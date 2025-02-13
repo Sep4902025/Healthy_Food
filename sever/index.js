@@ -2,10 +2,13 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const connectDB = require("./config/connectDB");
-const adminRouter = require("./routes/adminRouter");
-const clientRouter = require("./routes/clientRouter");
-
+const globalErrorHandler = require("./controller/errorController");
+const AppError = require("./utils/appError");
+const userRouter = require("./routes/userRouter");
 const app = express();
+const cookieParser = require("cookie-parser");
+app.use(express.json());
+app.use(cookieParser()); // Thêm middleware này để xử lý cookie
 
 // Danh sách các URL được phép truy cập
 const allowedOrigins = [
@@ -34,7 +37,13 @@ app.get("/", (req, res) => {
   res.send("Hello, CORS is working!");
 });
 // API Endpoint
-app.use("/admin", adminRouter), app.use("/client", clientRouter);
+app.use("/api/v1/users", userRouter);
+
+// Users api urls
+app.all("*", (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on thiss server!`, 404));
+});
+app.use(globalErrorHandler);
 // Khởi động server
 const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
