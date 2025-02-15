@@ -1,6 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Google Button Customization */
+.google-btn-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.google-btn-wrapper>div {
+  width: 100% !important;
+  max-width: 300px;
+}
+
+.google-btn-wrapper iframe {
+  scale: 1;
+  margin: 0;
+}
+
+/* Ẩn thông tin người dùng trên nút */
+.google-btn-wrapper .nsm7Bb-HzV7m-LgbsSe-Bz112c {
+  display: none !important;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",

@@ -1,3 +1,4 @@
+const { OAuth2Client } = require("google-auth-library");
 const generateOtp = require("../utils/generateOtp");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
@@ -5,6 +6,7 @@ const UserModel = require("../models/UserModel");
 const sendEmail = require("../utils/email");
 const jwt = require("jsonwebtoken");
 
+const client = new OAuth2Client(process.env.GG_CLIENT_ID);
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET_KEY, {
     expiresIn: process.env.JWT_EXPIRES_IN,
@@ -167,6 +169,39 @@ exports.login = catchAsync(async (req, res, next) => {
 
   createSendToken(user, 200, res, "Login Successful");
 });
+// Google Login
+exports.googleLogin = catchAsync(async (req, res, next) => {
+  const { idToken } = req.body;
+  if (!idToken) {
+    return next(new AppError("No Google token provided", 400));
+  }
+
+  // Xác thực token với Google
+  const ticket = await client.verifyIdToken({
+    idToken,
+    audience: process.env.GG_CLIENT_ID,
+  });
+
+  const { sub, email, name, picture } = ticket.getPayload(); // `sub` là Google ID
+
+  // Tìm người dùng trong DB
+  let user = await UserModel.findOne({ email });
+
+  if (!user) {
+    // Nếu chưa có, tạo tài khoản mới (kèm googleId)
+    user = await UserModel.create({
+      username: name,
+      email,
+      avatar_url: picture,
+      googleId: sub, // Lưu Google ID để tránh yêu cầu password
+      isVerified: true, // Đánh dấu tài khoản đã được xác thực
+    });
+  }
+
+  // Tạo token & gửi response
+  createSendToken(user, 200, res, "Google Login Successful");
+});
+
 // Logout
 exports.logout = catchAsync(async (req, res, next) => {
   res.cookie("token", "loggedout", {

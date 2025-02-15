@@ -1,0 +1,166 @@
+import axios from "axios";
+
+const API_URL = process.env.REACT_APP_API_URL;
+
+// Tạo instance axios với config mặc định
+const axiosInstance = axios.create({
+  baseURL: API_URL,
+  timeout: 5000, // timeout sau 5 giây
+});
+
+// Thêm interceptor để xử lý lỗi
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error);
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      // Có thể thêm redirect tới trang login ở đây
+    }
+    return Promise.reject(error);
+  }
+);
+
+const AuthService = {
+  resetPassword: async (email) => {
+    try {
+      const response = await axiosInstance.post("/users/reset-password", { email });
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi reset mật khẩu:", error);
+      throw error;
+    }
+  },
+
+  googleAuth: async (token) => {
+    try {
+      const response = await axiosInstance.post("/users/login-google", { idToken: token });
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi Google Auth:", error);
+      throw error;
+    }
+  },
+
+  signup: async (data) => {
+    try {
+      console.log("Sending signup request:", data);
+      const response = await axiosInstance.post("/users/signup", data);
+      console.log("Signup response:", response.data);
+
+      // Kiểm tra response
+      if (response.data) {
+        // Đảm bảo trả về đúng format
+        return {
+          success: true,
+          message: response.data.message || "Đăng ký thành công",
+          data: response.data,
+        };
+      }
+
+      return {
+        success: false,
+        message: "Không nhận được phản hồi từ server",
+      };
+    } catch (error) {
+      console.error("Lỗi đăng ký:", error.response?.data || error.message);
+      throw {
+        success: false,
+        message: error.response?.data?.message || "Đăng ký thất bại, vui lòng thử lại",
+      };
+    }
+  },
+
+  verifyAccount: async (otpData) => {
+    try {
+      const response = await axiosInstance.post("/users/verify", otpData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi xác thực OTP:", error);
+      throw error;
+    }
+  },
+
+  resendOTP: async () => {
+    try {
+      const response = await axiosInstance.post(
+        "/users/resend-otp",
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi gửi lại OTP:", error);
+      throw error;
+    }
+  },
+
+  login: async (credentials) => {
+    try {
+      console.log("Sending login request:", credentials);
+      const response = await axiosInstance.post("/users/login", credentials);
+      console.log("Login response:", response.data);
+
+      if (response.data) {
+        // Lưu token vào localStorage nếu có
+        if (response.data.token) {
+          localStorage.setItem("token", response.data.token);
+        }
+
+        return {
+          success: true,
+          message: response.data.message || "Đăng nhập thành công",
+          token: response.data.token,
+          user: response.data.data?.user,
+        };
+      }
+
+      return {
+        success: false,
+        message: "Không nhận được phản hồi từ server",
+      };
+    } catch (error) {
+      console.error("Lỗi đăng nhập:", error.response?.data || error.message);
+      throw {
+        success: false,
+        message: error.response?.data?.message || "Đăng nhập thất bại, vui lòng thử lại",
+      };
+    }
+  },
+
+  logout: async () => {
+    try {
+      const response = await axiosInstance.post(
+        "/users/logout",
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      localStorage.removeItem("token");
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi đăng xuất:", error);
+      throw error;
+    }
+  },
+
+  forgetPassword: async (email) => {
+    try {
+      const response = await axiosInstance.post("/users/forget-password", { email });
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi quên mật khẩu:", error);
+      throw error;
+    }
+  },
+};
+
+export default AuthService;
