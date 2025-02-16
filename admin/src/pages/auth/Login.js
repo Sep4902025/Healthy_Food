@@ -4,8 +4,11 @@ import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { GoogleLogin } from "@react-oauth/google";
 import { loginWithEmail, loginWithGoogle } from "../../store/actions/authActions";
-import { selectIsAuthenticated, selectAuthLoading } from "../../store/selectors/authSelectors";
-
+import {
+  selectIsAuthenticated,
+  selectAuthLoading,
+  selectAuth,
+} from "../../store/selectors/authSelectors";
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -33,9 +36,22 @@ const Login = () => {
 
   const handleEmailLogin = async (e) => {
     e.preventDefault();
-    const success = await dispatch(loginWithEmail(formData));
-    if (success) {
-      navigate("/");
+    try {
+      const response = await dispatch(loginWithEmail(formData));
+      console.log("Login response:", response);
+
+      if (response && response.success) {
+        const userRole = response.user.role;
+        console.log("User role:", userRole);
+
+        if (userRole === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/"); // Điều hướng user bình thường về trang chủ
+        }
+      }
+    } catch (error) {
+      console.error("Login error:", error);
     }
   };
 

@@ -106,19 +106,20 @@ const AuthService = {
     try {
       console.log("Sending login request:", credentials);
       const response = await axiosInstance.post("/users/login", credentials);
-      console.log("Login response:", response.data);
+      console.log("Raw API response:", response.data);
 
       if (response.data) {
-        // Lưu token vào localStorage nếu có
+        // Lưu token vào localStorage
         if (response.data.token) {
           localStorage.setItem("token", response.data.token);
         }
 
+        // Format lại dữ liệu
         return {
           success: true,
           message: response.data.message || "Đăng nhập thành công",
           token: response.data.token,
-          user: response.data.data?.user,
+          user: response.data.data.user, // Truy cập trực tiếp vào user data
         };
       }
 
@@ -128,7 +129,7 @@ const AuthService = {
       };
     } catch (error) {
       console.error("Lỗi đăng nhập:", error.response?.data || error.message);
-      throw {
+      return {
         success: false,
         message: error.response?.data?.message || "Đăng nhập thất bại, vui lòng thử lại",
       };

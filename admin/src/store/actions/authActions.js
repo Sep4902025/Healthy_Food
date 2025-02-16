@@ -29,24 +29,27 @@ export const loginWithGoogle = (credential) => async (dispatch) => {
     return false;
   }
 };
+
 export const loginWithEmail = (formData) => async (dispatch) => {
   try {
     dispatch(loginStart()); // Đánh dấu loading
     const response = await AuthService.login(formData);
 
-    if (!response.token) {
-      throw new Error(response.message || "Đăng nhập thất bại!");
+    if (response.success) {
+      dispatch(
+        loginSuccess({
+          user: response.user,
+          token: response.token,
+        })
+      );
+
+      toast.success("Đăng nhập thành công!");
+      return response; // Trả về response để lấy thông tin role
+    } else {
+      dispatch(loginFailure(response.message));
+      toast.error(response.message || "Đăng nhập thất bại!");
+      return false;
     }
-
-    dispatch(
-      loginSuccess({
-        user: response.user,
-        token: response.token,
-      })
-    );
-
-    toast.success("Đăng nhập thành công!");
-    return true;
   } catch (error) {
     const errorMessage = error.response?.data?.message || "Đăng nhập thất bại!";
     dispatch(loginFailure(errorMessage));
@@ -54,6 +57,7 @@ export const loginWithEmail = (formData) => async (dispatch) => {
     return false;
   }
 };
+
 export const logoutUser = () => (dispatch) => {
   // Đăng xuất khỏi Google
   googleLogout();
