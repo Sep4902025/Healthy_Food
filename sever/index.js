@@ -7,6 +7,32 @@ const AppError = require("./utils/appError");
 const userRouter = require("./routes/userRouter");
 const app = express();
 const cookieParser = require("cookie-parser");
+const http = require("http");
+const socketIo = require("socket.io");
+const conversationRouter = require("./routes/conversationRouter");
+
+// Tạo server HTTP
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.ADMIN_WEB_URL, // URL của frontend client
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+    credentials: true,
+  },
+});
+
+// Định nghĩa socket events
+io.on("connection", (socket) => {
+  console.log("A user connected");
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
+
+  // Có thể thêm các sự kiện khác cho việc chat hoặc giao tiếp real-time
+});
+
 app.use(express.json());
 app.use(cookieParser()); // Thêm middleware này để xử lý cookie
 
@@ -38,6 +64,7 @@ app.get("/", (req, res) => {
 });
 // API Endpoint
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/conversations", conversationRouter);
 
 // Users api urls
 app.all("*", (req, res, next) => {
@@ -47,7 +74,7 @@ app.use(globalErrorHandler);
 // Khởi động server
 const PORT = process.env.PORT || 8080;
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
 });

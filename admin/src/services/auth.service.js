@@ -67,10 +67,7 @@ const AuthService = {
       };
     } catch (error) {
       console.error("Lỗi đăng ký:", error.response?.data || error.message);
-      throw {
-        success: false,
-        message: error.response?.data?.message || "Đăng ký thất bại, vui lòng thử lại",
-      };
+      throw new Error(error.response?.data?.message || "Đăng ký thất bại, vui lòng thử lại");
     }
   },
 
@@ -162,6 +159,12 @@ const AuthService = {
       throw error;
     }
   },
+};
+
+const CHAT_ALLOWED_ROLES = ["customer", "nutritionist"];
+
+export const canAccessChat = (userRole) => {
+  return CHAT_ALLOWED_ROLES.includes(userRole);
 };
 
 export default AuthService;

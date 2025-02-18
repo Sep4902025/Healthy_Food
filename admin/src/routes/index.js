@@ -14,6 +14,13 @@ import SendOtp from "../pages/auth/SendOtp";
 import AdminLayout from "../components/layouts/AdminLayout";
 import TableUser from "../pages/admin/TableUser";
 import TableOrder from "../pages/admin/TableOrder";
+import NutritionistLayout from "../components/layouts/NutritionistLayout";
+import NutritionChat from "../pages/nutritionist/NutritionChat";
+import TableIngredient from "../pages/nutritionist/TableIngredient";
+import TableMealPlan from "../pages/nutritionist/TableMealPlan";
+import TableDishes from "../pages/nutritionist/TableDishes";
+import ChatWindow from "../components/Chat/ChatWindow";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 const AppRoutes = () => {
   return (
@@ -71,6 +78,20 @@ const AppRoutes = () => {
         <Route path="user" element={<TableUser />} />
         <Route path="order" element={<TableOrder />} />
       </Route>
+      <Route path="/nutritionist" element={<NutritionistLayout />}>
+        <Route path="chat" element={<NutritionChat />} />
+        <Route path="ingredient" element={<TableIngredient />} />
+        <Route path="mealplan" element={<TableMealPlan />} />
+        <Route path="dishes" element={<TableDishes />} />
+      </Route>
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute allowedRoles={["user", "nutritionist"]}>
+            <ChatWindow />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 };

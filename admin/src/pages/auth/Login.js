@@ -4,11 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { GoogleLogin } from "@react-oauth/google";
 import { loginWithEmail, loginWithGoogle } from "../../store/actions/authActions";
-import {
-  selectIsAuthenticated,
-  selectAuthLoading,
-  selectAuth,
-} from "../../store/selectors/authSelectors";
+import { selectIsAuthenticated, selectAuthLoading } from "../../store/selectors/authSelectors";
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -46,6 +42,8 @@ const Login = () => {
 
         if (userRole === "admin") {
           navigate("/admin");
+        } else if (userRole === "nutritionist") {
+          navigate("/nutritionist");
         } else {
           navigate("/"); // Điều hướng user bình thường về trang chủ
         }

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { logoutUser } from "../../store/actions/authActions";
 import { selectUser } from "../../store/selectors/authSelectors";
+import UserChatButton from "../Chat/UserChatButton";
 
 const MainLayout = () => {
   const navigate = useNavigate();
@@ -62,6 +63,7 @@ const MainLayout = () => {
           <p className="text-center text-gray-600">© 2025 Your Company. All rights reserved.</p>
         </div>
       </footer>
+      {user?.role === "customer" && <UserChatButton />}
     </div>
   );
 };
