@@ -8,7 +8,7 @@ const {
   forgetPassword,
   resetPassword,
   googleLogin,
-} = require("../controller/authController");
+} = require("../controllers/authController");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 
 const userRouter = express.Router();

@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const connectDB = require("./config/connectDB");
-const globalErrorHandler = require("./controller/errorController");
+const globalErrorHandler = require("./controllers/errorController");
 const AppError = require("./utils/appError");
 const userRouter = require("./routes/userRouter");
 const app = express();
