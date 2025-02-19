@@ -9,7 +9,7 @@ const sendEmail = async (options) => {
     },
   });
   const mailOptions = {
-    from: `"HEALTHY_FOOD" <${process.env.EMAIL_USER}>`, // Sử dụng biến môi trường cho email
+    from: `"HEALTHY_FOOD" <${process.env.EMAIL_USER}>`,
     to: options.email,
     subject: options.subject,
     html: options.html,
@@ -20,7 +20,7 @@ const sendEmail = async (options) => {
     console.log("Email sent successfully");
   } catch (error) {
     console.error("Error sending email:", error);
-    throw error; // Hoặc xử lý lỗi theo cách bạn muốn
+    throw error;
   }
 };
 

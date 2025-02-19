@@ -17,7 +17,7 @@ const isAuthenticated = catchAsync(async (req, res, next) => {
     return next(new AppError("The user belonging to this token does not exist", 401));
   }
 
-  req.user = currentUser; // Make the user available in subsequent middleware/routes
-  next(); // Call next to proceed to the next middleware/route
+  req.user = currentUser;
+  next();
 });
 module.exports = isAuthenticated;
