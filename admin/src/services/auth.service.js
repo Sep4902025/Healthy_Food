@@ -22,9 +22,13 @@ axiosInstance.interceptors.response.use(
 );
 
 const AuthService = {
-  resetPassword: async (email) => {
+  resetPassword: async (email, password, passwordConfirm) => {
     try {
-      const response = await axiosInstance.post("/users/reset-password", { email });
+      const response = await axiosInstance.post("/users/reset-password", {
+        email,
+        password,
+        passwordConfirm,
+      });
       return response.data;
     } catch (error) {
       console.error("Lỗi reset mật khẩu:", error);
@@ -71,30 +75,22 @@ const AuthService = {
     }
   },
 
-  verifyAccount: async (otpData) => {
+  verifyOTP: async (email, otp) => {
     try {
-      const response = await axiosInstance.post("/users/verify", otpData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const response = await axiosInstance.post("/users/verify", { email, otp });
       return response.data;
     } catch (error) {
-      console.error("Lỗi xác thực OTP:", error);
-      throw error;
+      console.error("Lỗi xác thực OTP:", error.response?.data || error);
+      throw error.response?.data || error;
     }
   },
 
-  resendOTP: async () => {
+  resendOTP: async (email) => {
     try {
-      const response = await axiosInstance.post(
-        "/users/resend-otp",
-        {},
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+      const response = await axiosInstance.post("/users/resend-otp", { email });
       return response.data;
     } catch (error) {
-      console.error("Lỗi gửi lại OTP:", error);
+      console.error("Lỗi gửi lại OTP:", error.response?.data?.message || error.message);
       throw error;
     }
   },

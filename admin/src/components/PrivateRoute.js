@@ -6,7 +6,7 @@ const PrivateRoute = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth/login" />;
+    return <Navigate to="/login" />;
   }
 
   return children;

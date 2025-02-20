@@ -51,7 +51,7 @@ const SignUp = () => {
       if (response.success === true) {
         toast.success(response.message || "Đăng ký thành công!");
         setTimeout(() => {
-          navigate("/auth/login");
+          navigate("/login");
         }, 1000);
       } else {
         toast.error(response.message || "Đăng ký thất bại!");
@@ -209,7 +209,7 @@ const SignUp = () => {
           {/* Link to Login */}
           <div className="text-center text-sm">
             <span className="text-gray-500">Already have an account?</span>
-            <Link to="/auth/login" className="ml-1 text-pink-500 hover:text-pink-600">
+            <Link to="/login" className="ml-1 text-pink-500 hover:text-pink-600">
               Sign in
             </Link>
           </div>

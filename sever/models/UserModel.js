@@ -44,23 +44,11 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true, // Cho phép giá trị null
     },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
     otp: {
       type: String,
       default: null,
     },
     otpExpires: {
-      type: Date,
-      default: null,
-    },
-    resetPasswordOTP: {
-      type: String,
-      default: null,
-    },
-    resetPasswordOTPExpires: {
       type: Date,
       default: null,
     },

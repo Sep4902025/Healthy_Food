@@ -17,8 +17,7 @@ const Home = () => {
 
   return (
     <div className="w-full">
-      <p className="text-sm text-gray-500">Tên người dùng</p>
-      <p className="text-lg font-medium text-gray-800">{user.username}</p>
+      <p>helllllooo</p>
     </div>
   );
 };

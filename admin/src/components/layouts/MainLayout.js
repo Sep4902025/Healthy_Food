@@ -13,14 +13,9 @@ const MainLayout = () => {
 
   const handleLogout = () => {
     dispatch(logoutUser());
-    navigate("/auth/login");
+    navigate("/login");
     toast.success("Đăng xuất thành công!");
   };
-
-  if (!user) {
-    navigate("/auth/login");
-    return null;
-  }
 
   return (
     <div className=" bg-gray-100">

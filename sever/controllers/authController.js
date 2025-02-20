@@ -51,7 +51,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   // Tạo OTP và thời gian hết hạn
   const otp = generateOtp();
   const otpExpires = Date.now() + 24 * 60 * 60 * 1000; // Thời gian hết hạn là 24 giờ
-
+  console.log("otp", otp);
   // Tạo người dùng mới
   const newUser = await UserModel.create({
     email,
@@ -81,36 +81,44 @@ exports.signup = catchAsync(async (req, res, next) => {
     return next(new AppError("There is an error sending the email. Try again", 500));
   }
 });
+
 // Verify Account
 exports.verifyAccount = catchAsync(async (req, res, next) => {
-  const { otp } = req.body;
+  const { email, otp } = req.body;
 
-  if (!otp) {
-    return next(new AppError("OTP is missing", 400));
+  if (!email || !otp) {
+    return next(new AppError("Email and OTP are required", 400));
   }
 
-  const user = req.user;
+  // 1. Tìm user bằng email
+  const user = await UserModel.findOne({ email });
 
-  if (Date.now() > user.otpExpires) {
-    return next(new AppError("OTP has expired. Please request a new OTP", 400));
+  if (!user) {
+    return next(new AppError("User not found", 404));
   }
 
+  // 2. Kiểm tra thời hạn của OTP
+  if (!user.otp || Date.now() > user.otpExpires) {
+    return next(new AppError("OTP has expired. Please request a new one", 400));
+  }
+
+  // 3. Kiểm tra OTP có đúng không
   if (user.otp !== otp) {
     return next(new AppError("Invalid OTP", 400));
   }
 
-  // Nếu OTP hợp lệ, thực hiện các hành động sau:
-  user.isVerified = true;
-  user.otp = undefined; // Xóa OTP sau khi đã xác thực
+  // 4. Nếu OTP hợp lệ, cập nhật trạng thái tài khoản
+  user.otp = undefined; // Xóa OTP để tránh bị dùng lại
   user.otpExpires = undefined; // Xóa thời gian hết hạn OTP
 
   await user.save({ validateBeforeSave: false }); // Lưu thay đổi vào database
 
   createSendToken(user, 200, res, "Email has been verified successfully!"); // Gửi token và thông báo thành công
 });
+
 // Resend OTP
 exports.resendOTP = catchAsync(async (req, res, next) => {
-  const { email } = req.user; // Lấy email từ req.user (đã được lưu bởi middleware xác thực)
+  const { email } = req.body; // Nhận email từ body, không cần auth
 
   if (!email) {
     return next(new AppError("Email is required to resend OTP", 400));
@@ -120,10 +128,6 @@ exports.resendOTP = catchAsync(async (req, res, next) => {
 
   if (!user) {
     return next(new AppError("User not found", 404));
-  }
-
-  if (user.isVerified) {
-    return next(new AppError("This account is already verified", 400));
   }
 
   // Tạo OTP mới
@@ -139,20 +143,22 @@ exports.resendOTP = catchAsync(async (req, res, next) => {
   try {
     await sendEmail({
       email: user.email,
-      subject: "Resend otp for email verification",
+      subject: "Resend OTP for email verification",
       html: `<h1>Your new OTP is ${newOtp}</h1>`,
     });
 
-    res
-      .status(200)
-      .json({ status: "success", message: "A new otp has sent to your email successfully" });
+    res.status(200).json({
+      status: "success",
+      message: "A new OTP has been sent to your email successfully.",
+    });
   } catch (error) {
     user.otp = undefined;
     user.otpExpires = undefined;
     await user.save({ validateBeforeSave: false });
-    return next(new AppError("There is an error sending the email. Try again", 500));
+    return next(new AppError("There was an error sending the email. Please try again.", 500));
   }
 });
+
 // Login
 exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
@@ -194,7 +200,6 @@ exports.googleLogin = catchAsync(async (req, res, next) => {
       email,
       avatar_url: picture,
       googleId: sub, // Lưu Google ID để tránh yêu cầu password
-      isVerified: true, // Đánh dấu tài khoản đã được xác thực
     });
   }
 
@@ -223,11 +228,13 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
   const user = await UserModel.findOne({ email });
 
   if (!user) {
-    return next(new AppError("No user found with that email", 404)); // Sửa lỗi 484 thành 404
+    return next(new AppError("No user found with that email", 404));
   }
+
+  // Tạo OTP mới
   const otp = generateOtp();
-  user.resetPasswordOTP = otp;
-  user.resetPasswordOTPExpires = Date.now() + 300000; // 5 phút
+  user.otp = otp;
+  user.otpExpires = Date.now() + 300000; // 5 phút hết hạn
 
   await user.save({ validateBeforeSave: false });
 
@@ -237,44 +244,45 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
       subject: "Your password reset token (valid for 5 min)",
       html: `
       <p>Forgot your password? Submit a PATCH request with your new password and passwordConfirm to:</p> 
-      <p>Your OTP is <b>${user.resetPasswordOTP}</b></p>        
+      <p>Your OTP is <b>${user.otp}</b></p>        
       <p>If you didn't forget your password, please ignore this email!</p>
       `,
     });
 
     res.status(200).json({
       status: "success",
-      message: "Password reset otp is send to your email",
+      message: "Password reset OTP has been sent to your email.",
     });
   } catch (err) {
-    user.resetPasswordOTP = undefined;
-    user.resetPasswordOTPExpires = undefined;
+    user.otp = undefined;
+    user.otpExpires = undefined;
     await user.save({ validateBeforeSave: false });
 
-    return next(new AppError("There is an error sending the email. Try again later!", 500));
+    return next(new AppError("There was an error sending the email. Try again later!", 500));
   }
 });
 // Reset Password
 exports.resetPassword = catchAsync(async (req, res, next) => {
-  const { email, otp, password, passwordConfirm } = req.body;
+  const { email, password, passwordConfirm } = req.body;
 
   const user = await UserModel.findOne({
     email,
-    resetPasswordOTP: otp,
-    resetPasswordOTPExpires: { $gt: Date.now() },
   });
 
   if (!user) {
-    return next(new AppError("No user found or invalid OTP", 400));
+    return next(new AppError("Invalid email or OTP expired", 400));
   }
 
-  // Update password and related fields
+  // Cập nhật mật khẩu mới và đánh dấu là đã thay đổi
   user.password = password;
   user.passwordConfirm = passwordConfirm;
-  user.resetPasswordOTP = undefined;
-  user.resetPasswordOTPExpires = undefined;
+  user.markModified("password"); // Đảm bảo middleware hash chạy
 
-  await user.save(); // Validate password before saving (important!)
+  // Xóa OTP sau khi sử dụng để tránh bị dùng lại
+  user.otp = undefined;
+  user.otpExpires = undefined;
+
+  await user.save(); // Middleware sẽ tự hash mật khẩu
 
   createSendToken(user, 200, res, "Password reset successfully!");
 });

@@ -137,7 +137,7 @@ const Login = () => {
           </div>
 
           <div className="flex items-center justify-end">
-            <Link to="/auth/forget-password" className="text-sm text-pink-500 hover:text-pink-600">
+            <Link to="/forget-password" className="text-sm text-pink-500 hover:text-pink-600">
               Forgot password?
             </Link>
           </div>
@@ -178,7 +178,7 @@ const Login = () => {
           {/* Link to Signup */}
           <div className="text-center text-sm">
             <span className="text-gray-500">Don't have an account?</span>
-            <Link to="/auth/signup" className="ml-1 text-pink-500 hover:text-pink-600">
+            <Link to="/signup" className="ml-1 text-pink-500 hover:text-pink-600">
               Sign up
             </Link>
           </div>

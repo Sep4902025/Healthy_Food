@@ -1,5 +1,4 @@
 import { Routes, Route } from "react-router-dom";
-import AuthLayout from "../components/layouts/AuthLayout";
 import MainLayout from "../components/layouts/MainLayout";
 import PrivateRoute from "../components/PrivateRoute";
 import Home from "../pages/user/Home";
@@ -10,7 +9,6 @@ import Dishes from "../pages/user/Dishes";
 import MealsPlan from "../pages/user/MealsPlan";
 import Ingredient from "../pages/user/Ingredient";
 import ForgetPassword from "../pages/auth/ForgetPassword";
-import SendOtp from "../pages/auth/SendOtp";
 import AdminLayout from "../components/layouts/AdminLayout";
 import TableUser from "../pages/admin/TableUser";
 import TableOrder from "../pages/admin/TableOrder";
@@ -21,19 +19,19 @@ import TableMealPlan from "../pages/nutritionist/TableMealPlan";
 import TableDishes from "../pages/nutritionist/TableDishes";
 import ChatWindow from "../components/Chat/ChatWindow";
 import ProtectedRoute from "../components/ProtectedRoute";
+import VerifyOtp from "../pages/auth/VerifyOtp";
+import ResetPassword from "../pages/auth/ResetPassword";
 
 const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<MainLayout />}>
-        <Route
-          index
-          element={
-            <PrivateRoute>
-              <Home />
-            </PrivateRoute>
-          }
-        />
+        <Route index element={<Home />} />
+        <Route path="login" element={<Login />} />
+        <Route path="signup" element={<SignUp />} />
+        <Route path="verify" element={<VerifyOtp />} />
+        <Route path="forget-password" element={<ForgetPassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
         <Route
           path="user"
           element={
@@ -68,12 +66,6 @@ const AppRoutes = () => {
         />
       </Route>
 
-      <Route path="/auth" element={<AuthLayout />}>
-        <Route path="login" element={<Login />} />
-        <Route path="signup" element={<SignUp />} />
-        <Route path="forget-password" element={<ForgetPassword />} />
-        <Route path="send-otp" element={<SendOtp />} />
-      </Route>
       <Route path="/admin" element={<AdminLayout />}>
         <Route path="user" element={<TableUser />} />
         <Route path="order" element={<TableOrder />} />
