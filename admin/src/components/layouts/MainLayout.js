@@ -13,7 +13,7 @@ const MainLayout = () => {
 
   const handleLogout = () => {
     dispatch(logoutUser());
-    navigate("/login");
+    navigate("/signin");
     toast.success("Đăng xuất thành công!");
   };
 

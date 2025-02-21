@@ -51,7 +51,6 @@ exports.signup = catchAsync(async (req, res, next) => {
   // Tạo OTP và thời gian hết hạn
   const otp = generateOtp();
   const otpExpires = Date.now() + 24 * 60 * 60 * 1000; // Thời gian hết hạn là 24 giờ
-  console.log("otp", otp);
   // Tạo người dùng mới
   const newUser = await UserModel.create({
     email,

@@ -31,7 +31,7 @@ const ResetPassword = () => {
       if (response.status === "success") {
         toast.success("Password reset successfully! Redirecting...");
         sessionStorage.removeItem("resetEmail"); // Xóa email khỏi sessionStorage sau khi reset thành công
-        navigate("/login");
+        navigate("/signin");
       }
     } catch (error) {
       setError("Failed to reset password. Please try again.");
