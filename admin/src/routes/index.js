@@ -64,6 +64,14 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute allowedRoles={["user"]}>
+              <ChatWindow />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
@@ -76,14 +84,6 @@ const AppRoutes = () => {
         <Route path="mealplan" element={<TableMealPlan />} />
         <Route path="dishes" element={<TableDishes />} />
       </Route>
-      <Route
-        path="/chat"
-        element={
-          <ProtectedRoute allowedRoles={["user", "nutritionist"]}>
-            <ChatWindow />
-          </ProtectedRoute>
-        }
-      />
     </Routes>
   );
 };

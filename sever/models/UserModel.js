@@ -58,7 +58,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "customer", "chef", "nutritionist"],
+      enum: ["admin", "customer", "nutritionist"],
       default: "customer",
     },
     user_preference_id: {
@@ -66,15 +66,19 @@ const userSchema = new mongoose.Schema(
       ref: "UserPreference",
       default: null,
     },
-    theme: {
-      type: Boolean,
-      default: false, // false: Light Mode, true: Dark Mode
-    },
     createdAt: {
       type: Date,
       default: Date.now,
     },
     isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    isBan: {
+      type: Boolean,
+      default: false,
+    },
+    isDelete: {
       type: Boolean,
       default: false,
     },
