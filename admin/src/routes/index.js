@@ -32,6 +32,8 @@ const AppRoutes = () => {
         <Route path="verify" element={<VerifyOtp />} />
         <Route path="forget-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
+
+        {/* Các route cần đăng nhập */}
         <Route
           path="user"
           element={
@@ -64,8 +66,10 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+
+        {/* ✅ Bảo vệ trang chat, chỉ user mới vào được */}
         <Route
-          path="/chat"
+          path="chat"
           element={
             <ProtectedRoute allowedRoles={["user"]}>
               <ChatWindow />
@@ -74,11 +78,28 @@ const AppRoutes = () => {
         />
       </Route>
 
-      <Route path="/admin" element={<AdminLayout />}>
+      {/* ✅ Bảo vệ toàn bộ route admin */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="user" element={<TableUser />} />
         <Route path="order" element={<TableOrder />} />
       </Route>
-      <Route path="/nutritionist" element={<NutritionistLayout />}>
+
+      {/* ✅ Bảo vệ toàn bộ route nutritionist */}
+      <Route
+        path="/nutritionist"
+        element={
+          <ProtectedRoute allowedRoles={["nutritionist"]}>
+            <NutritionistLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="chat" element={<NutritionChat />} />
         <Route path="ingredient" element={<TableIngredient />} />
         <Route path="mealplan" element={<TableMealPlan />} />
