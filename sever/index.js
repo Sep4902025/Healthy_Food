@@ -10,6 +10,8 @@ const cookieParser = require("cookie-parser");
 const http = require("http");
 const socketIo = require("socket.io");
 const conversationRouter = require("./routes/conversationRouter");
+const dishRouter = require("./routes/dishRouter");
+const ingredientRouter = require("./routes/ingredientRouter");
 
 // Tạo server HTTP
 const server = http.createServer(app);
@@ -65,6 +67,8 @@ app.get("/", (req, res) => {
 // API Endpoint
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/conversations", conversationRouter);
+app.use("/api/v1/dishes", dishRouter);
+app.use("/api/v1/ingredients", ingredientRouter);
 
 // Users api urls
 app.all("*", (req, res, next) => {
