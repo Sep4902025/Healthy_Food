@@ -258,13 +258,18 @@ code {
   color: #9197b3;
   text-align: left;
   margin: 50px 0;
-  width: 10%;
+  width: 100%;
+}
+
+.user-item.selected a {
+  
+  color: green; /* Chữ trắng */
 }
 
 .nav-container {
-  width: 1100px;
+  width: 100%;
   height: 110px;
-
+  padding: 0 20px;
   margin-top: 50px;
 
   background-color: #1e2875;
@@ -293,22 +298,26 @@ code {
 }
 
 .content-container {
-  width: 100%;
-  height: 100%;
+  
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
+  margin: 20px;
 }
 
 .user-content {
   border: 1px solid black;
   border-radius: 12px;
+  width: 48%;
+  min-height: 960px;
 }
 
 .user-content-2 {
-  width: 100%;
-  height: 100%;
-  background-color: #1e2875;
+  border: 1px solid black;
+  border-radius: 12px;
+  margin-left: 20px;
+  width: 48%;
+  min-height: 960px;
 }
 
 .user-content-img {
@@ -320,7 +329,7 @@ code {
 .user-img {
   background-color: #ffa78d;
   border: none;
-  background-image: "../../assets/images/FemaleUser.jpg";
+  
 }
 
 .user-content-img-btn {
@@ -359,7 +368,193 @@ table {
   
 }
 
-.infor-table td{
+.infor-table tr{
   color: inherit;
   margin-left: 10px;
 }
+
+.table-edit-btn {
+  width: 192px;
+  height: 61px;
+  background-color: #CB87CB;
+  color: #ffffff  ;
+  border-radius: 25px;
+}
+
+.goal-container{
+  border: 0.5px solid gray;
+  
+  margin: 20px;
+}
+
+.goal-title {
+  display: flex;            
+  justify-content: space-between; 
+  align-items: center;      
+  padding: 10px;           
+  border-bottom: 1px solid #ddd; 
+}
+
+.g-title {
+  font-size: 24px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.g-link{
+  color: #CB87CB;
+  text-transform: uppercase;
+  font-size: 20px;
+}
+
+.goal-content{
+  color: #49454F;
+  font-size: 16px;
+  margin: 20px;
+}
+
+.body-container{
+  border: 0.5px solid gray;
+  margin: 20px;
+}
+
+.body-title{
+  text-align: left;
+  margin: 20px 10px;
+  text-transform: uppercase;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.body-content{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px;
+}
+
+.body-warning{
+  width: 360px;
+  height: 100px;
+  background: linear-gradient(to right, #ff7e5f, #feb47b);
+  border-radius: 12px;
+  color: #ffffff;
+}
+
+.body-warning-title{
+  text-align: left;
+  margin:10px;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.body-warning-content{
+  margin: 10px;
+}
+
+.fa-detail-container{
+  border: 0.5px solid gray;
+  margin: 20px;
+}
+
+.fa-title{
+  font-size: 24px;
+  text-align: left;
+  font-weight: bold;
+  color: #000;
+  margin: 20px 10px;
+}
+
+.fa-content{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px;
+  color: #49454F;
+}
+
+.kind-fa-title{
+  font-size: 24px;
+  font-weight: bold;
+  color: #000;
+  text-align: left;
+  margin: 20px 30px;
+}
+
+.kind-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Chia thành 2 cột */
+  gap: 10px; /* Khoảng cách giữa các mục */
+  padding: 20px;
+  list-style: none; /* Bỏ dấu chấm mặc định */
+  counter-reset: kind-counter; /* Đặt bộ đếm */
+}
+
+.kind-item {
+  background-color: #FFF; /* Màu nền */
+  padding: 5px 15px;
+  border-radius: 25px; /* Bo góc */
+  font-size: 16px;
+  border: 0.5px solid gray;
+  
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.kind-item::before {
+  counter-increment: kind-counter; /* Tăng bộ đếm */
+  content: "•"; /* Dấu chấm tròn */
+  color: green; /* Màu xanh */
+  font-size: 28px;
+  font-weight: 900;
+  margin-right: 10px;
+}
+
+.cus-review-title{
+  font-size: 24px;
+  font-weight: bold;
+  color: #000;
+  text-align: left;
+  margin: 20px 30px;
+}
+
+.cus-review-container{
+  border: 0.5px solid gray;
+  margin: 20px;
+}
+
+.food-review-name{
+  font-size: 20px;
+  font-weight: bold;
+  color: #000;
+  text-align: left;
+  margin: 20px 30px;
+}
+
+.food-review-star {
+  
+  gap: 5px;
+  font-size: 40px; /* Tăng kích thước ngôi sao */
+}
+
+.food-review-content{
+  font-size: 16px;
+  color: #49454F;
+  opacity: 0.7;
+  margin: 20px;
+  text-align: center;
+}
+
+.cus-review-link{
+  color: #ff6868;
+  
+  margin: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+
+
+

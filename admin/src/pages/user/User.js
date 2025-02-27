@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
 import { useNavigate } from "react-router-dom";
 import femaleUser from "../../assets/images/FemaleUser.png";
+import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const User = () => {
   const user = useSelector(selectUser);
@@ -52,17 +53,30 @@ const User = () => {
         </div>
 
         <ul className="user-list">
-          <li className="user-item">
-            <a href="/dishes">Favorite Food</a>
+          <li className="user-item selected">
+            <a href="/profile">
+              <i className="fas fa-user"></i> Profile
+            </a>
           </li>
           <li className="user-item">
-            <a href="/dishes">Don't eat food</a>
+            <a href="/dishes">
+              <i className="fas fa-utensils"></i> Favorite Food
+            </a>
           </li>
           <li className="user-item">
-            <a href="/dishes">Change Password</a>
+            <a href="/dishes">
+              <i className="fas fa-ban"></i> Don't eat food
+            </a>
           </li>
           <li className="user-item">
-            <a href="/dishes">FAQs</a>
+            <a href="/dishes">
+              <i className="fas fa-key"></i> Change Password
+            </a>
+          </li>
+          <li className="user-item">
+            <a href="/dishes">
+              <i className="fas fa-question-circle"></i> FAQs
+            </a>
           </li>
         </ul>
       </div>
@@ -89,6 +103,18 @@ const User = () => {
               <table className="infor-table w-full border-collapse border-none">
                 <tbody>
                   <tr>
+                    <td>
+                      <h1 className="m-2 font-bold text-2xl text-black uppercase">
+                        Your Profile
+                      </h1>
+                    </td>
+                    <td colSpan="2" className="text-right">
+                      <button className="m-2 table-edit-btn hover:bg-purple-600">
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
                     <td className="p-2 font-semibold border-none">Your name</td>
                     <td className="p-2 border-none">
                       <label className="w-full p-1 block text-gray-700">
@@ -112,19 +138,17 @@ const User = () => {
                       </label>
                     </td>
                   </tr>
-
-                  
                 </tbody>
               </table>
-
-              
             </div>
 
             <div className="goal-container">
               <div className="goal-title">
                 <div className="g-title">Nutrition Goal</div>
 
-                <buton>Edit</buton>
+                <a href="/" class="g-link">
+                  Edit
+                </a>
               </div>
 
               <div className="goal-content">
@@ -136,57 +160,97 @@ const User = () => {
 
             <div className="body-container">
               <h3 className="body-title">Body Measurements</h3>
-              <table className="w-full border-collapse border border-gray-300">
-                <tbody>
-                  <tr>
-                    <td className="border border-gray-300 p-2 font-semibold">
-                      Weight
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      <label
-                        type="text"
-                        placeholder="Weight"
-                        value={user}
-                        className="w-full p-1 border border-gray-300"
-                      />{" "}
-                      kg
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-gray-300 p-2 font-semibold">
-                      Height
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      <label
-                        type="text"
-                        placeholder="Height"
-                        value={user.height}
-                        className="w-full p-1 border border-gray-300"
-                      />{" "}
-                      cm
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-gray-300 p-2 font-semibold">
-                      BMI
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      <label
-                        type="text"
-                        placeholder="BMI"
-                        value={user.weight / (user.height * 2)}
-                        className="w-full p-1 border border-gray-300"
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="body-content">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    <tr>
+                      <td className="p-2 font-semibold">Weight</td>
+                      <td className="p-2">
+                        <label className="w-full p-1"> {user.weight} kg </label>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-semibold">Height</td>
+                      <td className="p-2">
+                        <label className="w-full p-1"> {user.height} cm </label>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-semibold">BMI</td>
+                      <td className="p-2">
+                        <label className="w-full p-1">
+                          {" "}
+                          {user.weight / (user.height * 2)}{" "}
+                        </label>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
 
-              <div className="body-warning"></div>
+                <div className="body-warning">
+                  <div className="body-warning-title">Warning</div>
+                  <div className="body-warning-content">
+                    You are so fast. You should eat more.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="user-content-2"></div>
+          <div className="user-content-2">
+            <div className="fa-detail-container">
+              <div className="fa-title">Favorite Food Details</div>
+              <div className="fa-content">
+                <div className="fa-item">
+                  <img src="" alt="" />
+                  <div className="fa-item-name">
+                    This are the professional details shown to users in the app.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="kind-fa-container">
+              <h1 className="kind-fa-title">Favorite food</h1>
+              <ul class="kind-list">
+                <li className="kind-item">No-Calories</li>
+                <li className="kind-item">Lunch</li>
+                <li className="kind-item">Breakfast</li>
+                <li className="kind-item">Dinner</li>
+              </ul>
+            </div>
+
+            <div className="kind-fa-container">
+              <h1 className="kind-fa-title">Don't like food</h1>
+              <ul class="kind-list">
+                <li className="kind-item">No-Calories</li>
+                <li className="kind-item">Lunch</li>
+                <li className="kind-item">Breakfast</li>
+                <li className="kind-item">Dinner</li>
+              </ul>
+            </div>
+
+            <h1 className="cus-review-title">Food Review</h1>
+
+            <div className="cus-review-container">
+              <div className="food-review-name">Ankit Srivastava</div>
+
+              <div className="food-review-star">
+                <i className="fas fa-star" style={{ color: "gold" }}></i>
+                <i className="fas fa-star" style={{ color: "gold" }}></i>
+                <i className="fas fa-star" style={{ color: "gold" }}></i>
+                <i className="fas fa-star" style={{ color: "gold" }}></i>
+                <i className="far fa-star" style={{ color: "gray" }}></i>{" "}
+                {/* Sao trắng */}
+              </div>
+
+              <div className="food-review-content">Very good</div>
+            </div>
+
+            <a href="/" className="cus-review-link">
+              See All Review-
+            </a>
+          </div>
         </div>
       </div>
     </div>
