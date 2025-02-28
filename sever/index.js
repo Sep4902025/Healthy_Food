@@ -10,6 +10,9 @@ const cookieParser = require("cookie-parser");
 const http = require("http");
 const socketIo = require("socket.io");
 const conversationRouter = require("./routes/conversationRouter");
+const footerRouter = require("./routes/footerRoutes"); 
+
+
 
 // Tạo server HTTP
 const server = http.createServer(app);
@@ -65,6 +68,9 @@ app.get("/", (req, res) => {
 // API Endpoint
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/conversations", conversationRouter);
+app.use("/api/v1/footer", footerRouter);
+
+
 
 // Users api urls
 app.all("*", (req, res, next) => {

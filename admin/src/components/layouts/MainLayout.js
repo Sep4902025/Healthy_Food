@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { logoutUser } from "../../store/actions/authActions";
 import { selectUser } from "../../store/selectors/authSelectors";
 import UserChatButton from "../Chat/UserChatButton";
+import Footer from "../../pages/user/footer/Footer";
 
 const MainLayout = () => {
   const navigate = useNavigate();
@@ -18,14 +19,12 @@ const MainLayout = () => {
   };
 
   return (
-    <div className=" bg-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-100">
       {/* Header */}
       <header className="bg-white shadow-md">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <h2 className="text-2xl font-bold text-gray-800">Logo</h2>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Logo</h2>
 
             <div className="flex items-center space-x-4">
               {user && (
@@ -48,16 +47,16 @@ const MainLayout = () => {
           </div>
         </div>
       </header>
+
       {/* Main Content */}
-      <main>
+      <main className="flex-grow">
         <Outlet />
       </main>
+
       {/* Footer */}
-      <footer className="bg-white shadow-md mt-auto">
-        <div className="container mx-auto px-4 py-4">
-          <p className="text-center text-gray-600">© 2025 Your Company. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
+
+      {/* Chat button (chỉ hiển thị nếu là customer) */}
       {user?.role === "customer" && <UserChatButton />}
     </div>
   );

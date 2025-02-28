@@ -5,7 +5,7 @@ import { selectAuth } from "../../store/selectors/authSelectors";
 const Home = () => {
   const { user } = useSelector(selectAuth);
 
-  console.log("user satte", user);
+  console.log("user state", user);
 
   if (!user) {
     return (
@@ -16,8 +16,12 @@ const Home = () => {
   }
 
   return (
-    <div className="w-full">
-      <p>helllllooo</p>
+    <div className="w-full min-h-screen flex flex-col">
+      <div className="flex-grow">
+        <p>helllllooo</p>
+      </div>
+
+  
     </div>
   );
 };

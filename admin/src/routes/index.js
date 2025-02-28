@@ -21,6 +21,15 @@ import ChatWindow from "../components/Chat/ChatWindow";
 import ProtectedRoute from "../components/ProtectedRoute";
 import VerifyOtp from "../pages/auth/VerifyOtp";
 import ResetPassword from "../pages/auth/ResetPassword";
+import FAQs from "../pages/user/footer/FAQs";
+import About from "../pages/user/footer/About";
+import Contact from "../pages/user/footer/Contact";
+import Term from "../pages/user/footer/Term";
+import AboutUsManagement from "../pages/admin/FooterManagement/AboutUsManagement";
+import TermOfUseManagement from "../pages/admin/FooterManagement/TermOfUseManagement";
+import FAQsManagement from "../pages/admin/FooterManagement/FAQsManagement";
+import ContactUsManagement from "../pages/admin/FooterManagement/ContactUsManagement";
+
 
 const AppRoutes = () => {
   return (
@@ -76,20 +85,26 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route path="faqs" element={<FAQs />} />
+        <Route path="about" element={<About />} />
+        <Route path="contact" element={<Contact />} />
+        <Route path="term" element={<Term />} />
+
       </Route>
 
       {/* ✅ Bảo vệ toàn bộ route admin */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      >
+      <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminLayout /></ProtectedRoute>}>
         <Route path="user" element={<TableUser />} />
         <Route path="order" element={<TableOrder />} />
+
+        {/* ✅ Thêm route cho Footer Management */}
+        <Route path="about" element={<AboutUsManagement/>} />
+        <Route path="term" element={<TermOfUseManagement/>} />
+        <Route path="faqs" element={<FAQsManagement/>} />
+        <Route path="contact" element={<ContactUsManagement/>} />
+
       </Route>
+
 
       {/* ✅ Bảo vệ toàn bộ route nutritionist */}
       <Route
@@ -105,6 +120,7 @@ const AppRoutes = () => {
         <Route path="mealplan" element={<TableMealPlan />} />
         <Route path="dishes" element={<TableDishes />} />
       </Route>
+
     </Routes>
   );
 };
