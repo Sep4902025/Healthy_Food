@@ -15,29 +15,6 @@ const User = () => {
   }
 
   return (
-    // <div className="container mx-auto py-10 px-6">
-    //   <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md">
-    //     <h2 className="text-2xl font-bold text-gray-800 mb-4">User Profile</h2>
-    //     <div className="flex items-center space-x-6">
-    //       <img
-    //         src={user.avatar_url || "https://via.placeholder.com/150"}
-    //         alt="User Avatar"
-    //         className="w-24 h-24 rounded-full border"
-    //       />
-    //       <div>
-    //         <h3 className="text-xl font-semibold">{user.username}</h3>
-    //         <p className="text-gray-600">{user.email}</p>
-    //       </div>
-    //     </div>
-    //     <div className="mt-6">
-    //       <h4 className="text-lg font-semibold">Additional Info</h4>
-    //       <p className="text-gray-700">Role: {user.role}</p>
-
-    //       {/* Thêm thông tin khác tại đây nếu cần */}
-    //     </div>
-    //   </div>
-    // </div>
-
     <div className="user-container">
       <div className="user-container-1">
         <div class="w-[223.50px] h-[73.64px] relative">

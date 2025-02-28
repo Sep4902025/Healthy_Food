@@ -21,6 +21,8 @@ import ChatWindow from "../components/Chat/ChatWindow";
 import ProtectedRoute from "../components/ProtectedRoute";
 import VerifyOtp from "../pages/auth/VerifyOtp";
 import ResetPassword from "../pages/auth/ResetPassword";
+import IngredientList from "../pages/ingredients/ingredientByType";
+import DishesList from "../pages/dishes/dishByType";
 
 const AppRoutes = () => {
   return (
@@ -66,6 +68,10 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+
+        <Route path="ingredients/:type" element={<IngredientList />} />
+        <Route path="dishes/:type" element={<DishesList />} />
+        
 
         {/* ✅ Bảo vệ trang chat, chỉ user mới vào được */}
         <Route
