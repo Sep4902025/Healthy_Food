@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { logoutUser } from "../../store/actions/authActions";
 import { selectUser } from "../../store/selectors/authSelectors";
 import UserChatButton from "../Chat/UserChatButton";
+import ReminderNotification from "../Reminder/ReminderNotifiaction";
 
 const MainLayout = () => {
   const navigate = useNavigate();
@@ -48,6 +49,7 @@ const MainLayout = () => {
           </div>
         </div>
       </header>
+      <ReminderNotification userId={user?._id} />
       {/* Main Content */}
       <main>
         <Outlet />

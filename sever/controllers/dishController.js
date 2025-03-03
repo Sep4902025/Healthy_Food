@@ -199,17 +199,17 @@ exports.filterIngredientsByType = async (req, res) => {
 // Create Recipe
 exports.createRecipe = async (req, res) => {
   try {
-    const { dish_id, ingredients, total_servings } = req.body;
+    const { dishId, ingredients, totalServings } = req.body;
 
-    // Kiểm tra xem dish_id có tồn tại không
-    const dish = await Dish.findById(dish_id);
+    // Kiểm tra xem dishId có tồn tại không
+    const dish = await Dish.findById(dishId);
     if (!dish) {
       return res.status(404).json({ status: "fail", message: "Dish not found" });
     }
 
     // Kiểm tra xem tất cả các ingredients có tồn tại không
     const ingredientsExist = await Ingredients.find({
-      _id: { $in: ingredients.map((ing) => ing.ingredient_id) },
+      _id: { $in: ingredients.map((ing) => ing.ingredientId) },
     });
     if (ingredientsExist.length !== ingredients.length) {
       return res.status(404).json({ status: "fail", message: "One or more ingredients not found" });
@@ -217,15 +217,15 @@ exports.createRecipe = async (req, res) => {
 
     // Tạo recipe mới
     const newRecipe = new Recipe({
-      dish_id,
+      dishId,
       ingredients,
-      total_servings,
+      totalServings,
     });
 
     await newRecipe.save();
 
     // Cập nhật recipe_id trong Dish
-    dish.recipe_id = newRecipe._id;
+    dish.recipeId = newRecipe._id;
     await dish.save();
 
     res.status(201).json({ status: "success", data: newRecipe });
@@ -238,7 +238,7 @@ exports.createRecipe = async (req, res) => {
 exports.getAllRecipes = async (req, res) => {
   try {
     const recipes = await Recipe.find()
-      .populate("dish_id ingredients.ingredient_id")
+      .populate("dishId ingredients.ingredientId")
       .where("isDelete")
       .equals(false); // Only fetch non-deleted recipes
 
@@ -251,7 +251,7 @@ exports.getAllRecipes = async (req, res) => {
 // Read Recipe by ID
 exports.getRecipeById = async (req, res) => {
   try {
-    const recipe = await Recipe.findById(req.params.recipeId).populate("ingredients.ingredient_id");
+    const recipe = await Recipe.findById(req.params.recipeId).populate("ingredients.ingredientId");
     if (!recipe) {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }

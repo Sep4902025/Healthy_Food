@@ -6,7 +6,7 @@ const ingredientSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    image_url: {
+    imageUrl: {
       type: String,
     },
     description: {
@@ -29,7 +29,7 @@ const ingredientSchema = new mongoose.Schema(
       enum: ["ml", "g", "tbsp", "tsp"], // Allowed units
       required: true,
     },
-    nutritional_info: {
+    nutritionalInfo: {
       type: String,
     },
     type: {
