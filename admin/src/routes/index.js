@@ -14,13 +14,15 @@ import TableUser from "../pages/admin/TableUser";
 import TableOrder from "../pages/admin/TableOrder";
 import NutritionistLayout from "../components/layouts/NutritionistLayout";
 import NutritionChat from "../pages/nutritionist/NutritionChat";
-import TableIngredient from "../pages/nutritionist/TableIngredient";
+import TableIngredient from "../pages/nutritionist/Ingredient Management/TableIngredient";
 import TableMealPlan from "../pages/nutritionist/TableMealPlan";
-import TableDishes from "../pages/nutritionist/TableDishes";
+import TableDishes from "../pages/nutritionist/Dishes Management/TableDishes";
+import AddDishes from "../pages/nutritionist/Dishes Management/AddDishes";
 import ChatWindow from "../components/Chat/ChatWindow";
 import ProtectedRoute from "../components/ProtectedRoute";
 import VerifyOtp from "../pages/auth/VerifyOtp";
 import ResetPassword from "../pages/auth/ResetPassword";
+import AddIngredient from "../pages/nutritionist/Ingredient Management/AddIngredient";
 
 const AppRoutes = () => {
   return (
@@ -93,17 +95,26 @@ const AppRoutes = () => {
 
       {/* ✅ Bảo vệ toàn bộ route nutritionist */}
       <Route
-        path="/nutritionist"
-        element={
+        path="/nutritionist" element={
           <ProtectedRoute allowedRoles={["nutritionist"]}>
             <NutritionistLayout />
           </ProtectedRoute>
         }
       >
         <Route path="chat" element={<NutritionChat />} />
-        <Route path="ingredient" element={<TableIngredient />} />
         <Route path="mealplan" element={<TableMealPlan />} />
-        <Route path="dishes" element={<TableDishes />} />
+        {/* <Route path="dishes" element={<TableDishes />} /> */}
+        <Route path="dishes" >
+          <Route index element={<TableDishes />} />
+          <Route path="add" element={<AddDishes />} />
+        </Route>
+
+        <Route path="ingredients" >
+          <Route index element={<TableIngredient />} />
+          <Route path="add" element={<AddIngredient />} />
+        </Route>
+
+
       </Route>
     </Routes>
   );

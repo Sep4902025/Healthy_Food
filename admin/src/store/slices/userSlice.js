@@ -4,7 +4,7 @@ const initialState = {
   _id: "",
   username: "",
   email: "",
-  avatar_url: "",
+  avatarUrl: "",
   role: "", //
   token: "",
   onlineUser: [],
@@ -19,7 +19,7 @@ export const userSlice = createSlice({
       state._id = action.payload._id;
       state.username = action.payload.username;
       state.email = action.payload.email;
-      state.avatar_url = action.payload.avatar_url;
+      state.avatarUrl = action.payload.avatarUrl;
       state.role = action.payload.role;
     },
     setToken: (state, action) => {
@@ -29,7 +29,7 @@ export const userSlice = createSlice({
       state._id = "";
       state.username = "";
       state.email = "";
-      state.avatar_url = "";
+      state.avatarUrl = "";
       state.role = "";
       state.token = "";
       state.socketConnection = null;
