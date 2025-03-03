@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { logoutUser } from "../../store/actions/authActions";
 import { selectUser } from "../../store/selectors/authSelectors";
 import UserChatButton from "../Chat/UserChatButton";
+import ReminderNotification from "../Reminder/ReminderNotifiaction";
 import Footer from "../../pages/user/footer/Footer";
 
 const MainLayout = () => {
@@ -47,7 +48,7 @@ const MainLayout = () => {
           </div>
         </div>
       </header>
-
+      <ReminderNotification userId={user?._id} />
       {/* Main Content */}
       <main className="flex-grow">
         <Outlet />
@@ -57,7 +58,7 @@ const MainLayout = () => {
       <Footer />
 
       {/* Chat button (chỉ hiển thị nếu là customer) */}
-      {user?.role === "customer" && <UserChatButton />}
+      {user?.role === "user" && <UserChatButton />}
     </div>
   );
 };
