@@ -80,6 +80,8 @@ io.on("connection", (socket) => {
 app.get("/", (req, res) => {
   res.send("Hello, CORS is working!");
 });
+
+// API endpoints
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/conversations", conversationRouter);
 app.use("/api/v1/dishes", dishRouter);

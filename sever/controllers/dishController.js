@@ -223,7 +223,6 @@ exports.createRecipe = async (req, res) => {
 
     // Kiểm tra xem dishId có tồn tại không
     const dish = await Dish.findById(dishId);
-
     if (!dish) {
       return res.status(404).json({ status: "fail", message: "Dish not found" });
     }
@@ -245,8 +244,8 @@ exports.createRecipe = async (req, res) => {
 
     await newRecipe.save();
 
-    // Cập nhật recipe_id trong Dish
-    dish.recipe_id = newRecipe._id;
+    // Cập nhật recipeId trong Dish
+    dish.recipeId = newRecipe._id;
     await dish.save();
 
     res.status(201).json({ status: "success", data: newRecipe });
@@ -272,7 +271,7 @@ exports.getAllRecipes = async (req, res) => {
 // Read Recipe by ID
 exports.getRecipeById = async (req, res) => {
   try {
-    const recipe = await Recipe.findById(req.params.recipeId).populate("ingredients.ingredientId");
+    const recipe = await Recipe.findById(req.params.recipeId).populate("ingredients.ingredient_id");
     if (!recipe) {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }
