@@ -41,9 +41,9 @@ const Term = () => {
         <div className="space-y-6">
           {terms.map((term) => (
             <div key={term._id} className="bg-white p-4 shadow-md rounded-lg">
-              {term.banner_url && (
+              {term.bannerUrl && (
                 <img
-                  src={term.banner_url}
+                  src={term.bannerUrl}
                   alt="Banner"
                   className="w-full h-32 object-cover rounded-md mb-4"
                 />

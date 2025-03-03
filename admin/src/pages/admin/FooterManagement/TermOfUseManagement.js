@@ -7,7 +7,7 @@ const TermOfUseManagement = () => {
     const [error, setError] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
     const [editData, setEditData] = useState(null);
-    const [formData, setFormData] = useState({ banner_url: "", content: "" });
+    const [formData, setFormData] = useState({ _id: "", bannerUrl: "", content: "" });
 
     useEffect(() => {
         fetchTerms();
@@ -24,53 +24,72 @@ const TermOfUseManagement = () => {
         setLoading(false);
     };
 
-    const handleToggleVisibility = async (id, isCurrentlyDeleted) => {
-        const newStatus = !isCurrentlyDeleted;
-        await termService.updateTerm(id, { isDeleted: newStatus });
-        fetchTerms();
+    const handleToggleVisibility = async (term) => {
+        const updatedTerm = { 
+            ...term, 
+            isVisible: !term.isVisible, 
+            isDeleted: term.isDeleted || false // ✅ Đảm bảo có đầy đủ dữ liệu
+        };
+    
+        const response = await termService.updateTerm(term._id, updatedTerm);
+        
+        if (response.success) {
+            setTerms(terms.map(t => (t._id === term._id ? { ...t, isVisible: !t.isVisible } : t)));
+        } else {
+            console.error("Lỗi khi cập nhật trạng thái hiển thị:", response.message);
+        }
     };
 
     const handleHardDelete = async (id) => {
         if (window.confirm("Bạn có chắc chắn muốn xóa vĩnh viễn điều khoản này?")) {
-            await termService.hardDeleteTerm(id);
-            fetchTerms();
+            const response = await termService.hardDeleteTerm(id);
+            if (response.success) {
+                setTerms(terms.filter(term => term._id !== id)); // ✅ Cập nhật UI ngay lập tức
+            } else {
+                console.error("Lỗi khi xóa:", response.message);
+            }
         }
     };
 
     const handleOpenModal = (item = null) => {
         if (item) {
             setEditData(item);
-            setFormData({ banner_url: item.banner_url, content: item.content });
+            setFormData({ _id: item._id, bannerUrl: item.bannerUrl, content: item.content });
         } else {
             setEditData(null);
-            setFormData({ banner_url: "", content: "" });
+            setFormData({ _id: "", bannerUrl: "", content: "" });
         }
         setModalOpen(true);
     };
 
     const handleSave = async () => {
-        if (!formData.banner_url.trim()) {
-            alert("Banner không được để trống!");
+        if (!formData.bannerUrl || !formData.content) {
+            console.error("Lỗi: Vui lòng nhập đầy đủ thông tin");
             return;
         }
-        if (!formData.content.trim()) {
-            alert("Nội dung không được để trống!");
-            return;
-        }
-
+    
+        let response;
         if (editData) {
-            await termService.updateTerm(editData._id, formData);
+            response = await termService.updateTerm(editData._id, formData);
+            if (response.success) {
+                setTerms(terms.map(t => (t._id === editData._id ? { ...formData, _id: editData._id } : t)));
+            }
         } else {
-            const result = await termService.createTerm(formData);
-            if (!result.success) {
-                alert(result.message);
-                return;
+            response = await termService.createTerm(formData);
+            if (response.success) {
+                setTerms([...terms, response.data]);
             }
         }
-
+    
+        if (!response.success) {
+            console.error("Lỗi:", response.message);
+        }
+    
         setModalOpen(false);
-        fetchTerms();
+        setEditData(null);
+        setFormData({ _id: "", bannerUrl: "", content: "" });
     };
+    
 
     return (
         <div className="container mx-auto px-6 py-12">
@@ -103,7 +122,7 @@ const TermOfUseManagement = () => {
                                     <td className="p-2">{index + 1}</td>
                                     <td className="p-2">
                                         <img
-                                            src={item.banner_url}
+                                            src={item.bannerUrl}
                                             alt="Banner"
                                             className="w-20 h-12 object-cover rounded"
                                         />
@@ -118,12 +137,11 @@ const TermOfUseManagement = () => {
                                                 Sửa
                                             </button>
                                             <button
-                                                className={`px-2 py-1 text-white rounded ${
-                                                    item.isDeleted ? "bg-gray-500 hover:bg-gray-600" : "bg-yellow-500 hover:bg-yellow-600"
-                                                }`}
-                                                onClick={() => handleToggleVisibility(item._id, item.isDeleted)}
+                                                className={`px-2 py-1 text-white rounded transition ${item.isVisible ? "bg-gray-500" : "bg-green-500"
+                                                    }`}
+                                                onClick={() => handleToggleVisibility(item)}
                                             >
-                                                {item.isDeleted ? "Đã ẩn" : "Ẩn"}
+                                                {item.isVisible ? "Ẩn" : "Hiện"}
                                             </button>
                                             <button
                                                 className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
@@ -156,9 +174,8 @@ const TermOfUseManagement = () => {
                         <input
                             type="text"
                             className="w-full border p-2 mb-4"
-                            value={formData.banner_url}
-                            onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
-                            placeholder="Nhập URL ảnh hoặc để trống nếu không thay đổi"
+                            value={formData.bannerUrl}
+                            onChange={(e) => setFormData({ ...formData, bannerUrl: e.target.value })}
                         />
 
                         <label className="block mb-2">Nội dung:</label>

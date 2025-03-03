@@ -37,16 +37,6 @@ exports.updateContactUs = async (req, res) => {
     }
 };
 
-// Xóa mềm Contact Us
-exports.softDeleteContactUs = async (req, res) => {
-    const { id } = req.params;
-    try {
-        await ContactUs.findByIdAndUpdate(id, { isDeleted: true });
-        res.status(200).json({ status: "success", message: "Contact Us đã được xóa mềm" });
-    } catch (error) {
-        res.status(500).json({ status: "error", error: "Lỗi xóa mềm Contact Us" });
-    }
-};
 
 // Xóa cứng Contact Us
 exports.hardDeleteContactUs = async (req, res) => {

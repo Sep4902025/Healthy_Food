@@ -45,15 +45,6 @@ const aboutService = {
     }
   },
 
-  deleteAboutUs: async (id) => {
-    try {
-      await axios.delete(`${API_URL}/about/${id}`);
-      return { success: true };
-    } catch (error) {
-      return { success: false, message: "Xóa mềm thất bại!" };
-    }
-  },
-
   hardDeleteAboutUs: async (id) => {
     try {
       await axios.delete(`${API_URL}/about/hard/${id}`);

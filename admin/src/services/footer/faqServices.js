@@ -40,14 +40,6 @@ const faqServices = {
         }
     },
 
-    deleteFAQ: async (id) => {
-        try {
-            await axios.delete(`${API_URL}/faqs/${id}`);
-            return { success: true };
-        } catch (error) {
-            return { success: false, message: "Xóa mềm thất bại!" };
-        }
-    },
 
     hardDeleteFAQ: async (id) => {
         try {

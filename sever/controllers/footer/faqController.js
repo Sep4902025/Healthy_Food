@@ -44,16 +44,6 @@ exports.updateFAQ = async (req, res) => {
   }
 };
 
-// Xóa FAQ
-exports.softDeleteFAQ = async (req, res) => {
-  const { id } = req.params;
-  try {
-    await FAQ.findByIdAndUpdate(id, { isDeleted: true });
-    res.status(200).json({ status: "success", message: "FAQ đã được xóa mềm" });
-  } catch (error) {
-    res.status(500).json({ status: "error", message: "Lỗi xóa mềm FAQ" });
-  }
-};
 
 exports.hardDeleteFAQ = async (req, res) => {
   const { id } = req.params;

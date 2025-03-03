@@ -52,7 +52,7 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    avatar_url: {
+    avatarUrl: {
       type: String,
       default: null,
     },
@@ -61,7 +61,7 @@ const userSchema = new mongoose.Schema(
       enum: ["admin", "customer", "nutritionist"],
       default: "customer",
     },
-    user_preference_id: {
+    userPreferenceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "UserPreference",
       default: null,

@@ -197,7 +197,7 @@ exports.googleLogin = catchAsync(async (req, res, next) => {
     user = await UserModel.create({
       username: name,
       email,
-      avatar_url: picture,
+      avatarUrl: picture,
       googleId: sub, // Lưu Google ID để tránh yêu cầu password
     });
   }

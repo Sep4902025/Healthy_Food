@@ -24,10 +24,15 @@ const FAQsManagement = () => {
         setLoading(false);
     };
 
-    const handleToggleVisibility = async (id, isCurrentlyDeleted) => {
-        const newStatus = !isCurrentlyDeleted;
-        await faqService.updateFAQ(id, { isDeleted: newStatus });
-        fetchFAQs();
+    const handleToggleVisibility = async (faqs) => {
+        const updatedFAQ = { ...faqs, isVisible: !faqs.isVisible };
+        const response = await faqService.updateFAQ(faqs._id, updatedFAQ);
+        
+        if (response.success) {
+            fetchFAQs(); // Cập nhật lại danh sách trên trang quản lý
+        } else {
+            console.error("Lỗi khi cập nhật trạng thái hiển thị:", response.message);
+        }
     };
 
     const handleHardDelete = async (id) => {
@@ -118,12 +123,11 @@ const FAQsManagement = () => {
                                                 Sửa
                                             </button>
                                             <button
-                                                className={`px-2 py-1 text-white rounded ${
-                                                    item.isDeleted ? "bg-gray-500 hover:bg-gray-600" : "bg-yellow-500 hover:bg-yellow-600"
-                                                }`}
-                                                onClick={() => handleToggleVisibility(item._id, item.isDeleted)}
+                                                className={`px-2 py-1 text-white rounded transition ${item.isVisible ? "bg-gray-500" : "bg-green-500"
+                                                    }`}
+                                                onClick={() => handleToggleVisibility(item)}
                                             >
-                                                {item.isDeleted ? "Đã ẩn" : "Ẩn"}
+                                                {item.isVisible ? "Ẩn" : "Hiện"}
                                             </button>
                                             <button
                                                 className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"

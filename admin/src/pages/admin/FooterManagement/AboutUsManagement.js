@@ -7,7 +7,7 @@ const AboutUsManagement = () => {
     const [error, setError] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
     const [editData, setEditData] = useState(null);
-    const [formData, setFormData] = useState({ banner_url: "", content: "" });
+    const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
 
     useEffect(() => {
         fetchAboutUs();
@@ -24,11 +24,18 @@ const AboutUsManagement = () => {
         setLoading(false);
     };
 
-    const handleToggleVisibility = async (id, isCurrentlyDeleted) => {
-        const newStatus = !isCurrentlyDeleted; // Đảo trạng thái
-        await aboutService.updateAboutUs(id, { isDeleted: newStatus });
-        fetchAboutUs(); // Cập nhật lại danh sách
+    const handleToggleVisibility = async (about) => {
+        const updatedAbout = { ...about, isVisible: !about.isVisible };
+        const response = await aboutService.updateAboutUs(about._id, updatedAbout);
+        
+        if (response.success) {
+            fetchAboutUs(); // Cập nhật lại danh sách trên trang quản lý
+        } else {
+            console.error("Lỗi khi cập nhật trạng thái hiển thị:", response.message);
+        }
     };
+    
+
 
     const handleHardDelete = async (id) => {
         if (window.confirm("Bạn có chắc chắn muốn xóa vĩnh viễn mục này?")) {
@@ -40,16 +47,16 @@ const AboutUsManagement = () => {
     const handleOpenModal = (item = null) => {
         if (item) {
             setEditData(item);
-            setFormData({ banner_url: item.banner_url, content: item.content });
+            setFormData({ bannerUrl: item.bannerUrl, content: item.content });
         } else {
             setEditData(null);
-            setFormData({ banner_url: "", content: "" });
+            setFormData({ bannerUrl: "", content: "" });
         }
         setModalOpen(true);
     };
 
     const handleSave = async () => {
-        if (!formData.banner_url.trim()) {
+        if (!formData.bannerUrl.trim()) {
             alert("Banner không được để trống!");
             return;
         }
@@ -57,7 +64,7 @@ const AboutUsManagement = () => {
             alert("Nội dung không được để trống!");
             return;
         }
-    
+
         if (editData) {
             await aboutService.updateAboutUs(editData._id, formData);
         } else {
@@ -67,7 +74,7 @@ const AboutUsManagement = () => {
                 return;
             }
         }
-    
+
         setModalOpen(false);
         fetchAboutUs();
     };
@@ -102,36 +109,37 @@ const AboutUsManagement = () => {
                                     <td className="p-2">{index + 1}</td>
                                     <td className="p-2">
                                         <img
-                                            src={item.banner_url}
+                                            src={item.bannerUrl}
                                             alt="Banner"
                                             className="w-20 h-12 object-cover rounded"
                                         />
                                     </td>
                                     <td className="p-2 text-left">{item.content}</td>
                                     <td className="p-2">
-    <div className="flex justify-center space-x-2">
-        <button
-            className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-            onClick={() => handleOpenModal(item)}
-        >
-            Sửa
-        </button>
-        <button
-            className={`px-2 py-1 text-white rounded ${
-                item.isDeleted ? "bg-gray-500 hover:bg-gray-600" : "bg-yellow-500 hover:bg-yellow-600"
-            }`}
-            onClick={() => handleToggleVisibility(item._id, item.isDeleted)}
-        >
-            {item.isDeleted ? "Đã ẩn" : "Ẩn"}
-        </button>
-        <button
-            className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-            onClick={() => handleHardDelete(item._id)}
-        >
-            Xóa vĩnh viễn
-        </button>
-    </div>
-</td>
+                                        <div className="flex justify-center space-x-2">
+                                            <button
+                                                className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                onClick={() => handleOpenModal(item)}
+                                            >
+                                                Sửa
+                                            </button>
+                                            <button
+                                                className={`px-2 py-1 text-white rounded transition ${item.isVisible ? "bg-gray-500" : "bg-green-500"
+                                                    }`}
+                                                onClick={() => handleToggleVisibility(item)}
+                                            >
+                                                {item.isVisible ? "Ẩn" : "Hiện"}
+                                            </button>
+
+
+                                            <button
+                                                className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                                                onClick={() => handleHardDelete(item._id)}
+                                            >
+                                                Xóa vĩnh viễn
+                                            </button>
+                                        </div>
+                                    </td>
 
                                 </tr>
                             ))
@@ -156,8 +164,8 @@ const AboutUsManagement = () => {
                         <input
                             type="text"
                             className="w-full border p-2 mb-4"
-                            value={formData.banner_url}
-                            onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
+                            value={formData.bannerUrl}
+                            onChange={(e) => setFormData({ ...formData, bannerUrl: e.target.value })}
                             placeholder="Nhập URL ảnh hoặc để trống nếu không thay đổi"
                         />
 

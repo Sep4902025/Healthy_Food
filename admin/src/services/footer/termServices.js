@@ -15,51 +15,40 @@ const termService = {
             return {
                 success: true,
                 data: response.data.data.map((item) => ({
-                    banner_url: item.banner_url || "",
-                    content: String(item.content || ""),
+                    _id: item._id,  // ✅ Thêm ID để sử dụng trong cập nhật
+                    bannerUrl: item.bannerUrl || "",
+                    content: item.content || "",
+                    isVisible: item.isVisible || false,
                 })),
             };
         } catch (error) {
             console.error("Lỗi khi gọi API Term:", error);
             return {
                 success: false,
-                message: error.response?.data?.error || "Không thể kết nối đến API",
+                message: error.response?.data?.message || "Không thể kết nối đến API",
             };
         }
     },
 
     createTerm: async (data) => {
         try {
-            console.log("Dữ liệu gửi lên API:", data);
             const response = await axios.post(`${API_URL}/terms`, data);
-            console.log("Phản hồi từ server:", response.data);
-            return { success: true };
+            return { success: true, data: response.data };
         } catch (error) {
-            console.error("Lỗi khi gọi API:", error.response?.data || error.message);
-
-            if (error.response?.status === 400) {
-                return { success: false, message: error.response.data.error };
-            }
-
+            console.error("Lỗi khi tạo mới:", error.response?.data || error.message);
             return { success: false, message: "Thêm mới thất bại!" };
         }
     },
 
-    updateTerm: async (id, data) => {
-        try {
-            await axios.put(`${API_URL}/terms/${id}`, data);
-            return { success: true };
-        } catch (error) {
-            return { success: false, message: "Cập nhật thất bại!" };
-        }
-    },
+    updateTerm: async (id, termData) => {
+        if (!id) return { success: false, message: "ID không hợp lệ" };
 
-    deleteTerm: async (id) => {
         try {
-            await axios.delete(`${API_URL}/terms/${id}`);
-            return { success: true };
+            const response = await axios.put(`${API_URL}/terms/${id}`, termData);
+            return { success: true, data: response.data };
         } catch (error) {
-            return { success: false, message: "Xóa mềm thất bại!" };
+            console.error("Lỗi khi cập nhật term:", error.response?.data || error.message);
+            return { success: false, message: "Không thể cập nhật Term" };
         }
     },
 
@@ -68,7 +57,8 @@ const termService = {
             await axios.delete(`${API_URL}/terms/hard/${id}`);
             return { success: true };
         } catch (error) {
-            return { success: false, message: "Xóa vĩnh viễn thất bại!" };
+            console.error("Lỗi khi xóa:", error.response?.data || error.message);
+            return { success: false, message: "Xóa thất bại!" };
         }
     },
 };

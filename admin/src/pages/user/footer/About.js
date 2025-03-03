@@ -30,10 +30,10 @@ const AboutPage = () => {
       {aboutData.length > 0 ? (
         aboutData.map((item, index) => (
           <div key={index} className="bg-white shadow-lg rounded-lg overflow-hidden mb-10">
-            {item.banner_url && (
+            {item.bannerUrl && (
               <div className="relative h-80">
                 <img
-                  src={item.banner_url}
+                  src={item.bannerUrl}
                   alt="About Us Banner"
                   className="w-full h-full object-cover"
                 />
