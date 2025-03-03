@@ -52,16 +52,16 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    avatar_url: {
+    avatarUrl: {
       type: String,
       default: null,
     },
     role: {
       type: String,
-      enum: ["admin", "customer", "nutritionist"],
-      default: "customer",
+      enum: ["admin", "user", "nutritionist"],
+      default: "user",
     },
-    user_preference_id: {
+    userPreferenceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "UserPreference",
       default: null,

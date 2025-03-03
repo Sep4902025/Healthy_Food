@@ -51,7 +51,7 @@ const ChatWindow = ({ conversation }) => {
 
     const interval = setInterval(() => {
       refreshMessages();
-    }, 10000);
+    }, 10000); // đổi time reset ở đây
 
     return () => clearInterval(interval);
   }, [conversation?._id]);
