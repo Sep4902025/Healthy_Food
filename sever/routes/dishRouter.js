@@ -7,6 +7,7 @@ const {
   getDishById,
   getAllDishes,
   deleteDish,
+  getDishByType,
   createRecipe,
   updateRecipe,
   getRecipeById,
@@ -19,7 +20,7 @@ dishRouter.get("/", getAllDishes); // Get all dishes
 dishRouter.get("/:dishId", getDishById); // Get dish by ID
 dishRouter.put("/:dishId", updateDish); // Update dish
 dishRouter.delete("/:dishId", deleteDish); // Delete dish
-// dishRouter.get("/type/:type", getDishByType); // Get dish by type
+dishRouter.get("/type/:type", getDishByType); // Get dish by type
 
 // Recipe Routes
 dishRouter.post("/recipes", createRecipe); // Create a new recipe

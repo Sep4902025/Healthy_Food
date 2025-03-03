@@ -10,20 +10,20 @@ const dishSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    image_url: {
+    imageUrl: {
       type: String,
       default: null,
     },
-    video_url: {
+    videoUrl: {
       type: String,
       default: null,
     },
-    recipe_id: {
+    recipeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Recipe",
       required: false,
     },
-    cooking_time: {
+    cookingTime: {
       type: String,
       required: false,
     },

@@ -31,8 +31,8 @@ const MainLayout = () => {
               {user && (
                 <>
                   <div className="flex items-center space-x-3">
-                    {user.avatar_url && (
-                      <img src={user.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full" />
+                    {user.avatarUrl && (
+                      <img src={user.avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full" />
                     )}
                     <span className="text-gray-700">Xin chào, {user.username}</span>
                   </div>
