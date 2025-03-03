@@ -60,7 +60,7 @@ const MainLayout = () => {
           <p className="text-center text-gray-600">© 2025 Your Company. All rights reserved.</p>
         </div>
       </footer>
-      {user?.role === "customer" && <UserChatButton />}
+      {user?.role === "user" && <UserChatButton />}
     </div>
   );
 };

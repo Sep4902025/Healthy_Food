@@ -34,7 +34,7 @@ const ReminderNotification = ({ userId }) => {
   console.log("REMINDER SOCKET", reminders);
 
   return (
-    <div className="fixed top-4 right-4 p-4">
+    <div className="fixed top-10 right-5 p-4">
       {reminders.length > 0 ? (
         <div className="bg-white shadow-lg rounded-lg p-4 w-80">
           <div className="flex justify-between items-center mb-2">

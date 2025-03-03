@@ -161,7 +161,7 @@ const UserChatButton = () => {
       {isOpen && (
         <div className="fixed bottom-20 right-4 w-[380px] bg-white rounded-lg shadow-xl z-40">
           {currentConversation ? (
-            <ChatWindow conversation={currentConversation} isCustomer={true} />
+            <ChatWindow conversation={currentConversation} />
           ) : user?._id ? (
             <StartChatForm onSubmit={handleStartChat} onClose={() => setIsOpen(false)} />
           ) : (
