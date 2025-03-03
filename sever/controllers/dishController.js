@@ -40,7 +40,7 @@ exports.getDishById = async (req, res) => {
 exports.getDishByType = async (req, res) => {
   try {
     const { type } = req.params;
-    
+
     // Lấy danh sách món ăn có type tương ứng (chưa bị xóa mềm)
     const dishes = await Dish.find({ type, isDelete: false });
 
@@ -77,7 +77,6 @@ exports.deleteDish = async (req, res) => {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
-
 
 // Ingredients CRUD Operations
 
@@ -140,9 +139,13 @@ exports.getIngredientById = async (req, res) => {
 // Update Ingredient
 exports.updateIngredient = async (req, res) => {
   try {
-    const updatedIngredient = await Ingredients.findByIdAndUpdate(req.params.ingredientId, req.body, {
-      new: true,
-    });
+    const updatedIngredient = await Ingredients.findByIdAndUpdate(
+      req.params.ingredientId,
+      req.body,
+      {
+        new: true,
+      }
+    );
     if (!updatedIngredient)
       return res.status(404).json({ status: "fail", message: "Ingredient not found" });
 
@@ -168,7 +171,6 @@ exports.deleteIngredient = async (req, res) => {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
-
 
 // Search Ingredients by name
 exports.searchIngredientsByName = async (req, res) => {
@@ -221,6 +223,7 @@ exports.createRecipe = async (req, res) => {
 
     // Kiểm tra xem dishId có tồn tại không
     const dish = await Dish.findById(dishId);
+
     if (!dish) {
       return res.status(404).json({ status: "fail", message: "Dish not found" });
     }
@@ -242,8 +245,8 @@ exports.createRecipe = async (req, res) => {
 
     await newRecipe.save();
 
-    // Cập nhật recipeId trong Dish
-    dish.recipeId = newRecipe._id;
+    // Cập nhật recipe_id trong Dish
+    dish.recipe_id = newRecipe._id;
     await dish.save();
 
     res.status(201).json({ status: "success", data: newRecipe });

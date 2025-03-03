@@ -1,12 +1,12 @@
 import io from "socket.io-client";
-import axios from "axios";
 import api from "./api";
 
-// Tách API_URL và SOCKET_URL từ env
-const API_URL = process.env.REACT_APP_API_URL;
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
 console.log("SOCKET_URL", SOCKET_URL);
 
+// Lấy token từ localStorage
+const token = localStorage.getItem("token");
+console.log("🔍 Token trước khi gửi:", token);
 // Cấu hình socket với options
 const socket = io(SOCKET_URL, {
   path: "/socket.io",
@@ -17,6 +17,9 @@ const socket = io(SOCKET_URL, {
   // Thêm các options để tránh duplicate messages
   forceNew: true,
   multiplex: false,
+  auth: {
+    token: token, // 🛠 Truyền token vào auth
+  },
 });
 
 // Thêm log để debug socket
@@ -42,7 +45,13 @@ const ChatService = {
 
     return socket;
   },
-
+  // ⬇️ Thêm hàm disconnect
+  disconnectSocket: () => {
+    if (socket.connected) {
+      console.log("🔌 Disconnecting socket...");
+      socket.disconnect();
+    }
+  },
   // Lấy tin nhắn trong một cuộc trò chuyện
   getMessages: (conversationId) => {
     return api.get(`/conversations/${conversationId}/messages`);

@@ -58,8 +58,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "customer", "nutritionist"],
-      default: "customer",
+      enum: ["admin", "user", "nutritionist"],
+      default: "user",
     },
     userPreferenceId: {
       type: mongoose.Schema.Types.ObjectId,
