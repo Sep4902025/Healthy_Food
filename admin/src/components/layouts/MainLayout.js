@@ -8,6 +8,8 @@ import UserChatButton from "../Chat/UserChatButton";
 import { FaSearch } from "react-icons/fa";
 import logo from "../../assets/images/Logo.png";
 import HomeService from "../../services/home.service";
+import ReminderNotification from "../Reminder/ReminderNotifiaction";
+import Footer from "../../pages/user/footer/Footer";
 
 const MainLayout = () => {
   const navigate = useNavigate();
@@ -100,25 +102,22 @@ const MainLayout = () => {
           {/* Auth Button */}
           {user ? (
             <div className="flex items-center space-x-4">
-              {user.avatar_url && (
+              {user.avatarUrl && (
                 <img
-                  src={user.avatar_url}
+                  src={user.avatarUrl}
                   alt="Avatar"
                   className="w-10 h-10 rounded-full cursor-pointer"
                   onClick={() => navigate("/user")}
                 />
               )}
-              <span
-                className="text-gray-700 cursor-pointer"
-                onClick={() => navigate("/user")}
-              >
+              <span className="text-gray-700 cursor-pointer" onClick={() => navigate("/user")}>
                 {user.username}
               </span>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
               >
-                Logout
+                SignOut
               </button>
             </div>
           ) : (
@@ -126,7 +125,7 @@ const MainLayout = () => {
               onClick={() => navigate("/signin")}
               className="px-4 py-2 bg-green-800 text-white rounded-lg hover:bg-green-900 transition"
             >
-              Register/Login
+              SignUp/SignIn
             </button>
           )}
         </div>
@@ -158,9 +157,7 @@ const MainLayout = () => {
                     </li>
                   ))
                 ) : (
-                  <li className="px-4 py-2 text-gray-500">
-                    No categories available
-                  </li>
+                  <li className="px-4 py-2 text-gray-500">No categories available</li>
                 )}
               </ul>
             )}
@@ -190,27 +187,24 @@ const MainLayout = () => {
                     </li>
                   ))
                 ) : (
-                  <li className="px-4 py-2 text-gray-500">
-                    No dish type available
-                  </li>
+                  <li className="px-4 py-2 text-gray-500">No dish type available</li>
                 )}
               </ul>
             )}
           </div>
         </div>
       </header>
-
+      <ReminderNotification userId={user?._id} />
       {/* Main Content */}
       <main className="container mx-auto py-6 px-6">
         <Outlet />
       </main>
 
       {/* Footer */}
-      <footer className="bg-white shadow-md py-4 mt-auto text-center text-gray-600">
-        © 2025 Your Company. All rights reserved.
-      </footer>
+      <Footer />
 
-      {user?.role === "customer" && <UserChatButton />}
+      {/* Chat button (chỉ hiển thị nếu là customer) */}
+      {user?.role === "user" && <UserChatButton />}
     </div>
   );
 };
