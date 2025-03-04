@@ -45,7 +45,7 @@ const Home = () => {
         </div>
 
         <div className="cate-container">
-          <h1 className="cate-title">Popular Categories</h1>
+          <h1 className="cate-title">Popular Dishes</h1>
           <div className="cate-list">
             <div className="cate-item">
               <div className="center-con">
@@ -187,7 +187,7 @@ const Home = () => {
 
   return (
     <div className="w-full">
-      <p>helllllooo</p>
+      <p>You must be login to see out product</p>
     </div>
   );
 };

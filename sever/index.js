@@ -13,6 +13,7 @@ const conversationRouter = require("./routes/conversationRouter");
 const dishRouter = require("./routes/dishRouter");
 const ingredientRouter = require("./routes/ingredientRouter");
 const homeRouter = require("./routes/homeRouter");
+const uRouter = require("./routes/uRouter");
 
 // Tạo server HTTP
 const server = http.createServer(app);
@@ -71,6 +72,7 @@ app.use("/api/v1/conversations", conversationRouter);
 app.use("/api/v1/dishes", dishRouter);
 app.use("/api/v1/ingredients", ingredientRouter);
 app.use("/api/v1/home", homeRouter);
+app.use("/api/v1/user", uRouter);
 
 // Users api urls
 app.all("*", (req, res, next) => {

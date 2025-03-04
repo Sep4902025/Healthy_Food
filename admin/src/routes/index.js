@@ -23,6 +23,7 @@ import VerifyOtp from "../pages/auth/VerifyOtp";
 import ResetPassword from "../pages/auth/ResetPassword";
 import IngredientList from "../pages/ingredients/ingredientByType";
 import DishesList from "../pages/dishes/dishByType";
+import RecipeView from "../pages/recipe/ViewRecipe";
 
 const AppRoutes = () => {
   return (
@@ -111,6 +112,9 @@ const AppRoutes = () => {
         <Route path="mealplan" element={<TableMealPlan />} />
         <Route path="dishes" element={<TableDishes />} />
       </Route>
+
+      {/* Router recipe */}
+      <Route path="recipes" element={<RecipeView />} />
     </Routes>
   );
 };
