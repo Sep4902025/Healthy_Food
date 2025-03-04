@@ -9,9 +9,9 @@ const {
   deleteDish,
   getDishByType,
   createRecipe,
-  updateRecipe,
+  updateRecipeById,
   getRecipeById,
-  getAllRecipes,
+  deleteRecipeById,
 } = require("../controllers/dishController");
 
 // Dish Routes
@@ -24,8 +24,8 @@ dishRouter.get("/type/:type", getDishByType); // Get dish by type
 
 // Recipe Routes
 dishRouter.post("/recipes", createRecipe); // Create a new recipe
-dishRouter.get("/recipes", getAllRecipes); // Get all recipes
 dishRouter.get("/recipes/:recipeId", getRecipeById); // Get recipe by ID
-dishRouter.put("/recipes/:recipeId", updateRecipe); // Update recipe
+dishRouter.put("/recipes/:recipeId", updateRecipeById); // Update recipe
+dishRouter.delete("/recipes/:recipeId", deleteRecipeById); // Update recipe
 
 module.exports = dishRouter;
