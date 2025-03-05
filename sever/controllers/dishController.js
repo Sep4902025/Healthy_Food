@@ -271,7 +271,7 @@ exports.getAllRecipes = async (req, res) => {
 // Read Recipe by ID
 exports.getRecipeById = async (req, res) => {
   try {
-    const recipe = await Recipe.findById(req.params.recipeId).populate("ingredients.ingredient_id");
+    const recipe = await Recipe.findById(req.params.recipeId).populate("dishId ingredients.ingredientId");
     if (!recipe) {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }
