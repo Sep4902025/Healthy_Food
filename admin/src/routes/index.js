@@ -45,6 +45,8 @@ const AppRoutes = () => {
         <Route path="verify" element={<VerifyOtp />} />
         <Route path="forget-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
+        {/* Router recipe */}
+        <Route path="recipes" element={<RecipeView />} />
 
         {/* Các route cần đăng nhập */}
         <Route
@@ -140,8 +142,7 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-      {/* Router recipe */}
-      <Route path="recipes" element={<RecipeView />} />
+      
     </Routes>
   );
 };
