@@ -20,6 +20,12 @@ const reminderRouter = require("./routes/reminderRouter");
 const jobRouter = require("./routes/jobRouter");
 const footerRouter = require("./routes/footerRoutes");
 const homeRouter = require("./routes/homeRouter");
+const commentRatingRouter = require("./routes/commentRatingRouter");
+const medicalConditionRouter = require("./routes/medicalConditionRouter"); 
+const userFavoriteDishesRouter = require("./routes/userFavoriteDishesRouter"); 
+
+
+
 const uRouter = require("./routes/uRouter");
 
 const app = express();
@@ -95,6 +101,13 @@ app.use("/api/v1/jobs", jobRouter);
 app.use("/api/v1/footer", footerRouter);
 app.use("/api/v1/home", homeRouter);
 app.use("/api/v1/user", uRouter);
+app.use("/api/v1", commentRatingRouter);
+app.use("/api/v1/recipe", commentRatingRouter);
+app.use("/api/v1/medicalConditions", medicalConditionRouter);
+app.use("/api/v1/favoriteDishes", userFavoriteDishesRouter);
+
+
+
 
 // Xử lý route không tồn tại
 app.all("*", (req, res, next) => {
