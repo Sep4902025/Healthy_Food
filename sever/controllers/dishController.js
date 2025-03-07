@@ -217,34 +217,19 @@ exports.filterIngredientsByType = async (req, res) => {
 // Recipe CRUD Operations
 
 // Create Recipe
+// Create Recipe
 exports.createRecipe = async (req, res) => {
   try {
-    const { dishId, ingredients, totalServings } = req.body;
-
-    // Kiểm tra xem dishId có tồn tại không
-    const dish = await Dish.findById(dishId);
+    // 1️⃣ Kiểm tra xem Dish có tồn tại không
+    const dish = await Dish.findById(req.body.dishId);
     if (!dish) {
       return res.status(404).json({ status: "fail", message: "Dish not found" });
     }
 
-    // Kiểm tra xem tất cả các ingredients có tồn tại không
-    const ingredientsExist = await Ingredients.find({
-      _id: { $in: ingredients.map((ing) => ing.ingredientId) },
-    });
-    if (ingredientsExist.length !== ingredients.length) {
-      return res.status(404).json({ status: "fail", message: "One or more ingredients not found" });
-    }
+    // 2️⃣ Tạo Recipe
+    const newRecipe = await Recipe.create(req.body);
 
-    // Tạo recipe mới
-    const newRecipe = new Recipe({
-      dishId,
-      ingredients,
-      totalServings,
-    });
-
-    await newRecipe.save();
-
-    // Cập nhật recipeId trong Dish
+    // 3️⃣ Cập nhật recipeId trong Dish
     dish.recipeId = newRecipe._id;
     await dish.save();
 
@@ -254,43 +239,43 @@ exports.createRecipe = async (req, res) => {
   }
 };
 
-// Read all Recipes
-exports.getAllRecipes = async (req, res) => {
-  try {
-    const recipes = await Recipe.find()
-      .populate("dishId ingredients.ingredientId")
-      .where("isDelete")
-      .equals(false); // Only fetch non-deleted recipes
-
-    res.status(200).json({ status: "success", data: recipes });
-  } catch (error) {
-    res.status(500).json({ status: "fail", message: error.message });
-  }
-};
-
-// Read Recipe by ID
+// Read Recipe
 exports.getRecipeById = async (req, res) => {
   try {
-    const recipe = await Recipe.findById(req.params.recipeId).populate("dishId ingredients.ingredientId");
+    const recipe = await Recipe.findById(req.params.recipeId).populate("dishId");
     if (!recipe) {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }
     res.status(200).json({ status: "success", data: recipe });
   } catch (error) {
-    res.status(500).json({ status: "fail", message: error.message });
+    res.status(400).json({ status: "fail", message: error.message });
   }
 };
 
 // Update Recipe
-exports.updateRecipe = async (req, res) => {
+exports.updateRecipeById = async (req, res) => {
   try {
     const updatedRecipe = await Recipe.findByIdAndUpdate(req.params.recipeId, req.body, {
       new: true,
+      runValidators: true,
     });
     if (!updatedRecipe) {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }
     res.status(200).json({ status: "success", data: updatedRecipe });
+  } catch (error) {
+    res.status(400).json({ status: "fail", message: error.message });
+  }
+};
+
+// Delete Recipe
+exports.deleteRecipeById = async (req, res) => {
+  try {
+    const recipe = await Recipe.findByIdAndDelete(req.params.recipeId);
+    if (!recipe) {
+      return res.status(404).json({ status: "fail", message: "Recipe not found" });
+    }
+    res.status(204).json({ status: "success", message: "Recipe deleted" });
   } catch (error) {
     res.status(400).json({ status: "fail", message: error.message });
   }

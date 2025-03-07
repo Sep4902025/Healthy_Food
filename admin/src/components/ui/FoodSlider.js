@@ -6,10 +6,16 @@ import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import HomeService from "../../services/home.service";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 const FoodSlider = ({ userId, dishes = [] }) => {
   const swiperRef = useRef(null);
   const [likedFoods, setLikedFoods] = useState([]);
+  const navigate = useNavigate();
+
+  const handleFoodClick = (dishId) => {
+    navigate(`/dishes/${dishId}`);
+  };
 
   // 🟢 Lấy danh sách món yêu thích khi component mount
   useEffect(() => {
@@ -75,7 +81,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
       >
         {dishes.map((food) => (
           <SwiperSlide key={food._id}>
-            <div className="food-item">
+            <div className="food-item" onClick={() => handleFoodClick(food._id)}>
               {/* Nút Like (Chỉ hiển thị, không có sự kiện onClick) */}
               <div className="food-like-container flex items-center justify-center">
                 <div

@@ -34,6 +34,7 @@ import AboutUsManagement from "../pages/admin/FooterManagement/AboutUsManagement
 import TermOfUseManagement from "../pages/admin/FooterManagement/TermOfUseManagement";
 import FAQsManagement from "../pages/admin/FooterManagement/FAQsManagement";
 import ContactUsManagement from "../pages/admin/FooterManagement/ContactUsManagement";
+import DishDetail from "../pages/user/DishDetail";
 
 const AppRoutes = () => {
   return (
@@ -46,7 +47,7 @@ const AppRoutes = () => {
         <Route path="forget-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
         {/* Router recipe */}
-        <Route path="recipes" element={<RecipeView />} />
+        <Route path="recipes/:recipe_id" element={<RecipeView />} />
 
         {/* Các route cần đăng nhập */}
         <Route
@@ -65,6 +66,15 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        <Route
+          path="dishes/:dishId"
+          element={
+            <PrivateRoute>
+              <DishDetail />
+            </PrivateRoute>
+          }
+        />
+        
         <Route
           path="meal"
           element={

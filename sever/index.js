@@ -101,7 +101,7 @@ app.use("/api/v1/jobs", jobRouter);
 app.use("/api/v1/footer", footerRouter);
 app.use("/api/v1/home", homeRouter);
 app.use("/api/v1/user", uRouter);
-app.use("/api/v1", commentRatingRouter);
+app.use("/api/v1/comment", commentRatingRouter);
 app.use("/api/v1/recipe", commentRatingRouter);
 app.use("/api/v1/medicalConditions", medicalConditionRouter);
 app.use("/api/v1/favoriteDishes", userFavoriteDishesRouter);
