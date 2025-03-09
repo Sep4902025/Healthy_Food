@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 import Male from "../../assets/images/gender/male.jpg";
@@ -11,11 +11,38 @@ const genderGroups = [
 
 const Gender = () => {
   const navigate = useNavigate();
+  const [selectedGender, setSelectedGender] = useState(null);
+
+  // Load dữ liệu từ sessionStorage khi vào trang
+  useEffect(() => {
+    const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    if (savedData.gender) {
+      setSelectedGender(savedData.gender);
+    }
+  }, []);
+
   const handleNext = () => {
-    navigate("");
+    if (!selectedGender) {
+      alert("Please select your gender!");
+      return;
+    }
+
+    // Lấy dữ liệu hiện tại từ sessionStorage
+    const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+
+    // Ghi đè gender vào object hiện tại
+    const updatedData = {
+      ...currentData,
+      gender: selectedGender,
+    };
+
+    // Lưu lại toàn bộ quizData vào sessionStorage
+    sessionStorage.setItem("quizData", JSON.stringify(updatedData));
+
+    // Điều hướng sang trang tiếp theo
+    navigate("/quizinfor/age");
   };
 
-  const [selectedGender, setSelectedGender] = useState(null);
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
@@ -41,20 +68,24 @@ const Gender = () => {
             }`}
             onClick={() => setSelectedGender(item.gender)}
           >
-            <span
-              onClick={() => navigate("/quizinfor/age")}
-              className="text-lg font-semibold flex-1 text-left"
-            >
+            <span className="text-lg font-semibold flex-1 text-left">
               {item.gender}
             </span>
             <img
               src={item.img}
-              alt=""
+              alt={item.gender}
               className="w-16 h-16 rounded-full object-cover"
             />
           </div>
         ))}
       </div>
+
+      <button
+        onClick={handleNext}
+        className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
+      >
+        Next
+      </button>
     </div>
   );
 };

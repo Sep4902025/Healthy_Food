@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 
@@ -12,17 +12,40 @@ const eathabitGroups = [
 
 const EatHabit = () => {
   const navigate = useNavigate();
-  const handleNext = () => {
-    navigate("");
-  };
-
   const [selectedItems, setSelectedItems] = useState([]);
+
+  // Load dữ liệu từ sessionStorage khi vào trang
+  useEffect(() => {
+    const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    if (savedData.eatHabit) {
+      setSelectedItems(savedData.eatHabit);
+    }
+  }, []);
+
   const toggleItemSelection = (id) => {
     setSelectedItems((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
+
   const isSelected = (id) => selectedItems.includes(id);
+
+  const handleNext = () => {
+    // Lấy dữ liệu hiện tại trong sessionStorage
+    const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+
+    // Ghi đè eatingHabits vào object hiện tại
+    const updatedData = {
+      ...currentData,
+      eatingHabits: selectedItems,
+    };
+
+    // Lưu lại toàn bộ dữ liệu vào sessionStorage
+    sessionStorage.setItem("quizData", JSON.stringify(updatedData));
+
+    // Điều hướng tới trang tiếp theo
+    navigate("/quizinfor/underdisease");
+  };
 
   return (
     <div className="max-w-md mx-auto p-4">
@@ -65,12 +88,11 @@ const EatHabit = () => {
                 {eathabit.label}
               </span>
             </div>
-
             {eathabit.icon && <span className="text-2xl">{eathabit.icon}</span>}
           </div>
         ))}
         <button
-          onClick={() => navigate("/quizinfor/underdisease")}
+          onClick={handleNext}
           className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
         >
           Next

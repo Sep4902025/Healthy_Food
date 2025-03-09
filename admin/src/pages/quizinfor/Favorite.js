@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 
@@ -103,11 +103,15 @@ const favoriteGroups = [
 
 const Favorite = () => {
   const navigate = useNavigate();
-  const handleNext = () => {
-    navigate("");
-  };
-
   const [selectedItems, setSelectedItems] = useState([]);
+
+  // Load dữ liệu từ sessionStorage khi vào trang
+  useEffect(() => {
+    const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    if (savedData.favorite) {
+      setSelectedItems(savedData.favorite);
+    }
+  }, []);
 
   const toggleItemSelection = (item) => {
     setSelectedItems((prev) =>
@@ -130,6 +134,23 @@ const Favorite = () => {
     } else {
       deselectAll();
     }
+  };
+
+  const handleNext = () => {
+    // Lấy dữ liệu hiện tại từ sessionStorage
+    const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+
+    // Ghi đè favorites vào object hiện tại
+    const updatedData = {
+      ...currentData,
+      favorites: selectedItems,
+    };
+
+    // Lưu lại toàn bộ quizData vào sessionStorage
+    sessionStorage.setItem("quizData", JSON.stringify(updatedData));
+
+    // Điều hướng sang trang tiếp theo
+    navigate("/quizinfor/hate");
   };
 
   return (
@@ -157,17 +178,17 @@ const Favorite = () => {
             favoriteGroups.flatMap((c) => c.items).length
           }
         />
-        <label htmlFor="selectAll">Slect All</label>
+        <label htmlFor="selectAll">Select All</label>
       </div>
 
-      {favoriteGroups.map((favotire, index) => (
+      {favoriteGroups.map((favorite, index) => (
         <div key={index} className="mb-4">
           <div className="font-bold text-lg flex items-center space-x-2">
-            <span>{favotire.icon}</span>
-            <span>{favotire.name}</span>
+            <span>{favorite.icon}</span>
+            <span>{favorite.name}</span>
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
-            {favotire.items.map((item) => (
+            {favorite.items.map((item) => (
               <button
                 key={item}
                 className={`p-2 rounded-lg ${
@@ -183,8 +204,9 @@ const Favorite = () => {
           </div>
         </div>
       ))}
+
       <button
-        onClick={() => navigate("/quizinfor/hate")}
+        onClick={handleNext}
         className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
       >
         Next

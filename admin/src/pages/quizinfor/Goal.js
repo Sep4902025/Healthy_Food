@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 import Thin from "../../assets/images/goal/thin.jpg";
@@ -11,11 +11,38 @@ const goalGroups = [
 
 const Goal = () => {
   const navigate = useNavigate();
+  const [selectedGoal, setSelectedGoal] = useState(null);
+
+  // Load dữ liệu từ sessionStorage khi vào trang
+  useEffect(() => {
+    const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    if (savedData.goal) {
+      setSelectedGoal(savedData.goal);
+    }
+  }, []);
+
   const handleNext = () => {
-    navigate("");
+    if (!selectedGoal) {
+      alert("Please select your goal!");
+      return;
+    }
+
+    // Lấy dữ liệu hiện tại từ sessionStorage
+    const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+
+    // Cập nhật goal
+    const updatedData = {
+      ...currentData,
+      goal: selectedGoal,
+    };
+
+    // Lưu lại quizData vào sessionStorage
+    sessionStorage.setItem("quizData", JSON.stringify(updatedData));
+
+    // Điều hướng sang trang tiếp theo
+    navigate("/quizinfor/sleeptime");
   };
 
-  const [selectedGoal, setSelectedGoal] = useState(null);
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
@@ -41,20 +68,24 @@ const Goal = () => {
             }`}
             onClick={() => setSelectedGoal(item.goal)}
           >
-            <span
-              onClick={() => navigate("/quizinfor/sleeptime")}
-              className="text-lg font-semibold flex-1 text-left"
-            >
+            <span className="text-lg font-semibold flex-1 text-left">
               {item.goal}
             </span>
             <img
               src={item.img}
-              alt=""
+              alt={item.goal}
               className="w-16 h-16 rounded-full object-cover"
             />
           </div>
         ))}
       </div>
+
+      <button
+        onClick={handleNext}
+        className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
+      >
+        Next
+      </button>
     </div>
   );
 };

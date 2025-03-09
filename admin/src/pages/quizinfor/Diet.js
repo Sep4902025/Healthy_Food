@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 import Chay from "../../assets/images/diet/chay.jpg";
@@ -13,10 +13,38 @@ const dietGroups = [
 
 const Diet = () => {
   const navigate = useNavigate();
-  const handleNext = () => {
-    navigate("");
-  };
   const [selectedDiet, setSelectedDiet] = useState(null);
+
+  // Khi component mount, load dữ liệu đã lưu (nếu có) để user không phải chọn lại
+  useEffect(() => {
+    const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    if (savedData.diet) {
+      setSelectedDiet(savedData.diet);
+    }
+  }, []);
+
+  const handleNext = () => {
+    if (!selectedDiet) {
+      alert("Please select your diet before proceeding.");
+      return;
+    }
+
+    // Lấy dữ liệu hiện tại từ sessionStorage
+    const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+
+    // Ghi đè diet vào object hiện tại
+    const updatedData = {
+      ...currentData,
+      diet: selectedDiet,
+    };
+
+    // Lưu lại vào sessionStorage
+    sessionStorage.setItem("quizData", JSON.stringify(updatedData));
+
+    // Điều hướng sang trang tiếp theo
+    navigate("/quizinfor/mealnumber");
+  };
+
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
@@ -30,7 +58,7 @@ const Diet = () => {
       </div>
       <h2 className="text-2xl font-bold text-center">Diet</h2>
       <p className="text-center text-gray-600">
-        Choose your diet that you following
+        Choose your diet that you are following
       </p>
 
       <div className="space-y-4 mt-4">
@@ -44,10 +72,7 @@ const Diet = () => {
             }`}
             onClick={() => setSelectedDiet(item.diet)}
           >
-            <span
-              onClick={() => navigate("/quizinfor/mealnumber")}
-              className="text-lg font-semibold flex-1 text-left"
-            >
+            <span className="text-lg font-semibold flex-1 text-left">
               {item.diet}
             </span>
             <img
@@ -58,6 +83,13 @@ const Diet = () => {
           </div>
         ))}
       </div>
+
+      <button
+        onClick={handleNext}
+        className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
+      >
+        Next
+      </button>
     </div>
   );
 };

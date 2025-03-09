@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 import Age1825 from "../../assets/images/age/18-25.png";
@@ -15,11 +15,36 @@ const ageGroups = [
 
 const Age = () => {
   const navigate = useNavigate();
+  const [selectedAge, setSelectedAge] = useState(null);
+
+  // Khi component load, kiểm tra xem có age nào đã lưu không
+  useEffect(() => {
+    const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    if (savedData.age) {
+      setSelectedAge(savedData.age);
+    }
+  }, []);
+
   const handleNext = () => {
-    navigate("");
+    if (!selectedAge) {
+      alert("Please select your age before proceeding.");
+      return;
+    }
+
+    // Lấy dữ liệu cũ (nếu có) trong sessionStorage
+    const existingData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+
+    // Cập nhật age vào sessionStorage
+    const updatedData = {
+      ...existingData,
+      age: selectedAge,
+    };
+    sessionStorage.setItem("quizData", JSON.stringify(updatedData));
+
+    // Điều hướng sang trang tiếp theo
+    navigate("/quizinfor/goal");
   };
 
-  const [selectedAge, setSelectedAge] = useState(null);
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
@@ -45,10 +70,7 @@ const Age = () => {
             }`}
             onClick={() => setSelectedAge(item.age)}
           >
-            <span
-              onClick={() => navigate("/quizinfor/goal")}
-              className="text-lg font-semibold flex-1 text-left"
-            >
+            <span className="text-lg font-semibold flex-1 text-left">
               {item.age}
             </span>
             <img
@@ -59,6 +81,13 @@ const Age = () => {
           </div>
         ))}
       </div>
+
+      <button
+        onClick={handleNext}
+        className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
+      >
+        Next
+      </button>
     </div>
   );
 };

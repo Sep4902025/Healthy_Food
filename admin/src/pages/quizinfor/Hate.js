@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
+import quizService from "../../services/quizService"; // Import service
+import { useSelector } from "react-redux";
+import { selectAuth } from "../../store/selectors/authSelectors";
 
 const hateGroups = [
   {
@@ -102,12 +105,17 @@ const hateGroups = [
 ];
 
 const Hate = () => {
+  const { user } = useSelector(selectAuth);
   const navigate = useNavigate();
-  const handleNext = () => {
-    navigate("");
-  };
-
   const [selectedItems, setSelectedItems] = useState([]);
+
+  useEffect(() => {
+    const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    if (savedData.hate) {
+      setSelectedItems(savedData.hate);
+    }
+  }, []);
+
   const toggleItemSelection = (item) => {
     setSelectedItems((prev) =>
       prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
@@ -115,7 +123,7 @@ const Hate = () => {
   };
 
   const selectAll = () => {
-    const allItems = hateGroups.flatMap((hate) => hate.items);
+    const allItems = hateGroups.flatMap((group) => group.items);
     setSelectedItems(allItems);
   };
 
@@ -131,6 +139,35 @@ const Hate = () => {
     }
   };
 
+  const handleNext = async () => {
+    const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+
+    if (!user || !user._id) {
+      alert("User ID is missing. Please login again.");
+      console.error("❌ No user._id found in Redux.");
+      return;
+    }
+
+    const finalData = {
+      ...currentData,
+      hateFood: selectedItems,
+      userId: user._id, // Lấy trực tiếp từ Redux
+    };
+
+    sessionStorage.setItem("finalData", JSON.stringify(finalData));
+
+    console.log("🚀 FINALDATA to send:", finalData);
+
+    const result = await quizService.submitQuizData();
+
+    if (result.success) {
+      navigate("/");
+    } else {
+      alert(`Error: ${result.message}`);
+      console.error("🚨 Submit failed:", result.message);
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
@@ -140,7 +177,7 @@ const Hate = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={100} />
       </div>
 
       <h2 className="text-2xl font-bold text-center">Hate</h2>
@@ -155,17 +192,17 @@ const Hate = () => {
             selectedItems.length === hateGroups.flatMap((c) => c.items).length
           }
         />
-        <label htmlFor="selectAll">Slect All</label>
+        <label htmlFor="selectAll">Select All</label>
       </div>
 
-      {hateGroups.map((favotire, index) => (
+      {hateGroups.map((group, index) => (
         <div key={index} className="mb-4">
           <div className="font-bold text-lg flex items-center space-x-2">
-            <span>{favotire.icon}</span>
-            <span>{favotire.name}</span>
+            <span>{group.icon}</span>
+            <span>{group.name}</span>
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
-            {favotire.items.map((item) => (
+            {group.items.map((item) => (
               <button
                 key={item}
                 className={`p-2 rounded-lg ${
@@ -181,8 +218,9 @@ const Hate = () => {
           </div>
         </div>
       ))}
+
       <button
-        onClick={() => navigate("/quizinfor")}
+        onClick={handleNext}
         className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
       >
         Next

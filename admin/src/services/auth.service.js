@@ -157,7 +157,7 @@ const AuthService = {
   },
 };
 
-const CHAT_ALLOWED_ROLES = ["customer", "nutritionist"];
+const CHAT_ALLOWED_ROLES = ["user", "nutritionist"];
 
 export const canAccessChat = (userRole) => {
   return CHAT_ALLOWED_ROLES.includes(userRole);

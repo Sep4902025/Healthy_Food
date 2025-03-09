@@ -1,23 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 
 const waterdrinkGroups = [
-  { waterdrink: "0,5 - 1,5L ( 2-6 cups )" },
-  { waterdrink: "1,5 - 2,5L ( 7-10 cups )" },
-  { waterdrink: "More 2,5L ( Hơn 10 cups )" },
+  { waterdrink: "0,5 - 1,5L (2-6 cups)" },
+  { waterdrink: "1,5 - 2,5L (7-10 cups)" },
+  { waterdrink: "More than 2,5L (More than 10 cups)" },
   { waterdrink: "No count, depends on the day" },
 ];
 
 const WaterDrink = () => {
   const navigate = useNavigate();
+  const [selectedWaterDrink, setSelectedWaterDrink] = useState(null);
+
+  // Load dữ liệu từ sessionStorage khi vào trang
+  useEffect(() => {
+    const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    if (savedData.waterDrink) {
+      setSelectedWaterDrink(savedData.waterDrink);
+    }
+  }, []);
+
   const handleNext = () => {
-    navigate("");
+    if (!selectedWaterDrink) {
+      alert("Please select your daily water intake before proceeding.");
+      return;
+    }
+
+    // Lấy dữ liệu hiện tại từ sessionStorage
+    const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+
+    // Cập nhật dữ liệu mới
+    const updatedData = {
+      ...currentData,
+      waterDrink: selectedWaterDrink,
+    };
+
+    // Lưu vào sessionStorage
+    sessionStorage.setItem("quizData", JSON.stringify(updatedData));
+
+    // Chuyển sang trang tiếp theo
+    navigate("/quizinfor/diet");
   };
 
-  const [selectedWaterDrink, setSelectedWaterDrink] = useState(null);
   return (
     <div className="max-w-md mx-auto p-4">
+      {/* Header với back button và progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/quizinfor/sleeptime")}
@@ -25,13 +53,16 @@ const WaterDrink = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={60} /> {/* Điều chỉnh progress theo flow */}
       </div>
+
+      {/* Tiêu đề và mô tả */}
       <h2 className="text-2xl font-bold text-center">Water Drink</h2>
       <p className="text-center text-gray-600">
-        How many you drink water per day
+        How much water do you drink per day?
       </p>
 
+      {/* Danh sách lựa chọn */}
       <div className="space-y-4 mt-4">
         {waterdrinkGroups.map((item, index) => (
           <div
@@ -43,20 +74,20 @@ const WaterDrink = () => {
             }`}
             onClick={() => setSelectedWaterDrink(item.waterdrink)}
           >
-            <span
-              onClick={() => navigate("/quizinfor/diet")}
-              className="text-lg font-semibold flex-1 text-left"
-            >
+            <span className="text-lg font-semibold flex-1 text-left">
               {item.waterdrink}
             </span>
-            <img
-              src={item.img}
-              alt=""
-              className="w-16 h-16 rounded-full object-cover"
-            />
           </div>
         ))}
       </div>
+
+      {/* Nút Next */}
+      <button
+        onClick={handleNext}
+        className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
+      >
+        Next
+      </button>
     </div>
   );
 };

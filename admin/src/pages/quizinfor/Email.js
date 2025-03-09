@@ -1,16 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 
-const emailGroups = [{ email: "" }];
-
 const Email = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+
+  // Load email từ sessionStorage khi vào trang
+  useEffect(() => {
+    const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    if (savedData.email) {
+      setEmail(savedData.email);
+    }
+  }, []);
+
   const handleNext = () => {
-    navigate("");
+    // Lấy dữ liệu hiện tại từ sessionStorage
+    const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+
+    // Ghi đè email vào object hiện tại
+    const updatedData = {
+      ...currentData,
+      email,
+    };
+
+    // Lưu lại toàn bộ quizData vào sessionStorage
+    sessionStorage.setItem("quizData", JSON.stringify(updatedData));
+
+    // Điều hướng trang tiếp theo
+    navigate("/quizinfor/weight");
   };
 
-  const [selectedEmail, setSelectedEmail] = useState(null);
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
@@ -22,19 +42,20 @@ const Email = () => {
         </button>
         <ProgressBar progress={10} />
       </div>
+
       <h2 className="text-2xl font-bold text-center">Email</h2>
       <p className="text-center text-gray-600">Please enter your email</p>
 
       <div className="mt-4">
         <input
           type="text"
-          value={selectedEmail}
-          onChange={(e) => setSelectedEmail(e.target.value)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter your email"
           className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
         />
         <button
-          onClick={() => navigate("/quizinfor/weight")}
+          onClick={handleNext}
           className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
         >
           Next
