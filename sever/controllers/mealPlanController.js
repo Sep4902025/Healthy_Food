@@ -46,19 +46,19 @@ exports.createMealPlan = async (req, res) => {
       );
     }
 
-    // Nếu là `fixed`, tạo MealDay và Meal theo `meals`
-    if (type === "fixed") {
-      for (let i = 0; i < duration; i++) {
-        const mealDayDate = new Date(startDate);
-        mealDayDate.setDate(mealDayDate.getDate() + i);
+    // ✅ **Xử lý tạo MealDay**
+    for (let i = 0; i < duration; i++) {
+      const mealDayDate = new Date(startDate);
+      mealDayDate.setDate(mealDayDate.getDate() + i);
 
-        // Tạo MealDay
-        const mealDay = await MealDay.create({
-          mealPlanId: mealPlan._id,
-          date: mealDayDate.toISOString().split("T")[0], // Lưu YYYY-MM-DD
-        });
+      // Tạo MealDay (chưa có Meal)
+      await MealDay.create({
+        mealPlanId: mealPlan._id,
+        date: mealDayDate.toISOString().split("T")[0], // Lưu YYYY-MM-DD
+      });
 
-        // Tạo Meal nhưng chưa có dishes
+      // Nếu type === "fixed" thì tạo luôn Meal
+      if (type === "fixed") {
         const mealPromises = meals.map(async (meal) => {
           return await Meal.create({
             mealDayId: mealDay._id,
