@@ -70,6 +70,7 @@ const io = socketIo(server, {
 // Import và khởi tạo các socket (chat, reminder)
 const initializeChatSocket = require("./socket/chatSocket");
 const initializeReminderSocket = require("./socket/reminderSocket");
+const paymentRouter = require("./routes/paymentRouter");
 
 io.on("connection", (socket) => {
   console.log("A user connected");
@@ -89,6 +90,7 @@ app.use("/api/v1/conversations", conversationRouter);
 app.use("/api/v1/dishes", dishRouter);
 app.use("/api/v1/ingredients", ingredientRouter);
 app.use("/api/v1/mealPlan", mealPlanRouter);
+app.use("/api/v1/vnpay", paymentRouter);
 app.use("/api/v1/reminders", reminderRouter);
 app.use("/api/v1/jobs", jobRouter);
 app.use("/api/v1/footer", footerRouter);
