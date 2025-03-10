@@ -47,7 +47,7 @@ const AppRoutes = () => {
         <Route path="forget-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
         {/* Router recipe */}
-        <Route path="recipes/:recipe_id" element={<RecipeView />} />
+        <Route path=":dish_id/recipes/:recipe_id" element={<RecipeView />} />
 
         {/* Các route cần đăng nhập */}
         <Route

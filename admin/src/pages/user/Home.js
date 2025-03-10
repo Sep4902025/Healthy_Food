@@ -33,20 +33,16 @@ const Home = () => {
       <div className="home-container">
         <div className="home-content">
           <h1 className="home-title bold text-black-600">
-            Dive into Delights Of Delectable{" "}
-            <span className="text-green">Food</span>
+            <span className="text-green">Do you want to personalize it for you?</span>
           </h1>
-          <h2 className="home-title-s">Kill the Hunger</h2>
           <p className="home-description">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec
-            odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla
-            quis sem at nibh elementum imperdiet.
+          Please tell us more about yourself.
           </p>
           <button
             onClick={() => navigate("/another-page")} // Replace "/another-page" with the desired path
             className="btn-discover bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
           >
-            Discover Now
+            Take survey here
           </button>
         </div>
         <div className="home-picture">

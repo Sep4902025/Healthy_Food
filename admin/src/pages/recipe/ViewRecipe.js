@@ -12,9 +12,10 @@ import DishService from "../../services/nutritionist/dishesServices";
 import { toast } from "react-toastify";
 import Salad from "../../assets/images/Salad.png";
 import FemaleUser from "../../assets/images/FemaleUser.png";
+import { CheckCircle, Timer } from "lucide-react";
 
 const RecipeApp = () => {
-  const { recipe_id } = useParams();
+  const { dish_id, recipe_id } = useParams();
   const [recipe, setRecipe] = useState(null);
   const [dish, setDish] = useState(null);
   const [ingredients, setIngredients] = useState([]);
@@ -26,17 +27,18 @@ const RecipeApp = () => {
     const fetchRecipe = async () => {
       try {
         const recipeResponse = await RecipeService.getRecipeByRecipeId(
+          dish_id,
           recipe_id
         );
         setRecipe(recipeResponse.data);
 
         const dishResponse = await DishService.getDishById(
-          recipeResponse.data.dish_id
+          recipeResponse.data.dishId._id
         );
         setDish(dishResponse.data);
 
         const ingredientPromises = recipeResponse.data.ingredients.map((item) =>
-          IngredientService.getIngredientById(item.ingredient_id)
+          IngredientService.getIngredientById(item.ingredientId)
         );
         const ingredientResults = await Promise.all(ingredientPromises);
         setIngredients(ingredientResults.map((res) => res.data.data));
@@ -108,27 +110,24 @@ const RecipeApp = () => {
         <p className="text-gray-700 text-lg mb-4 text-center">
            {dish.description}
         </p>
+        <p className="text-gray-600 mt-1">🍽 Loại: {dish.type} </p>
         <p className="text-gray-700 text-lg mb-4 text-center">
-          Type : - {dish.type}
+        🌞 Mùa: {dish.season}
         </p>
-        <p className="text-gray-700 text-lg mb-4 text-center">
-          Season : - {dish.season}
-        </p>
-        <p className="text-lg text-gray-600 font-semibold text-center">
-          ⏳ Thời gian nấu:{" "}
-          <span className="text-gray-900">{dish.cooking_time}</span>
+        <p className="text-lg font-semibold flex items-center justify-center mt-3 text-gray-800">
+          <Timer className="w-5 h-5 mr-2 text-gray-600" /> Thời gian nấu: {recipe.cookingTime} phút
         </p>
       </div>
 
       {/* Danh sách nguyên liệu */}
       <div className="bg-white shadow-xl rounded-2xl p-6 max-w-3xl w-full mt-8">
         <h3 className="text-2xl font-bold text-gray-800 mb-4">
-          🍽️ Nguyên liệu
+          🍽️ Nguyên liệu cho {recipe.totalServing} người ăn
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recipe.ingredients.map((item, index) => {
             const ingredient = ingredients.find(
-              (ing) => ing._id === item.ingredient_id
+              (ing) => ing._id === item.ingredientId
             );
             return ingredient ? (
               <div
@@ -147,11 +146,6 @@ const RecipeApp = () => {
                   <p className="text-gray-600">
                     Số lượng: {item.quantity} {item.unit}
                   </p>
-                  <p className="text-gray-500 text-sm">
-                    🔥 {ingredient.calories} cal | 🥩 {ingredient.protein}g
-                    Protein | 🥑 {ingredient.fat}g Fat | 🌾 {ingredient.carbs}g
-                    Carb
-                  </p>
                 </div>
               </div>
             ) : null;
@@ -159,20 +153,27 @@ const RecipeApp = () => {
         </div>
       </div>
 
+      {/* Card thông tin dinh dưỡng */}
+      <Card className="mt-6 max-w-3xl w-full bg-white p-6 rounded-xl shadow-md">
+        <h3 className="text-2xl font-bold mb-4">🍏 Thông tin dinh dưỡng</h3>
+        
+          <p className="text-gray-700">
+          🔥 {recipe.totalCalories} cal | 🥩 {recipe.totalProtein}g
+          Protein | 🥑 {recipe.totalFat}g Fat | 🌾 {recipe.totalCarbs}g
+          </p>
+        
+      </Card>
+
       {/* Card hướng dẫn nấu ăn */}
       <Card className="mt-6 max-w-3xl w-full bg-white p-6 rounded-xl shadow-md">
-        <h3 className="text-2xl font-bold mb-4">📖 Hướng dẫn nấu ăn</h3>
-        {recipe.instructions && recipe.instructions.length > 0 ? (
-          <ul className="list-decimal pl-5 text-gray-700">
-            {recipe.instructions.map((step, index) => (
-              <li key={index} className="mb-2">
-                {step}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-500 text-center">Chưa có công thức.</p>
-        )}
+      <h3 className="text-2xl font-bold mb-4">📖 Hướng dẫn nấu ăn</h3>
+        <ol className="list-decimal pl-5 text-gray-700">
+          {recipe.instruction?.map((step) => (
+            <li key={step._id} className="mb-2 flex items-start">
+              <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" /> {step.description}
+            </li>
+          ))}
+        </ol>
       </Card>
 
       <div className="w-full max-w-3xl mt-6 bg-white p-6 rounded-lg shadow-md">

@@ -19,6 +19,7 @@ const DishDetail = () => {
     const fetchDishDetails = async () => {
       try {
         const response = await DishesService.getDishById(dishId);
+        console.log("Fetched Dish:", response.data); // Debug API response
         setDish(response.data);
       } catch (error) {
         console.error("Lỗi khi tải chi tiết món ăn:", error);
@@ -90,7 +91,7 @@ const DishDetail = () => {
       {dish.recipe_id && (
         <Button
           className="mt-6 px-6 py-3 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition"
-          onClick={() => navigate(`/recipes/${dish.recipe_id}`)}
+          onClick={() => navigate(`/${dish._id}/recipes/${dish.recipe_id}`)}
         >
           Xem công thức
         </Button>

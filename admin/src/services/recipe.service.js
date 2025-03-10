@@ -3,11 +3,12 @@ import axios from "axios";
 const API_URL = "http://localhost:8080/api/v1/dishes";
 
 const recipeService = {
-  // Lấy công thức theo dishId
-  getRecipeByRecipeId: async (dishId) => {
+  // Lấy công thức theo dishId và recipeId
+  getRecipeByRecipeId: async (dishId, recipeId) => {
     try {
-      const response = await axios.get(`${API_URL}/recipes/${dishId}`);
-      console.log("Fetched Recipes:", response.data); // Debug API response
+      const response = await axios.get(`${API_URL}/${dishId}/recipes/${recipeId}`);
+
+      console.log("Fetched Recipes nè :", response.data.data); // Debug API response
 
       return {
         success: true,
