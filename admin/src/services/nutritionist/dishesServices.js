@@ -56,29 +56,14 @@ const dishesService = {
     }
   },
 
-  // 🔹 Xóa mềm món ăn
-  deleteDish: async (id) => {
-    try {
-      console.log(`🗑️ Xóa mềm món ăn ID: ${id}`);
-
-      await axios.delete(`${API_URL}/dishes/${id}`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error("❌ Lỗi khi xóa món ăn:", error.response?.data || error.message);
-      return { success: false, message: "Xóa món ăn thất bại!" };
-    }
-  },
+    
 
   // 🔹 Xóa vĩnh viễn món ăn
   hardDeleteDish: async (id) => {
     try {
       console.log(`🗑️ Xóa vĩnh viễn món ăn ID: ${id}`);
 
-      await axios.delete(`${API_URL}/dishes/hard/${id}`, {
+      await axios.delete(`${API_URL}/dishes/${id}`, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });

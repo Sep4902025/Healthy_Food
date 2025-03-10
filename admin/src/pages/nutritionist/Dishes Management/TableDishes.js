@@ -51,11 +51,18 @@ const TableDishes = () => {
     const isConfirmed = window.confirm("Are you sure you want to delete this dish?");
     if (!isConfirmed) return;
   
-    const response = await dishesService.hardDeleteDish(id);
-    if (response.success) {
-      fetchDishes();
-    } else {
-      console.error("Error deleting dish:", response.message);
+    try {
+      const response = await dishesService.hardDeleteDish(id);
+      if (response.success) {
+        alert("Deleted successfully!");
+        fetchDishes(); // Cập nhật danh sách
+      } else {
+        console.error("Error deleting dish:", response.message);
+        alert("Failed to delete dish. Please try again.");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("An error occurred while deleting the dish.");
     }
   };
   
