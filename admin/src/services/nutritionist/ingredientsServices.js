@@ -89,7 +89,7 @@ const ingredientsService = {
   hardDeleteIngredient: async (id) => {
     try {
       console.log(`🗑 Xóa vĩnh viễn nguyên liệu ID: ${id}`);
-      await axios.delete(`${API_URL}/ingredients/hard/${id}`, {
+      await axios.delete(`${API_URL}/ingredients/${id}`, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
