@@ -55,6 +55,11 @@ const User = () => {
               <i className="fas fa-question-circle"></i> FAQs
             </a>
           </li>
+          <li className="user-item">
+            <a href="/dishes">
+              <i className="fas fa-question-circle"></i> ViewQuiz
+            </a>
+          </li>
         </ul>
       </div>
 

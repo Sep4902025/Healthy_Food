@@ -2,35 +2,43 @@ const mongoose = require("mongoose");
 
 const userPreferenceSchema = new mongoose.Schema(
   {
-    user_id: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, // Mỗi user chỉ có một preference
     },
     age: {
-      type: Number,
-      required: true,
+      type: String,
+      default: null,
     },
     diet: {
       type: String,
       default: null,
     },
     eatHabit: {
-      type: [String],
+      type: [String], // Mảng String
       default: [],
+    },
+    email: {
+      type: String,
+      required: [true, "Provide email"],
+      lowercase: true,
     },
     favorite: {
-      type: [String],
+      type: [String], // Mảng String
       default: [],
     },
-    songOfPlan: {
+    longOfPlan: {
       type: String,
       default: null,
     },
     mealNumber: {
-      type: Number,
+      type: String,
       default: 0,
+    },
+    name: {
+      type: String,
+      required: [true, "Provide name"],
     },
     goal: {
       type: String,
@@ -54,12 +62,12 @@ const userPreferenceSchema = new mongoose.Schema(
       ref: "MealPlan",
       default: null,
     },
-    date: {
-      type: [String],
+    hate: {
+      type: [String], // Mảng String
       default: [],
     },
     recommendedFoods: {
-      type: [String],
+      type: [String], // Mảng String
       default: [],
     },
     weight: {
@@ -76,8 +84,7 @@ const userPreferenceSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
-      required: true,
+      default: null,
     },
     phoneNumber: {
       type: String,
@@ -96,8 +103,13 @@ const userPreferenceSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // Tự động thêm createdAt và updatedAt
+  }
 );
 
-const UserPreference = mongoose.model("UserPreference", userPreferenceSchema);
-module.exports = UserPreference;
+const UserPreferenceModel = mongoose.model(
+  "UserPreference",
+  userPreferenceSchema
+);
+module.exports = UserPreferenceModel;

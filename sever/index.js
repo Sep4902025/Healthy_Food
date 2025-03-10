@@ -28,6 +28,7 @@ const userFavoriteDishesRouter = require("./routes/userFavoriteDishesRouter");
 
 const uRouter = require("./routes/uRouter");
 
+const userPreferenceRouter = require("./routes/userPreferenceRouter");
 const app = express();
 const server = http.createServer(app);
 
@@ -108,6 +109,7 @@ app.use("/api/v1/favoriteDishes", userFavoriteDishesRouter);
 
 
 
+app.use("/api/v1/userpreference", userPreferenceRouter);
 
 // Xử lý route không tồn tại
 app.all("*", (req, res, next) => {

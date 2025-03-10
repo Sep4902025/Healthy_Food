@@ -36,6 +36,26 @@ import FAQsManagement from "../pages/admin/FooterManagement/FAQsManagement";
 import ContactUsManagement from "../pages/admin/FooterManagement/ContactUsManagement";
 import DishDetail from "../pages/user/DishDetail";
 
+import QuizLayout from "../components/layouts/QuizLayout";
+import Favorite from "../pages/quizinfor/Favorite";
+import Age from "../pages/quizinfor/Age";
+import Diet from "../pages/quizinfor/Diet";
+import EatHabit from "../pages/quizinfor/EatHabit";
+import Email from "../pages/quizinfor/Email";
+import Gender from "../pages/quizinfor/Gender";
+import Goal from "../pages/quizinfor/Goal";
+import Hate from "../pages/quizinfor/Hate";
+import Height from "../pages/quizinfor/Height";
+import LongOfPlan from "../pages/quizinfor/LongOfPlan";
+import MealNumber from "../pages/quizinfor/MealNumber";
+import Name from "../pages/quizinfor/Name";
+import PhoneNumber from "../pages/quizinfor/PhoneNumber";
+import SleepTime from "../pages/quizinfor/SleepTime";
+import UnderDisease from "../pages/quizinfor/UnderDisease";
+import WaterDrink from "../pages/quizinfor/WaterDrink";
+import Weight from "../pages/quizinfor/Weight";
+import WeightGoal from "../pages/quizinfor/WeightGoal";
+import ViewQuiz from "../pages/user/ViewQuiz";
 const AppRoutes = () => {
   return (
     <Routes>
@@ -58,6 +78,7 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+
         <Route
           path="dishes"
           element={
@@ -128,6 +149,45 @@ const AppRoutes = () => {
         <Route path="faqs" element={<FAQsManagement />} />
         <Route path="contact" element={<ContactUsManagement />} />
       </Route>
+
+      {/* ✅ quizinfor */}
+      <Route
+        path="/quizinfor"
+        element={
+          <PrivateRoute>
+            <QuizLayout />
+          </PrivateRoute>
+        }
+      >
+        <Route path="age" element={<Age />} />
+        <Route path="diet" element={<Diet />} />
+        <Route path="eathabit" element={<EatHabit />} />
+        <Route path="email" element={<Email />} />
+        <Route path="favorite" element={<Favorite />} />
+        <Route path="gender" element={<Gender />} />
+        <Route path="goal" element={<Goal />} />
+        <Route path="hate" element={<Hate />} />
+        <Route path="height" element={<Height />} />
+        <Route path="longofplan" element={<LongOfPlan />} />
+        <Route path="mealnumber" element={<MealNumber />} />
+        <Route path="name" element={<Name />} />
+        <Route path="phonenumber" element={<PhoneNumber />} />
+        <Route path="sleeptime" element={<SleepTime />} />
+        <Route path="underdisease" element={<UnderDisease />} />
+        <Route path="waterdrink" element={<WaterDrink />} />
+        <Route path="weight" element={<Weight />} />
+        <Route path="weightgoal" element={<WeightGoal />} />
+      </Route>
+
+      {/* ✅ quizinfor */}
+      <Route
+        path="/viewquiz"
+        element={
+          <PrivateRoute>
+            <ViewQuiz />
+          </PrivateRoute>
+        }
+      ></Route>
 
       {/* ✅ Bảo vệ toàn bộ route nutritionist */}
       <Route
