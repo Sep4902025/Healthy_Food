@@ -16,6 +16,8 @@ const Home = () => {
   const [dishes, setDishes] = useState([]);
   const userId = useSelector(selectAuth)?.user?._id;
 
+  const [quizInfo, SetQuizInfo] = useState([]);
+
   useEffect(() => {
     const fetchDishes = async () => {
       try {
