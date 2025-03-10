@@ -103,6 +103,7 @@ app.use("/api/v1", commentRatingRouter);
 app.use("/api/v1/recipe", commentRatingRouter);
 app.use("/api/v1/medicalConditions", medicalConditionRouter);
 app.use("/api/v1/favoriteDishes", userFavoriteDishesRouter);
+app.use("/api/v1/recipes", dishRouter);
 
 
 

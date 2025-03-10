@@ -10,26 +10,13 @@ const mealPlanSchema = new mongoose.Schema({
   endDate: Date,
   price: Number,
   created_by: mongoose.Types.ObjectId,
-  isBlock: {
-    type: Boolean,
-    default: false,
-  },
-  isPaid: {
-    type: Boolean,
-    default: false,
-  },
-  isPause: {
-    type: Boolean,
-    default: false,
-  },
-  isDelete: {
-    type: Boolean,
-    default: false,
-  },
+  isBlock: { type: Boolean, default: false },
+  isPaid: { type: Boolean, default: false },
+  isPause: { type: Boolean, default: false },
+  isDelete: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
 
-  // Dùng chung cho cả fixed & custom
   mealsByDay: [
     {
       date: String, // YYYY-MM-DD
@@ -41,10 +28,13 @@ const mealPlanSchema = new mongoose.Schema({
             {
               dishId: mongoose.Types.ObjectId,
               name: String,
+              calories: Number,
             },
           ],
+          _id: false, // Bỏ `_id` tự sinh cho `meals`
         },
       ],
+      _id: false, // Bỏ `_id` tự sinh cho `mealsByDay`
     },
   ],
 });

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import termService from "../../../services/footer/termServices";
+import UploadComponent from "../../../components/UploadComponent";
+
 
 const TermOfUseManagement = () => {
   const [terms, setTerms] = useState([]);
@@ -37,17 +39,17 @@ const TermOfUseManagement = () => {
     if (response.success) {
       setTerms(terms.map((t) => (t._id === term._id ? { ...t, isVisible: !t.isVisible } : t)));
     } else {
-      console.error("Lỗi khi cập nhật trạng thái hiển thị:", response.message);
+      console.error("Error updating display status:", response.message);
     }
   };
 
   const handleHardDelete = async (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa vĩnh viễn điều khoản này?")) {
+    if (window.confirm("Are you sure you want to delete this term?")) {
       const response = await termService.hardDeleteTerm(id);
       if (response.success) {
         setTerms(terms.filter((term) => term._id !== id)); // ✅ Cập nhật UI ngay lập tức
       } else {
-        console.error("Lỗi khi xóa:", response.message);
+        console.error("Error while deleting:", response.message);
       }
     }
   };
@@ -64,10 +66,14 @@ const TermOfUseManagement = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.bannerUrl || !formData.content) {
-      console.error("Lỗi: Vui lòng nhập đầy đủ thông tin");
+    if (!formData.bannerUrl.trim()) {
+      alert("Banner cannot be empty!");
       return;
-    }
+  }
+  if (!formData.content.trim()) {
+      alert("Content cannot be empty!");
+      return;
+  }
 
     let response;
     if (editData) {
@@ -77,7 +83,7 @@ const TermOfUseManagement = () => {
     }
 
     if (!response.success) {
-      console.error("Lỗi:", response.message);
+      console.error("Error:", response.message);
       return;
     }
 
@@ -89,28 +95,32 @@ const TermOfUseManagement = () => {
     setFormData({ _id: "", bannerUrl: "", content: "" });
   };
 
+  const handleImageUpload = (imageUrl) => {
+    setFormData({ ...formData, bannerUrl: imageUrl });
+};
+
   return (
     <div className="container mx-auto px-6 py-12">
-      <h1 className="text-3xl font-bold text-green-700 mb-6">Quản lý Terms of Use</h1>
+      <h1 className="text-3xl font-bold text-green-700 mb-6">Terms of Use Management</h1>
 
       <button
         className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
         onClick={() => handleOpenModal()}
       >
-        + Thêm mới
+        + Add new
       </button>
 
-      {loading && <p className="text-center text-blue-500">Đang tải...</p>}
-      {error && <p className="text-center text-red-500">Lỗi: {error}</p>}
+      {loading && <p className="text-center text-blue-500">Loading...</p>}
+      {error && <p className="text-center text-red-500">Error: {error}</p>}
 
       <div className="bg-white shadow-lg rounded-lg p-6">
         <table className="w-full border-collapse border border-gray-300">
           <thead>
             <tr className="bg-gray-200">
-              <th className="border border-gray-300 p-2">STT</th>
-              <th className="border border-gray-300 p-2">Hình ảnh</th>
-              <th className="border border-gray-300 p-2">Nội dung</th>
-              <th className="border border-gray-300 p-2">Hành động</th>
+              <th className="border border-gray-300 p-2">No.</th>
+              <th className="border border-gray-300 p-2">Banner</th>
+              <th className="border border-gray-300 p-2">Content</th>
+              <th className="border border-gray-300 p-2">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -132,7 +142,7 @@ const TermOfUseManagement = () => {
                         className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                         onClick={() => handleOpenModal(item)}
                       >
-                        Sửa
+                        Edit
                       </button>
                       <button
                         className={`px-2 py-1 text-white rounded transition ${
@@ -140,13 +150,13 @@ const TermOfUseManagement = () => {
                         }`}
                         onClick={() => handleToggleVisibility(item)}
                       >
-                        {item.isVisible ? "Ẩn" : "Hiện"}
+                        {item.isVisible ? "Hidden" : "Visible"}
                       </button>
                       <button
                         className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                         onClick={() => handleHardDelete(item._id)}
                       >
-                        Xóa vĩnh viễn
+                        Delete
                       </button>
                     </div>
                   </td>
@@ -155,7 +165,7 @@ const TermOfUseManagement = () => {
             ) : (
               <tr>
                 <td colSpan="4" className="text-center text-gray-500 p-4">
-                  Không có điều khoản nào.
+                No terms.
                 </td>
               </tr>
             )}
@@ -167,17 +177,13 @@ const TermOfUseManagement = () => {
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-            <h2 className="text-2xl font-bold mb-4">{editData ? "Chỉnh sửa" : "Thêm mới"} Term</h2>
+            <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add New"} Term</h2>
 
             <label className="block mb-2">Banner URL:</label>
-            <input
-              type="text"
-              className="w-full border p-2 mb-4"
-              value={formData.bannerUrl}
-              onChange={(e) => setFormData({ ...formData, bannerUrl: e.target.value })}
-            />
+            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.imageUrl === ""} />
 
-            <label className="block mb-2">Nội dung:</label>
+
+            <label className="block mb-2">Content:</label>
             <textarea
               className="w-full border p-2 mb-4"
               rows="4"
@@ -190,10 +196,10 @@ const TermOfUseManagement = () => {
                 className="px-4 py-2 bg-gray-500 text-white rounded"
                 onClick={() => setModalOpen(false)}
               >
-                Hủy
+                Cancel
               </button>
               <button className="px-4 py-2 bg-green-500 text-white rounded" onClick={handleSave}>
-                Lưu
+                Save
               </button>
             </div>
           </div>
