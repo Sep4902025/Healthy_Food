@@ -52,13 +52,13 @@ exports.createMealPlan = async (req, res) => {
       mealDayDate.setDate(mealDayDate.getDate() + i);
 
       // Tạo MealDay (chưa có Meal)
-      await MealDay.create({
+      const mealDay = await MealDay.create({
         mealPlanId: mealPlan._id,
         date: mealDayDate.toISOString().split("T")[0], // Lưu YYYY-MM-DD
       });
 
       // Nếu type === "fixed" thì tạo luôn Meal
-      if (type === "fixed") {
+      if (type === "fixed" && meals) {
         const mealPromises = meals.map(async (meal) => {
           return await Meal.create({
             mealDayId: mealDay._id,
