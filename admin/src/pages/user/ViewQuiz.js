@@ -43,28 +43,28 @@ const ViewQuiz = () => {
         <InfoItem label="Name" value={userData.data.name} />
         <InfoItem label="Email" value={userData.data.email} />
         <InfoItem label="Age" value={userData.data.age} />
-        <InfoItem label="Gender" value={userData.gender} />
-        <InfoItem label="Phone Number" value={userData.phoneNumber} />
-        <InfoItem label="Height (cm)" value={userData.height} />
-        <InfoItem label="Weight (kg)" value={userData.weight} />
-        <InfoItem label="Weight Goal (kg)" value={userData.weightGoal} />
-        <InfoItem label="Diet" value={userData.diet} />
-        <InfoItem label="Eating Habits" value={userData.eatHabit?.join(", ")} />
-        <InfoItem label="Favorites" value={userData.favorite?.join(", ")} />
-        <InfoItem label="Dislikes" value={userData.hate?.join(", ")} />
-        <InfoItem label="Plan Duration" value={userData.longOfPlan} />
-        <InfoItem label="Meals Per Day" value={userData.mealNumber} />
-        <InfoItem label="Goal" value={userData.goal} />
-        <InfoItem label="Sleep Time" value={userData.sleepTime} />
-        <InfoItem label="Water Intake (L)" value={userData.waterDrink} />
-        <InfoItem label="Underlying Disease" value={userData.underDisease} />
+        <InfoItem label="Gender" value={userData.data.gender} />
+        <InfoItem label="Phone Number" value={userData.data.phoneNumber} />
+        <InfoItem label="Height (cm)" value={userData.data.height} />
+        <InfoItem label="Weight (kg)" value={userData.data.weight} />
+        <InfoItem label="Weight Goal (kg)" value={userData.data.weightGoal} />
+        <InfoItem label="Diet" value={userData.data.diet} />
+        <InfoItem label="Eating Habits" value={userData.data.eatHabit?.join(", ")} />
+        <InfoItem label="Favorites" value={userData.data.favorite?.join(", ")} />
+        <InfoItem label="Dislikes" value={userData.data.hate?.join(", ")} />
+        <InfoItem label="Plan Duration" value={userData.data.longOfPlan} />
+        <InfoItem label="Meals Per Day" value={userData.data.mealNumber} />
+        <InfoItem label="Goal" value={userData.data.goal} />
+        <InfoItem label="Sleep Time" value={userData.data.sleepTime} />
+        <InfoItem label="Water Intake (L)" value={userData.data.waterDrink} />
+        <InfoItem label="Underlying Disease" value={userData.data.underDisease} />
         <InfoItem
           label="Created At"
-          value={new Date(userData.createdAt).toLocaleString()}
+          value={new Date(userData.data.createdAt).toLocaleString()}
         />
         <InfoItem
           label="Updated At"
-          value={new Date(userData.updatedAt).toLocaleString()}
+          value={new Date(userData.data.updatedAt).toLocaleString()}
         />
       </div>
     </div>

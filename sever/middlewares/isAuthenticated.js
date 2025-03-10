@@ -20,4 +20,19 @@ const isAuthenticated = catchAsync(async (req, res, next) => {
   req.user = currentUser; // Make the user available in subsequent middleware/routes
   next(); // Call next to proceed to the next middleware/route
 });
-module.exports = isAuthenticated;
+// Middleware kiểm tra quyền admin
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    return next();
+  }
+  return next(new AppError("You do not have permission to perform this action", 403));
+};
+
+// Middleware kiểm tra quyền admin
+const isNutritionist = (req, res, next) => {
+  if (req.user && req.user.role === "nutritionist") {
+    return next();
+  }
+  return next(new AppError("You do not have permission to perform this action", 403));
+};
+module.exports = { isAuthenticated, isAdmin, isNutritionist };

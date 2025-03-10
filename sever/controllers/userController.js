@@ -1,10 +1,12 @@
 const UserModel = require("../models/UserModel");
+// Import UserPreference model
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 
-// 🟢 Get all users (Admin only)
+// 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await UserModel.find({ isDelete: false }); // Chỉ lấy user chưa bị xóa mềm
+  const users = await UserModel.find({ isDelete: false }).populate("user_preference_id");
+
   res.status(200).json({
     status: "success",
     results: users.length,
@@ -12,10 +14,16 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
   });
 });
 
-// 🟢 Get user by ID
+// 📌 Lấy thông tin chi tiết một người dùng theo ID (bỏ qua user đã xóa)
 exports.getUserById = catchAsync(async (req, res, next) => {
-  const user = await UserModel.findById(req.params.id);
-  if (!user || user.isDelete) return next(new AppError("User not found", 404));
+  const user = await UserModel.findOne({
+    _id: req.params.id,
+    isDelete: false, // Chỉ lấy user chưa bị xóa
+  }).populate("user_preference_id");
+
+  if (!user) {
+    return next(new AppError("User not found or has been deleted", 404));
+  }
 
   res.status(200).json({
     status: "success",
@@ -23,11 +31,9 @@ exports.getUserById = catchAsync(async (req, res, next) => {
   });
 });
 
-// 🟡 Update user (Chỉ cho chính user hoặc admin)
+// 📌 Cập nhật thông tin người dùng (chỉ cập nhật user chưa bị xóa)
 exports.updateUser = catchAsync(async (req, res, next) => {
-  const updates = req.body;
-  delete updates.password; // Không cho cập nhật password ở đây
-  delete updates.email; // Không cho cập nhật email ở đây
+  const { username, avatar_url, role, isBan, isDelete } = req.body;
 
   const user = await UserModel.findByIdAndUpdate(req.params.id, updates, {
     new: true,
@@ -37,11 +43,12 @@ exports.updateUser = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
+    message: "User updated successfully",
     data: { user },
   });
 });
 
-// 🔴 Soft delete user (Chỉ admin)
+// 📌 Xóa người dùng (Soft Delete) - chỉ xóa nếu user chưa bị xóa trước đó
 exports.deleteUser = catchAsync(async (req, res, next) => {
   const user = await UserModel.findByIdAndUpdate(
     req.params.id,
@@ -49,9 +56,11 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
     { new: true }
   );
 
-  if (!user) return next(new AppError("User not found", 404));
+  if (!user) {
+    return next(new AppError("User not found or has been deleted", 404));
+  }
 
-  res.status(204).json({
+  res.status(200).json({
     status: "success",
     message: "User deleted successfully",
   });

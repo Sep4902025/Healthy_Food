@@ -9,9 +9,9 @@ const {
   deleteDish,
   getDishByType,
   createRecipe,
-  updateRecipe,
+  updateRecipeById,
   getRecipeById,
-  getAllRecipes,
+  deleteRecipeById,
 } = require("../controllers/dishController");
 
 // Dish Routes
@@ -22,10 +22,10 @@ dishRouter.put("/:dishId", updateDish); // Update dish
 dishRouter.delete("/:dishId", deleteDish); // Delete dish
 dishRouter.get("/type/:type", getDishByType); // Get dish by type
 
-// Recipe Routes
-dishRouter.post("/recipes", createRecipe); // Create a new recipe
-dishRouter.get("/recipes", getAllRecipes); // Get all recipes
-dishRouter.get("/recipes/:recipeId", getRecipeById); // Get recipe by ID
-dishRouter.put("/recipes/:recipeId", updateRecipe); // Update recipe
+// Recipe Routes (thuộc một Dish cụ thể)
+dishRouter.post("/:dishId/recipes", createRecipe); // Create a new recipe for a dish
+dishRouter.get("/:dishId/recipes/:recipeId", getRecipeById); // Get recipe by ID for a dish
+dishRouter.put("/:dishId/recipes/:recipeId", updateRecipeById); // Update recipe for a dish
+dishRouter.delete("/:dishId/recipes/:recipeId", deleteRecipeById); // Delete recipe for a dish
 
 module.exports = dishRouter;

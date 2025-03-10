@@ -10,6 +10,7 @@ import logo from "../../assets/images/Logo.png";
 import HomeService from "../../services/home.service";
 import ReminderNotification from "../Reminder/ReminderNotifiaction";
 import Footer from "../../pages/user/footer/Footer";
+import quizService from "../../services/quizService";
 
 const MainLayout = () => {
   const navigate = useNavigate();
@@ -19,8 +20,33 @@ const MainLayout = () => {
   const [categories, setCategories] = useState([]);
   const [dishTypes, setDishTypes] = useState([]);
 
+  const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
+
+  useEffect(() => {
+    const checkUserQuizStatus = async () => {
+      if (user) {
+        try {
+          const response = await quizService.getUserPreference(user._id);
+          if (response.data.status === "success") {
+            setHasCompletedQuiz(true); 
+          } else {
+            setHasCompletedQuiz(false);
+          }
+        } catch (error) {
+          console.error("Error fetching quiz status:", error);
+          setHasCompletedQuiz(false); // Đảm bảo không bị trạng thái cũ giữ lại
+        }
+      } else {
+        setHasCompletedQuiz(false); // Khi user là null (đăng xuất) thì reset về false
+      }
+    };
+    checkUserQuizStatus();
+  }, [user]);
+  
+
   const handleLogout = () => {
     dispatch(logoutUser());
+    setHasCompletedQuiz(false);
     navigate("/signin");
     toast.success("Đăng xuất thành công!");
   };
@@ -97,12 +123,14 @@ const MainLayout = () => {
             <a href="/contact" className="hover:text-black">
               Contact
             </a>
-            <a href="/quizinfor" className="hover:text-black">
-              Quiz
+            {!hasCompletedQuiz ? (
+              <a href="/quizinfor" className="hover:text-black">Quiz</a>
+            ) : (
+              <a href="/viewquiz" className="hover:text-black">
+              For you
             </a>
-            <a href="/viewquiz" className="hover:text-black">
-              ViewQuiz
-            </a>
+            )}
+            
           </nav>
 
           {/* Auth Button */}

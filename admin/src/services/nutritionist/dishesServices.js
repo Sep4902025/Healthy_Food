@@ -69,6 +69,24 @@ const dishesService = {
       return { success: false, message: "Xóa vĩnh viễn món ăn thất bại!" };
     }
   },
+
+  //Recipes
+  getDishById: async (dishId) => {
+    try {
+      const response = await axios.get(`${API_URL}/${dishId}`);
+      console.log("Fetched Dish:", response.data); // Debug API response
+      return {
+        success: true,
+        data: response.data.data || {}, // Đảm bảo data luôn là object
+      };
+    } catch (error) {
+      console.error("Error fetching dish:", error);
+      return {
+        success: false,
+        message: error.response?.data?.error || "Lỗi khi tải món ăn",
+      };
+    }
+  },
 };
 
 export default dishesService;

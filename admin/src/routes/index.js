@@ -24,6 +24,7 @@ import VerifyOtp from "../pages/auth/VerifyOtp";
 import ResetPassword from "../pages/auth/ResetPassword";
 import IngredientList from "../pages/ingredients/ingredientByType";
 import DishesList from "../pages/dishes/dishByType";
+import RecipeView from "../pages/recipe/ViewRecipe";
 import AddIngredient from "../pages/nutritionist/Ingredient Management/AddIngredient";
 import FAQs from "../pages/user/footer/FAQs";
 import About from "../pages/user/footer/About";
@@ -33,6 +34,8 @@ import AboutUsManagement from "../pages/admin/FooterManagement/AboutUsManagement
 import TermOfUseManagement from "../pages/admin/FooterManagement/TermOfUseManagement";
 import FAQsManagement from "../pages/admin/FooterManagement/FAQsManagement";
 import ContactUsManagement from "../pages/admin/FooterManagement/ContactUsManagement";
+import DishDetail from "../pages/user/DishDetail";
+
 import QuizLayout from "../components/layouts/QuizLayout";
 import Favorite from "../pages/quizinfor/Favorite";
 import Age from "../pages/quizinfor/Age";
@@ -63,6 +66,8 @@ const AppRoutes = () => {
         <Route path="verify" element={<VerifyOtp />} />
         <Route path="forget-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
+        {/* Router recipe */}
+        <Route path=":dish_id/recipes/:recipe_id" element={<RecipeView />} />
 
         {/* Các route cần đăng nhập */}
         <Route
@@ -82,6 +87,15 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        <Route
+          path="dishes/:dishId"
+          element={
+            <PrivateRoute>
+              <DishDetail />
+            </PrivateRoute>
+          }
+        />
+        
         <Route
           path="meal"
           element={
@@ -197,6 +211,8 @@ const AppRoutes = () => {
           <Route path="add" element={<AddIngredient />} />
         </Route>
       </Route>
+
+      
     </Routes>
   );
 };
