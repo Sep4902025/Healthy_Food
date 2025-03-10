@@ -4,12 +4,20 @@ const uploadFile = async (file) => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", "healthy-food-file");
-  const response = fetch(url, {
-    method: "post",
+
+  const response = await fetch(url, {
+    method: "POST",
     body: formData,
   });
-  const responseData = await response.json();
 
-  return responseData;
+  if (!response.ok) {
+    throw new Error(`Upload failed with status ${response.status}`);
+  }
+
+  const responseData = await response.json();
+  return responseData; // Trả về URL ảnh
 };
+
 export default uploadFile;
+
+

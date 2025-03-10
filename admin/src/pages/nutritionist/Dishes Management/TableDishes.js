@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import UploadComponent from "../../../components/UploadComponent"; // Import component upload ảnh
 import dishesService from "../../../services/nutritionist/dishesServices";
 
 const TableDishes = () => {
@@ -30,6 +31,11 @@ const TableDishes = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Xử lý upload ảnh mới
+  const handleImageUpload = (newImageUrl) => {
+    setFormData({ ...formData, imageUrl: newImageUrl });
+  };
+
   const handleUpdate = async () => {
     const response = await dishesService.updateDish(editingDish, formData);
     if (response.success) {
@@ -40,10 +46,9 @@ const TableDishes = () => {
       console.error("Error updating dish:", response.message);
     }
   };
-  
 
   const handleDelete = async (id) => {
-    const isConfirmed = window.confirm("Bạn có chắc chắn muốn xóa món ăn này không?");
+    const isConfirmed = window.confirm("Are you sure you want to delete this dish?");
     if (!isConfirmed) return;
   
     const response = await dishesService.hardDeleteDish(id);
@@ -53,6 +58,7 @@ const TableDishes = () => {
       console.error("Error deleting dish:", response.message);
     }
   };
+  
   const handleToggleVisibility = async (dish) => {
     const updatedDish = { ...dish, isVisible: !dish.isVisible };
     const response = await dishesService.updateDish(dish._id, updatedDish);
@@ -74,17 +80,7 @@ const TableDishes = () => {
       {showEditForm && (
         <div className="bg-white p-4 border border-gray-300 mb-4">
           <h3 className="text-lg font-semibold mb-2">Edit Dish</h3>
-          {[
-            "name",
-            "description",
-            "imageUrl",
-            "videoUrl",
-            "cookingTime",
-            "nutritions",
-            "flavor",
-            "type",
-            "season",
-          ].map((field) => (
+          {["name", "description", "videoUrl", "cookingTime", "nutritions", "flavor", "type", "season"].map((field) => (
             <div key={field} className="mb-2">
               <label className="block mb-1 capitalize">{field.replace("_", " ")}</label>
               <input
@@ -96,6 +92,10 @@ const TableDishes = () => {
               />
             </div>
           ))}
+          
+          <label className="block mb-1">Upload Image:</label>
+          <UploadComponent onUploadSuccess={handleImageUpload} />
+
           <button className="bg-green-500 text-white px-4 py-2 mr-2" onClick={handleUpdate}>Save</button>
           <button className="bg-gray-500 text-white px-4 py-2" onClick={handleCancelEdit}>Cancel</button>
         </div>
@@ -128,7 +128,7 @@ const TableDishes = () => {
                 <button className="bg-blue-500 text-white px-2 py-1" onClick={() => handleEditClick(dish)}>Edit</button>
                 <button className="bg-red-500 text-white px-2 py-1" onClick={() => handleDelete(dish._id)}>Delete</button>
                 <button className={`px-2 py-1 text-white ${dish.isVisible ? "bg-gray-500" : "bg-green-500"}`} onClick={() => handleToggleVisibility(dish)}>
-                  {dish.isVisible ? "Ẩn" : "Hiện"}
+                  {dish.isVisible ? "Hidden" : "Visible"}
                 </button>
               </td>
             </tr>

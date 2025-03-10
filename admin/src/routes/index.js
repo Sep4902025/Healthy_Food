@@ -18,6 +18,8 @@ import TableIngredient from "../pages/nutritionist/Ingredient Management/TableIn
 import TableMealPlan from "../pages/nutritionist/TableMealPlan";
 import TableDishes from "../pages/nutritionist/Dishes Management/TableDishes";
 import AddDishes from "../pages/nutritionist/Dishes Management/AddDishes";
+import TableRecipes from "../pages/nutritionist/Recipes Management/TableRecipes";
+import AddRecipes from "../pages/nutritionist/Recipes Management/AddRecipes";
 import ChatWindow from "../components/Chat/ChatWindow";
 import ProtectedRoute from "../components/ProtectedRoute";
 import VerifyOtp from "../pages/auth/VerifyOtp";
@@ -136,6 +138,11 @@ const AppRoutes = () => {
         <Route path="ingredients">
           <Route index element={<TableIngredient />} />
           <Route path="add" element={<AddIngredient />} />
+        </Route>
+
+        <Route path="recipes">
+          <Route index element={<TableRecipes />} />
+          <Route path="add" element={<AddRecipes />} />
         </Route>
       </Route>
     </Routes>

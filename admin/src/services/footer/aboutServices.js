@@ -1,14 +1,25 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/v1/footer";
+const API_URL = process.env.REACT_APP_API_URL; // Chỉ giữ nguyên API_URL
+
+// Hàm lấy token từ localStorage
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const aboutService = {
+  // Lấy danh sách About Us
   getAboutUs: async () => {
     try {
-      const response = await axios.get(`${API_URL}/about`);
+      const response = await axios.get(`${API_URL}/footer/about`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+
       return {
         success: true,
-        data: response.data.data,
+        data: response.data.data || [],
       };
     } catch (error) {
       return {
@@ -18,39 +29,54 @@ const aboutService = {
     }
   },
 
+  // Tạo mới About Us
   createAboutUs: async (data) => {
     try {
-        console.log("Dữ liệu gửi lên API:", data);
-        const response = await axios.post(`${API_URL}/about`, data);
-        console.log("Phản hồi từ server:", response.data);
-        return { success: true };
-    } catch (error) {
-        console.error("Lỗi khi gọi API:", error.response?.data || error.message);
+      await axios.post(`${API_URL}/footer/about`, data, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
 
-        // Nếu lỗi do thiếu dữ liệu, hiển thị thông báo cụ thể hơn
-        if (error.response?.status === 400) {
-            return { success: false, message: error.response.data.error };
-        }
-
-        return { success: false, message: "Thêm mới thất bại!" };
-    }
-},
-
-  updateAboutUs: async (id, data) => {
-    try {
-      await axios.put(`${API_URL}/about/${id}`, data);
       return { success: true };
     } catch (error) {
-      return { success: false, message: "Cập nhật thất bại!" };
+      return {
+        success: false,
+        message: error.response?.data?.error || "Thêm mới thất bại!",
+      };
     }
   },
 
-  hardDeleteAboutUs: async (id) => {
+  // Cập nhật About Us
+  updateAboutUs: async (id, data) => {
     try {
-      await axios.delete(`${API_URL}/about/hard/${id}`);
+      await axios.put(`${API_URL}/footer/about/${id}`, data, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+
       return { success: true };
     } catch (error) {
-      return { success: false, message: "Xóa vĩnh viễn thất bại!" };
+      return {
+        success: false,
+        message: "Cập nhật thất bại!",
+      };
+    }
+  },
+
+  // Xóa vĩnh viễn About Us
+  hardDeleteAboutUs: async (id) => {
+    try {
+      await axios.delete(`${API_URL}/footer/about/hard/${id}`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Xóa vĩnh viễn thất bại!",
+      };
     }
   },
 };

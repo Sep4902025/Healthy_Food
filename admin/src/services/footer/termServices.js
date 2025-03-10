@@ -1,66 +1,87 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/v1/footer";
+const API_URL = process.env.REACT_APP_API_URL;
+
+// 🛠️ Hàm lấy token từ localStorage để gửi kèm trong headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const termService = {
-    getTerms: async () => {
-        try {
-            const response = await axios.get(`${API_URL}/terms`);
-            console.log("Raw API Response:", response.data);
+  // 🔹 Lấy danh sách Terms
+  getTerms: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/footer/terms`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+      console.log("🔍 Terms từ API:", response.data);
 
-            if (!response.data || !Array.isArray(response.data.data)) {
-                return { success: false, message: "Dữ liệu API không hợp lệ" };
-            }
+      return { success: true, data: response.data.data || [] };
+    } catch (error) {
+      console.error("❌ Lỗi khi lấy Terms:", error.response?.data || error.message);
 
-            return {
-                success: true,
-                data: response.data.data.map((item) => ({
-                    _id: item._id,  // ✅ Thêm ID để sử dụng trong cập nhật
-                    bannerUrl: item.bannerUrl || "",
-                    content: item.content || "",
-                    isVisible: item.isVisible || false,
-                })),
-            };
-        } catch (error) {
-            console.error("Lỗi khi gọi API Term:", error);
-            return {
-                success: false,
-                message: error.response?.data?.message || "Không thể kết nối đến API",
-            };
-        }
-    },
+      return {
+        success: false,
+        message: error.response?.data?.message || "Lỗi khi tải Terms",
+      };
+    }
+  },
 
-    createTerm: async (data) => {
-        try {
-            const response = await axios.post(`${API_URL}/terms`, data);
-            return { success: true, data: response.data };
-        } catch (error) {
-            console.error("Lỗi khi tạo mới:", error.response?.data || error.message);
-            return { success: false, message: "Thêm mới thất bại!" };
-        }
-    },
+  // 🔹 Tạo mới Term
+  createTerm: async (data) => {
+    try {
+      console.log("📤 Dữ liệu gửi lên API:", data);
+      
+      const response = await axios.post(`${API_URL}/footer/terms`, data, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
 
-    updateTerm: async (id, termData) => {
-        if (!id) return { success: false, message: "ID không hợp lệ" };
+      console.log("✅ Phản hồi từ server:", response.data);
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Lỗi khi tạo Term:", error.response?.data || error.message);
 
-        try {
-            const response = await axios.put(`${API_URL}/terms/${id}`, termData);
-            return { success: true, data: response.data };
-        } catch (error) {
-            console.error("Lỗi khi cập nhật term:", error.response?.data || error.message);
-            return { success: false, message: "Không thể cập nhật Term" };
-        }
-    },
+      return { success: false, message: "Thêm mới thất bại!" };
+    }
+  },
 
-    hardDeleteTerm: async (id) => {
-        try {
-            await axios.delete(`${API_URL}/terms/hard/${id}`);
-            return { success: true };
-        } catch (error) {
-            console.error("Lỗi khi xóa:", error.response?.data || error.message);
-            return { success: false, message: "Xóa thất bại!" };
-        }
-    },
+  // 🔹 Cập nhật Term
+  updateTerm: async (id, data) => {
+    try {
+      console.log(`📤 Cập nhật Term ID: ${id}`, data);
+
+      await axios.put(`${API_URL}/footer/terms/${id}`, data, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Lỗi khi cập nhật Term:", error.response?.data || error.message);
+      return { success: false, message: "Cập nhật thất bại!" };
+    }
+  },
+
+  // 🔹 Xóa vĩnh viễn Term
+  hardDeleteTerm: async (id) => {
+    try {
+      console.log(`🗑️ Xóa vĩnh viễn Term ID: ${id}`);
+
+      await axios.delete(`${API_URL}/footer/terms/hard/${id}`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Lỗi khi xóa Term:", error.response?.data || error.message);
+
+      return { success: false, message: "Xóa vĩnh viễn thất bại!" };
+    }
+  },
 };
 
 export default termService;

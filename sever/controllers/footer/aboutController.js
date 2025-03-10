@@ -1,14 +1,37 @@
+const jwt = require("jsonwebtoken");
+const UserModel = require("../../models/UserModel");
 const AboutUs = require("../../models/footer/About");
 
 // Lấy tất cả About Us
 exports.getAllAboutUs = async (req, res) => {
     try {
-        const aboutUs = await AboutUs.find({ isDeleted: false });
+        let filter = { isDeleted: false, isVisible: true }; // Mặc định: chỉ lấy dữ liệu chưa bị xóa & có thể hiển thị
+
+        // Lấy token từ request (cookie hoặc header)
+        const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+
+        if (token) {
+            try {
+                // Giải mã token để lấy user ID
+                const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+                const user = await UserModel.findById(decoded.id);
+
+                if (user && (user.role === "admin" || user.role === "nutritionist")) {
+                    filter = {}; // Admin/Nutritionist thấy TẤT CẢ dữ liệu, không áp dụng filter
+                }
+            } catch (error) {
+                console.error("Invalid token:", error.message);
+            }
+        }
+
+        // Lấy dữ liệu About Us theo điều kiện
+        const aboutUs = await AboutUs.find(filter);
         res.status(200).json({ status: "success", data: aboutUs });
     } catch (error) {
-        res.status(500).json({ status: "fail", error: "Lỗi lấy dữ liệu About Us" });
+        res.status(500).json({ status: "fail", message: "Lỗi lấy dữ liệu About Us" });
     }
 };
+
 
 // Tạo mới About Us
 exports.createAboutUs = async (req, res) => {
