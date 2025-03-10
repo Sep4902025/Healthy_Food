@@ -37,7 +37,7 @@ const EatHabit = () => {
     // Ghi đè eatingHabits vào object hiện tại
     const updatedData = {
       ...currentData,
-      eatingHabits: selectedItems,
+      eatHabit: selectedItems,
     };
 
     // Lưu lại toàn bộ dữ liệu vào sessionStorage

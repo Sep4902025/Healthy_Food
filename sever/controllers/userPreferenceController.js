@@ -3,41 +3,85 @@ const UserPreferenceModel = require("../models/UserPreferenceModel");
 
 exports.createUserPreference = async (req, res) => {
   try {
-    const { userId, ...preferenceData } = req.body;
+    const {
+      userId,
+      age,
+      diet,
+      eatHabit,
+      email,
+      favorite,
+      longOfPlan,
+      mealNumber,
+      name,
+      goal,
+      sleepTime,
+      waterDrink,
+      currentMealplanId,
+      previousMealplanId,
+      hate,
+      recommendedFoods,
+      weight,
+      weightGoal,
+      height,
+      gender,
+      phoneNumber,
+      underDisease,
+      theme,
+      isDelete,
+    } = req.body;
 
-    // Kiểm tra nếu userId không được cung cấp
-    if (!userId) {
-      return res
-        .status(400)
-        .json({ status: "fail", message: "User ID is required" });
+    // Kiểm tra email & userId có tồn tại không
+    if (!email || !name || !userId) {
+      return res.status(400).json({ message: "Missing required fields!" });
     }
 
-    // Tạo mới UserPreference và gán userId
+    // Tạo user preference mới
     const newUserPreference = new UserPreferenceModel({
-      ...preferenceData,
-      userId, // Gán userId vào UserPreference
+      userId,
+      age,
+      diet,
+      eatHabit,
+      email,
+      favorite,
+      longOfPlan,
+      mealNumber,
+      name,
+      goal,
+      sleepTime,
+      waterDrink,
+      currentMealplanId,
+      previousMealplanId,
+      hate,
+      recommendedFoods,
+      weight,
+      weightGoal,
+      height,
+      gender,
+      phoneNumber,
+      underDisease,
+      theme,
+      isDelete,
     });
+
     await newUserPreference.save();
 
-    // Cập nhật userPreferenceId trong UserModel
+    // Cập nhật `userPreferenceId` trong UserModel
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,
-      { userPreferenceId: newUserPreference._id },
-      { new: true, runValidators: true }
+      { userPreferenceId: newUserPreference._id }, // Thêm userPreferenceId vào User
+      { new: true } // Trả về dữ liệu mới sau khi cập nhật
     );
 
     if (!updatedUser) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User not found" });
+      return res.status(404).json({ message: "User not found!" });
     }
 
     res.status(201).json({
-      status: "success",
-      data: { userPreference: newUserPreference, user: updatedUser },
+      message: "User preference created and linked to user!",
+      data: newUserPreference,
     });
   } catch (error) {
-    res.status(400).json({ status: "fail", message: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 

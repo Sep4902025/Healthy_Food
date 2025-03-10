@@ -42,7 +42,7 @@ const UnderDisease = () => {
     // Cập nhật dữ liệu mới
     const updatedData = {
       ...currentData,
-      underDiseases: selectedItems,
+      underDisease: selectedItems,
     };
 
     // Lưu vào sessionStorage

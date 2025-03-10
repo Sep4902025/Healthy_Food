@@ -143,7 +143,7 @@ const Favorite = () => {
     // Ghi đè favorites vào object hiện tại
     const updatedData = {
       ...currentData,
-      favorites: selectedItems,
+      favorite: selectedItems,
     };
 
     // Lưu lại toàn bộ quizData vào sessionStorage

@@ -52,21 +52,7 @@ const userPreferenceSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    currentMealplanId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "MealPlan",
-      default: null,
-    },
-    previousMealplanId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "MealPlan",
-      default: null,
-    },
     hate: {
-      type: [String], // Mảng String
-      default: [],
-    },
-    recommendedFoods: {
       type: [String], // Mảng String
       default: [],
     },
@@ -91,8 +77,8 @@ const userPreferenceSchema = new mongoose.Schema(
       default: null,
     },
     underDisease: {
-      type: String,
-      default: null,
+      type: [String], // Chấp nhận nhiều giá trị
+      default: [],
     },
     theme: {
       type: Boolean,

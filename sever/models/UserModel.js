@@ -64,7 +64,7 @@ const userSchema = new mongoose.Schema(
     userPreferenceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "UserPreferenceModel",
-      default: false,
+      default: null,
     },
     createdAt: {
       type: Date,

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const WeightGoal = () => {
   const navigate = useNavigate();
-  const [selectedWeightGoal, setSelectedWeightGoal] = useState("");
+  const [selectedWeightGoal, setSelectedWeightGoal] = useState(0);
 
   // Load dữ liệu từ sessionStorage khi vào trang
   useEffect(() => {
@@ -56,9 +56,9 @@ const WeightGoal = () => {
       {/* Input nhập cân nặng mục tiêu */}
       <div className="mt-4">
         <input
-          type="text"
+          type="number"
           value={selectedWeightGoal}
-          onChange={(e) => setSelectedWeightGoal(e.target.value)}
+          onChange={(e) => setSelectedWeightGoal(Number(e.target.value))}
           placeholder="Enter your goal weight (kg)"
           className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
         />

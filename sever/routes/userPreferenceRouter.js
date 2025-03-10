@@ -1,6 +1,5 @@
 const express = require("express");
 const {
-  createUserPreference,
   getAllUserPreferences,
   getUserPreferenceById,
   updateUserPreference,
@@ -9,6 +8,7 @@ const {
   searchUserPreferencesByName,
   filterUserPreferencesByDiet,
   getUserPreferenceByUserId,
+  createUserPreference,
 } = require("../controllers/userPreferenceController");
 const userPreferenceRouter = express.Router();
 

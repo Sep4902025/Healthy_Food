@@ -150,7 +150,7 @@ const Hate = () => {
 
     const finalData = {
       ...currentData,
-      hateFood: selectedItems,
+      hate: selectedItems,
       userId: user._id, // Lấy trực tiếp từ Redux
     };
 
