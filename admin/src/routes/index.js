@@ -34,6 +34,13 @@ import AboutUsManagement from "../pages/admin/FooterManagement/AboutUsManagement
 import TermOfUseManagement from "../pages/admin/FooterManagement/TermOfUseManagement";
 import FAQsManagement from "../pages/admin/FooterManagement/FAQsManagement";
 import ContactUsManagement from "../pages/admin/FooterManagement/ContactUsManagement";
+import HealthyDashboard from "../pages/admin/pages/HealthyDashboard";
+import UserManagement from "../pages/admin/pages/UserManagement";
+import IngredientsManagement from "../pages/admin/pages/IngredientManagement";
+import DishManagement from "../pages/admin/pages/DishManagement";
+import MealPlan from "../pages/admin/pages/MealPlan";
+import EditUser from "../pages/admin/pages/EditUser";
+import ViewProfile from "../pages/admin/pages/ViewProfile";
 import DishDetail from "../pages/user/DishDetail";
 
 import QuizLayout from "../components/layouts/QuizLayout";
@@ -66,6 +73,17 @@ const AppRoutes = () => {
         <Route path="verify" element={<VerifyOtp />} />
         <Route path="forget-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
+        <Route path="/admin/dashboard" element={<HealthyDashboard />} />
+        <Route path="/admin/usermanagement" element={<UserManagement />} />
+        <Route
+          path="/admin/ingredientsmanagement"
+          element={<IngredientsManagement />}
+        />
+        <Route path="/admin/dishmanagement" element={<DishManagement />} />
+        <Route path="/admin/mealplan" element={<MealPlan />} />
+        <Route path="/admin/edituser/:id" element={<EditUser />} />
+        <Route path="/admin/viewprofile" element={<ViewProfile />} />
+        <Route path="/edit-profile" element={<ViewProfile />} />
         {/* Router recipe */}
         <Route path=":dish_id/recipes/:recipe_id" element={<RecipeView />} />
 
@@ -95,7 +113,7 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
-        
+
         <Route
           path="meal"
           element={
@@ -211,8 +229,6 @@ const AppRoutes = () => {
           <Route path="add" element={<AddIngredient />} />
         </Route>
       </Route>
-
-      
     </Routes>
   );
 };
