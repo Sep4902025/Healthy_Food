@@ -166,10 +166,7 @@ const AppRoutes = () => {
 
         <Route path="usermanagement" element={<UserManagement />} />
         <Route path="dishmanagement" element={<DishManagement />} />
-        <Route
-          path="ingredientsmanagement"
-          element={<IngredientsManagement />}
-        />
+        <Route path="ingredientsmanagement" element={<IngredientsManagement />} />
         <Route path="mealplan" element={<MealPlan />} />
         <Route path="edituser/:id" element={<EditUser />} />
         <Route path="viewprofile" element={<ViewProfile />} />
