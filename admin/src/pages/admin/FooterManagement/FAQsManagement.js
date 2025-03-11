@@ -31,12 +31,12 @@ const FAQsManagement = () => {
         if (response.success) {
             fetchFAQs(); // Cập nhật lại danh sách trên trang quản lý
         } else {
-            console.error("Lỗi khi cập nhật trạng thái hiển thị:", response.message);
+            console.error("Error updating display status:", response.message);
         }
     };
 
     const handleHardDelete = async (id) => {
-        if (window.confirm("Bạn có chắc chắn muốn xóa vĩnh viễn câu hỏi này?")) {
+        if (window.confirm("Are you sure you want to delete this question?")) {
             await faqService.hardDeleteFAQ(id);
             fetchFAQs();
         }
@@ -55,15 +55,15 @@ const FAQsManagement = () => {
 
     const handleSave = async () => {
         if (!formData.category.trim()) {
-            alert("Danh mục không được để trống!");
+            alert("Category cannot be empty!");
             return;
         }
         if (!formData.question.trim()) {
-            alert("Câu hỏi không được để trống!");
+            alert("Question cannot be left blank!");
             return;
         }
         if (!formData.answer.trim()) {
-            alert("Câu trả lời không được để trống!");
+            alert("Answer cannot be left blank!");
             return;
         }
 
@@ -83,27 +83,27 @@ const FAQsManagement = () => {
 
     return (
         <div className="container mx-auto px-6 py-12">
-            <h1 className="text-3xl font-bold text-green-700 mb-6">Quản lý FAQs</h1>
+            <h1 className="text-3xl font-bold text-green-700 mb-6">FAQs Management</h1>
 
             <button
                 className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
                 onClick={() => handleOpenModal()}
             >
-                + Thêm mới
+                + Add New
             </button>
 
-            {loading && <p className="text-center text-blue-500">Đang tải...</p>}
-            {error && <p className="text-center text-red-500">Lỗi: {error}</p>}
+            {loading && <p className="text-center text-blue-500">Loading...</p>}
+            {error && <p className="text-center text-red-500">Error: {error}</p>}
 
             <div className="bg-white shadow-lg rounded-lg p-6">
                 <table className="w-full border-collapse border border-gray-300">
                     <thead>
                         <tr className="bg-gray-200">
-                            <th className="border border-gray-300 p-2">STT</th>
-                            <th className="border border-gray-300 p-2">Danh mục</th>
-                            <th className="border border-gray-300 p-2">Câu hỏi</th>
-                            <th className="border border-gray-300 p-2">Câu trả lời</th>
-                            <th className="border border-gray-300 p-2">Hành động</th>
+                            <th className="border border-gray-300 p-2">No.</th>
+                            <th className="border border-gray-300 p-2">Category</th>
+                            <th className="border border-gray-300 p-2">Question</th>
+                            <th className="border border-gray-300 p-2">Answer</th>
+                            <th className="border border-gray-300 p-2">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -120,20 +120,20 @@ const FAQsManagement = () => {
                                                 className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                                                 onClick={() => handleOpenModal(item)}
                                             >
-                                                Sửa
+                                                Edit
                                             </button>
                                             <button
                                                 className={`px-2 py-1 text-white rounded transition ${item.isVisible ? "bg-gray-500" : "bg-green-500"
                                                     }`}
                                                 onClick={() => handleToggleVisibility(item)}
                                             >
-                                                {item.isVisible ? "Ẩn" : "Hiện"}
+                                                {item.isVisible ? "Hidden" : "Visible"}
                                             </button>
                                             <button
                                                 className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                                                 onClick={() => handleHardDelete(item._id)}
                                             >
-                                                Xóa vĩnh viễn
+                                                Delete
                                             </button>
                                         </div>
                                     </td>
@@ -142,7 +142,7 @@ const FAQsManagement = () => {
                         ) : (
                             <tr>
                                 <td colSpan="5" className="text-center text-gray-500 p-4">
-                                    Không có FAQs nào.
+                                There are no FAQs yet.
                                 </td>
                             </tr>
                         )}
@@ -154,9 +154,9 @@ const FAQsManagement = () => {
             {modalOpen && (
                 <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-                        <h2 className="text-2xl font-bold mb-4">{editData ? "Chỉnh sửa" : "Thêm mới"} FAQ</h2>
+                        <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add new"} FAQ</h2>
 
-                        <label className="block mb-2">Danh mục:</label>
+                        <label className="block mb-2">Category:</label>
                         <input
                             type="text"
                             className="w-full border p-2 mb-4"
@@ -164,7 +164,7 @@ const FAQsManagement = () => {
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         />
 
-                        <label className="block mb-2">Câu hỏi:</label>
+                        <label className="block mb-2">Question:</label>
                         <textarea
                             className="w-full border p-2 mb-4"
                             rows="2"
@@ -172,7 +172,7 @@ const FAQsManagement = () => {
                             onChange={(e) => setFormData({ ...formData, question: e.target.value })}
                         ></textarea>
 
-                        <label className="block mb-2">Câu trả lời:</label>
+                        <label className="block mb-2">Answer:</label>
                         <textarea
                             className="w-full border p-2 mb-4"
                             rows="4"
@@ -185,13 +185,13 @@ const FAQsManagement = () => {
                                 className="px-4 py-2 bg-gray-500 text-white rounded"
                                 onClick={() => setModalOpen(false)}
                             >
-                                Hủy
+                                Cancel
                             </button>
                             <button
                                 className="px-4 py-2 bg-green-500 text-white rounded"
                                 onClick={handleSave}
                             >
-                                Lưu
+                                Save
                             </button>
                         </div>
                     </div>
