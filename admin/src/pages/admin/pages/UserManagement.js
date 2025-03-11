@@ -103,6 +103,12 @@ const UserManagement = () => {
     }
   };
 
+  const handleSubmenuClick = (mainMenu, submenu) => {
+    setActiveMenu(submenu);
+    const route = `/admin/${submenu.toLowerCase().replace(/\s+/g, "")}`;
+    navigate(route);
+  };
+
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
@@ -141,11 +147,16 @@ const UserManagement = () => {
                 )}
               </div>
               {item.submenus && openSubmenus[item.name] && (
-                <div className="pl-10 mt-1">
+                <div className="ml-8 mt-1 space-y-1">
                   {item.submenus.map((submenu) => (
                     <div
                       key={submenu}
-                      className="p-2 text-sm text-gray-500 hover:bg-green-50 cursor-pointer"
+                      className={`p-2 cursor-pointer rounded hover:bg-green-50 ${
+                        activeMenu === submenu
+                          ? "bg-green-100 text-green-600"
+                          : "text-gray-600"
+                      }`}
+                      onClick={() => handleSubmenuClick(item.name, submenu)}
                     >
                       {submenu}
                     </div>
