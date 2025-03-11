@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Outlet, NavLink } from "react-router-dom";
-import { FaChevronDown, FaChevronUp } from "react-icons/fa"; // Icon mở rộng & thu gọn
+import { FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { BiHome, BiTask, BiBookContent, BiUser, BiBarChart, BiMessageSquareDetail, BiPencil } from "react-icons/bi";
 
 const AdminLayout = () => {
   const [isFooterOpen, setIsFooterOpen] = useState(false);
@@ -14,17 +15,43 @@ const AdminLayout = () => {
         </div>
         <nav className="mt-4">
           <ul className="space-y-2">
-            {/* Footer Management với Dropdown */}
-            <li className="mt-2">
+            <li>
+              <NavLink to="/admin/dashboard" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-200">
+                <BiHome /> Dashboard
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/admin/orders" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-200">
+                <BiTask /> Order Management
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/admin/meal-plan" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-200">
+                <BiBookContent /> Meal Plant
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/admin/users" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-200">
+                <BiUser /> User Management
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/admin/analytics" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-200">
+                <BiBarChart /> Analytics
+              </NavLink>
+            </li>
+            <li>
               <button
                 onClick={() => setIsFooterOpen(!isFooterOpen)}
-                className="w-full flex justify-between items-center p-3 text-gray-600 font-semibold hover:bg-gray-200"
+                className="w-full flex justify-between items-center p-3 text-gray-600 hover:bg-gray-200"
               >
-                Footer Management
+                <span className="flex items-center gap-3">
+                  <BiPencil /> Footer Management
+                </span>
                 {isFooterOpen ? <FaChevronUp /> : <FaChevronDown />}
               </button>
               {isFooterOpen && (
-                <ul className="ml-4 space-y-1 transition-all">
+                <ul className="ml-6 space-y-1">
                   <li>
                     <NavLink
                       to="/admin/about"
@@ -63,7 +90,6 @@ const AdminLayout = () => {
           </ul>
         </nav>
       </aside>
-
       {/* Main Content */}
       <div className="flex-1 p-6">
         <Outlet />

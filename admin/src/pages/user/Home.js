@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { selectAuth } from "../../store/selectors/authSelectors";
-// Import the icons
+import dishesService from "../../services/nutritionist/dishesServices";
+import ingredientsService from "../../services/nutritionist/ingredientsServices"; // Import dịch vụ API
 import homePicture from "../../assets/images/homePic.png";
 import brow from "../../assets/images/brow.png";
 import dessert from "../../assets/images/dessert.png";
@@ -40,7 +39,7 @@ const Home = () => {
           Please tell us more about yourself.
           </p>
           <button
-            onClick={() => navigate("/another-page")} // Replace "/another-page" with the desired path
+            onClick={() => navigate("/another-page")}
             className="btn-discover bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
           >
             Take survey here
@@ -51,48 +50,7 @@ const Home = () => {
         </div>
       </div>
 
-      <div className="cate-container">
-        <h1 className="cate-title">Popular Categories</h1>
-        <div className="cate-list">
-          <div className="cate-item">
-            <div className="center-con">
-              <div className="cate-i-container">
-                <img src={dish} alt="Main Dishes" />
-              </div>
-            </div>
-            <h2 className="cate-item-title">Main Dish</h2>
-            <h3 className="cate-item-count">(86 dishes)</h3>
-          </div>
-          <div className="cate-item">
-            <div className="center-con">
-              <div className="cate-i-container">
-                <img src={breakfast} alt="BreakFast" />
-              </div>
-            </div>
-            <h2 className="cate-item-title">Break Fast</h2>
-            <h3 className="cate-item-count">(12 break fast)</h3>
-          </div>
-          <div className="cate-item">
-            <div className="center-con">
-              <div className="cate-i-container">
-                <img src={dessert} alt="Dessert" />
-              </div>
-            </div>
-            <h2 className="cate-item-title">Dessert</h2>
-            <h3 className="cate-item-count">(48 desert)</h3>
-          </div>
-          <div className="cate-item">
-            <div className="center-con">
-              <div className="cate-i-container">
-                <img src={brow} alt="Browse" />
-              </div>
-            </div>
-            <h2 className="cate-item-title">Browse All</h2>
-            <h3 className="cate-item-count">(255 items)</h3>
-          </div>
-        </div>
-      </div>
-
+      {/* Danh sách món ăn từ API */}
       <div className="food-container">
         <h3 className="food-slogan">Recommended Dishes</h3>
         <div className="food-title-container">

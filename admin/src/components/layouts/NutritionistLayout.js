@@ -5,6 +5,7 @@ import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 const NutritionistLayout = () => {
   const [isDishOpen, setIsDishOpen] = useState(false);
   const [isIngredientOpen, setIsIngredientOpen] = useState(false);
+  const [isRecipeOpen, setIsRecipeOpen] = useState(false);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -34,11 +35,6 @@ const NutritionistLayout = () => {
                       Add New Dish
                     </NavLink>
                   </li>
-                  {/* <li>
-                    <NavLink to="/nutritionist/dishes/categories" className="block p-2 hover:bg-gray-200">
-                      Dish Categories
-                    </NavLink>
-                  </li> */}
                 </ul>
               )}
             </li>
@@ -63,10 +59,29 @@ const NutritionistLayout = () => {
                       Add New Ingredient
                     </NavLink>
                   </li>
+                </ul>
+              )}
+            </li>
+            {/* Recipes Management */}
+            <li>
+              <button
+                onClick={() => setIsRecipeOpen(!isRecipeOpen)}
+                className="w-full flex justify-between items-center p-3 text-gray-600 font-semibold hover:bg-gray-200"
+              >
+                Recipes Management
+                {isRecipeOpen ? <FaChevronUp /> : <FaChevronDown />}
+              </button>
+              {isRecipeOpen && (
+                <ul className="ml-4 space-y-1 transition-all">
                   <li>
-                    {/* <NavLink to="/nutritionist/ingredients/categories" className="block p-2 hover:bg-gray-200">
-                      Ingredient Categories
-                    </NavLink> */}
+                    <NavLink to="/nutritionist/recipes" className="block p-2 hover:bg-gray-200">
+                      View Recipes
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink to="/nutritionist/recipes/add" className="block p-2 hover:bg-gray-200">
+                      Add New Recipe
+                    </NavLink>
                   </li>
                 </ul>
               )}
