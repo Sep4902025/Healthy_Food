@@ -14,7 +14,7 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
 
 // 🟢 Get user by ID
 exports.getUserById = catchAsync(async (req, res, next) => {
-  const user = await UserModel.findById(req.params.id);
+  const user = await UserModel.findById(req.params.userId);
   if (!user || user.isDelete) return next(new AppError("User not found", 404));
 
   res.status(200).json({
