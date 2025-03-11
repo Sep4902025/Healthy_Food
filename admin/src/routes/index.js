@@ -10,8 +10,6 @@ import MealsPlan from "../pages/user/MealsPlan";
 import Ingredient from "../pages/user/Ingredient";
 import ForgetPassword from "../pages/auth/ForgetPassword";
 import AdminLayout from "../components/layouts/AdminLayout";
-import TableUser from "../pages/admin/TableUser";
-import TableOrder from "../pages/admin/TableOrder";
 import NutritionistLayout from "../components/layouts/NutritionistLayout";
 import NutritionChat from "../pages/nutritionist/NutritionChat";
 import TableIngredient from "../pages/nutritionist/Ingredient Management/TableIngredient";
@@ -76,17 +74,6 @@ const AppRoutes = () => {
         <Route path="verify" element={<VerifyOtp />} />
         <Route path="forget-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
-        <Route path="/admin/dashboard" element={<HealthyDashboard />} />
-        <Route path="/admin/usermanagement" element={<UserManagement />} />
-        <Route
-          path="/admin/ingredientsmanagement"
-          element={<IngredientsManagement />}
-        />
-        <Route path="/admin/dishmanagement" element={<DishManagement />} />
-        <Route path="/admin/mealplan" element={<MealPlan />} />
-        <Route path="/admin/edituser/:id" element={<EditUser />} />
-        <Route path="/edituser/:id" element={<EditUser />} />
-        <Route path="/admin/viewprofile" element={<ViewProfile />} />
         <Route path="/viewprofile" element={<ViewProfile />} />
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
@@ -162,7 +149,6 @@ const AppRoutes = () => {
         <Route path="term" element={<Term />} />
       </Route>
 
-      {/* ✅ Bảo vệ toàn bộ route admin */}
       <Route
         path="/admin"
         element={
@@ -171,14 +157,22 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
-        <Route path="user" element={<TableUser />} />
-        <Route path="order" element={<TableOrder />} />
-
+        <Route index element={<HealthyDashboard />} />
         {/* ✅ Thêm route cho Footer Management */}
-        <Route path="about" element={<AboutUsManagement />} />
-        <Route path="term" element={<TermOfUseManagement />} />
-        <Route path="faqs" element={<FAQsManagement />} />
-        <Route path="contact" element={<ContactUsManagement />} />
+        <Route path="aboutusmanagement" element={<AboutUsManagement />} />
+        <Route path="termofusemanagement" element={<TermOfUseManagement />} />
+        <Route path="faqsManagement" element={<FAQsManagement />} />
+        <Route path="contactusmanagement" element={<ContactUsManagement />} />
+
+        <Route path="usermanagement" element={<UserManagement />} />
+        <Route path="dishmanagement" element={<DishManagement />} />
+        <Route
+          path="ingredientsmanagement"
+          element={<IngredientsManagement />}
+        />
+        <Route path="mealplan" element={<MealPlan />} />
+        <Route path="edituser/:id" element={<EditUser />} />
+        <Route path="viewprofile" element={<ViewProfile />} />
       </Route>
 
       {/* ✅ quizinfor */}

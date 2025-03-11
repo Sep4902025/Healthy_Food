@@ -25,6 +25,8 @@ import {
   SettingsIcon as CogIcon,
 } from "lucide-react";
 
+import { useNavigate, useNavigationType } from "react-router-dom";
+
 // Sample data (you'll replace these with your actual data sources)
 const orderData = [
   { day: "Sunday", orders: 300 },
@@ -62,23 +64,48 @@ const HealthyDashboard = () => {
     "User Interface": false,
   });
 
+  const navigate = useNavigate();
+
+  const handleMenuClick = (menu) => {
+    setActiveMenu(menu.name);
+    if (menu.submenus) {
+      toggleSubmenu(menu.name);
+    } else {
+      const route = `/admin/${menu.name.toLowerCase().replace(/\s+/g, "")}`;
+      navigate(route); // Chuyển trang
+    }
+  };
+
+  const handleSubmenuClick = (mainMenu, submenu) => {
+    setActiveMenu(submenu);
+    const route = `/admin/${submenu.toLowerCase().replace(/\s+/g, "")}`;
+    navigate(route);
+  };
+
   const menuItems = [
     { icon: <HomeIcon size={20} />, name: "Dashboard" },
     { icon: <ShoppingCartIcon size={20} />, name: "Order Management" },
-    { icon: <BookOpenIcon size={20} />, name: "Meal Plant" },
+    { icon: <BookOpenIcon size={20} />, name: "Meal Plan" },
     {
       icon: <UserIcon size={20} />,
       name: "User Management",
-      submenus: ["Manage Users", "User Roles", "Permissions"],
     },
     {
       icon: <BarChartIcon size={20} />,
       name: "Analytics",
-      submenus: ["Sales Analytics", "User Analytics", "Performance"],
     },
     { icon: <HelpCircleIcon size={20} />, name: "Quiz Management" },
     { icon: <BookOpenIcon size={20} />, name: "Dish Preferences" },
-    { icon: <HelpCircleIcon size={20} />, name: "FAQs Management" },
+    {
+      icon: <HelpCircleIcon size={20} />,
+      name: "Footer Management",
+      submenus: [
+        "About Us Management",
+        "Contact Us Management",
+        "FAQs Management",
+        " Term of Use Management",
+      ],
+    },
     { icon: <SettingsIcon size={20} />, name: "User Interface" },
   ];
 
@@ -107,12 +134,7 @@ const HealthyDashboard = () => {
                     ? "bg-green-100 text-green-600"
                     : "text-gray-600"
                 }`}
-                onClick={() => {
-                  setActiveMenu(item.name);
-                  if (item.submenus) {
-                    toggleSubmenu(item.name);
-                  }
-                }}
+                onClick={() => handleMenuClick(item)}
               >
                 <span className="mr-3">{item.icon}</span>
                 <span className="flex-grow">{item.name}</span>
@@ -123,11 +145,16 @@ const HealthyDashboard = () => {
                 )}
               </div>
               {item.submenus && openSubmenus[item.name] && (
-                <div className="pl-10 mt-1">
+                <div className="ml-8 mt-1 space-y-1">
                   {item.submenus.map((submenu) => (
                     <div
                       key={submenu}
-                      className="p-2 text-sm text-gray-500 hover:bg-green-50 cursor-pointer"
+                      className={`p-2 cursor-pointer rounded hover:bg-green-50 ${
+                        activeMenu === submenu
+                          ? "bg-green-100 text-green-600"
+                          : "text-gray-600"
+                      }`}
+                      onClick={() => handleSubmenuClick(item.name, submenu)}
                     >
                       {submenu}
                     </div>
@@ -141,53 +168,8 @@ const HealthyDashboard = () => {
 
       {/* Main Content */}
       <div className="flex-grow flex flex-col">
-        {/* Top Header with Search and Buttons */}
-        <div className="bg-white border-b p-4 flex items-center justify-between">
-          {/* Search Bar */}
-          <div className="flex-grow max-w-xl mr-4 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <SearchIcon className="text-gray-400" size={20} />
-            </div>
-            <input
-              type="text"
-              placeholder="Search here..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-3">
-            <button className="p-2 hover:bg-gray-100 rounded-full relative">
-              <BellIcon className="text-gray-600" size={20} />
-              <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full relative">
-              <MessageCircleIcon className="text-gray-600" size={20} />
-              <span className="absolute top-0 right-0 h-2 w-2 bg-green-500 rounded-full"></span>
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <GiftIcon className="text-gray-600" size={20} />
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <CogIcon className="text-gray-600" size={20} />
-            </button>
-
-            {/* User Profile */}
-            <div className="flex items-center ml-4">
-              <span className="mr-2 text-gray-700">Hello, Samantha</span>
-              <img
-                src="/api/placeholder/40/40"
-                alt="Profile"
-                className="rounded-full w-10 h-10 border-2 border-green-500"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Rest of the existing dashboard content remains the same */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-6 ml-6">
           <div className="bg-white p-4 rounded shadow">
             <div className="flex items-center">
               <div className="mr-4">
@@ -248,7 +230,7 @@ const HealthyDashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 ml-6">
           <div className="bg-white p-4 rounded shadow">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Pie Chart</h3>
@@ -319,7 +301,7 @@ const HealthyDashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-2 gap-4 mt-4 ml-6">
           <div className="bg-white p-4 rounded shadow">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Total Revenue</h3>

@@ -17,6 +17,8 @@ import {
   PlusIcon
 } from 'lucide-react';
 
+import { useNavigate } from "react-router-dom";
+
 // Sample meal plan data
 const initialMealPlans = [
   { 
@@ -78,24 +80,50 @@ const MealPlan = () => {
   });
 
   const menuItems = [
-    { icon: <HomeIcon size={20} />, name: 'Dashboard' },
-    { icon: <ShoppingCartIcon size={20} />, name: 'Order Management' },
-    { icon: <BookOpenIcon size={20} />, name: 'Meal Plant' },
-    { 
-      icon: <UserIcon size={20} />, 
-      name: 'User Management', 
-      submenus: ['Manage Users', 'User Roles', 'Permissions'] 
+    { icon: <HomeIcon size={20} />, name: "Dashboard" },
+    { icon: <ShoppingCartIcon size={20} />, name: "Order Management" },
+    { icon: <BookOpenIcon size={20} />, name: "Meal Plan" },
+    {
+      icon: <UserIcon size={20} />,
+      name: "User Management",
     },
-    { 
-      icon: <BarChartIcon size={20} />, 
-      name: 'Analytics', 
-      submenus: ['Sales Analytics', 'User Analytics', 'Performance'] 
+    {
+      icon: <BarChartIcon size={20} />,
+      name: "Analytics",
     },
-    { icon: <HelpCircleIcon size={20} />, name: 'Quiz Management' },
-    { icon: <BookOpenIcon size={20} />, name: 'Dish Preferences' },
-    { icon: <HelpCircleIcon size={20} />, name: 'FAQs Management' },
-    { icon: <SettingsIcon size={20} />, name: 'User Interface' }
+    { icon: <HelpCircleIcon size={20} />, name: "Quiz Management" },
+    { icon: <BookOpenIcon size={20} />, name: "Dish Preferences" },
+    {
+      icon: <HelpCircleIcon size={20} />,
+      name: "Footer Management",
+      submenus: [
+        "About Us Management",
+        "Contact Us Management",
+        "FAQs Management",
+        " Term of Use Management",
+      ],
+    },
+    { icon: <SettingsIcon size={20} />, name: "User Interface" },
   ];
+
+  const navigate = useNavigate ();
+
+  const handleMenuClick = (menu) => {
+    setActiveMenu(menu.name);
+    if (menu.submenus) {
+      toggleSubmenu(menu.name);
+    } else {
+      const route = `/admin/${menu.name.toLowerCase().replace(/\s+/g, "")}`;
+      navigate(route); // Chuyển trang
+    }
+  };
+
+  const handleSubmenuClick = (mainMenu, submenu) => {
+    setActiveMenu(submenu);
+    const route = `/admin/${submenu.toLowerCase().replace(/\s+/g, "")}`;
+    navigate(route);
+  };
+
 
   const toggleSubmenu = (menuName) => {
     setOpenSubmenus(prev => ({
@@ -124,12 +152,7 @@ const MealPlan = () => {
                 className={`flex items-center p-3 cursor-pointer rounded hover:bg-green-50 ${
                   activeMenu === item.name ? 'bg-green-100 text-green-600' : 'text-gray-600'
                 }`}
-                onClick={() => {
-                  setActiveMenu(item.name);
-                  if (item.submenus) {
-                    toggleSubmenu(item.name);
-                  }
-                }}
+                onClick={() => handleMenuClick(item)}
               >
                 <span className="mr-3">{item.icon}</span>
                 <span className="flex-grow">{item.name}</span>
@@ -140,11 +163,16 @@ const MealPlan = () => {
                 )}
               </div>
               {item.submenus && openSubmenus[item.name] && (
-                <div className="pl-10 mt-1">
+                <div className="ml-8 mt-1 space-y-1">
                   {item.submenus.map((submenu) => (
-                    <div 
-                      key={submenu} 
-                      className="p-2 text-sm text-gray-500 hover:bg-green-50 cursor-pointer"
+                    <div
+                      key={submenu}
+                      className={`p-2 cursor-pointer rounded hover:bg-green-50 ${
+                        activeMenu === submenu
+                          ? "bg-green-100 text-green-600"
+                          : "text-gray-600"
+                      }`}
+                      onClick={() => handleSubmenuClick(item.name, submenu)}
                     >
                       {submenu}
                     </div>
@@ -158,50 +186,6 @@ const MealPlan = () => {
 
       {/* Main Content */}
       <div className="flex-grow flex flex-col">
-        {/* Top Header with Search and Buttons */}
-        <div className="bg-white border-b p-4 flex items-center justify-between">
-          {/* Search Bar */}
-          <div className="flex-grow max-w-xl mr-4 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <SearchIcon className="text-gray-400" size={20} />
-            </div>
-            <input 
-              type="text" 
-              placeholder="Search here..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-3">
-            <button className="p-2 hover:bg-gray-100 rounded-full relative">
-              <BellIcon className="text-gray-600" size={20} />
-              <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full relative">
-              <MessageCircleIcon className="text-gray-600" size={20} />
-              <span className="absolute top-0 right-0 h-2 w-2 bg-green-500 rounded-full"></span>
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <GiftIcon className="text-gray-600" size={20} />
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <CogIcon className="text-gray-600" size={20} />
-            </button>
-
-            {/* User Profile */}
-            <div className="flex items-center ml-4">
-              <span className="mr-2 text-gray-700">Hello, Samantha</span>
-              <img 
-                src="/api/placeholder/40/40" 
-                alt="Profile" 
-                className="rounded-full w-10 h-10 border-2 border-green-500"
-              />
-            </div>
-          </div>
-        </div>
 
         {/* Meal Plan Content */}
         <div className="flex-grow p-6 bg-gray-100 overflow-y-auto">
