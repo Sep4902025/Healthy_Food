@@ -66,7 +66,9 @@ const DishDetail = () => {
             ? {
                 ...comment,
                 isLiked: !comment.isLiked,
-                likeCount: comment.isLiked ? comment.likeCount - 1 : comment.likeCount + 1 
+                likeCount: comment.isLiked
+                  ? comment.likeCount - 1
+                  : comment.likeCount + 1,
               }
             : comment
         )
@@ -82,16 +84,16 @@ const DishDetail = () => {
     <div className="p-6 bg-gray-100 min-h-screen flex flex-col items-center">
       <h1 className="text-3xl font-bold text-center mb-4">{dish.name}</h1>
       <img
-        src={dish.image_url}
+        src={dish.imageUrl}
         alt={dish.name}
         className="w-full max-w-lg h-80 object-cover rounded-lg shadow-md"
       />
       <p className="text-gray-700 text-lg mt-4">{dish.description}</p>
 
-      {dish.recipe_id && (
+      {dish.recipeId && (
         <Button
           className="mt-6 px-6 py-3 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition"
-          onClick={() => navigate(`/${dish._id}/recipes/${dish.recipe_id}`)}
+          onClick={() => navigate(`/${dish._id}/recipes/${dish.recipeId}`)}
         >
           Xem công thức
         </Button>

@@ -15,7 +15,7 @@ import FemaleUser from "../../assets/images/FemaleUser.png";
 import { CheckCircle, Timer } from "lucide-react";
 
 const RecipeApp = () => {
-  const { dish_id, recipe_id } = useParams();
+  const { dishId, recipeId } = useParams();
   const [recipe, setRecipe] = useState(null);
   const [dish, setDish] = useState(null);
   const [ingredients, setIngredients] = useState([]);
@@ -27,8 +27,8 @@ const RecipeApp = () => {
     const fetchRecipe = async () => {
       try {
         const recipeResponse = await RecipeService.getRecipeByRecipeId(
-          dish_id,
-          recipe_id
+          dishId,
+          recipeId
         );
         setRecipe(recipeResponse.data);
 
@@ -49,7 +49,7 @@ const RecipeApp = () => {
 
     const fetchRatings = async () => {
       try {
-        const response = await commentService.getRatingsByRecipe(recipe_id);
+        const response = await commentService.getRatingsByRecipe(recipeId);
         setRatings(response.data);
       } catch (error) {
         console.error("Lỗi khi tải đánh giá:", error);
@@ -58,7 +58,7 @@ const RecipeApp = () => {
 
     fetchRecipe();
     fetchRatings();
-  }, [recipe_id]);
+  }, [recipeId]);
 
   if (!recipe || !dish)
     return (
@@ -70,7 +70,7 @@ const RecipeApp = () => {
   const handleRateRecipe = async () => {
     try {
       const response = await commentService.rateRecipe(
-        recipe_id,
+        recipeId,
         userId,
         rating
       );
@@ -102,20 +102,21 @@ const RecipeApp = () => {
           {dish.name}
         </h2>
         <img
-          src={dish.image_url}
+          src={dish.imageUrl}
           alt={dish.name}
           className="w-56 h-56 object-cover rounded-full mx-auto mb-4 shadow-lg border-4 border-gray-300 transition-transform duration-300 hover:scale-105"
         />
 
         <p className="text-gray-700 text-lg mb-4 text-center">
-           {dish.description}
+          {dish.description}
         </p>
         <p className="text-gray-600 mt-1">🍽 Loại: {dish.type} </p>
         <p className="text-gray-700 text-lg mb-4 text-center">
-        🌞 Mùa: {dish.season}
+          🌞 Mùa: {dish.season}
         </p>
         <p className="text-lg font-semibold flex items-center justify-center mt-3 text-gray-800">
-          <Timer className="w-5 h-5 mr-2 text-gray-600" /> Thời gian nấu: {recipe.cookingTime} phút
+          <Timer className="w-5 h-5 mr-2 text-gray-600" /> Thời gian nấu:{" "}
+          {recipe.cookingTime} phút
         </p>
       </div>
 
@@ -156,21 +157,21 @@ const RecipeApp = () => {
       {/* Card thông tin dinh dưỡng */}
       <Card className="mt-6 max-w-3xl w-full bg-white p-6 rounded-xl shadow-md">
         <h3 className="text-2xl font-bold mb-4">🍏 Thông tin dinh dưỡng</h3>
-        
-          <p className="text-gray-700">
-          🔥 {recipe.totalCalories} cal | 🥩 {recipe.totalProtein}g
-          Protein | 🥑 {recipe.totalFat}g Fat | 🌾 {recipe.totalCarbs}g
-          </p>
-        
+
+        <p className="text-gray-700">
+          🔥 {recipe.totalCalories} cal | 🥩 {recipe.totalProtein}g Protein | 🥑{" "}
+          {recipe.totalFat}g Fat | 🌾 {recipe.totalCarbs}g
+        </p>
       </Card>
 
       {/* Card hướng dẫn nấu ăn */}
       <Card className="mt-6 max-w-3xl w-full bg-white p-6 rounded-xl shadow-md">
-      <h3 className="text-2xl font-bold mb-4">📖 Hướng dẫn nấu ăn</h3>
+        <h3 className="text-2xl font-bold mb-4">📖 Hướng dẫn nấu ăn</h3>
         <ol className="list-decimal pl-5 text-gray-700">
           {recipe.instruction?.map((step) => (
             <li key={step._id} className="mb-2 flex items-start">
-              <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" /> {step.description}
+              <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" />{" "}
+              {step.description}
             </li>
           ))}
         </ol>

@@ -87,7 +87,7 @@ const AppRoutes = () => {
         <Route path="/admin/viewprofile" element={<ViewProfile />} />
         <Route path="/viewprofile" element={<ViewProfile />} />
         {/* Router recipe */}
-        <Route path=":dish_id/recipes/:recipe_id" element={<RecipeView />} />
+        <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
 
         {/* Các route cần đăng nhập */}
         <Route
@@ -137,13 +137,13 @@ const AppRoutes = () => {
         <Route path="dishes/:type" element={<DishesList />} />
 
         <Route
-        path="/foryou"
-        element={
-          <PrivateRoute>
-            <ForYoyPage />
-          </PrivateRoute>
-        }
-      ></Route>
+          path="/foryou"
+          element={
+            <PrivateRoute>
+              <ForYoyPage />
+            </PrivateRoute>
+          }
+        ></Route>
 
         {/* ✅ Bảo vệ trang chat, chỉ user mới vào được */}
         <Route
@@ -217,8 +217,6 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       ></Route>
-
-      
 
       {/* ✅ Bảo vệ toàn bộ route nutritionist */}
       <Route

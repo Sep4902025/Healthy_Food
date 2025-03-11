@@ -81,7 +81,10 @@ const FoodSlider = ({ userId, dishes = [] }) => {
       >
         {dishes.map((food) => (
           <SwiperSlide key={food._id}>
-            <div className="food-item" onClick={() => handleFoodClick(food._id)}>
+            <div
+              className="food-item"
+              onClick={() => handleFoodClick(food._id)}
+            >
               {/* Nút Like (Chỉ hiển thị, không có sự kiện onClick) */}
               <div className="food-like-container flex items-center justify-center">
                 <div
@@ -107,7 +110,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
               <div className="center-con">
                 <div className="food-i-container">
                   <img
-                    src={food.image_url}
+                    src={food.imageUrl}
                     alt={food.name}
                     className="w-full h-40 object-cover rounded-md"
                   />
