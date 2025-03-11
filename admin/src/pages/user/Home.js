@@ -9,7 +9,8 @@ import dish from "../../assets/images/mainDish.png";
 import breakfast from "../../assets/images/breakfast.png";
 import HomeService from "../../services/home.service";
 import FoodSlider from "../../components/ui/FoodSlider";
-
+import { useSelector } from "react-redux";
+import { selectAuth } from "../../store/selectors/authSelectors";
 const Home = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
@@ -33,10 +34,12 @@ const Home = () => {
       <div className="home-container">
         <div className="home-content">
           <h1 className="home-title bold text-black-600">
-            <span className="text-green">Do you want to personalize it for you?</span>
+            <span className="text-green">
+              Do you want to personalize it for you?
+            </span>
           </h1>
           <p className="home-description">
-          Please tell us more about yourself.
+            Please tell us more about yourself.
           </p>
           <button
             onClick={() => navigate("/another-page")}
@@ -55,9 +58,7 @@ const Home = () => {
         <h3 className="food-slogan">Recommended Dishes</h3>
         <div className="food-title-container">
           <h1 className="food-title">Standout Foods From Our Menu</h1>
-          
         </div>
-        
 
         <FoodSlider userId={userId} dishes={dishes} />
 
