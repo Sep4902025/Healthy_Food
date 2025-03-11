@@ -53,13 +53,16 @@ const AppRoutes = () => {
         <Route path="reset-password" element={<ResetPassword />} />
         <Route path="/admin/dashboard" element={<HealthyDashboard />} />
         <Route path="/admin/usermanagement" element={<UserManagement />} />
-        <Route path="/admin/ingredientsmanagement" element={<IngredientsManagement />} />
-        <Route path="/admin/dishmanagement" element={<DishManagement/>} />
-        <Route path="/admin/mealplan" element={<MealPlan/>} />
+        <Route
+          path="/admin/ingredientsmanagement"
+          element={<IngredientsManagement />}
+        />
+        <Route path="/admin/dishmanagement" element={<DishManagement />} />
+        <Route path="/admin/mealplan" element={<MealPlan />} />
         <Route path="/admin/edituser/:id" element={<EditUser />} />
         <Route path="/edituser/:id" element={<EditUser />} />
-        <Route path="/admin/viewprofile" element={<ViewProfile/>} />
-        <Route path="/viewprofile" element={<ViewProfile/>} />
+        <Route path="/admin/viewprofile" element={<ViewProfile />} />
+        <Route path="/viewprofile" element={<ViewProfile />} />
 
         {/* Các route cần đăng nhập */}
         <Route
@@ -113,23 +116,25 @@ const AppRoutes = () => {
         <Route path="term" element={<Term />} />
       </Route>
 
-      {/* ✅ Bảo vệ toàn bộ route admin */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="user" element={<TableUser />} />
-        <Route path="order" element={<TableOrder />} />
+      <Route path="/" element={<MainLayout />}>
+        {/* ✅ Bảo vệ toàn bộ route admin */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <HealthyDashboard />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="user" element={<TableUser />} />
+          <Route path="order" element={<TableOrder />} />
 
-        {/* ✅ Thêm route cho Footer Management */}
-        <Route path="about" element={<AboutUsManagement />} />
-        <Route path="term" element={<TermOfUseManagement />} />
-        <Route path="faqs" element={<FAQsManagement />} />
-        <Route path="contact" element={<ContactUsManagement />} />
+          {/* ✅ Thêm route cho Footer Management */}
+          <Route path="aboutusmanagement" element={<AboutUsManagement />} />
+          <Route path="termofusemanagement" element={<TermOfUseManagement />} />
+          <Route path="faqsManagement" element={<FAQsManagement />} />
+          <Route path="contactusmanagement" element={<ContactUsManagement />} />
+        </Route>
       </Route>
 
       {/* ✅ Bảo vệ toàn bộ route nutritionist */}

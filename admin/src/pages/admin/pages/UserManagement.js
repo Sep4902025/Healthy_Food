@@ -22,20 +22,27 @@ import {
 const menuItems = [
   { icon: <HomeIcon size={20} />, name: "Dashboard" },
   { icon: <ShoppingCartIcon size={20} />, name: "Order Management" },
-  { icon: <BookOpenIcon size={20} />, name: "Meal Plant" },
+  { icon: <BookOpenIcon size={20} />, name: "Meal Plan" },
   {
     icon: <UserIcon size={20} />,
     name: "User Management",
-    submenus: ["Manage Users", "User Roles", "Permissions"],
   },
   {
     icon: <BarChartIcon size={20} />,
     name: "Analytics",
-    submenus: ["Sales Analytics", "User Analytics", "Performance"],
   },
   { icon: <HelpCircleIcon size={20} />, name: "Quiz Management" },
   { icon: <BookOpenIcon size={20} />, name: "Dish Preferences" },
-  { icon: <HelpCircleIcon size={20} />, name: "FAQs Management" },
+  {
+    icon: <HelpCircleIcon size={20} />,
+    name: "Footer Management",
+    submenus: [
+      "About Us Management",
+      "Contact Us Management",
+      "FAQs Management",
+      " Term of Use Management",
+    ],
+  },
   { icon: <SettingsIcon size={20} />, name: "User Interface" },
 ];
 
@@ -86,6 +93,16 @@ const UserManagement = () => {
     setUsers((prevUsers) => prevUsers.filter((user) => user._id !== _id));
   };
 
+  const handleMenuClick = (menu) => {
+    setActiveMenu(menu.name);
+    if (menu.submenus) {
+      toggleSubmenu(menu.name);
+    } else {
+      const route = `/admin/${menu.name.toLowerCase().replace(/\s+/g, "")}`;
+      navigate(route); // Chuyển trang
+    }
+  };
+
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
@@ -113,12 +130,7 @@ const UserManagement = () => {
                     ? "bg-green-100 text-green-600"
                     : "text-gray-600"
                 }`}
-                onClick={() => {
-                  setActiveMenu(item.name);
-                  if (item.submenus) {
-                    toggleSubmenu(item.name);
-                  }
-                }}
+                onClick={() => handleMenuClick(item)}
               >
                 <span className="mr-3">{item.icon}</span>
                 <span className="flex-grow">{item.name}</span>
