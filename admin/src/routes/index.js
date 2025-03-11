@@ -39,8 +39,8 @@ import UserManagement from "../pages/admin/pages/UserManagement";
 import IngredientsManagement from "../pages/admin/pages/IngredientManagement";
 import DishManagement from "../pages/admin/pages/DishManagement";
 import MealPlan from "../pages/admin/pages/MealPlan";
-import EditUser from "../pages/admin/pages/EditUser";
-import ViewProfile from "../pages/admin/pages/ViewProfile";
+import EditUser from "../pages/user/EditUser";
+import ViewProfile from "../pages/user/ViewProfile";
 import DishDetail from "../pages/user/DishDetail";
 
 import QuizLayout from "../components/layouts/QuizLayout";
@@ -82,8 +82,9 @@ const AppRoutes = () => {
         <Route path="/admin/dishmanagement" element={<DishManagement />} />
         <Route path="/admin/mealplan" element={<MealPlan />} />
         <Route path="/admin/edituser/:id" element={<EditUser />} />
+        <Route path="/edituser/:id" element={<EditUser />} />
         <Route path="/admin/viewprofile" element={<ViewProfile />} />
-        <Route path="/edit-profile" element={<ViewProfile />} />
+        <Route path="/viewprofile" element={<ViewProfile />} />
         {/* Router recipe */}
         <Route path=":dish_id/recipes/:recipe_id" element={<RecipeView />} />
 
@@ -92,7 +93,7 @@ const AppRoutes = () => {
           path="user"
           element={
             <PrivateRoute>
-              <User />
+              <ViewProfile />
             </PrivateRoute>
           }
         />

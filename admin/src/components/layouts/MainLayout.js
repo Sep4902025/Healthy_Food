@@ -96,7 +96,7 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="flex flex-col bg-gray-50 min-h-screen">
       {/* Header */}
       <header className="bg-white shadow-md py-2">
         <div className="container mx-auto flex items-center justify-between px-6">
@@ -237,7 +237,7 @@ const MainLayout = () => {
       </header>
       <ReminderNotification userId={user?._id} />
       {/* Main Content */}
-      <main className="container mx-auto py-6 px-6">
+      <main className="container mx-auto py-6 px-6 flex-grow">
         <Outlet />
       </main>
 

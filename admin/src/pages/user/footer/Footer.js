@@ -4,7 +4,7 @@ const Footer = () => {
   const navigate = useNavigate();
 
   return (
-    <footer className="bg-gray-800 text-white py-4 px-6 flex justify-between items-center">
+    <footer className="bg-gray-800 text-white py-4 px-6 flex justify-between items-center mt-auto w-full">
       <p className="text-sm">Copyright &copy; 2025 HealthyFood Inc. All rights reserved.</p>
       <div className="flex space-x-4">
         <button onClick={() => navigate("/about")} className="hover:underline">About Us</button>

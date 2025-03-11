@@ -21,10 +21,8 @@ const jobRouter = require("./routes/jobRouter");
 const footerRouter = require("./routes/footerRoutes");
 const homeRouter = require("./routes/homeRouter");
 const commentRatingRouter = require("./routes/commentRatingRouter");
-const medicalConditionRouter = require("./routes/medicalConditionRouter"); 
-const userFavoriteDishesRouter = require("./routes/userFavoriteDishesRouter"); 
-
-
+const medicalConditionRouter = require("./routes/medicalConditionRouter");
+const userFavoriteDishesRouter = require("./routes/userFavoriteDishesRouter");
 
 const uRouter = require("./routes/uRouter");
 
@@ -106,8 +104,6 @@ app.use("/api/v1/comment", commentRatingRouter);
 app.use("/api/v1/recipe", commentRatingRouter);
 app.use("/api/v1/medicalConditions", medicalConditionRouter);
 app.use("/api/v1/favoriteDishes", userFavoriteDishesRouter);
-
-
 
 app.use("/api/v1/userpreference", userPreferenceRouter);
 
