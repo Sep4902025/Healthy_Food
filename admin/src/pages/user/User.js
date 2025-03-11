@@ -1,18 +1,63 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
 import { useNavigate } from "react-router-dom";
 import femaleUser from "../../assets/images/FemaleUser.png";
 import "@fortawesome/fontawesome-free/css/all.min.css";
+import quizService from "../../services/quizService";
 
 const User = () => {
   const user = useSelector(selectUser);
   const navigate = useNavigate();
 
+  const [userPreference, setUserPreference] = useState([]);
+
+  useEffect(() => {
+    const fetchUserPreference = async () => {
+      if (!user) {
+        setUserPreference(null);
+        return;
+      }
+
+      try {
+        const response = await quizService.getUserPreference(user._id);
+        if (response.data) {
+          setUserPreference(response.data.data);
+
+          console.log("User preference:", userPreference);
+        } else {
+          setUserPreference(null);
+        }
+      } catch (error) {
+        console.error("Error fetching user preference:", error);
+        setUserPreference(null);
+      }
+    };
+
+    fetchUserPreference();
+  }, [user]);
+
   if (!user) {
     navigate("/signin");
     return null;
   }
+
+  const bmi =
+    userPreference?.weight && userPreference?.height
+      ? (
+          userPreference.weight / Math.pow(userPreference.height / 100, 2)
+        ).toFixed(2)
+      : null;
+
+  // Xác định thông báo cảnh báo
+  const getWarningMessage = (bmi) => {
+    if (!bmi) return "Chưa có dữ liệu để đánh giá!";
+    if (bmi < 18.5) return "Bạn quá gầy, nên ăn nhiều hơn!";
+    if (bmi >= 18.5 && bmi < 25) return "Cơ thể bạn đang ở trạng thái tốt!";
+    if (bmi >= 25 && bmi < 30)
+      return "Bạn hơi dư cân, nên điều chỉnh chế độ ăn uống!";
+    return "Bạn cần kiểm soát cân nặng để tránh ảnh hưởng sức khỏe!";
+  };
 
   return (
     <div className="user-container">
@@ -116,7 +161,23 @@ const User = () => {
                     <td className="p-2 font-semibold border-none">Phone</td>
                     <td className="p-2 border-none">
                       <label className="w-full p-1 block text-gray-700">
-                        {user.phone}
+                        {userPreference.phoneNumber}
+                      </label>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-semibold border-none">Gender</td>
+                    <td className="p-2 border-none">
+                      <label className="w-full p-1 block text-gray-700">
+                        {userPreference.gender}
+                      </label>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-semibold border-none">Age</td>
+                    <td className="p-2 border-none">
+                      <label className="w-full p-1 block text-gray-700">
+                        {userPreference.age}
                       </label>
                     </td>
                   </tr>
@@ -134,9 +195,43 @@ const User = () => {
               </div>
 
               <div className="goal-content">
-                Lorem ipsum dolor sit amet consectetur. Erat auctor a aliquam
-                vel congue luctus. Leo diam cras neque mauris ac arcu elit ipsum
-                dolor sit amet consectetur.
+              <table className="w-full border-collapse">
+                  <tbody>
+                    <tr>
+                      <td className="p-2 font-semibold">Goal</td>
+                      <td className="p-2">
+                        <label className="w-full p-1">
+                          {userPreference.goal} 
+                        </label>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-semibold">Diet</td>
+                      <td className="p-2">
+                        <label className="w-full p-1">
+                          {userPreference.diet} 
+                        </label>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-semibold">Sleep Time</td>
+                      <td className="p-2">
+                        <label className="w-full p-1">
+                          {userPreference.sleepTime} 
+                        </label>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-semibold">Long of plan</td>
+                      <td className="p-2">
+                        <label className="w-full p-1">
+                          {userPreference.longOfPlan}
+                        </label>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                
               </div>
             </div>
 
@@ -148,31 +243,46 @@ const User = () => {
                     <tr>
                       <td className="p-2 font-semibold">Weight</td>
                       <td className="p-2">
-                        <label className="w-full p-1"> {user.weight} kg </label>
+                        <label className="w-full p-1">
+                          {" "}
+                          {userPreference.weight} kg{" "}
+                        </label>
                       </td>
                     </tr>
                     <tr>
                       <td className="p-2 font-semibold">Height</td>
                       <td className="p-2">
-                        <label className="w-full p-1"> {user.height} cm </label>
+                        <label className="w-full p-1">
+                          {" "}
+                          {userPreference.height} cm{" "}
+                        </label>
                       </td>
                     </tr>
                     <tr>
                       <td className="p-2 font-semibold">BMI</td>
                       <td className="p-2">
                         <label className="w-full p-1">
-                          {" "}
-                          {user.weight / (user.height * 2)}{" "}
+                          {bmi ? bmi : "Chưa có dữ liệu"}{" "}
                         </label>
                       </td>
                     </tr>
                   </tbody>
                 </table>
 
-                <div className="body-warning">
-                  <div className="body-warning-title">Warning</div>
+                <div
+                  className={`body-warning ${
+                    bmi < 18.5
+                      ? "bg-blue-200 text-blue-800"
+                      : bmi >= 18.5 && bmi < 25
+                      ? "bg-green-200 text-green-800"
+                      : bmi >= 25 && bmi < 30
+                      ? "bg-yellow-200 text-yellow-800"
+                      : "bg-red-200 text-red-800"
+                  } p-4 rounded-lg`}
+                >
+                  <div className="body-warning-title font-bold">Warning</div>
                   <div className="body-warning-content">
-                    You are so fast. You should eat more.
+                    {getWarningMessage(bmi)}
                   </div>
                 </div>
               </div>

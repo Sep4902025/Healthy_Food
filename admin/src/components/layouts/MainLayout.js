@@ -28,21 +28,20 @@ const MainLayout = () => {
         try {
           const response = await quizService.getUserPreference(user._id);
           if (response.data.status === "success") {
-            setHasCompletedQuiz(true); 
+            setHasCompletedQuiz(true);
           } else {
             setHasCompletedQuiz(false);
           }
         } catch (error) {
           console.error("Error fetching quiz status:", error);
-          setHasCompletedQuiz(false); // Đảm bảo không bị trạng thái cũ giữ lại
+          setHasCompletedQuiz(false);
         }
       } else {
-        setHasCompletedQuiz(false); // Khi user là null (đăng xuất) thì reset về false
+        setHasCompletedQuiz(false);
       }
     };
     checkUserQuizStatus();
   }, [user]);
-  
 
   const handleLogout = () => {
     dispatch(logoutUser());
@@ -124,13 +123,18 @@ const MainLayout = () => {
               Contact
             </a>
             {!hasCompletedQuiz ? (
-              <a href="/quizinfor" className="hover:text-black">Quiz</a>
+              <a href="/quizinfor" className="hover:text-black">
+                Quiz
+              </a>
             ) : (
-              <a href="/viewquiz" className="hover:text-black">
-              For you
-            </a>
+              <a href="/foryou" className="hover:text-black">
+                For you
+              </a>
             )}
-            
+
+            <a href="/viewquiz" className="hover:text-black">
+              ViewQuiz
+            </a>
           </nav>
 
           {/* Auth Button */}

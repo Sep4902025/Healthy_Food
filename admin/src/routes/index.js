@@ -63,6 +63,7 @@ import WaterDrink from "../pages/quizinfor/WaterDrink";
 import Weight from "../pages/quizinfor/Weight";
 import WeightGoal from "../pages/quizinfor/WeightGoal";
 import ViewQuiz from "../pages/user/ViewQuiz";
+import ForYoyPage from "../pages/user/ForYouPage";
 const AppRoutes = () => {
   return (
     <Routes>
@@ -134,6 +135,15 @@ const AppRoutes = () => {
 
         <Route path="ingredients/:type" element={<IngredientList />} />
         <Route path="dishes/:type" element={<DishesList />} />
+
+        <Route
+        path="/foryou"
+        element={
+          <PrivateRoute>
+            <ForYoyPage />
+          </PrivateRoute>
+        }
+      ></Route>
 
         {/* ✅ Bảo vệ trang chat, chỉ user mới vào được */}
         <Route
@@ -207,6 +217,8 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       ></Route>
+
+      
 
       {/* ✅ Bảo vệ toàn bộ route nutritionist */}
       <Route
