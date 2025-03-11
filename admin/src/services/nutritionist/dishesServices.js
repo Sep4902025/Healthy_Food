@@ -19,7 +19,10 @@ const dishesService = {
       console.log("🔍 Danh sách món ăn từ API:", response.data);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy món ăn:", error.response?.data || error.message);
+      console.error(
+        "❌ Lỗi khi lấy món ăn:",
+        error.response?.data || error.message
+      );
       return { success: false, message: "Lỗi khi tải danh sách món ăn" };
     }
   },
@@ -34,7 +37,10 @@ const dishesService = {
       console.log("✅ Phản hồi từ server:", response.data);
       return { success: true };
     } catch (error) {
-      console.error("❌ Lỗi khi thêm món ăn:", error.response?.data || error.message);
+      console.error(
+        "❌ Lỗi khi thêm món ăn:",
+        error.response?.data || error.message
+      );
       return { success: false, message: "Thêm món ăn thất bại!" };
     }
   },
@@ -51,12 +57,13 @@ const dishesService = {
 
       return { success: true };
     } catch (error) {
-      console.error("❌ Lỗi khi cập nhật món ăn:", error.response?.data || error.message);
+      console.error(
+        "❌ Lỗi khi cập nhật món ăn:",
+        error.response?.data || error.message
+      );
       return { success: false, message: "Cập nhật món ăn thất bại!" };
     }
   },
-
-    
 
   // 🔹 Xóa vĩnh viễn món ăn
   hardDeleteDish: async (id) => {
@@ -70,7 +77,10 @@ const dishesService = {
 
       return { success: true };
     } catch (error) {
-      console.error("❌ Lỗi khi xóa vĩnh viễn món ăn:", error.response?.data || error.message);
+      console.error(
+        "❌ Lỗi khi xóa vĩnh viễn món ăn:",
+        error.response?.data || error.message
+      );
       return { success: false, message: "Xóa vĩnh viễn món ăn thất bại!" };
     }
   },
@@ -78,7 +88,7 @@ const dishesService = {
   //Recipes
   getDishById: async (dishId) => {
     try {
-      const response = await axios.get(`${API_URL}/${dishId}`);
+      const response = await axios.get(`${API_URL}/dishes/${dishId}`);
       console.log("Fetched Dish:", response.data); // Debug API response
       return {
         success: true,
