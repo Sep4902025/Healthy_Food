@@ -95,7 +95,7 @@ const userPreferenceSchema = new mongoose.Schema(
 );
 
 const UserPreferenceModel = mongoose.model(
-  "UserPreference",
+  "UserPreferenceModel",
   userPreferenceSchema
 );
 module.exports = UserPreferenceModel;

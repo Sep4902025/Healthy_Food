@@ -24,8 +24,6 @@ const commentRatingRouter = require("./routes/commentRatingRouter");
 const medicalConditionRouter = require("./routes/medicalConditionRouter");
 const userFavoriteDishesRouter = require("./routes/userFavoriteDishesRouter");
 
-const uRouter = require("./routes/uRouter");
-
 const userPreferenceRouter = require("./routes/userPreferenceRouter");
 const app = express();
 const server = http.createServer(app);
@@ -99,7 +97,6 @@ app.use("/api/v1/reminders", reminderRouter);
 app.use("/api/v1/jobs", jobRouter);
 app.use("/api/v1/footer", footerRouter);
 app.use("/api/v1/home", homeRouter);
-app.use("/api/v1/user", uRouter);
 app.use("/api/v1/comment", commentRatingRouter);
 app.use("/api/v1/recipe", commentRatingRouter);
 app.use("/api/v1/medicalConditions", medicalConditionRouter);

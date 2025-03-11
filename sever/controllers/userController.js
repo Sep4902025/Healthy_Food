@@ -5,7 +5,9 @@ const AppError = require("../utils/appError");
 
 // 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await UserModel.find({ isDelete: false }).populate("user_preference_id");
+  const users = await UserModel.find({ isDelete: false }).populate(
+    "userPreferenceId"
+  );
 
   res.status(200).json({
     status: "success",
@@ -19,7 +21,7 @@ exports.getUserById = catchAsync(async (req, res, next) => {
   const user = await UserModel.findOne({
     _id: req.params.id,
     isDelete: false, // Chỉ lấy user chưa bị xóa
-  }).populate("user_preference_id");
+  }).populate("userPreferenceId");
 
   if (!user) {
     return next(new AppError("User not found or has been deleted", 404));

@@ -1,5 +1,5 @@
 const UserModel = require("../models/UserModel");
-const UserPreferenceModel = require("../models/UserPreferenceModel");
+const UserPreferenceModel = require("../models/UserPrefenrenceModel");
 
 exports.createUserPreference = async (req, res) => {
   try {
