@@ -6,7 +6,10 @@ import Login from "../pages/auth/Login";
 import SignUp from "../pages/auth/SignUp";
 import User from "../pages/user/User";
 import Dishes from "../pages/user/Dishes";
-import MealsPlan from "../pages/user/MealsPlan";
+import MealsPlan from "../pages/user/Meal Plan/MealsPlan";
+import MealDays from "../pages/user/Meal Plan/MealDays";
+import Meals from "../pages/user/Meal Plan/Meals";
+import AddDishToMeal from "../pages/user/Meal Plan/AddDishToMeal";
 import Ingredient from "../pages/user/Ingredient";
 import ForgetPassword from "../pages/auth/ForgetPassword";
 import AdminLayout from "../components/layouts/AdminLayout";
@@ -49,29 +52,38 @@ const AppRoutes = () => {
 
         {/* Các route cần đăng nhập */}
         <Route
-          path="user"
-          element={
-            <PrivateRoute>
-              <User />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="dishes"
-          element={
-            <PrivateRoute>
-              <Dishes />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="meal"
+          path="meal-plan"
           element={
             <PrivateRoute>
               <MealsPlan />
             </PrivateRoute>
           }
         />
+        <Route
+          path="meal-plan/:mealPlanId/meal-days"
+          element={
+            <PrivateRoute>
+              <MealDays />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="meal-plan/:mealPlanId/meal-day/:mealDayId/meal"
+          element={
+            <PrivateRoute>
+              <Meals />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="meal-plan/:mealPlanId/mealDay/:mealDayId/meal/:mealId/add-dish"
+          element={
+            <PrivateRoute>
+              <AddDishToMeal />
+            </PrivateRoute>
+          }
+        />
+
         <Route
           path="ingredient"
           element={
@@ -80,9 +92,6 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
-
-        <Route path="ingredients/:type" element={<IngredientList />} />
-        <Route path="dishes/:type" element={<DishesList />} />
 
         {/* ✅ Bảo vệ trang chat, chỉ user mới vào được */}
         <Route

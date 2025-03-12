@@ -97,6 +97,9 @@ const MainLayout = () => {
             <a href="/contact" className="hover:text-black">
               Contact
             </a>
+            <a href="/meal-plan" className="hover:text-black">
+              Meal Plan
+            </a>
           </nav>
 
           {/* Auth Button */}

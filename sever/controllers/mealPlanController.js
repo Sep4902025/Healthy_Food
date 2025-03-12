@@ -96,6 +96,29 @@ exports.getMealPlan = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+exports.getMealDayByMealPlan = async (req, res) => {
+  try {
+    const { mealPlanId } = req.params;
+
+    // Kiểm tra MealPlan có tồn tại không
+    const mealPlan = await MealPlan.findById(mealPlanId);
+    if (!mealPlan) {
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
+    }
+
+    // Tìm tất cả MealDays thuộc về MealPlan này
+    const mealDays = await MealDay.find({ mealPlanId });
+
+    res.status(200).json({ success: true, data: mealDays });
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy MealDays:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ khi lấy MealDays" });
+  }
+};
+
+
+
 // Cập nhật lại hàm updateMealPlan để xử lý đầy đủ các trường hợp
 exports.updateMealPlan = async (req, res) => {
   try {
