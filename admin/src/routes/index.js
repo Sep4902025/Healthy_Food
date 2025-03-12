@@ -64,16 +64,18 @@ import Weight from "../pages/quizinfor/Weight";
 import WeightGoal from "../pages/quizinfor/WeightGoal";
 import ViewQuiz from "../pages/user/ViewQuiz";
 import ForYoyPage from "../pages/user/ForYouPage";
+
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Home />} />
-        <Route path="signin" element={<Login />} />
+      <Route path="signin" element={<Login />} />
         <Route path="signup" element={<SignUp />} />
         <Route path="verify" element={<VerifyOtp />} />
         <Route path="forget-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<Home />} />
+        
         <Route path="/viewprofile" element={<ViewProfile />} />
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
@@ -83,7 +85,7 @@ const AppRoutes = () => {
           path="user"
           element={
             <PrivateRoute>
-              <ViewProfile />
+              <User />
             </PrivateRoute>
           }
         />

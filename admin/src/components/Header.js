@@ -119,15 +119,12 @@ const Header = () => {
             <a href="/quizinfor" className="hover:text-black">
               Quiz
             </a>
+            
           ) : (
             <a href="/foryou" className="hover:text-black">
               For you
             </a>
-          )}
-
-          <a href="/viewquiz" className="hover:text-black">
-            ViewQuiz
-          </a>
+          )}          
         </nav>
 
         {/* Auth Button */}

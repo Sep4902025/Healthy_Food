@@ -110,7 +110,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
               <div className="center-con">
                 <div className="food-i-container">
                   <img
-                    src={food.imageUrl}
+                    src={food.image_url}
                     alt={food.name}
                     className="w-full h-40 object-cover rounded-md"
                   />

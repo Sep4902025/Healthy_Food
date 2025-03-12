@@ -29,7 +29,14 @@ const DishDetail = () => {
     const fetchComments = async () => {
       try {
         const response = await CommentsService.getCommentsByDishId(dishId);
-        setComments(response.data);
+
+        const cmts = response.data.map((comment) => ({
+          ...comment,
+          isLiked: comment.likedBy.includes(userId),
+        }));
+        setComments(cmts);
+
+        console.log("Fetched Comments:",cmts ); // Debug API response
       } catch (error) {
         console.error("Lỗi khi tải bình luận:", error);
       }
@@ -56,19 +63,17 @@ const DishDetail = () => {
 
   const handleLikeComment = async (commentId) => {
     try {
-      const updatedComment = await CommentsService.toggleLikeComment(
-        commentId,
-        userId
-      );
+      const updatedComment = await CommentsService.toggleLikeComment(commentId,userId);
       setComments(
         comments.map((comment) =>
           comment._id === commentId
             ? {
                 ...comment,
                 isLiked: !comment.isLiked,
-                likeCount: comment.isLiked
-                  ? comment.likeCount - 1
-                  : comment.likeCount + 1,
+                likeCount: comment.isLiked? comment.likeCount - 1: comment.likeCount + 1,
+                likedBy: comment.isLiked
+              ? comment.likedBy.filter(id => id !== userId) // Xóa user khỏi likedBy khi unlike
+              : [...comment.likedBy, userId] // Thêm user vào likedBy khi like
               }
             : comment
         )
