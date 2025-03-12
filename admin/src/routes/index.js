@@ -83,17 +83,16 @@ const AppRoutes = () => {
 
         {/* Các route cần đăng nhập */}
         <Route
-          path="meal-plan"
+          path="mealPlan"
           element={
             <PrivateRoute>
               <MealsPlan />
-              <ViewProfile />
             </PrivateRoute>
           }
         />
 
         <Route
-          path="meal-plan/:mealPlanId/meal-days"
+          path="mealPlan/:mealPlanId/mealDay"
           element={
             <PrivateRoute>
               <MealDays />
@@ -119,7 +118,7 @@ const AppRoutes = () => {
         />
 
         <Route
-          path="meal-plan/:mealPlanId/meal-day/:mealDayId/meal"
+          path="mealPlan/:mealPlanId/mealDay/:mealDayId/meal"
           element={
             <PrivateRoute>
               <Meals />
@@ -127,7 +126,7 @@ const AppRoutes = () => {
           }
         />
         <Route
-          path="meal-plan/:mealPlanId/mealDay/:mealDayId/meal/:mealId/add-dish"
+          path="mealPlan/:mealPlanId/mealDay/:mealDayId/meal/:mealId/addDish"
           element={
             <PrivateRoute>
               <AddDishToMeal />
@@ -233,7 +232,7 @@ const AppRoutes = () => {
         }
       ></Route>
 
-      {/* ✅ Bảo vệ toàn bộ route nutritionist */}
+      {/* ✅ Bảo vệ toàn bộ route Nutritionist */}
       <Route
         path="/nutritionist"
         element={
