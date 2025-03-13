@@ -13,26 +13,40 @@ const {
   updateMealPlan,
   toggleMealPlanStatus,
   deleteMealPlan,
+  getUserMealPlan,
 } = require("../controllers/mealPlanController");
 const { isAuthenticated } = require("../middlewares/isAuthenticated");
 
 // // Tạo MealPlan
-mealPlanRouter.get("/", isAuthenticated, getMealPlan);
+mealPlanRouter.get("/", getMealPlan);
+mealPlanRouter.get("/user/:userId", isAuthenticated, getUserMealPlan);
+
 mealPlanRouter.post("/", createMealPlan);
 mealPlanRouter.put("/:mealPlanId", isAuthenticated, updateMealPlan);
 mealPlanRouter.put("/:mealPlanId", isAuthenticated, deleteMealPlan);
 mealPlanRouter.patch("/:mealPlanId/toggle", isAuthenticated, toggleMealPlanStatus);
 mealPlanRouter.delete("/:mealPlanId", isAuthenticated, deleteMealPlan);
 mealPlanRouter.post("/:mealPlanId/mealDay/:mealDayId/meal", isAuthenticated, addMealToDay);
-mealPlanRouter.post("/:mealPlanId/mealDay/:mealDayId/meal/:mealId/dishes", addDishesToMeal);
-mealPlanRouter.delete("/:mealPlanId/mealDay/:mealDayId/meal/:mealId/dishes/:dishId", deleteDishFromMeal);
+mealPlanRouter.post(
+  "/:mealPlanId/mealDay/:mealDayId/meal/:mealId/dishes",
+  isAuthenticated,
+  addDishesToMeal
+);
+mealPlanRouter.delete(
+  "/:mealPlanId/mealDay/:mealDayId/meal/:mealId/dishes/:dishId",
+  isAuthenticated,
+  deleteDishFromMeal
+);
 
 //  Lấy
 mealPlanRouter.get("/:mealPlanId/mealDay/:mealDayId/meal", isAuthenticated, getMealsByDayId);
 mealPlanRouter.get("/:mealPlanId/mealDay/:mealDayId/meal/:mealId", isAuthenticated, getMealById);
-mealPlanRouter.get("/:mealPlanId/mealDay/:mealDayId/meal/:mealId/dishes", isAuthenticated, getDishesByMeal);
+mealPlanRouter.get(
+  "/:mealPlanId/mealDay/:mealDayId/meal/:mealId/dishes",
+  isAuthenticated,
+  getDishesByMeal
+);
 mealPlanRouter.get("/:mealPlanId/mealDay", isAuthenticated, getMealDayByMealPlan);
-
 
 // // Lấy danh sách MealPlan của user
 // mealPlanRouter.get("/user/:user_id", getUserMealPlans);
