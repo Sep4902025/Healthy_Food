@@ -993,7 +993,6 @@ exports.deleteDishFromMeal = async (req, res) => {
 
     // ✅ Lấy userId từ token trong header
     const userId = req.user?.id;
-
     if (!userId) {
       return res.status(401).json({ success: false, message: "Bạn chưa đăng nhập" });
     }
@@ -1025,19 +1024,23 @@ exports.deleteDishFromMeal = async (req, res) => {
     const meal = await Meal.findOne({ _id: mealId, mealDayId });
     if (!meal) return res.status(404).json({ success: false, message: "Bữa ăn không hợp lệ" });
 
-    // Kiểm tra Món ăn
-    const dishIndex = meal.dishes.findIndex((dish) => dish.dishId.toString() === dishId);
+    // ✅ Tìm món ăn theo `_id`
+    const dishIndex = meal.dishes.findIndex((dish) => dish._id.toString() === dishId);
     if (dishIndex === -1)
       return res.status(404).json({ success: false, message: "Món ăn không tồn tại" });
 
-    // Xóa món ăn
+    // Xóa món ăn khỏi danh sách
     meal.dishes.splice(dishIndex, 1);
     await meal.save();
 
-    // Nếu không còn món ăn, xóa Reminder & MealTracking
+    // ✅ Cập nhật Reminder & Job
     if (meal.dishes.length === 0) {
+      // Nếu không còn món ăn, xóa luôn Reminder & MealTracking
       await Reminder.deleteMany({ userId, mealPlanId, mealDayId, mealId });
       await MealTracking.deleteMany({ userId, mealPlanId, mealDayId, mealId });
+    } else {
+      // Nếu vẫn còn món ăn, cập nhật lại Reminder & Job
+      await handleReminderAndJob(userId, mealPlanId, mealDayId, mealId, meal, mealDay);
     }
 
     res.status(200).json({ success: true, data: meal });
