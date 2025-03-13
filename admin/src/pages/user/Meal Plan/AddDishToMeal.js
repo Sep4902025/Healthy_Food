@@ -6,6 +6,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const [selectedDish, setSelectedDish] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     const fetchDishes = async () => {
@@ -35,6 +36,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     }
 
     try {
+      setIsAdding(true);
       const newDish = {
         dishId: selectedDish._id,
         name: selectedDish.name,
@@ -53,10 +55,12 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
         onClose(); // Đóng modal
       } else {
         setError(response.message || "Thêm món ăn thất bại");
+        setIsAdding(false);
       }
     } catch (error) {
       console.error("❌ Lỗi khi thêm món ăn:", error);
       setError("Không thể thêm món ăn");
+      setIsAdding(false);
     }
   };
 
@@ -78,6 +82,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
                 checked={selectedDish?._id === dish._id}
                 onChange={() => setSelectedDish(dish)}
                 className="mr-2"
+                disabled={isAdding}
               />
               {dish.name} ({dish.calories} kcal)
             </label>
@@ -88,14 +93,19 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
         <div className="mt-4 flex justify-between">
           <button
             onClick={handleAddDish}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
-            disabled={!selectedDish}
+            className={`${
+              isAdding || !selectedDish
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            } text-white px-4 py-2 rounded-lg`}
+            disabled={isAdding || !selectedDish}
           >
-            Thêm món ăn
+            {isAdding ? "Đang thêm..." : "Thêm món ăn"}
           </button>
           <button
             onClick={onClose}
             className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg"
+            disabled={isAdding}
           >
             Hủy
           </button>

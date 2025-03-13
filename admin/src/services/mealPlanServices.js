@@ -2,16 +2,6 @@ import api from "./api";
 const API_URL = process.env.REACT_APP_API_URL;
 
 const mealPlanService = {
-  // Lấy MealPlan hiện tại của user
-  getUserMealPlan: async (userId) => {
-    try {
-      const response = await api.get(`/mealPlan/user/${userId}`);
-      return response.data;
-    } catch (error) {
-      console.error("Lỗi lấy meal plan của user:", error);
-      throw error;
-    }
-  },
   getAllMealPlans: async () => {
     try {
       const response = await api.get(`/mealPlan`);
@@ -35,6 +25,17 @@ const mealPlanService = {
     }
   },
 
+  // Lấy MealPlan hiện tại của user
+  getUserMealPlan: async (userId) => {
+    try {
+      const response = await api.get(`/mealPlan/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi lấy meal plan của user:", error);
+      throw error;
+    }
+  },
+
   // 🔹 Lấy danh sách MealDays theo MealPlan ID
   getMealDaysByMealPlan: async (mealPlanId) => {
     try {
@@ -46,7 +47,18 @@ const mealPlanService = {
       return { success: false, message: "Không thể lấy MealDays" };
     }
   },
-
+  // In your mealPlanService, add this function:
+  getMealDayById: async (mealPlanId, mealDayId) => {
+    try {
+      console.log(`📤 Gửi request GET /mealPlan/${mealPlanId}/mealDay/${mealDayId}`);
+      const response = await api.get(`/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`);
+      console.log("📥 Dữ liệu MealDay từ API:", response.data);
+      return { success: true, data: response.data.data || {} };
+    } catch (error) {
+      console.error("❌ Lỗi khi lấy MealDay:", error.response?.data || error.message);
+      return { success: false, message: "Không thể lấy MealDay" };
+    }
+  },
   // 🔹 Lấy danh sách Meals theo MealDay ID
   getMealsByMealDay: async (mealPlanId, mealDayId) => {
     try {
@@ -57,6 +69,19 @@ const mealPlanService = {
     } catch (error) {
       console.error("❌ Lỗi khi lấy Meals:", error.response?.data || error.message);
       return { success: false, message: "Không thể lấy Meals" };
+    }
+  },
+  // Lấy chi tiết một bữa ăn cụ thể
+  getMealByMealId: async (mealPlanId, mealDayId, mealId) => {
+    try {
+      const response = await api.get(`/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error("Lỗi khi lấy chi tiết bữa ăn:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Không thể lấy chi tiết bữa ăn",
+      };
     }
   },
 
@@ -125,20 +150,6 @@ const mealPlanService = {
     } catch (error) {
       console.error("❌ Lỗi khi lấy danh sách món ăn:", error.response?.data || error.message);
       return { success: false, message: "Không thể lấy danh sách món ăn!" };
-    }
-  },
-
-  // 🔹 Cập nhật MealPlan
-  updateMealPlan: async (id, data) => {
-    try {
-      console.log(`📤 Cập nhật MealPlan ID: ${id}`, data);
-
-      await api.put(`/mealPlan/${id}`, data);
-
-      return { success: true };
-    } catch (error) {
-      console.error("❌ Lỗi khi cập nhật MealPlan:", error.response?.data || error.message);
-      return { success: false, message: "Cập nhật MealPlan thất bại!" };
     }
   },
 
