@@ -40,6 +40,7 @@ import DishManagement from "../pages/admin/pages/DishManagement";
 import MealPlan from "../pages/admin/pages/MealPlan";
 import EditUser from "../pages/user/EditUser";
 import ViewProfile from "../pages/user/ViewProfile";
+import Quiz from "../pages/user/Quiz";
 
 const AppRoutes = () => {
   return (
@@ -51,18 +52,12 @@ const AppRoutes = () => {
         <Route path="verify" element={<VerifyOtp />} />
         <Route path="forget-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
-        <Route path="/admin/dashboard" element={<HealthyDashboard />} />
-        <Route path="/admin/usermanagement" element={<UserManagement />} />
-        <Route
-          path="/admin/ingredientsmanagement"
-          element={<IngredientsManagement />}
-        />
-        <Route path="/admin/dishmanagement" element={<DishManagement />} />
-        <Route path="/admin/mealplan" element={<MealPlan />} />
-        <Route path="/admin/edituser/:id" element={<EditUser />} />
+
         <Route path="/edituser/:id" element={<EditUser />} />
-        <Route path="/admin/viewprofile" element={<ViewProfile />} />
+
         <Route path="/viewprofile" element={<ViewProfile />} />
+
+        <Route path="/foodrecommend" element={<Quiz/>} />
 
         {/* Các route cần đăng nhập */}
         <Route
@@ -117,19 +112,26 @@ const AppRoutes = () => {
       </Route>
 
       <Route path="/" element={<MainLayout />}>
-        {/* ✅ Bảo vệ toàn bộ route admin */}
         <Route
-          path="/admin"
+          path="admin"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <HealthyDashboard />
+              <AdminLayout />
             </ProtectedRoute>
           }
         >
           <Route path="user" element={<TableUser />} />
           <Route path="order" element={<TableOrder />} />
-
-          {/* ✅ Thêm route cho Footer Management */}
+          <Route path="dashboard" element={<HealthyDashboard />} />
+          <Route path="usermanagement" element={<UserManagement />} />
+          <Route
+            path="ingredientsmanagement"
+            element={<IngredientsManagement />}
+          />
+          <Route path="dishmanagement" element={<DishManagement />} />
+          <Route path="mealplan" element={<MealPlan />} />
+          <Route path="edituser/:id" element={<EditUser />} />
+          <Route path="viewprofile" element={<ViewProfile />} />
           <Route path="aboutusmanagement" element={<AboutUsManagement />} />
           <Route path="termofusemanagement" element={<TermOfUseManagement />} />
           <Route path="faqsManagement" element={<FAQsManagement />} />
