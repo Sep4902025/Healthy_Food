@@ -1,14 +1,10 @@
 import React, { useState } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import TimePicker from "react-time-picker";
-import "react-time-picker/dist/TimePicker.css";
 import mealPlanService from "../../../services/mealPlanServices";
 import { convertTo24Hour } from "../../../utils/formatTime";
 
 const CreateMealPlanForm = ({ userId, onSuccess }) => {
   const [title, setTitle] = useState("");
-  const [startDate, setStartDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]); // Lấy ngày hiện tại
   const [duration, setDuration] = useState(7);
   const [type, setType] = useState("custom");
   const [meals, setMeals] = useState([{ mealTime: "", mealName: "" }]);
@@ -80,10 +76,11 @@ const CreateMealPlanForm = ({ userId, onSuccess }) => {
       />
 
       {/* Chọn ngày bắt đầu */}
-      <DatePicker
-        selected={startDate}
-        onChange={(date) => setStartDate(date)}
-        dateFormat="dd/MM/yyyy"
+      <label className="block text-gray-700 mb-1">Ngày bắt đầu</label>
+      <input
+        type="date"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
         className="input-field"
       />
 
@@ -128,10 +125,11 @@ const CreateMealPlanForm = ({ userId, onSuccess }) => {
               >
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-gray-700 text-sm mb-1">Giờ ăn</label>
-                  <TimePicker
+                  <input
+                    type="time"
                     value={meal.mealTime}
-                    onChange={(time) => handleMealChange(index, "mealTime", time)}
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    onChange={(e) => handleMealChange(index, "mealTime", e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div className="flex-[2] min-w-[200px]">

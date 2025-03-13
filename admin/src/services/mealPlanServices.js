@@ -154,7 +154,26 @@ const mealPlanService = {
       return { success: false, message: "Không thể xóa món ăn!" };
     }
   },
+  // Status MealPlan Pause/Resume
+  toggleMealPlanStatus: async (mealPlanId, isPause) => {
+    try {
+      console.log(`📤 ${isPause ? "Tạm dừng" : "Tiếp tục"} MealPlan ID: ${mealPlanId}`);
 
+      const response = await api.patch(`/mealPlan/${mealPlanId}/toggle`, { isPause });
+
+      console.log(`✅ MealPlan đã được ${isPause ? "tạm dừng" : "tiếp tục"}:`, response.data);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error(
+        `❌ Lỗi khi ${isPause ? "tạm dừng" : "tiếp tục"} MealPlan:`,
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: `Không thể ${isPause ? "tạm dừng" : "tiếp tục"} MealPlan!`,
+      };
+    }
+  },
   // 🔹 Xóa MealPlan
   deleteMealPlan: async (id) => {
     try {
