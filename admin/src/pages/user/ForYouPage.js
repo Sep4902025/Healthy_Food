@@ -1,11 +1,14 @@
-import React, { useRef } from "react";
+import React, { useRef, useContext } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react";
+import { DarkModeContext } from "../context/DarkModeContext";
 
 const ForYoyPage = () => {
   const sliderRef = useRef(null);
+
+  const { darkMode, toggleDarkMode } = useContext(DarkModeContext);
   const categories = [
     {
       id: 1,
@@ -119,35 +122,26 @@ const ForYoyPage = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-200">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[#40b491] text-[56px] font-bold font-['Syne'] text-left ">
+        <h2 className="text-[56px] font-bold font-['Syne'] text-[#40b491] dark:text-white">
           Recipes by category
         </h2>
         <div className="flex space-x-2">
-          <button
-            className="w-8 h-8 flex items-center justify-center bg-[#40b491] rounded-full hover:bg-blue-700 transition"
-            onClick={() => sliderRef.current.slickPrev()}
-          >
+          <button onClick={() => sliderRef.current.slickPrev()} className="w-8 h-8 flex items-center justify-center bg-[#40b491] dark:bg-[#309f80] rounded-full hover:bg-[#268a6f] transition">
             <ChevronLeft size={20} className="text-white" />
           </button>
-          <button
-            className="w-8 h-8 flex items-center justify-center bg-[#40b491] rounded-full hover:bg-blue-700 transition"
-            onClick={() => sliderRef.current.slickNext()}
-          >
+          <button onClick={() => sliderRef.current.slickNext()} className="w-8 h-8 flex items-center justify-center bg-[#40b491] dark:bg-[#309f80] rounded-full hover:bg-[#268a6f] transition">
             <ChevronRight size={20} className="text-white" />
           </button>
         </div>
       </div>
+      
       <Slider ref={sliderRef} {...sliderSettings} className="pb-4">
         {categories.map((category) => (
           <div key={category.id} className="text-center">
-            <img
-              src={category.image}
-              alt={category.name}
-              className="rounded-xl shadow-lg w-40 h-32 object-cover border-2 border-gray-200 mx-auto "
-            />
-            <p className="mt-2 font-semibold text-gray-700">{category.name}</p>
+            <img src={category.image} alt={category.name} className="rounded-xl shadow-lg w-40 h-32 object-cover border-2 border-gray-200 dark:border-gray-500 mx-auto" />
+            <p className="mt-2 font-semibold text-gray-700 dark:text-gray-300">{category.name}</p>
           </div>
         ))}
       </Slider>
@@ -155,35 +149,20 @@ const ForYoyPage = () => {
       <h2 className="text-[56px] font-bold font-['Syne'] text-white bg-[#40b491] py-6 px-6 rounded-lg text-center mt-10">
         Recommended for you
       </h2>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
         {recommendedRecipes.map((recipe) => (
-          <div
-            key={recipe.id}
-            className="bg-white p-5 rounded-xl shadow-xl transition transform hover:scale-105 text-left"
-          >
+          <div key={recipe.id} className="relative bg-white text-gray-900 dark:bg-gray-700 dark:text-gray-100 p-5 rounded-xl shadow-xl transition transform hover:scale-105 text-left">
             <span className="absolute top-3 right-3 bg-[#40b491] uppercase text-white text-xs font-semibold px-3 py-1 rounded-full">
               {recipe.category}
             </span>
-            <img
-              src={recipe.image}
-              alt={recipe.name}
-              className="rounded-full w-44 h-44 object-cover mx-auto"
-            />
-            <h3 className="mt-3 text-xl font-semibold text-gray-800 font-['Inter']">
-              {recipe.name}
-            </h3>
-            <p className="text-gray-500 mt-1 font-['Inter']">
-              {recipe.description}
-            </p>
+            <img src={recipe.image} alt={recipe.name} className="rounded-full w-44 h-44 object-cover mx-auto" />
+            <h3 className="mt-3 text-xl font-semibold font-['Inter'] text-gray-800 dark:text-white">{recipe.name}</h3>
+            <p className="mt-1 font-['Inter'] text-gray-500 dark:text-gray-300">{recipe.description}</p>
             <div className="flex items-center space-x-2 mt-2">
-              <p className="text-[#ff6868] text-xl font-semibold font-['Inter']">
-                Rating:
-              </p>
-              <p className="text-yellow-500 font-bold flex items-center">
-                ⭐ {recipe.rating}
-              </p>
+              <p className="text-xl font-semibold font-['Inter'] text-[#ff6868] dark:text-white">Rating:</p>
+              <p className="text-yellow-500 font-bold flex items-center">⭐ {recipe.rating}</p>
             </div>
-
             <div className="absolute right-[-10px] bottom-[-10px] w-[87px] h-[75px] bg-[#40b491] rounded-tr-[37.50px] rounded-bl-[42.50px] flex items-center justify-center">
               <Heart size={32} className="text-white fill-white" />
             </div>
@@ -192,12 +171,13 @@ const ForYoyPage = () => {
       </div>
 
       <div className="text-center mt-8">
-        <button className="px-8 py-3 bg-white text-[#40b491] font-semibold rounded-full shadow-lg hover:bg-[#40b491] hover:text-[#555555] transition outline">
+        <button className="px-8 py-3 bg-white text-[#40b491] dark:bg-gray-700 dark:text-white font-semibold rounded-full shadow-lg hover:bg-[#40b491] hover:text-[#555555] transition outline">
           VIEW ALL RECIPES
         </button>
       </div>
     </div>
   );
 };
+
 
 export default ForYoyPage;

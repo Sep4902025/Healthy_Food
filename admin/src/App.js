@@ -3,15 +3,19 @@ import AppRoutes from "./routes";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
+import {DarkModeProvider } from "./pages/context/DarkModeContext"
 
 function App() {
   return (
-    <BrowserRouter>
+    <DarkModeProvider>
+        <BrowserRouter>
       <div className="App">
         <AppRoutes />
         <ToastContainer />
       </div>
     </BrowserRouter>
+    </DarkModeProvider>
+    
   );
 }
 
