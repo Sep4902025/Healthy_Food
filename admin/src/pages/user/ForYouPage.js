@@ -1,75 +1,200 @@
-import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { selectAuth } from "../../store/selectors/authSelectors";
+import React, { useRef } from "react";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 
-import brow from "../../assets/images/brow.png";
-import dessert from "../../assets/images/dessert.png";
-import dish from "../../assets/images/mainDish.png";
-import breakfast from "../../assets/images/breakfast.png";
 const ForYoyPage = () => {
-    const navigate = useNavigate();
+  const sliderRef = useRef(null);
+  const categories = [
+    {
+      id: 1,
+      name: "Breakfast",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+    {
+      id: 2,
+      name: "Dessert",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+    {
+      id: 3,
+      name: "Dinner",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+    {
+      id: 4,
+      name: "Lunch",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+  ];
+
+  const recommendedRecipes = [
+    {
+      id: 1,
+      name: "Fattoush Salad",
+      description: "Description of the item",
+      rating: 4.9,
+      category: "Breakfast",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+    {
+      id: 2,
+      name: "Vegetable Salad",
+      description: "Description of the item",
+      rating: 4.6,
+      category: "Breakfast",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+    {
+      id: 3,
+      name: "Egg Vegi Salad",
+      description: "Description of the item",
+      rating: 4.5,
+      category: "Breakfast",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+    {
+      id: 4,
+      name: "Egg Vegi Salad",
+      description: "Description of the item",
+      rating: 4.5,
+      category: "Breakfast",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+    {
+      id: 5,
+      name: "Egg Vegi Salad",
+      description: "Description of the item",
+      rating: 4.5,
+      category: "Breakfast",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+    {
+      id: 6,
+      name: "Egg Vegi Salad",
+      description: "Description of the item",
+      rating: 4.5,
+      category: "Breakfast",
+      image:
+        "https://dayphache.edu.vn/wp-content/uploads/2021/07/che-bap-dau-xanh.jpg",
+    },
+  ];
+
+  const sliderSettings = {
+    dots: true,
+    infinite: true,
+    speed: 500,
+    slidesToShow: 4,
+    slidesToScroll: 1,
+    responsive: [
+      {
+        breakpoint: 1024,
+        settings: {
+          slidesToShow: 3,
+        },
+      },
+      {
+        breakpoint: 768,
+        settings: {
+          slidesToShow: 2,
+        },
+      },
+      {
+        breakpoint: 480,
+        settings: {
+          slidesToShow: 1,
+        },
+      },
+    ],
+  };
 
   return (
-    <div className="home">
-      
-
-      <div className="cate-container">
-        <h1 className="cate-title">Recipes by category</h1>
-        <div className="cate-list">
-          <div className="cate-item">
-            <div className="center-con">
-              <div className="cate-i-container">
-                <img src={dish} alt="Main Dishes" />
-              </div>
-            </div>
-            <h2 className="cate-item-title">Main Dish</h2>
-            <h3 className="cate-item-count">(86 dishes)</h3>
-          </div>
-          <div className="cate-item">
-            <div className="center-con">
-              <div className="cate-i-container">
-                <img src={breakfast} alt="BreakFast" />
-              </div>
-            </div>
-            <h2 className="cate-item-title">Break Fast</h2>
-            <h3 className="cate-item-count">(12 break fast)</h3>
-          </div>
-          <div className="cate-item">
-            <div className="center-con">
-              <div className="cate-i-container">
-                <img src={dessert} alt="Dessert" />
-              </div>
-            </div>
-            <h2 className="cate-item-title">Dessert</h2>
-            <h3 className="cate-item-count">(48 desert)</h3>
-          </div>
-          <div className="cate-item">
-            <div className="center-con">
-              <div className="cate-i-container">
-                <img src={brow} alt="Browse" />
-              </div>
-            </div>
-            <h2 className="cate-item-title">Browse All</h2>
-            <h3 className="cate-item-count">(255 items)</h3>
-          </div>
+    <div className="container mx-auto p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-[#40b491] text-[56px] font-bold font-['Syne'] text-left ">
+          Recipes by category
+        </h2>
+        <div className="flex space-x-2">
+          <button
+            className="w-8 h-8 flex items-center justify-center bg-[#40b491] rounded-full hover:bg-blue-700 transition"
+            onClick={() => sliderRef.current.slickPrev()}
+          >
+            <ChevronLeft size={20} className="text-white" />
+          </button>
+          <button
+            className="w-8 h-8 flex items-center justify-center bg-[#40b491] rounded-full hover:bg-blue-700 transition"
+            onClick={() => sliderRef.current.slickNext()}
+          >
+            <ChevronRight size={20} className="text-white" />
+          </button>
         </div>
       </div>
+      <Slider ref={sliderRef} {...sliderSettings} className="pb-4">
+        {categories.map((category) => (
+          <div key={category.id} className="text-center">
+            <img
+              src={category.image}
+              alt={category.name}
+              className="rounded-xl shadow-lg w-40 h-32 object-cover border-2 border-gray-200 mx-auto "
+            />
+            <p className="mt-2 font-semibold text-gray-700">{category.name}</p>
+          </div>
+        ))}
+      </Slider>
 
-      <div className="food-container">
-        <h3 className="food-slogan">Recommended For you</h3>
-        <div className="food-title-container">
-          
-          
-        </div>
-        
+      <h2 className="text-[56px] font-bold font-['Syne'] text-white bg-[#40b491] py-6 px-6 rounded-lg text-center mt-10">
+        Recommended for you
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+        {recommendedRecipes.map((recipe) => (
+          <div
+            key={recipe.id}
+            className="bg-white p-5 rounded-xl shadow-xl transition transform hover:scale-105 text-left"
+          >
+            <span className="absolute top-3 right-3 bg-[#40b491] uppercase text-white text-xs font-semibold px-3 py-1 rounded-full">
+              {recipe.category}
+            </span>
+            <img
+              src={recipe.image}
+              alt={recipe.name}
+              className="rounded-full w-44 h-44 object-cover mx-auto"
+            />
+            <h3 className="mt-3 text-xl font-semibold text-gray-800 font-['Inter']">
+              {recipe.name}
+            </h3>
+            <p className="text-gray-500 mt-1 font-['Inter']">
+              {recipe.description}
+            </p>
+            <div className="flex items-center space-x-2 mt-2">
+              <p className="text-[#ff6868] text-xl font-semibold font-['Inter']">
+                Rating:
+              </p>
+              <p className="text-yellow-500 font-bold flex items-center">
+                ⭐ {recipe.rating}
+              </p>
+            </div>
 
-        
+            <div className="absolute right-[-10px] bottom-[-10px] w-[87px] h-[75px] bg-[#40b491] rounded-tr-[37.50px] rounded-bl-[42.50px] flex items-center justify-center">
+              <Heart size={32} className="text-white fill-white" />
+            </div>
+          </div>
+        ))}
+      </div>
 
-        <div className="chef-container">
-          <div className="chef-img-container"></div>
-          <div className="chef-content"></div>
-        </div>
+      <div className="text-center mt-8">
+        <button className="px-8 py-3 bg-white text-[#40b491] font-semibold rounded-full shadow-lg hover:bg-[#40b491] hover:text-[#555555] transition outline">
+          VIEW ALL RECIPES
+        </button>
       </div>
     </div>
   );
