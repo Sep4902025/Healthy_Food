@@ -14,10 +14,14 @@ const {
   toggleMealPlanStatus,
   deleteMealPlan,
   getUserMealPlan,
+  getMealPlanById,
+  removeMealFromDay,
 } = require("../controllers/mealPlanController");
 const { isAuthenticated } = require("../middlewares/isAuthenticated");
 // Lấy danh sách MealPlan
 mealPlanRouter.get("/", getMealPlan);
+mealPlanRouter.get("/:mealPlanId", isAuthenticated, getMealPlanById);
+
 mealPlanRouter.get("/user/:userId", isAuthenticated, getUserMealPlan);
 
 // Tạo MealPlan
@@ -30,6 +34,11 @@ mealPlanRouter.delete("/:mealPlanId", isAuthenticated, deleteMealPlan);
 
 // Quản lý Meal trong MealDay
 mealPlanRouter.post("/:mealPlanId/mealDay/:mealDayId/meal", isAuthenticated, addMealToDay);
+mealPlanRouter.delete(
+  "/:mealPlanId/mealDay/:mealDayId/meal/:mealId",
+  isAuthenticated,
+  removeMealFromDay
+);
 
 // Quản lý Dish trong Meal
 mealPlanRouter.post(

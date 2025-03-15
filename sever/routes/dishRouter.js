@@ -16,7 +16,7 @@ const {
   getAllRecipes,
 } = require("../controllers/dishController");
 
-dishRouter.get("/", getAllDishes); 
+dishRouter.get("/", getAllDishes);
 
 // Chỉ admin/nutritionist mới có thể thêm, cập nhật, xóa món ăn
 dishRouter.post("/", isAuthenticated, isNutritionist, createDish);

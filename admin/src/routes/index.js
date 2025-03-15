@@ -75,7 +75,7 @@ const AppRoutes = () => {
         <Route path="signin" element={<Login />} />
         <Route path="signup" element={<SignUp />} />
         <Route path="verify" element={<VerifyOtp />} />
-        <Route path="forget-password" element={<ForgetPassword />} />
+        <Route path="forgot-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
         <Route path="/viewprofile" element={<ViewProfile />} />
         {/* Router recipe */}

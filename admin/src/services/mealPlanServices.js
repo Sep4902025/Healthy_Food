@@ -50,9 +50,7 @@ const mealPlanService = {
   // In your mealPlanService, add this function:
   getMealDayById: async (mealPlanId, mealDayId) => {
     try {
-      console.log(`📤 Gửi request GET /mealPlan/${mealPlanId}/mealDay/${mealDayId}`);
       const response = await api.get(`/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`);
-      console.log("📥 Dữ liệu MealDay từ API:", response.data);
       return { success: true, data: response.data.data || {} };
     } catch (error) {
       console.error("❌ Lỗi khi lấy MealDay:", error.response?.data || error.message);
@@ -62,9 +60,7 @@ const mealPlanService = {
   // 🔹 Lấy danh sách Meals theo MealDay ID
   getMealsByMealDay: async (mealPlanId, mealDayId) => {
     try {
-      console.log(`📤 Gửi request GET /mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`);
       const response = await api.get(`/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`);
-      console.log("📥 Dữ liệu Meals từ API:", response.data);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
       console.error("❌ Lỗi khi lấy Meals:", error.response?.data || error.message);
@@ -95,6 +91,41 @@ const mealPlanService = {
     } catch (error) {
       console.error("❌ Lỗi khi tạo Meal Plan:", error.response?.data || error.message);
       return { success: false, message: "Không thể tạo Meal Plan!" };
+    }
+  },
+
+  // 🔹 Thêm bữa ăn vào ngày
+  addMealToDay: async (mealPlanId, mealDayId, mealData) => {
+    try {
+      console.log("📤 Gửi request POST để thêm bữa ăn:", mealData);
+
+      const response = await api.post(
+        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`,
+        mealData
+      );
+
+      console.log("✅ Bữa ăn đã được thêm:", response.data);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error("❌ Lỗi khi thêm bữa ăn vào ngày:", error.response?.data || error.message);
+      return { success: false, message: "Không thể thêm bữa ăn!" };
+    }
+  },
+
+  // Xóa bữa ăn khỏi ngày
+  removeMealFromDay: async (mealPlanId, mealDayId, mealId) => {
+    try {
+      console.log("📤 Gửi request DELETE để xóa bữa ăn:", mealId);
+
+      const response = await api.delete(
+        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`
+      );
+
+      console.log("✅ Bữa ăn đã được xóa:", response.data);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error("❌ Lỗi khi xóa bữa ăn:", error.response?.data || error.message);
+      return { success: false, message: "Không thể xóa bữa ăn!" };
     }
   },
 

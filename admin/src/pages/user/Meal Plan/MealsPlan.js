@@ -4,6 +4,7 @@ import { selectAuth } from "../../../store/selectors/authSelectors";
 import mealPlanService from "../../../services/mealPlanServices";
 import MealDays from "./MealDays";
 import CreateMealPlanForm from "./CreateMealPlanForm";
+import ReminderNotification from "../../../components/Reminder/ReminderNotifiaction";
 
 const MealsPlan = () => {
   const { user } = useSelector(selectAuth);
@@ -90,9 +91,12 @@ const MealsPlan = () => {
   if (loading) return <div>Đang tải...</div>;
 
   return (
-    <div className="max-w-6xl mx-auto p-4">
-      <h1 className="text-3xl font-semibold text-green-600">Meal Plan</h1>
-
+    <div className="max-full mx-auto p-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-semibold text-green-600">Meal Plan</h1>
+        {/* Đặt ReminderNotification ở góc phải trên */}
+        <ReminderNotification userId={user?._id} />
+      </div>
       {userMealPlan ? (
         <div className="bg-white p-6 rounded-lg shadow-md mt-6">
           <div className="flex justify-between items-center mb-4">
