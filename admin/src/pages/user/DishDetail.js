@@ -89,7 +89,7 @@ const DishDetail = () => {
     <div className="p-6 bg-gray-100 min-h-screen flex flex-col items-center">
       <h1 className="text-3xl font-bold text-center mb-4">{dish.name}</h1>
       <img
-        src={dish.imageUrl}
+        src={dish.image_url}
         alt={dish.name}
         className="w-full max-w-lg h-80 object-cover rounded-lg shadow-md"
       />
