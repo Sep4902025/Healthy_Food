@@ -5,8 +5,6 @@ import {
   PlusIcon
 } from 'lucide-react';
 
-import { useNavigate } from "react-router-dom";
-
 // Sample meal plan data
 const initialMealPlans = [
   { 

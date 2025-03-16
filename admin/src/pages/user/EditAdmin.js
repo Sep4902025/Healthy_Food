@@ -1,36 +1,25 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { selectUser } from "../../store/selectors/authSelectors";
+import { FaUser, FaUpload, FaCheck, FaBan } from "react-icons/fa";
 import axios from "axios";
-import {
-  FaUser,
-  FaUpload,
-  FaTrash,
-  FaCheck,
-  FaShoppingCart,
-  FaBan,
-  FaKey,
-  FaQuestionCircle,
-} from "react-icons/fa";
 import { toast } from "react-toastify";
-import "./EditUser.css";
+import "./EditUser.css"; // Reusing EditUser CSS
 import UserService from "../../services/user.service";
 
-const EditUser = () => {
+const EditAdmin = () => {
   const location = useLocation();
   const userData = location.state?.user || {};
   const { id } = useParams();
-  console.log("IDDDDDDD",id);
-  
+  const navigate = useNavigate();
+  const currentUser = useSelector(selectUser);
 
   const [user, setUser] = useState({
     username: "",
     email: "",
-    phoneNumber: "",
-    gender: "Male",
-    weight: "",
-    height: "",
-    profileImage: null,
     profileImageUrl: "",
+    profileImage: null,
   });
 
   const [loading, setLoading] = useState(false);
@@ -38,15 +27,33 @@ const EditUser = () => {
   const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
+    // Check if user exists and is admin
+    if (!currentUser) {
+      navigate("/signin");
+      return;
+    }
+
+    if (currentUser.role !== "admin") {
+      navigate("/user"); // Redirect to normal profile if not admin
+      return;
+    }
+
+    // Set user data from location state or fetch it
     if (userData && Object.keys(userData).length > 0) {
-      setUser(userData);
-      if (userData.profileImageUrl) {
-        setPreviewImage(userData.profileImageUrl);
+      setUser({
+        username: userData.username || "",
+        email: userData.email || "",
+        profileImageUrl: userData.avatar_url || "",
+        profileImage: null,
+      });
+
+      if (userData.avatar_url) {
+        setPreviewImage(userData.avatar_url);
       }
     } else if (id) {
       fetchUserData(id);
     }
-  }, [userData, id]);
+  }, [userData, id, currentUser, navigate]);
 
   const fetchUserData = async (userId) => {
     try {
@@ -72,13 +79,13 @@ const EditUser = () => {
     }
   };
 
-  const handleInputChange = useCallback((e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setUser((prevUser) => ({
       ...prevUser,
       [name]: value,
     }));
-  }, []);
+  };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -101,7 +108,6 @@ const EditUser = () => {
       const cloudName =
         process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || "dds8jiclc";
 
-      // Make sure your cloud name is correct and upload preset is properly configured in Cloudinary
       const response = await axios.post(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         formData
@@ -126,27 +132,8 @@ const EditUser = () => {
     }
   };
 
-  const handleClear = () => {
-    setUser({
-      username: "",
-      email: "",
-      phoneNumber: "",
-      gender: "Male",
-      weight: "",
-      height: "",
-      profileImage: null,
-      profileImageUrl: "",
-    });
-    setPreviewImage(null);
-  };
-
   const handleCancel = () => {
-    // Restore original data
-    if (id) {
-      fetchUserData(id);
-    } else {
-      handleClear();
-    }
+    navigate(`/admin/profile`);
     toast.info("Changes cancelled");
   };
 
@@ -159,30 +146,27 @@ const EditUser = () => {
     try {
       setLoading(true);
 
-      // Optional: Validate data before sending
       const userData = {
-        id: id, // Make sure to include the user ID
+        id: user._id,
         username: user.username,
         email: user.email,
-        phoneNumber: user.phoneNumber,
-        gender: user.gender,
-        weight: user.weight,
-        height: user.height,
-        profileImageUrl: user.profileImageUrl,
+        avatar_url: user.profileImageUrl,
         profileImage: user.profileImage,
       };
 
-      // Make sure your API endpoint is correct
-      // Consider using a base URL from environment variables
-        // Truyền thêm userRole vào UserService.updateUser
-        const response = await UserService.updateUser(id, userData);
-    
+      const userRole = "admin"; // Hoặc lấy từ context, redux, localStorage, v.v.
 
-      if (response.status === 200) {
-        toast.success("Profile updated successfully");
+      // Truyền thêm userRole vào UserService.updateUser
+      const response = await UserService.updateUser(id, userData);
+
+      if (response.success) {
+        toast.success("Admin profile updated successfully");
+        navigate("/admin/profile");
+      } else {
+        toast.error(response.message || "Failed to update profile");
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
+      console.error("Error updating admin profile:", error);
       toast.error(
         "Failed to update profile: " +
           (error.response?.data?.message || error.message)
@@ -197,9 +181,9 @@ const EditUser = () => {
       <div className="profile-sidebar">
         <div className="profile-avatar-container">
           <span className="profile-initial">
-            {user.username ? user.username.charAt(0).toUpperCase() : "G"}
+            {user.username ? user.username.charAt(0).toUpperCase() : "A"}
           </span>
-          <h2>My Profile</h2>
+          <h2>Admin Profile</h2>
         </div>
 
         <ul className="sidebar-menu">
@@ -207,28 +191,12 @@ const EditUser = () => {
             <FaUser className="menu-icon" />
             <span>Profile</span>
           </li>
-          <li>
-            <FaShoppingCart className="menu-icon" />
-            <span>Favorite Food</span>
-          </li>
-          <li>
-            <FaBan className="menu-icon" />
-            <span>Don't Eat Food</span>
-          </li>
-          <li>
-            <FaKey className="menu-icon" />
-            <span>Change Password</span>
-          </li>
-          <li>
-            <FaQuestionCircle className="menu-icon" />
-            <span>FAQs</span>
-          </li>
         </ul>
       </div>
 
       <div className="edit-profile-content">
         <div className="edit-profile-header">
-          <h1>Edit Profile</h1>
+          <h1>Edit Admin Profile</h1>
         </div>
 
         <div className="edit-profile-form">
@@ -242,7 +210,7 @@ const EditUser = () => {
                 />
               ) : (
                 <div className="profile-image-placeholder">
-                  {user.username ? user.username.charAt(0).toUpperCase() : ""}
+                  {user.username ? user.username.charAt(0).toUpperCase() : "A"}
                 </div>
               )}
               {uploading && (
@@ -270,44 +238,16 @@ const EditUser = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="username">Your Name:</label>
+              <label htmlFor="username">Admin Name:</label>
               <input
                 type="text"
                 id="username"
                 name="username"
                 value={user.username}
                 onChange={handleInputChange}
-                placeholder="Enter your name"
+                placeholder="Enter admin name"
                 required
               />
-            </div>
-
-            <div className="form-group">
-              <label>Gender:</label>
-              <div className="gender-options">
-                <label className="radio-container">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="Male"
-                    checked={user.gender === "Male"}
-                    onChange={handleInputChange}
-                  />
-                  <span className="radio-custom"></span>
-                  Male
-                </label>
-                <label className="radio-container">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="Female"
-                    checked={user.gender === "Female"}
-                    onChange={handleInputChange}
-                  />
-                  <span className="radio-custom"></span>
-                  Female
-                </label>
-              </div>
             </div>
           </div>
 
@@ -320,64 +260,19 @@ const EditUser = () => {
                 name="email"
                 value={user.email}
                 onChange={handleInputChange}
-                placeholder="Enter your email"
+                placeholder="Enter admin email"
                 required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="weight">Weight:</label>
-              <input
-                type="text"
-                id="weight"
-                name="weight"
-                value={user.weight}
-                onChange={handleInputChange}
-                placeholder="Enter weight in kg"
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="phoneNumber">Phone Number:</label>
-              <input
-                type="text"
-                id="phoneNumber"
-                name="phoneNumber"
-                value={user.phoneNumber}
-                onChange={handleInputChange}
-                placeholder="Enter your phone number"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="height">Height:</label>
-              <input
-                type="text"
-                id="height"
-                name="height"
-                value={user.height}
-                onChange={handleInputChange}
-                placeholder="Enter height in m"
               />
             </div>
           </div>
 
           <div className="form-actions">
             <button
-              className="btn btn-clear"
-              onClick={handleClear}
-              disabled={loading || uploading}
-            >
-              <FaTrash /> Clear
-            </button>
-            <button
               className="btn btn-cancel"
               onClick={handleCancel}
               disabled={loading || uploading}
             >
-              <FaCheck /> Cancel
+              <FaBan /> Cancel
             </button>
             <button
               className="btn btn-save"
@@ -393,4 +288,4 @@ const EditUser = () => {
   );
 };
 
-export default EditUser;
+export default EditAdmin;

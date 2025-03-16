@@ -100,6 +100,11 @@ const MainLayout = () => {
             <a href="/foodrecommend" className="hover:text-black">
               Food Recommend
             </a>
+            {user?.role === "admin" && (
+              <a href="/admin" className="hover:text-black">
+                Management
+              </a>
+            )}
           </nav>
 
           {/* Auth Button */}
@@ -110,10 +115,10 @@ const MainLayout = () => {
                   src={user.avatarUrl}
                   alt="Avatar"
                   className="w-10 h-10 rounded-full cursor-pointer"
-                  onClick={() => navigate("/user")}
+                  onClick={() => navigate(user.role === "admin" ? "/admin/profile" : "/user")}
                 />
               )}
-              <span className="text-gray-700 cursor-pointer" onClick={() => navigate("/user")}>
+              <span className="text-gray-700 cursor-pointer" onClick={() => navigate(user.role === "admin" ? "/admin/profile" : "/user")}>
                 {user.username}
               </span>
               <button

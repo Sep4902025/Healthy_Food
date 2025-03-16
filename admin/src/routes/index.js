@@ -41,6 +41,9 @@ import MealPlan from "../pages/admin/pages/MealPlan";
 import EditUser from "../pages/user/EditUser";
 import ViewProfile from "../pages/user/ViewProfile";
 import Quiz from "../pages/user/Quiz";
+import AddUser from "../pages/admin/pages/AddUserManagement";
+import AdminProfile from "../pages/user/AdminProfile";
+import EditAdmin from "../pages/user/EditAdmin";
 
 const AppRoutes = () => {
   return (
@@ -120,6 +123,8 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         >
+          <Route path="profile" element={<AdminProfile/>}/>
+          <Route path="adduser" element={<AddUser />}/>
           <Route path="user" element={<TableUser />} />
           <Route path="order" element={<TableOrder />} />
           <Route path="dashboard" element={<HealthyDashboard />} />
@@ -130,6 +135,7 @@ const AppRoutes = () => {
           />
           <Route path="dishmanagement" element={<DishManagement />} />
           <Route path="mealplan" element={<MealPlan />} />
+          <Route path="editadmin/:id" element={<EditAdmin />} />
           <Route path="edituser/:id" element={<EditUser />} />
           <Route path="viewprofile" element={<ViewProfile />} />
           <Route path="aboutusmanagement" element={<AboutUsManagement />} />

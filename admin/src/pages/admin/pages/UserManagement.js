@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from "react";
 import UserService from "../../../services/user.service";
 import { useNavigate } from "react-router-dom";
-import {
-  EditIcon,
-  TrashIcon,
-  PlusIcon,
- 
-} from "lucide-react";
-
-
+import { EditIcon, TrashIcon, PlusIcon } from "lucide-react";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -53,12 +46,14 @@ const UserManagement = () => {
 
   return (
     <div className="flex h-screen">
-
       {/* Main Content */}
       <div className="flex-grow p-6 bg-gray-100 overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">User Management</h1>
-          <button className="bg-pink-500 text-white px-4 py-2 rounded-lg flex items-center">
+          <button
+            onClick={() => navigate("/admin/adduser")}
+            className="bg-pink-500 text-white px-4 py-2 rounded-lg flex items-center"
+          >
             <PlusIcon className="mr-2" size={20} />
             Create user
           </button>
