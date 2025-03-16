@@ -93,7 +93,11 @@ const Header = () => {
   return (
     <div className="bg-white shadow-md py-3 sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between px-6">
-        <img src={logo} alt="Logo" className="w-36 cursor-pointer hover:opacity-80 transition" />
+        <img
+          src={logo}
+          alt="Logo"
+          className="w-36 cursor-pointer hover:opacity-80 transition"
+        />
 
         {/* Search bar */}
         <div className="relative w-96">
@@ -116,15 +120,25 @@ const Header = () => {
           <a href="/contact" className="hover:text-green-600 transition">
             Contact
           </a>
-          {!hasCompletedQuiz ? (
-            <a href="/survey/name" className="hover:text-green-600 transition">
-              Survey
-            </a>
-          ) : (
-            <a href="/foryou" className="hover:text-green-600 transition">
-              For You
+          {user?.role === "admin" && (
+            <a href="/admin" className="hover:text-black">
+              Management
             </a>
           )}
+
+          {user?.role !== "admin" &&
+            (!hasCompletedQuiz ? (
+              <a
+                href="/survey/name"
+                className="hover:text-green-600 transition"
+              >
+                Survey
+              </a>
+            ) : (
+              <a href="/foryou" className="hover:text-green-600 transition">
+                For You
+              </a>
+            ))}
         </nav>
 
         {/* User/Auth Button */}
@@ -135,7 +149,9 @@ const Header = () => {
                 src={user.avatarUrl}
                 alt="Avatar"
                 className="w-10 h-10 rounded-full border-2 border-green-400 cursor-pointer hover:scale-105 transition"
-                onClick={() => navigate("/user")}
+                onClick={() =>
+                  navigate(user.role === "admin" ? "/admin/profile" : "/user")
+                }
               />
             )}
             <span
@@ -199,7 +215,9 @@ const Header = () => {
                   </li>
                 ))
               ) : (
-                <li className="px-4 py-2 text-gray-500">No categories available</li>
+                <li className="px-4 py-2 text-gray-500">
+                  No categories available
+                </li>
               )}
             </ul>
           )}
@@ -228,7 +246,9 @@ const Header = () => {
                   </li>
                 ))
               ) : (
-                <li className="px-4 py-2 text-gray-500">No dish type available</li>
+                <li className="px-4 py-2 text-gray-500">
+                  No dish type available
+                </li>
               )}
             </ul>
           )}

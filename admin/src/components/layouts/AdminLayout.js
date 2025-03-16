@@ -26,7 +26,7 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
   const navigate = useNavigate();
 
   const menuRoutes = {
-    Dashboard: "/admin/dashboard",
+    Dashboard: "/admin",
     "Order Management": "/admin/order",
     "Meal Plan": "/admin/mealplan",
     "User Management": "/admin/usermanagement",
