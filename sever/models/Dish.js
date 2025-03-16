@@ -24,12 +24,28 @@ const dishSchema = new mongoose.Schema(
       required: false,
     },
     cookingTime: {
-      type: String,
-      required: false,
+      type: Number,
+      default: 0, // in minutes
     },
-    nutritions: {
-      type: [String], // Array of nutrition information
-      default: [],
+    calories: {
+      type: Number,
+      default: 0,
+    },
+    protein: {
+      type: Number,
+      default: 0,
+    },
+    carbs: {
+      type: Number,
+      default: 0,
+    },
+    fat: {
+      type: Number,
+      default: 0,
+    },
+    totalServing: {
+      type: Number,
+      default: 0,
     },
     flavor: {
       type: [String], // Array of flavors

@@ -20,7 +20,6 @@ userRouter.get("/:id", getUserById);
 
 userRouter.put("/:id", updateUserById); 
 
-
 userRouter.post("/signup", signup);
 userRouter.post("/verify", verifyAccount);
 userRouter.post("/resend-otp", resendOTP);

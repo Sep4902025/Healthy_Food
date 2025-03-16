@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
+import Footer from "../../pages/user/footer/Footer"; // Import Footer
+import Header from "../Header";
 import {
   HomeIcon,
   ShoppingCartIcon,
@@ -88,58 +90,63 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
   };
 
   return (
-    <div className="flex h-screen">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r p-4 overflow-y-auto">
-        <div className="flex items-center mb-8">
-          <span className="text-2xl font-bold text-green-600">Healthy</span>
-          <span className="text-sm ml-1 text-gray-500">.Admin</span>
-        </div>
-        <nav>
-          {menuItems.map((item) => (
-            <div key={item.name}>
-              <div
-                className={`flex items-center p-3 cursor-pointer rounded hover:bg-green-50 ${
-                  activeMenu === item.name
-                    ? "bg-green-100 text-green-600"
-                    : "text-gray-600"
-                }`}
-                onClick={() => handleMenuClick(item)}
-              >
-                <span className="mr-3">{item.icon}</span>
-                <span className="flex-grow">{item.name}</span>
-                {item.submenus && (
-                  <span className="ml-auto">
-                    {openSubmenus[item.name] ? "▲" : "▼"}
-                  </span>
+    <div className="flex flex-col bg-gray-50 min-h-screen">
+      <Header />
+      <div className="flex-grow flex">
+        {/* Sidebar */}
+        <div className="w-64 bg-white border-r p-4 overflow-y-auto">
+          <div className="flex items-center mb-8">
+            <span className="text-2xl font-bold text-green-600">Healthy</span>
+            <span className="text-sm ml-1 text-gray-500">.Admin</span>
+          </div>
+          <nav>
+            {menuItems.map((item) => (
+              <div key={item.name}>
+                <div
+                  className={`flex items-center p-3 cursor-pointer rounded hover:bg-green-50 ${
+                    activeMenu === item.name
+                      ? "bg-green-100 text-green-600"
+                      : "text-gray-600"
+                  }`}
+                  onClick={() => handleMenuClick(item)}
+                >
+                  <span className="mr-3">{item.icon}</span>
+                  <span className="flex-grow">{item.name}</span>
+                  {item.submenus && (
+                    <span className="ml-auto">
+                      {openSubmenus[item.name] ? "▲" : "▼"}
+                    </span>
+                  )}
+                </div>
+                {item.submenus && openSubmenus[item.name] && (
+                  <div className="ml-8 mt-1 space-y-1">
+                    {item.submenus.map((submenu) => (
+                      <div
+                        key={submenu}
+                        className={`p-2 cursor-pointer rounded hover:bg-green-50 ${
+                          activeMenu === submenu
+                            ? "bg-green-100 text-green-600"
+                            : "text-gray-600"
+                        }`}
+                        onClick={() => handleSubmenuClick(item.name, submenu)}
+                      >
+                        {submenu}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-              {item.submenus && openSubmenus[item.name] && (
-                <div className="ml-8 mt-1 space-y-1">
-                  {item.submenus.map((submenu) => (
-                    <div
-                      key={submenu}
-                      className={`p-2 cursor-pointer rounded hover:bg-green-50 ${
-                        activeMenu === submenu
-                          ? "bg-green-100 text-green-600"
-                          : "text-gray-600"
-                      }`}
-                      onClick={() => handleSubmenuClick(item.name, submenu)}
-                    >
-                      {submenu}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-      </div>
+            ))}
+          </nav>
+        </div>
 
-      {/* Main Content */}
-      <div className="flex-grow flex flex-col">
-        <Outlet />
+        {/* Main Content */}
+        <div className="flex-grow p-6 bg-white shadow">
+          <Outlet />
+        </div>
       </div>
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

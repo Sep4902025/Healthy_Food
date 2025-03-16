@@ -1,72 +1,105 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/v1/dishes";
+const API_URL = process.env.REACT_APP_API_URL;
+
+// Hàm lấy token từ localStorage
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const dishesService = {
-  // Lấy tất cả món ăn
+  // 🔹 Lấy tất cả món ăn
   getAllDishes: async () => {
     try {
-      const response = await axios.get(API_URL);
-      console.log("Fetched Dishes:", response.data); // Debug API response
-      return {
-        success: true,
-        data: response.data.data || [], // Đảm bảo data luôn là mảng
-      };
+      const response = await axios.get(`${API_URL}/dishes`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+      console.log("🔍 Danh sách món ăn từ API:", response.data);
+      return { success: true, data: response.data.data || [] };
     } catch (error) {
-      console.error("Error fetching dishes:", error);
-      return {
-        success: false,
-        message: error.response?.data?.error || "Lỗi khi tải danh sách món ăn",
-      };
+      console.error(
+        "❌ Lỗi khi lấy món ăn:",
+        error.response?.data || error.message
+      );
+      return { success: false, message: "Lỗi khi tải danh sách món ăn" };
     }
   },
 
-  // Thêm món ăn mới
+  // 🔹 Thêm món ăn mới
   createDish: async (data) => {
     try {
-      console.log("Dữ liệu gửi lên API:", data);
-      const response = await axios.post(API_URL, data);
-      console.log("Phản hồi từ server:", response.data);
+      const response = await axios.post(`${API_URL}/dishes`, data, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+      console.log("✅ Phản hồi từ server:", response.data);
       return { success: true };
     } catch (error) {
-      console.error("Lỗi khi thêm món ăn:", error.response?.data || error.message);
+      console.error(
+        "❌ Lỗi khi thêm món ăn:",
+        error.response?.data || error.message
+      );
       return { success: false, message: "Thêm món ăn thất bại!" };
     }
   },
 
-  // Cập nhật món ăn
+  // 🔹 Cập nhật món ăn
   updateDish: async (id, data) => {
     try {
-      console.log(`Cập nhật món ăn ${id}:`, data);
-      await axios.put(`${API_URL}/${id}`, data);
+      console.log(`📤 Cập nhật món ăn ID: ${id}`, data);
+
+      await axios.put(`${API_URL}/dishes/${id}`, data, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+
       return { success: true };
     } catch (error) {
-      console.error("Lỗi khi cập nhật món ăn:", error);
+      console.error(
+        "❌ Lỗi khi cập nhật món ăn:",
+        error.response?.data || error.message
+      );
       return { success: false, message: "Cập nhật món ăn thất bại!" };
     }
   },
 
-  // Xóa mềm món ăn
-  deleteDish: async (id) => {
+  // 🔹 Xóa vĩnh viễn món ăn
+  hardDeleteDish: async (id) => {
     try {
-      console.log(`Xóa mềm món ăn ID: ${id}`);
-      await axios.delete(`${API_URL}/${id}`);
+      console.log(`🗑️ Xóa vĩnh viễn món ăn ID: ${id}`);
+
+      await axios.delete(`${API_URL}/dishes/${id}`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+
       return { success: true };
     } catch (error) {
-      console.error("Lỗi khi xóa món ăn:", error);
-      return { success: false, message: "Xóa mềm món ăn thất bại!" };
+      console.error(
+        "❌ Lỗi khi xóa vĩnh viễn món ăn:",
+        error.response?.data || error.message
+      );
+      return { success: false, message: "Xóa vĩnh viễn món ăn thất bại!" };
     }
   },
 
-  // Xóa vĩnh viễn món ăn
-  hardDeleteDish: async (id) => {
+  //Recipes
+  getDishById: async (dishId) => {
     try {
-      console.log(`Xóa vĩnh viễn món ăn ID: ${id}`);
-      await axios.delete(`${API_URL}/${id}`);
-      return { success: true };
+      const response = await axios.get(`${API_URL}/dishes/${dishId}`);
+      console.log("Fetched Dish:", response.data); // Debug API response
+      return {
+        success: true,
+        data: response.data.data || {}, // Đảm bảo data luôn là object
+      };
     } catch (error) {
-      console.error("Lỗi khi xóa vĩnh viễn món ăn:", error);
-      return { success: false, message: "Xóa vĩnh viễn món ăn thất bại!" };
+      console.error("Error fetching dish:", error);
+      return {
+        success: false,
+        message: error.response?.data?.error || "Lỗi khi tải món ăn",
+      };
     }
   },
 };

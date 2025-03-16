@@ -63,7 +63,7 @@ const userSchema = new mongoose.Schema(
     },
     userPreferenceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "UserPreference",
+      ref: "UserPreferenceModel",
       default: null,
     },
     createdAt: {
@@ -102,7 +102,10 @@ userSchema.pre("save", async function (next) {
 });
 
 // ✅ Kiểm tra password khi đăng nhập thường
-userSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
+userSchema.methods.correctPassword = async function (
+  candidatePassword,
+  userPassword
+) {
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 

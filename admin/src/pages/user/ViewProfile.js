@@ -12,12 +12,18 @@ const ViewProfile = () => {
   const [reviews, setReviews] = useState([]);
   const [favoriteCategories, setFavoriteCategories] = useState([]);
 
+  const handleNavigation = (path) => {
+    navigate(path);
+  };
+
   useEffect(() => {
     // Check if user exists
     if (!user) {
       navigate('/signin');
       return;
     }
+
+    
     
     // Fetch mock reviews
     fetchMockReviews();
@@ -108,7 +114,7 @@ const ViewProfile = () => {
             <FaUser className="menu-icon" />
             <span>Profile</span>
           </li>
-          <li>
+          <li onClick={() => handleNavigation('/favoriteList')}>
             <FaShoppingCart className="menu-icon" />
             <span>Favorite Food</span>
           </li>

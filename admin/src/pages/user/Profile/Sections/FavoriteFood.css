@@ -1,0 +1,50 @@
+.nav-container{
+    width: 1200px;
+}
+
+.favorite-content{
+    width: 100%;
+}
+
+.fa-content {
+    display: flex;
+    flex-direction: column; /* Xếp món ăn theo chiều dọc */
+    gap: 12px; /* Khoảng cách giữa các món */
+    padding: 16px;
+  }
+  
+  .fa-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 600px; /* Giới hạn chiều rộng để không quá dài */
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .fa-item:hover {
+    transform: scale(1.02);
+  }
+  
+  .food-image {
+    width: 120px; /* Ảnh nhỏ gọn */
+    height: 120px;
+    object-fit: cover;
+    border-radius: 25px;
+    margin-right: 16px; /* Tạo khoảng cách với tên món */
+  }
+  
+  .fa-item-name {
+    flex-grow: 1;
+  }
+  
+  .like-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  

@@ -1,11 +1,15 @@
 const UserModel = require("../models/UserModel");
+// Import UserPreference model
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const mongoose = require("mongoose");
 
-// 🟢 Get all users (Admin only)
+// 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await UserModel.find({ isDelete: false }); // Chỉ lấy user chưa bị xóa mềm
+  const users = await UserModel.find({ isDelete: false }).populate(
+    "userPreferenceId"
+  );
+
   res.status(200).json({
     status: "success",
     results: users.length,
@@ -13,10 +17,16 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
   });
 });
 
-// 🟢 Get user by ID
+// 📌 Lấy thông tin chi tiết một người dùng theo ID (bỏ qua user đã xóa)
 exports.getUserById = catchAsync(async (req, res, next) => {
-  const user = await UserModel.findById(req.params._id); // Đổi từ userId -> id
-  if (!user || user.isDelete) return next(new AppError("User not found", 404));
+  const user = await UserModel.findOne({
+    _id: req.params.id,
+    isDelete: false, // Chỉ lấy user chưa bị xóa
+  }).populate("userPreferenceId");
+
+  if (!user) {
+    return next(new AppError("User not found or has been deleted", 404));
+  }
 
   res.status(200).json({
     status: "success",
@@ -38,6 +48,7 @@ exports.updateUserById = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
+    message: "User updated successfully",
     data: { user },
   });
 });
@@ -45,17 +56,26 @@ exports.updateUserById = catchAsync(async (req, res, next) => {
 
 
 
-// 🔴 Soft delete user (Chỉ admin)
+
+
+
+// 📌 Xóa người dùng (Soft Delete) - chỉ xóa nếu user chưa bị xóa trước đó
 exports.deleteUser = catchAsync(async (req, res, next) => {
   const user = await UserModel.findByIdAndUpdate(
+    
     req.params.id,
+   
     { isDelete: true },
+   
     { new: true }
+  
   );
 
-  if (!user) return next(new AppError("User not found", 404));
+  if (!user) {
+    return next(new AppError("User not found or has been deleted", 404));
+  }
 
-  res.status(204).json({
+  res.status(200).json({
     status: "success",
     message: "User deleted successfully",
   });
@@ -64,9 +84,13 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 // 🟢 Restore user (Chỉ admin)
 exports.restoreUser = catchAsync(async (req, res, next) => {
   const user = await UserModel.findByIdAndUpdate(
+    
     req.params.id,
+   
     { isDelete: false },
+   
     { new: true }
+  
   );
 
   if (!user) return next(new AppError("User not found", 404));

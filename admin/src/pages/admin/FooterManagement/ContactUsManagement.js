@@ -16,14 +16,14 @@ const ContactUsManagement = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4">Quản lý Liên hệ</h1>
+      <h1 className="text-3xl font-bold mb-4">Contact Us Management</h1>
       <table className="w-full border-collapse border border-gray-300">
         <thead>
           <tr className="bg-gray-200">
-            <th className="border p-2">Tên</th>
+            <th className="border p-2">Full Name</th>
             <th className="border p-2">Email</th>
-            <th className="border p-2">Chủ đề</th>
-            <th className="border p-2">Tin nhắn</th>
+            <th className="border p-2">Topic</th>
+            <th className="border p-2">Message</th>
           </tr>
         </thead>
         <tbody>
@@ -38,7 +38,7 @@ const ContactUsManagement = () => {
             ))
           ) : (
             <tr>
-              <td colSpan="4" className="text-center p-4">Không có liên hệ nào</td>
+              <td colSpan="4" className="text-center p-4">No contact</td>
             </tr>
           )}
         </tbody>
