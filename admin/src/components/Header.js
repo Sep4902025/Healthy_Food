@@ -93,11 +93,7 @@ const Header = () => {
   return (
     <div className="bg-white shadow-md py-3 sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between px-6">
-        <img
-          src={logo}
-          alt="Logo"
-          className="w-36 cursor-pointer hover:opacity-80 transition"
-        />
+        <img src={logo} alt="Logo" className="w-36 cursor-pointer hover:opacity-80 transition" />
 
         {/* Search bar */}
         <div className="relative w-96">
@@ -121,8 +117,8 @@ const Header = () => {
             Contact
           </a>
           {!hasCompletedQuiz ? (
-            <a href="/quizinfor" className="hover:text-green-600 transition">
-              Quiz
+            <a href="/survey/name" className="hover:text-green-600 transition">
+              Survey
             </a>
           ) : (
             <a href="/foryou" className="hover:text-green-600 transition">
@@ -203,9 +199,7 @@ const Header = () => {
                   </li>
                 ))
               ) : (
-                <li className="px-4 py-2 text-gray-500">
-                  No categories available
-                </li>
+                <li className="px-4 py-2 text-gray-500">No categories available</li>
               )}
             </ul>
           )}
@@ -234,9 +228,7 @@ const Header = () => {
                   </li>
                 ))
               ) : (
-                <li className="px-4 py-2 text-gray-500">
-                  No dish type available
-                </li>
+                <li className="px-4 py-2 text-gray-500">No dish type available</li>
               )}
             </ul>
           )}

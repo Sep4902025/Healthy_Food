@@ -6,7 +6,7 @@ import HomeService from "./../../../../services/home.service";
 import { selectAuth } from "./../../../../store/selectors/authSelectors";
 import "./FavoriteFood.css"; // Import file CSS
 
-import { Heart} from "lucide-react";
+import { Heart } from "lucide-react";
 
 const FavoriteFood = () => {
   const userId = useSelector(selectAuth)?.user?._id;
@@ -17,7 +17,7 @@ const FavoriteFood = () => {
     { bg: "#FFEBE6", outline: "#FF4D4D", text: "#CC0000" }, // Hồng nhạt - viền đỏ
     { bg: "#EEFDEE", outline: "#4CAF50", text: "#006600" }, // Xanh lá nhạt - viền xanh lá
     { bg: "#D9D9D9", outline: "#000000", text: "#000000" }, // Xám - viền trắng
-    { bg: "#E0FFFF", outline: "#00BFFF", text: "#006699" }  // Xanh nhạt - viền xanh dương
+    { bg: "#E0FFFF", outline: "#00BFFF", text: "#006699" }, // Xanh nhạt - viền xanh dương
   ];
 
   const handleFoodClick = (dishId) => {
@@ -60,15 +60,10 @@ const FavoriteFood = () => {
   // 🟢 Xử lý Like món ăn
   const handleLike = async (dishId) => {
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
-    const isCurrentlyLiked =
-      foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
+    const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
 
     // Gửi request lên server
-    const newLikeState = await HomeService.toggleFavoriteDish(
-      userId,
-      dishId,
-      isCurrentlyLiked
-    );
+    const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId, isCurrentlyLiked);
 
     // Cập nhật lại state
     setLikedFoods((prev) => {
@@ -89,8 +84,6 @@ const FavoriteFood = () => {
     }
   };
 
-  
-
   return (
     <div>
       <div className="user-container-nav">
@@ -104,9 +97,7 @@ const FavoriteFood = () => {
           <div className="fa-detail-container">
             <div className="fa-content">
               {likedFoods.length === 0 ? (
-                <p className="text-gray-600 text-center">
-                  Bạn chưa có món ăn yêu thích nào.
-                </p>
+                <p className="text-gray-600 text-center">Bạn chưa có món ăn yêu thích nào.</p>
               ) : (
                 likedFoods.map((food, index) => {
                   const { bg, outline, text } = colors[index % colors.length];
@@ -119,15 +110,13 @@ const FavoriteFood = () => {
                     >
                       {/* Nút Like đặt ở góc trên cùng bên phải */}
                       <div className="m-20">
-                      <Heart
-                        onClick={() => handleLike(food.dish._id)}
-                        color="red" // Màu viền
-                        size={32}
-                        style={{ cursor: "pointer", fill: food.isLike ? "red" : "none" }}
-                      >
-                      </Heart>
+                        <Heart
+                          onClick={() => handleLike(food.dish._id)}
+                          color="red" // Màu viền
+                          size={32}
+                          style={{ cursor: "pointer", fill: food.isLike ? "red" : "none" }}
+                        ></Heart>
                       </div>
-                      
 
                       <div className="flex-1 text-center md:text-left">
                         <h3 className="text-2xl font-bold" style={{ color: text }}>
@@ -136,7 +125,7 @@ const FavoriteFood = () => {
                         <div className="flex flex-wrap justify-center md:justify-start items-center mt-2 gap-2">
                           <div
                             className="w-64 px-4 py-1 rounded-full outline outline-1 flex justify-center items-center"
-                            style={{ outlineColor: outline, color: text}}
+                            style={{ outlineColor: outline, color: text }}
                           >
                             <span className="text-xl">{food.dish.type}</span>
                           </div>
@@ -157,7 +146,7 @@ const FavoriteFood = () => {
                         </div>
                       </div>
                       <img
-                        src={food.dish.image_url}
+                        src={food.dish.imageUrl}
                         alt={food.dish.name}
                         className="w-32 h-32 rounded-full object-cover cursor-pointer mt-4 md:mt-0"
                         onClick={() => handleFoodClick(food.dish._id)}

@@ -1,79 +1,75 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
+import Male from "../../assets/images/gender/male.jpg";
+import Female from "../../assets/images/gender/female.jpg";
 
-const longofplanGroups = [
-  { longofplan: "3 months" },
-  { longofplan: "6 months" },
-  { longofplan: "9 months" },
-  { longofplan: "12 months" },
+const genderGroups = [
+  { gender: "Male", img: Male },
+  { gender: "Female", img: Female },
 ];
 
-const LongOfPlan = () => {
+const Gender = () => {
   const navigate = useNavigate();
-  const [selectedLongOfPlan, setSelectedLongOfPlan] = useState(null);
+  const [selectedGender, setSelectedGender] = useState(null);
 
-  // Load dữ liệu từ sessionStorage khi trang được mở
+  // Load dữ liệu từ sessionStorage khi vào trang
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
-    if (savedData.longOfPlan) {
-      setSelectedLongOfPlan(savedData.longOfPlan);
+    if (savedData.gender) {
+      setSelectedGender(savedData.gender);
     }
   }, []);
 
   const handleNext = () => {
-    if (!selectedLongOfPlan) {
-      alert("Please select how long you want to use the plan.");
+    if (!selectedGender) {
+      alert("Please select your gender!");
       return;
     }
 
     // Lấy dữ liệu hiện tại từ sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật dữ liệu mới
+    // Ghi đè gender vào object hiện tại
     const updatedData = {
       ...currentData,
-      longOfPlan: selectedLongOfPlan,
+      gender: selectedGender,
     };
 
-    // Lưu vào sessionStorage
+    // Lưu lại toàn bộ quizData vào sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
     // Điều hướng sang trang tiếp theo
-    navigate("/quizinfor/eathabit");
+    navigate("/survey/age");
   };
 
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
         <button
-          onClick={() => navigate("/quizinfor/mealnumber")}
+          onClick={() => navigate("/survey/weightgoal")}
           className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
         <ProgressBar progress={10} />
       </div>
-
-      <h2 className="text-2xl font-bold text-center">Long Of Plan</h2>
-      <p className="text-center text-gray-600">
-        How long do you want to use the plan?
-      </p>
+      <h2 className="text-2xl font-bold text-center">Gender</h2>
+      <p className="text-center text-gray-600">Select your gender</p>
 
       <div className="space-y-4 mt-4">
-        {longofplanGroups.map((item, index) => (
+        {genderGroups.map((item, index) => (
           <div
             key={index}
             className={`flex items-center p-4 rounded-lg shadow cursor-pointer transition duration-300 ${
-              selectedLongOfPlan === item.longofplan
+              selectedGender === item.gender
                 ? "bg-green-400 text-black"
                 : "bg-gray-100 hover:bg-green-200"
             }`}
-            onClick={() => setSelectedLongOfPlan(item.longofplan)}
+            onClick={() => setSelectedGender(item.gender)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.longofplan}
-            </span>
+            <span className="text-lg font-semibold flex-1 text-left">{item.gender}</span>
+            <img src={item.img} alt={item.gender} className="w-16 h-16 rounded-full object-cover" />
           </div>
         ))}
       </div>
@@ -88,4 +84,4 @@ const LongOfPlan = () => {
   );
 };
 
-export default LongOfPlan;
+export default Gender;

@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 const QuizLayout = () => {
   const navigate = useNavigate();
   const handleNext = () => {
-    navigate("/quizinfor/name");
+    navigate("/survey/name");
   };
   return (
     <div>

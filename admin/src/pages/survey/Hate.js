@@ -172,7 +172,7 @@ const Hate = () => {
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
         <button
-          onClick={() => navigate("/quizinfor/favorite")}
+          onClick={() => navigate("/survey/favorite")}
           className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
@@ -188,9 +188,7 @@ const Hate = () => {
           type="checkbox"
           id="selectAll"
           onChange={handleSelectAllToggle}
-          checked={
-            selectedItems.length === hateGroups.flatMap((c) => c.items).length
-          }
+          checked={selectedItems.length === hateGroups.flatMap((c) => c.items).length}
         />
         <label htmlFor="selectAll">Select All</label>
       </div>

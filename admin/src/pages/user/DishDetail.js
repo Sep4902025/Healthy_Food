@@ -36,7 +36,7 @@ const DishDetail = () => {
         }));
         setComments(cmts);
 
-        console.log("Fetched Comments:",cmts ); // Debug API response
+        console.log("Fetched Comments:", cmts); // Debug API response
       } catch (error) {
         console.error("Lỗi khi tải bình luận:", error);
       }
@@ -49,11 +49,7 @@ const DishDetail = () => {
   const handleCommentSubmit = async () => {
     if (!newComment.trim()) return;
     try {
-      const response = await CommentsService.addComment(
-        dishId,
-        newComment,
-        userId
-      );
+      const response = await CommentsService.addComment(dishId, newComment, userId);
       setComments([...comments, response.data]);
       setNewComment("");
     } catch (error) {
@@ -63,17 +59,17 @@ const DishDetail = () => {
 
   const handleLikeComment = async (commentId) => {
     try {
-      const updatedComment = await CommentsService.toggleLikeComment(commentId,userId);
+      const updatedComment = await CommentsService.toggleLikeComment(commentId, userId);
       setComments(
         comments.map((comment) =>
           comment._id === commentId
             ? {
                 ...comment,
                 isLiked: !comment.isLiked,
-                likeCount: comment.isLiked? comment.likeCount - 1: comment.likeCount + 1,
+                likeCount: comment.isLiked ? comment.likeCount - 1 : comment.likeCount + 1,
                 likedBy: comment.isLiked
-              ? comment.likedBy.filter(id => id !== userId) // Xóa user khỏi likedBy khi unlike
-              : [...comment.likedBy, userId] // Thêm user vào likedBy khi like
+                  ? comment.likedBy.filter((id) => id !== userId) // Xóa user khỏi likedBy khi unlike
+                  : [...comment.likedBy, userId], // Thêm user vào likedBy khi like
               }
             : comment
         )
@@ -89,7 +85,7 @@ const DishDetail = () => {
     <div className="p-6 bg-gray-100 min-h-screen flex flex-col items-center">
       <h1 className="text-3xl font-bold text-center mb-4">{dish.name}</h1>
       <img
-        src={dish.image_url}
+        src={dish.imageUrl}
         alt={dish.name}
         className="w-full max-w-lg h-80 object-cover rounded-lg shadow-md"
       />
@@ -115,10 +111,7 @@ const DishDetail = () => {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
           />
-          <Button
-            className="mt-2 bg-blue-500 text-white"
-            onClick={handleCommentSubmit}
-          >
+          <Button className="mt-2 bg-blue-500 text-white" onClick={handleCommentSubmit}>
             Gửi bình luận
           </Button>
         </div>
@@ -138,11 +131,7 @@ const DishDetail = () => {
                 >
                   <Heart
                     size={20}
-                    className={
-                      comment.isLiked
-                        ? "fill-red-500 stroke-red-500"
-                        : "stroke-gray-500"
-                    }
+                    className={comment.isLiked ? "fill-red-500 stroke-red-500" : "stroke-gray-500"}
                   />
                   <span>{comment.likeCount}</span>
                 </button>
