@@ -1,6 +1,7 @@
 const UserModel = require("../models/UserModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
+const mongoose = require("mongoose");
 
 // 🟢 Get all users (Admin only)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
@@ -14,7 +15,7 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
 
 // 🟢 Get user by ID
 exports.getUserById = catchAsync(async (req, res, next) => {
-  const user = await UserModel.findById(req.params.userId);
+  const user = await UserModel.findById(req.params._id); // Đổi từ userId -> id
   if (!user || user.isDelete) return next(new AppError("User not found", 404));
 
   res.status(200).json({
@@ -23,14 +24,17 @@ exports.getUserById = catchAsync(async (req, res, next) => {
   });
 });
 
-// 🟡 Update user (Chỉ cho chính user hoặc admin)
-exports.updateUser = catchAsync(async (req, res, next) => {
+// Update User By ID
+exports.updateUserById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
   const updates = req.body;
-  delete updates.password; // Không cho cập nhật password ở đây
-  delete updates.email; // Không cho cập nhật email ở đây
 
-  const user = await UserModel.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
-  if (!user) return next(new AppError("User not found", 404));
+  const user = await UserModel.findByIdAndUpdate(id, updates, {
+    new: true, // Trả về user sau khi cập nhật
+    runValidators: true, // Chạy validation trên dữ liệu cập nhật
+  });
+
+  if (!user || user.isDelete) return next(new AppError("User not found", 404));
 
   res.status(200).json({
     status: "success",
@@ -38,9 +42,16 @@ exports.updateUser = catchAsync(async (req, res, next) => {
   });
 });
 
+
+
+
 // 🔴 Soft delete user (Chỉ admin)
 exports.deleteUser = catchAsync(async (req, res, next) => {
-  const user = await UserModel.findByIdAndUpdate(req.params.id, { isDelete: true }, { new: true });
+  const user = await UserModel.findByIdAndUpdate(
+    req.params.id,
+    { isDelete: true },
+    { new: true }
+  );
 
   if (!user) return next(new AppError("User not found", 404));
 
@@ -52,7 +63,11 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 
 // 🟢 Restore user (Chỉ admin)
 exports.restoreUser = catchAsync(async (req, res, next) => {
-  const user = await UserModel.findByIdAndUpdate(req.params.id, { isDelete: false }, { new: true });
+  const user = await UserModel.findByIdAndUpdate(
+    req.params.id,
+    { isDelete: false },
+    { new: true }
+  );
 
   if (!user) return next(new AppError("User not found", 404));
 
