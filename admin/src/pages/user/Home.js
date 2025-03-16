@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import dishesService from "../../services/nutritionist/dishesServices";
-import ingredientsService from "../../services/nutritionist/ingredientsServices"; // Import dịch vụ API
 import homePicture from "../../assets/images/homePic.png";
-import brow from "../../assets/images/brow.png";
-import dessert from "../../assets/images/dessert.png";
-import dish from "../../assets/images/mainDish.png";
-import breakfast from "../../assets/images/breakfast.png";
 import HomeService from "../../services/home.service";
 import FoodSlider from "../../components/ui/FoodSlider";
 import { useSelector } from "react-redux";

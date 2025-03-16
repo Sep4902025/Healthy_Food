@@ -564,7 +564,21 @@ table {
 
 
 
+.user-item {
+  cursor: pointer;
+}
 
+.user-item i {
+  margin-right: 10px;
+}
 
+.user-item:hover {
+  background: #f0f0f0;
+}
 
+.user-item.selected {
+  color: rgb(22, 197, 121);
+  font-weight: bold;
+  border-radius: 5px;
+}
 

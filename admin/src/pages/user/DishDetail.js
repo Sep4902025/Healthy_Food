@@ -29,7 +29,14 @@ const DishDetail = () => {
     const fetchComments = async () => {
       try {
         const response = await CommentsService.getCommentsByDishId(dishId);
-        setComments(response.data);
+
+        const cmts = response.data.map((comment) => ({
+          ...comment,
+          isLiked: comment.likedBy.includes(userId),
+        }));
+        setComments(cmts);
+
+        console.log("Fetched Comments:", cmts); // Debug API response
       } catch (error) {
         console.error("Lỗi khi tải bình luận:", error);
       }
@@ -42,11 +49,7 @@ const DishDetail = () => {
   const handleCommentSubmit = async () => {
     if (!newComment.trim()) return;
     try {
-      const response = await CommentsService.addComment(
-        dishId,
-        newComment,
-        userId
-      );
+      const response = await CommentsService.addComment(dishId, newComment, userId);
       setComments([...comments, response.data]);
       setNewComment("");
     } catch (error) {
@@ -56,19 +59,17 @@ const DishDetail = () => {
 
   const handleLikeComment = async (commentId) => {
     try {
-      const updatedComment = await CommentsService.toggleLikeComment(
-        commentId,
-        userId
-      );
+      const updatedComment = await CommentsService.toggleLikeComment(commentId, userId);
       setComments(
         comments.map((comment) =>
           comment._id === commentId
             ? {
                 ...comment,
                 isLiked: !comment.isLiked,
-                likeCount: comment.isLiked
-                  ? comment.likeCount - 1
-                  : comment.likeCount + 1,
+                likeCount: comment.isLiked ? comment.likeCount - 1 : comment.likeCount + 1,
+                likedBy: comment.isLiked
+                  ? comment.likedBy.filter((id) => id !== userId) // Xóa user khỏi likedBy khi unlike
+                  : [...comment.likedBy, userId], // Thêm user vào likedBy khi like
               }
             : comment
         )
@@ -110,10 +111,7 @@ const DishDetail = () => {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
           />
-          <Button
-            className="mt-2 bg-blue-500 text-white"
-            onClick={handleCommentSubmit}
-          >
+          <Button className="mt-2 bg-blue-500 text-white" onClick={handleCommentSubmit}>
             Gửi bình luận
           </Button>
         </div>
@@ -133,11 +131,7 @@ const DishDetail = () => {
                 >
                   <Heart
                     size={20}
-                    className={
-                      comment.isLiked
-                        ? "fill-red-500 stroke-red-500"
-                        : "stroke-gray-500"
-                    }
+                    className={comment.isLiked ? "fill-red-500 stroke-red-500" : "stroke-gray-500"}
                   />
                   <span>{comment.likeCount}</span>
                 </button>

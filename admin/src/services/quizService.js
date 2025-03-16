@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/v1/userpreference";
+const API_URL = process.env.REACT_APP_API_URL;
 
 const quizService = {
   submitQuizData: async () => {
@@ -16,7 +16,7 @@ const quizService = {
       }
 
       // Gửi dữ liệu lên BE
-      const response = await axios.post(API_URL, finalData);
+      const response = await axios.post(`${API_URL}/userPreference`, finalData);
 
       // Xoá dữ liệu sau khi gửi thành công
       sessionStorage.removeItem("quizData");
@@ -33,33 +33,31 @@ const quizService = {
 
   getUserPreference: async (userId) => {
     try {
-      const response = await axios.get(`${API_URL}/${userId}`);
+      const response = await axios.get(`${API_URL}/userPreference/${userId}`);
       return { success: true, data: response.data };
     } catch (error) {
       return {
         success: false,
-        message:
-          error.response?.data?.error || "Failed to fetch user preference.",
+        message: error.response?.data?.error || "Failed to fetch user preference.",
       };
     }
   },
 
   updateUserPreference: async (userId, updatedData) => {
     try {
-      const response = await axios.put(`${API_URL}/${userId}`, updatedData);
+      const response = await axios.put(`${API_URL}/userPreference/${userId}`, updatedData);
       return { success: true, data: response.data };
     } catch (error) {
       return {
         success: false,
-        message:
-          error.response?.data?.error || "Failed to update user preference.",
+        message: error.response?.data?.error || "Failed to update user preference.",
       };
     }
   },
 
   deleteUserPreference: async (userId) => {
     try {
-      await axios.delete(`${API_URL}/${userId}`);
+      await axios.delete(`${API_URL}/userPreference/s${userId}`);
       return {
         success: true,
         message: "User preference deleted successfully.",
@@ -67,8 +65,7 @@ const quizService = {
     } catch (error) {
       return {
         success: false,
-        message:
-          error.response?.data?.error || "Failed to delete user preference.",
+        message: error.response?.data?.error || "Failed to delete user preference.",
       };
     }
   },

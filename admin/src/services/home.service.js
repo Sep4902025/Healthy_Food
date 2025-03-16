@@ -86,12 +86,14 @@ const HomeService = {
   getFavoriteDishes: async (userId) => {
     try {
         const response = await axiosInstance.get(`/favoriteDishes/${userId}`);
+        console.log("UserId", userId)
         if (response.data.status === "success") {
-          console.log("🔥 Danh sách món ăn yêu thích từ API:", response.data.data);
-            return response.data.data.map((item) => ({
-                dishId: item.dishId._id, 
-                isLike: item.isLike 
-            }));
+            return response.data.data
+                .filter((item) => item.isLike) // 🔥 Chỉ lấy món có isLike = true
+                .map((item) => ({
+                    dishId: item.dishId._id, 
+                    isLike: item.isLike 
+                }));
         }
         return [];
     } catch (error) {
@@ -99,6 +101,7 @@ const HomeService = {
         return [];
     }
 },
+
 
 
   // 🟢 Toggle Like / Unlike món ăn

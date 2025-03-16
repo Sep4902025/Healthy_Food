@@ -33,7 +33,7 @@ const WeightGoal = () => {
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
     // Điều hướng sang trang tiếp theo
-    navigate("/quizinfor/gender");
+    navigate("/survey/gender");
   };
 
   return (
@@ -41,7 +41,7 @@ const WeightGoal = () => {
       {/* Header: nút back + progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
-          onClick={() => navigate("/quizinfor/height")}
+          onClick={() => navigate("/survey/height")}
           className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>

@@ -4,7 +4,6 @@ import { Outlet } from "react-router-dom";
 import { selectUser } from "../../store/selectors/authSelectors";
 import UserChatButton from "../Chat/UserChatButton";
 
-import ReminderNotification from "../Reminder/ReminderNotifiaction";
 import Footer from "../../pages/user/footer/Footer";
 
 import Header from "../Header";
@@ -16,9 +15,9 @@ const MainLayout = () => {
     <div className="flex flex-col bg-gray-50 min-h-screen">
       {/* Header */}
       <Header />
-      <ReminderNotification userId={user?._id} />
+
       {/* Main Content */}
-      <main className="container mx-auto py-6 px-6 flex-grow">
+      <main className="container mx-auto">
         <Outlet />
       </main>
 

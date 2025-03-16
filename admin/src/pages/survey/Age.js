@@ -42,14 +42,14 @@ const Age = () => {
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
     // Điều hướng sang trang tiếp theo
-    navigate("/quizinfor/goal");
+    navigate("/survey/goal");
   };
 
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
         <button
-          onClick={() => navigate("/quizinfor/gender")}
+          onClick={() => navigate("/survey/gender")}
           className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
@@ -70,14 +70,8 @@ const Age = () => {
             }`}
             onClick={() => setSelectedAge(item.age)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.age}
-            </span>
-            <img
-              src={item.img}
-              alt=""
-              className="w-16 h-16 rounded-full object-cover"
-            />
+            <span className="text-lg font-semibold flex-1 text-left">{item.age}</span>
+            <img src={item.img} alt="" className="w-16 h-16 rounded-full object-cover" />
           </div>
         ))}
       </div>

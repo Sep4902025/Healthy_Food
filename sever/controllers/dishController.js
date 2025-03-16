@@ -17,6 +17,28 @@ exports.createDish = async (req, res) => {
     res.status(400).json({ status: "fail", message: error.message });
   }
 };
+// Create Many Dishes
+exports.createManyDishes = async (req, res) => {
+  try {
+    const dishes = req.body; // Nhận mảng các món ăn từ request body
+
+    // Kiểm tra xem dishes có phải là mảng không
+    if (!Array.isArray(dishes) || dishes.length === 0) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Input should be a non-empty array of dishes",
+      });
+    }
+
+    // Tạo nhiều món ăn và lưu vào database
+    const createdDishes = await Dish.insertMany(dishes);
+
+    // Trả về kết quả
+    res.status(201).json({ status: "success", data: createdDishes });
+  } catch (error) {
+    res.status(400).json({ status: "fail", message: error.message });
+  }
+};
 
 // Read all Dishes
 exports.getAllDishes = async (req, res) => {
@@ -50,7 +72,6 @@ exports.getAllDishes = async (req, res) => {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
-
 
 // Read Dish by ID
 exports.getDishById = async (req, res) => {
@@ -199,7 +220,6 @@ exports.getAllIngredients = async (req, res) => {
   }
 };
 
-
 // Read Ingredient by ID
 exports.getIngredientById = async (req, res) => {
   try {
@@ -232,7 +252,7 @@ exports.updateIngredient = async (req, res) => {
   }
 };
 
-// Delete Ingredient 
+// Delete Ingredient
 exports.deleteIngredient = async (req, res) => {
   try {
     const deletedIngredient = await Ingredients.findByIdAndDelete(req.params.ingredientId);
@@ -337,14 +357,15 @@ exports.getAllRecipes = async (req, res) => {
     }
 
     // Lấy danh sách công thức theo điều kiện
-    const recipes = await Recipe.find(filter).populate("dishId").populate("ingredients.ingredientId");
-    
+    const recipes = await Recipe.find(filter)
+      .populate("dishId")
+      .populate("ingredients.ingredientId");
+
     res.status(200).json({ status: "success", data: recipes });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
-
 
 // Create Recipe
 exports.createRecipe = async (req, res) => {
@@ -366,7 +387,10 @@ exports.createRecipe = async (req, res) => {
 
     // 3️⃣ Kiểm tra quyền: chỉ "admin" hoặc "nutritionist" mới được tạo recipe
     if (user.role !== "admin" && user.role !== "nutritionist") {
-      return res.status(403).json({ status: "fail", message: "Forbidden: You do not have permission to create recipes" });
+      return res.status(403).json({
+        status: "fail",
+        message: "Forbidden: You do not have permission to create recipes",
+      });
     }
 
     // 4️⃣ Kiểm tra xem Dish có tồn tại không
@@ -377,7 +401,10 @@ exports.createRecipe = async (req, res) => {
     }
 
     // 5️⃣ Tính toán giá trị dinh dưỡng từ nguyên liệu
-    let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
+    let totalCalories = 0,
+      totalProtein = 0,
+      totalCarbs = 0,
+      totalFat = 0;
 
     for (const ingredientItem of req.body.ingredients) {
       const ingredientInfo = await Ingredient.findById(ingredientItem.ingredientId);
@@ -390,7 +417,8 @@ exports.createRecipe = async (req, res) => {
 
       let conversionFactor = ingredientItem.quantity / 100;
       if (ingredientItem.unit === "tbsp") conversionFactor = (ingredientItem.quantity * 15) / 100;
-      if (ingredientItem.unit === "tsp" || ingredientItem.unit === "tp") conversionFactor = (ingredientItem.quantity * 5) / 100;
+      if (ingredientItem.unit === "tsp" || ingredientItem.unit === "tp")
+        conversionFactor = (ingredientItem.quantity * 5) / 100;
 
       totalCalories += (ingredientInfo.calories || 0) * conversionFactor;
       totalProtein += (ingredientInfo.protein || 0) * conversionFactor;
@@ -443,8 +471,6 @@ exports.createRecipe = async (req, res) => {
 };
 
 // Read Recipe
-
-
 
 exports.getRecipeById = async (req, res) => {
   try {
@@ -534,7 +560,7 @@ exports.updateRecipeById = async (req, res) => {
     }
 
     res.status(200).json({ status: "success", data: updatedRecipe });
-  } catch (error) { 
+  } catch (error) {
     console.error("Error updating recipe:", error);
     res.status(400).json({ status: "fail", message: error.message });
   }

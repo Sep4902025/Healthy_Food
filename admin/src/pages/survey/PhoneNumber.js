@@ -2,21 +2,32 @@ import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 
-const Weight = () => {
+const PhoneNumber = () => {
   const navigate = useNavigate();
-  const [selectedWeight, setSelectedWeight] = useState(0);
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState("");
 
-  // Load dữ liệu từ sessionStorage khi vào trang
+  // Load dữ liệu từ sessionStorage khi mở trang
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
-    if (savedData.weight) {
-      setSelectedWeight(savedData.weight);
+    if (savedData.phoneNumber) {
+      setSelectedPhoneNumber(savedData.phoneNumber);
     }
   }, []);
 
+  // Hàm kiểm tra số điện thoại 10 số
+  const validatePhoneNumber = (phone) => {
+    const phoneRegex = /^[0-9]{10}$/;
+    return phoneRegex.test(phone);
+  };
+
   const handleNext = () => {
-    if (!selectedWeight) {
-      alert("Please enter your weight before proceeding.");
+    if (!selectedPhoneNumber.trim()) {
+      alert("Please enter your phone number.");
+      return;
+    }
+
+    if (!validatePhoneNumber(selectedPhoneNumber)) {
+      alert("Invalid phone number. Please enter a valid 10-digit number.");
       return;
     }
 
@@ -26,44 +37,44 @@ const Weight = () => {
     // Cập nhật dữ liệu mới
     const updatedData = {
       ...currentData,
-      weight: selectedWeight,
+      phoneNumber: selectedPhoneNumber,
     };
 
     // Lưu vào sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
     // Điều hướng sang trang tiếp theo
-    navigate("/quizinfor/height");
+    navigate("/survey/email");
   };
 
   return (
     <div className="max-w-md mx-auto p-4">
-      {/* Header với Back button và Progress Bar */}
+      {/* Header with back button & progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
-          onClick={() => navigate("/quizinfor/email")}
+          onClick={() => navigate("/survey/name")}
           className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={20} /> {/* Điều chỉnh progress theo flow */}
+        <ProgressBar progress={20} />
       </div>
 
-      {/* Tiêu đề và mô tả */}
-      <h2 className="text-2xl font-bold text-center">Weight</h2>
-      <p className="text-center text-gray-600">Please enter your weight</p>
+      {/* Title & description */}
+      <h2 className="text-2xl font-bold text-center">Phone Number</h2>
+      <p className="text-center text-gray-600">Please enter your phone number</p>
 
-      {/* Input nhập cân nặng */}
+      {/* Input field */}
       <div className="mt-4">
         <input
-          type="number"
-          value={selectedWeight}
-          onChange={(e) => setSelectedWeight(Number(e.target.value))}
-          placeholder="Enter your weight (kg)"
+          type="text"
+          value={selectedPhoneNumber}
+          onChange={(e) => setSelectedPhoneNumber(e.target.value)}
+          placeholder="Enter your phone number"
           className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
         />
 
-        {/* Nút Next */}
+        {/* Next button */}
         <button
           onClick={handleNext}
           className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
@@ -75,4 +86,4 @@ const Weight = () => {
   );
 };
 
-export default Weight;
+export default PhoneNumber;

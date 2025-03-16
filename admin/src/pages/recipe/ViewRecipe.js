@@ -21,8 +21,10 @@ const RecipeApp = () => {
   const [ingredients, setIngredients] = useState([]);
   const [rating, setRating] = useState(5);
   const [ratings, setRatings] = useState([]);
-  const userId = useSelector(selectAuth)?.user?._id;
+  const user = useSelector(selectAuth)?.user;
 
+
+  console.log("User: ",user);
   useEffect(() => {
     const fetchRecipe = async () => {
       try {
@@ -67,33 +69,46 @@ const RecipeApp = () => {
       </p>
     );
 
-  const handleRateRecipe = async () => {
-    try {
-      const response = await commentService.rateRecipe(
-        recipeId,
-        userId,
-        rating
-      );
-      if (response.success) {
-        toast.success(`Rating thành công ⭐`);
-        setRatings((prevRatings) => {
-          const existingRatingIndex = prevRatings.findIndex(
-            (r) => r.userId._id === userId
-          );
-          if (existingRatingIndex !== -1) {
-            const updatedRatings = [...prevRatings];
-            updatedRatings[existingRatingIndex] = response.data.data;
-            return updatedRatings;
-          }
-          return [...prevRatings, response.data.data];
-        });
-      } else {
-        toast.error("Lỗi khi gửi đánh giá");
+    const handleRateRecipe = async () => {
+      try {
+        const response = await commentService.rateRecipe(recipeId, user?._id, rating);
+    
+        if (response.success) {
+          toast.success(`Rating thành công ⭐`);
+    
+          // Lấy thông tin người dùng từ Redux (hoặc API nếu cần)
+          
+    
+          setRatings((prevRatings) => {
+            // Kiểm tra xem người dùng đã có đánh giá trước đó chưa
+            const existingIndex = prevRatings.findIndex(
+              (r) => r.userId._id === user?._id
+            );
+    
+    
+            const newRating = {
+              ...response.data.data,
+              userId: { _id: user._id, email: user.email }, // Thêm tên
+            };
+    
+            if (existingIndex !== -1) {
+              // Nếu đã có, cập nhật đánh giá cũ
+              const updatedRatings = [...prevRatings];
+              updatedRatings[existingIndex] = newRating;
+              return updatedRatings;
+            }
+    
+    
+            // Nếu chưa có, thêm mới vào danh sách
+            return [...prevRatings, newRating];
+          });
+        } else {
+          toast.error("Lỗi khi gửi đánh giá");
+        }
+      } catch (error) {
+        console.error("Lỗi khi gửi đánh giá:", error);
       }
-    } catch (error) {
-      console.error("Lỗi khi gửi đánh giá:", error);
-    }
-  };
+    };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen w-full flex flex-col items-center">

@@ -44,14 +44,14 @@ const EatHabit = () => {
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
     // Điều hướng tới trang tiếp theo
-    navigate("/quizinfor/underdisease");
+    navigate("/survey/underdisease");
   };
 
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
         <button
-          onClick={() => navigate("/quizinfor/longofplan")}
+          onClick={() => navigate("/survey/longofplan")}
           className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
@@ -67,9 +67,7 @@ const EatHabit = () => {
           <div
             key={eathabit.id}
             className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer ${
-              isSelected(eathabit.id)
-                ? "bg-yellow-50 border-yellow-400"
-                : "bg-gray-100"
+              isSelected(eathabit.id) ? "bg-yellow-50 border-yellow-400" : "bg-gray-100"
             }`}
             onClick={() => toggleItemSelection(eathabit.id)}
           >

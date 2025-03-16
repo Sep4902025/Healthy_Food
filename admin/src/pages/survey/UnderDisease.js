@@ -49,7 +49,7 @@ const UnderDisease = () => {
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
     // Điều hướng sang trang tiếp theo
-    navigate("/quizinfor/favorite");
+    navigate("/survey/favorite");
   };
 
   return (
@@ -57,7 +57,7 @@ const UnderDisease = () => {
       {/* Header với back button và progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
-          onClick={() => navigate("/quizinfor/eathabit")}
+          onClick={() => navigate("/survey/eathabit")}
           className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
@@ -67,9 +67,7 @@ const UnderDisease = () => {
 
       {/* Tiêu đề và mô tả */}
       <h2 className="text-2xl font-bold text-center">Under Disease</h2>
-      <p className="text-center text-gray-600">
-        Let me know your under disease
-      </p>
+      <p className="text-center text-gray-600">Let me know your under disease</p>
 
       {/* Danh sách lựa chọn */}
       <div className="space-y-3 mt-4">
@@ -77,9 +75,7 @@ const UnderDisease = () => {
           <div
             key={underdisease.id}
             className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer ${
-              isSelected(underdisease.id)
-                ? "bg-yellow-50 border-yellow-400"
-                : "bg-gray-100"
+              isSelected(underdisease.id) ? "bg-yellow-50 border-yellow-400" : "bg-gray-100"
             }`}
             onClick={() => toggleItemSelection(underdisease.id)}
           >
@@ -92,18 +88,14 @@ const UnderDisease = () => {
               />
               <span
                 className={`font-medium ${
-                  isSelected(underdisease.id)
-                    ? "text-yellow-700"
-                    : "text-gray-700"
+                  isSelected(underdisease.id) ? "text-yellow-700" : "text-gray-700"
                 }`}
               >
                 {underdisease.label}
               </span>
             </div>
 
-            {underdisease.icon && (
-              <span className="text-2xl">{underdisease.icon}</span>
-            )}
+            {underdisease.icon && <span className="text-2xl">{underdisease.icon}</span>}
           </div>
         ))}
       </div>

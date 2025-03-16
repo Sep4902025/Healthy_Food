@@ -50,18 +50,20 @@ exports.removeFavoriteDish = async (req, res) => {
   try {
     const { userId, dishId } = req.body;
 
-    const favorite = await UserFavoriteDishes.findOneAndUpdate(
+    // Cập nhật tất cả bản ghi có userId và dishId thành isLike: false
+    const result = await UserFavoriteDishes.updateMany(
       { userId, dishId },
-      { isLike: false },
-      { new: true }
+      { $set: { isLike: false } }
     );
 
-    if (!favorite) {
+    // Nếu không tìm thấy bản ghi nào, trả về lỗi
+    if (result.matchedCount === 0) {
       return res.status(404).json({ status: "fail", message: "Món ăn không tồn tại trong danh sách yêu thích" });
     }
 
-    res.status(200).json({ status: "success", message: "Đã xóa khỏi danh sách yêu thích", data: favorite });
+    res.status(200).json({ status: "success", message: "Đã xóa khỏi danh sách yêu thích", data: result });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
+
