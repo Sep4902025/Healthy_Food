@@ -9,6 +9,7 @@ import { FaSearch } from "react-icons/fa";
 import { selectUser } from "../store/selectors/authSelectors";
 import { logoutUser } from "../store/actions/authActions";
 import { DarkModeContext } from "../pages/context/DarkModeContext";
+
 const Header = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -23,6 +24,7 @@ const Header = () => {
     const checkUserQuizStatus = async () => {
       if (user) {
         try {
+          
           const response = await quizService.getUserPreference(user._id);
           if (response.data.status === "success") {
             setHasCompletedQuiz(true);
@@ -93,7 +95,11 @@ const Header = () => {
   return (
     <div className="bg-white shadow-md py-3 sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between px-6">
-        <img src={logo} alt="Logo" className="w-36 cursor-pointer hover:opacity-80 transition" />
+        <img
+          src={logo}
+          alt="Logo"
+          className="w-36 cursor-pointer hover:opacity-80 transition"
+        />
 
         {/* Search bar */}
         <div className="relative w-96">
@@ -125,6 +131,10 @@ const Header = () => {
               For You
             </a>
           )}
+
+          <a href="/viewquiz" className="hover:text-green-600 transition">
+            View Quiz
+          </a>
         </nav>
 
         {/* User/Auth Button */}
@@ -199,7 +209,9 @@ const Header = () => {
                   </li>
                 ))
               ) : (
-                <li className="px-4 py-2 text-gray-500">No categories available</li>
+                <li className="px-4 py-2 text-gray-500">
+                  No categories available
+                </li>
               )}
             </ul>
           )}
@@ -228,7 +240,9 @@ const Header = () => {
                   </li>
                 ))
               ) : (
-                <li className="px-4 py-2 text-gray-500">No dish type available</li>
+                <li className="px-4 py-2 text-gray-500">
+                  No dish type available
+                </li>
               )}
             </ul>
           )}
@@ -236,7 +250,7 @@ const Header = () => {
         {/* Meal Plan */}'
         <div className="relative dropdown-container">
           <button
-            onClick={() => toggleDropdown("dishes")}
+            onClick={() => navigate(`/mealPlan`)}
             className="text-gray-700 font-medium px-4 py-2 rounded-md hover:bg-gray-300 transition shadow-sm"
           >
             Meal Plan

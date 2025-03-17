@@ -43,10 +43,13 @@ const FoodSlider = ({ userId, dishes = [] }) => {
         }
 
         try {
-          const response = await commentService.getRatingsByRecipe(dish.recipeId);
+          const response = await commentService.getRatingsByRecipe(
+            dish.recipeId
+          );
           if (response.data.length > 0) {
             const avgRating =
-              response.data.reduce((sum, r) => sum + r.star, 0) / response.data.length;
+              response.data.reduce((sum, r) => sum + r.star, 0) /
+              response.data.length;
             ratingsData[dish._id] = avgRating.toFixed(1);
           } else {
             ratingsData[dish._id] = "Chưa có đánh giá";
@@ -67,12 +70,28 @@ const FoodSlider = ({ userId, dishes = [] }) => {
     }
   }, [dishes]);
 
+  const sortedDishes = [...dishes]
+    .map((food) => {
+      const ratingValue = parseFloat(ratings[food._id]); // Chuyển về số
+      return {
+        ...food,
+        rating: isNaN(ratingValue) ? 0 : ratingValue, // Nếu rating không hợp lệ, đặt 0
+      };
+    })
+    .sort((a, b) => b.rating - a.rating) // Sắp xếp theo rating giảm dần
+    .slice(0, 8); // Chỉ lấy tối đa 8 món
+
   const handleLike = async (dishId) => {
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
-    const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
+    const isCurrentlyLiked =
+      foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
 
     // Gửi request lên server
-    const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId, isCurrentlyLiked);
+    const newLikeState = await HomeService.toggleFavoriteDish(
+      userId,
+      dishId,
+      isCurrentlyLiked
+    );
 
     // Cập nhật lại state
     setLikedFoods((prev) => {
@@ -103,16 +122,24 @@ const FoodSlider = ({ userId, dishes = [] }) => {
         <ChevronLeft size={24} />
       </button>
 
+      <div className="w-full max-w-6xl mx-auto px-4">
       <Swiper
         modules={[Navigation]}
-        spaceBetween={20}
-        slidesPerView={3}
-        loop={true}
+        breakpoints={{
+          320: { slidesPerView: 1, spaceBetween: 10 }, // Mobile nhỏ
+          480: { slidesPerView: 1, spaceBetween: 15 }, // Mobile trung bình
+          640: { slidesPerView: 2, spaceBetween: 20 }, // Tablet
+          1024: { slidesPerView: 3, spaceBetween: 30 }, // Desktop
+        }}
+        loop={false}
         onSwiper={(swiper) => (swiperRef.current = swiper)}
       >
-        {dishes.map((food) => (
-          <SwiperSlide key={food._id}>
-            <div className="food-item" onClick={() => handleFoodClick(food._id)}>
+        {sortedDishes.map((food) => (
+          <SwiperSlide key={food._id} className="flex items-stretch">
+            <div
+              className="food-item w-full max-w-[500px] min-w-[250px] min-h-[550px] aspect-auto h-auto flex flex-col bg-[#c1f1c6] rounded-[35px]"
+              onClick={() => handleFoodClick(food._id)}
+            >
               {/* Nút Like (Chỉ hiển thị, không có sự kiện onClick) */}
               <div className="food-like-container flex items-center justify-center">
                 <div
@@ -125,7 +152,8 @@ const FoodSlider = ({ userId, dishes = [] }) => {
                   <Heart
                     size={32}
                     className={`text-white ${
-                      likedFoods.find((item) => item.dishId === food._id)?.isLike
+                      likedFoods.find((item) => item.dishId === food._id)
+                        ?.isLike
                         ? "fill-white"
                         : "stroke-white"
                     }`}
@@ -152,13 +180,18 @@ const FoodSlider = ({ userId, dishes = [] }) => {
                 <p className="food-item-rating-title">Rating</p>
                 <span className="food-item-rating-star"></span>
                 <p className="food-item-rating-average block mb-2 text-lg font-semibold text-gray-700">
-                  {ratings[food._id] + "⭐" || "Đang tải..."}
+                  {food.rating > 0
+                    ? food.rating.toFixed(1) + "⭐"
+                    : "Chưa có đánh giá"}
                 </p>
               </div>
             </div>
           </SwiperSlide>
         ))}
       </Swiper>
+      </div>
+
+      
 
       {/* Nút điều hướng phải */}
       <button

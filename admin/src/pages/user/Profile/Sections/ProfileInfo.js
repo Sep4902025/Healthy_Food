@@ -23,8 +23,6 @@ const ProfileInfo = () => {
         const response = await quizService.getUserPreference(user._id);
         if (response.data) {
           setUserPreference(response.data.data);
-
-          console.log("User preference:", userPreference);
         } else {
           setUserPreference(null);
         }
@@ -36,6 +34,19 @@ const ProfileInfo = () => {
 
     fetchUserPreference();
   }, [user]);
+
+  const handleResetPreference = async () => {
+    if (!user) return;
+    
+    const result = await quizService.resetUserPreference(userPreference._id);
+    if (result.success) {
+      setUserPreference(null); // Reset state nếu cần
+      alert("User preference has been reset!");
+    } else {
+      alert(result.message);
+    }
+  };
+  
 
   if (!user) {
     navigate("/signin");
@@ -90,6 +101,12 @@ const ProfileInfo = () => {
                   <td colSpan="2" className="text-right">
                     <button className="m-2 table-edit-btn hover:bg-purple-600">
                       Edit
+                    </button>
+                  </td>
+                  <td colSpan="2" className="text-right">
+                    <button className="m-2 table-edit-btn hover:bg-purple-600" 
+                    onClick={handleResetPreference}>
+                      Reset 
                     </button>
                   </td>
                 </tr>

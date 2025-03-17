@@ -38,19 +38,24 @@ const quizService = {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.error || "Failed to fetch user preference.",
+        message:
+          error.response?.data?.error || "Failed to fetch user preference.",
       };
     }
   },
 
   updateUserPreference: async (userId, updatedData) => {
     try {
-      const response = await axios.put(`${API_URL}/userPreference/${userId}`, updatedData);
+      const response = await axios.put(
+        `${API_URL}/userPreference/${userId}`,
+        updatedData
+      );
       return { success: true, data: response.data };
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.error || "Failed to update user preference.",
+        message:
+          error.response?.data?.error || "Failed to update user preference.",
       };
     }
   },
@@ -65,7 +70,27 @@ const quizService = {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.error || "Failed to delete user preference.",
+        message:
+          error.response?.data?.error || "Failed to delete user preference.",
+      };
+    }
+  },
+
+  resetUserPreference: async (userPreferenceId) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/userPreference/reset/${userPreferenceId}`
+      );
+      return {
+        success: true,
+        data: response.data,
+        message: "User preference reset successfully.",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          error.response?.data?.error || "Failed to reset user preference.",
       };
     }
   },
