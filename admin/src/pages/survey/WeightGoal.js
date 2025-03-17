@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const WeightGoal = () => {
   const navigate = useNavigate();
-  const [selectedWeightGoal, setSelectedWeightGoal] = useState(0);
+  const [selectedWeightGoal, setSelectedWeightGoal] = useState("");
 
   // Load dữ liệu từ sessionStorage khi vào trang
   useEffect(() => {
