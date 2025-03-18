@@ -60,13 +60,7 @@ code {
   align-items: center;
 }
 
-.home-title {
-  font-size: 62px; /* Adjust the font size as needed */
-  font-weight: 800;
-  color: #000000; /* Tailwind's text-gray-800 */
-  text-align: left;
-  width: 65%;
-}
+
 
 .text-green {
   color: #39db4a;

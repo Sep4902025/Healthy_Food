@@ -25,10 +25,10 @@ const Home = () => {
   }, []);
   return (
     <div className="home">
-      <div className=" flex flex-col md:flex-row items-center justify-between">
-        <div className=" text-center md:text-left md:w-1/2">
-        <h1 className="m-10 text-xl md:text-4xl lg:text-[62px] font-extrabold text-black leading-normal md:leading-[1.2] w-full md:w-2/3 lg:w-[65%] text-center md:text-left mx-auto md:mx-0">
-            <span className="text-green">
+      <div className="flex flex-col md:flex-row items-center justify-between">
+        <div className="text-center md:text-left md:w-1/2">
+          <h1 className="m-10 text-xl md:text-4xl lg:text-[62px] font-extrabold text-black leading-normal md:leading-[1.2] w-full md:w-2/3 lg:w-[65%] text-center md:text-left mx-auto md:mx-0">
+            <span className="text-[#39db4a]">
               Do you want to personalize it for you?
             </span>
           </h1>

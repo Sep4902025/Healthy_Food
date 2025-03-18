@@ -3,7 +3,7 @@ import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import HomeService from "../../services/home.service";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -12,105 +12,78 @@ import commentService from "./../../services/comment.service";
 const FoodSlider = ({ userId, dishes = [] }) => {
   const swiperRef = useRef(null);
   const [likedFoods, setLikedFoods] = useState([]);
-  const [ratings, setRatings] = useState([]);
+  const [ratings, setRatings] = useState({});
   const navigate = useNavigate();
 
   const handleFoodClick = (dishId) => {
     navigate(`/dishes/${dishId}`);
   };
 
-  // 🟢 Lấy danh sách món yêu thích khi component mount
+  // 🟢 Fetch danh sách yêu thích & đánh giá cùng lúc
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || dishes.length === 0) return;
 
-    const fetchFavorites = async () => {
-      const favoriteDishes = await HomeService.getFavoriteDishes(userId);
-      setLikedFoods(favoriteDishes);
-    };
+    const fetchData = async () => {
+      try {
+        const [favoriteDishes, ratingsData] = await Promise.all([
+          HomeService.getFavoriteDishes(userId),
+          Promise.all(
+            dishes.map(async (dish) => {
+              if (!dish.recipeId) return { [dish._id]: "Chưa có đánh giá" };
+              try {
+                const response = await commentService.getRatingsByRecipe(dish.recipeId);
+                const avgRating = response.data.length
+                  ? (response.data.reduce((sum, r) => sum + r.star, 0) / response.data.length).toFixed(1)
+                  : "Chưa có đánh giá";
+                return { [dish._id]: avgRating };
+              } catch (error) {
+                return { [dish._id]: "Chưa có đánh giá" };
+              }
+            })
+          ),
+        ]);
 
-    fetchFavorites();
-  }, [userId]);
-
-  // 🟢 Lấy danh sách rating cho từng món ăn
-  useEffect(() => {
-    const fetchRatings = async () => {
-      let ratingsData = {};
-
-      for (const dish of dishes) {
-        if (!dish.recipeId) {
-          ratingsData[dish._id] = "Chưa có đánh giá";
-          continue;
-        }
-
-        try {
-          const response = await commentService.getRatingsByRecipe(
-            dish.recipeId
-          );
-          if (response.data.length > 0) {
-            const avgRating =
-              response.data.reduce((sum, r) => sum + r.star, 0) /
-              response.data.length;
-            ratingsData[dish._id] = avgRating.toFixed(1);
-          } else {
-            ratingsData[dish._id] = "Chưa có đánh giá";
-          }
-        } catch (error) {
-          if (error.response?.status === 404) {
-            ratingsData[dish._id] = "Chưa có đánh giá";
-          } else {
-            console.error("Lỗi khi tải đánh giá:", error);
-          }
-        }
+        setLikedFoods(favoriteDishes);
+        setRatings(Object.assign({}, ...ratingsData));
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu:", error);
       }
-      setRatings(ratingsData);
     };
 
-    if (dishes.length > 0) {
-      fetchRatings();
-    }
-  }, [dishes]);
+    fetchData();
+  }, [userId, dishes]);
 
-  const sortedDishes = [...dishes]
-    .map((food) => {
-      const ratingValue = parseFloat(ratings[food._id]); // Chuyển về số
-      return {
-        ...food,
-        rating: isNaN(ratingValue) ? 0 : ratingValue, // Nếu rating không hợp lệ, đặt 0
-      };
-    })
-    .sort((a, b) => b.rating - a.rating) // Sắp xếp theo rating giảm dần
-    .slice(0, 8); // Chỉ lấy tối đa 8 món
-
-  const handleLike = async (dishId) => {
-    const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
-    const isCurrentlyLiked =
-      foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
-
-    // Gửi request lên server
-    const newLikeState = await HomeService.toggleFavoriteDish(
-      userId,
-      dishId,
-      isCurrentlyLiked
+  // 🟢 Xử lý sự kiện Like
+  const handleLike = useCallback(async (dishId) => {
+    setLikedFoods((prev) =>
+      prev.some((item) => item.dishId === dishId)
+        ? prev.filter((item) => item.dishId !== dishId)
+        : [...prev, { dishId, isLike: true }]
     );
 
-    // Cập nhật lại state
-    setLikedFoods((prev) => {
-      if (newLikeState) {
-        return [...prev, { dishId, isLike: true }];
-      } else {
-        return prev.filter((item) => item.dishId !== dishId);
+    try {
+      const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId);
+      const food = dishes.find((item) => item._id === dishId);
+      if (food) {
+        toast.success(
+          newLikeState
+            ? `Đã thêm "${food.name}" vào danh sách yêu thích! ❤️`
+            : `Đã xóa "${food.name}" khỏi danh sách yêu thích! 💔`
+        );
       }
-    });
-
-    const food = dishes.find((item) => item._id === dishId);
-    if (food) {
-      toast.success(
-        newLikeState
-          ? `Đã thêm "${food.name}" vào danh sách yêu thích! ❤️`
-          : `Đã xóa "${food.name}" khỏi danh sách yêu thích! 💔`
-      );
+    } catch (error) {
+      console.error("Lỗi khi thay đổi trạng thái yêu thích:", error);
     }
-  };
+  }, [userId, dishes]);
+
+  // 🟢 Sắp xếp & lọc món ăn có rating cao
+  const sortedDishes = dishes
+    .map((food) => ({
+      ...food,
+      rating: parseFloat(ratings[food._id]) || 0, // Nếu không có rating, đặt 0
+    }))
+    .sort((a, b) => b.rating - a.rating) // Sắp xếp theo rating giảm dần
+    .slice(0, 8); // Chỉ lấy tối đa 8 món
 
   return (
     <div className="relative w-full">
