@@ -1,7 +1,7 @@
 import { toast } from "react-toastify";
 import { googleLogout } from "@react-oauth/google";
 import AuthService from "../../services/auth.service";
-import { loginStart, loginSuccess, loginFailure, logout } from "../slices/authSlice";
+import { loginStart, loginSuccess, loginFailure, logout, updateUserSuccess } from "../slices/authSlice";
 
 export const loginWithGoogle = (credential) => async (dispatch) => {
   try {
@@ -76,4 +76,23 @@ export const logoutUser = () => (dispatch) => {
   });
 
   toast.success("Đăng xuất thành công!");
+};
+
+export const updateUser = (userData) => async (dispatch) => {
+  try {
+    const response = await AuthService.updateUser(userData);
+
+    if (response.success) {
+      dispatch(updateUserSuccess(response.user)); // Cập nhật Redux state
+      toast.success("Cập nhật thông tin thành công!");
+      return response.user; // Trả về user mới
+    } else {
+      toast.error(response.message || "Cập nhật thất bại!");
+      return false;
+    }
+  } catch (error) {
+    console.error("Lỗi cập nhật user:", error);
+    toast.error("Đã có lỗi xảy ra. Vui lòng thử lại!");
+    return false;
+  }
 };

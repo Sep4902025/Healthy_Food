@@ -9,6 +9,7 @@ import { FaSearch } from "react-icons/fa";
 import { selectUser } from "../store/selectors/authSelectors";
 import { logoutUser } from "../store/actions/authActions";
 import { DarkModeContext } from "../pages/context/DarkModeContext";
+
 const Header = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -156,7 +157,7 @@ const Header = () => {
             )}
             <span
               className="text-gray-700 font-semibold cursor-pointer hover:text-green-600 transition"
-              onClick={() => navigate("/user")}
+              onClick={() => navigate(user.role === "admin" ? "/admin/profile" : "/user")}
             >
               {user.username}
             </span>
