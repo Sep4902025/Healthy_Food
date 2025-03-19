@@ -19,8 +19,7 @@ const EditUser = () => {
   const location = useLocation();
   const userData = location.state?.user || {};
   const { id } = useParams();
-  console.log("IDDDDDDD",id);
-  
+  console.log("IDDDDDDD", id);
 
   const [user, setUser] = useState({
     username: "",
@@ -174,9 +173,8 @@ const EditUser = () => {
 
       // Make sure your API endpoint is correct
       // Consider using a base URL from environment variables
-        // Truyền thêm userRole vào UserService.updateUser
-        const response = await UserService.updateUser(id, userData);
-    
+      // Truyền thêm userRole vào UserService.updateUser
+      const response = await UserService.updateUser(id, userData);
 
       if (response.status === 200) {
         toast.success("Profile updated successfully");

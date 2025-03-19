@@ -56,7 +56,7 @@ const EatHabit = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={78.75} />
       </div>
 
       <h2 className="text-2xl font-bold text-center">Eat Habit</h2>
@@ -67,7 +67,9 @@ const EatHabit = () => {
           <div
             key={eathabit.id}
             className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer ${
-              isSelected(eathabit.id) ? "bg-yellow-50 border-yellow-400" : "bg-gray-100"
+              isSelected(eathabit.id)
+                ? "bg-yellow-50 border-yellow-400"
+                : "bg-gray-100"
             }`}
             onClick={() => toggleItemSelection(eathabit.id)}
           >
