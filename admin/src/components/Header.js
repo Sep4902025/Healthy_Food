@@ -158,6 +158,16 @@ const Header = () => {
 
           {/* Primary Navigation - Center (hidden on mobile) */}
           <div className="hidden lg:flex items-center space-x-6">
+            <a
+              href="/"
+              className={`font-medium transition-colors ${
+                isActive("/") && location.pathname === "/"
+                  ? "text-green-600"
+                  : "text-gray-700 hover:text-green-600"
+              }`}
+            >
+              Home
+            </a>
             {user?.role === "admin" && (
               <a
                 href="/admin"
@@ -170,16 +180,6 @@ const Header = () => {
                 Management
               </a>
             )}
-            <a
-              href="/"
-              className={`font-medium transition-colors ${
-                isActive("/") && location.pathname === "/"
-                  ? "text-green-600"
-                  : "text-gray-700 hover:text-green-600"
-              }`}
-            >
-              Home
-            </a>
             <a
               href="/survey/name"
               className={`font-medium transition-colors ${
@@ -217,8 +217,15 @@ const Header = () => {
             {/* Icons & Auth */}
             {user ? (
               <div className="flex items-center space-x-4">
-                <FaShoppingBag className="text-gray-600 hover:text-green-600 cursor-pointer hidden sm:block" />
-                <FaBell className="text-gray-600 hover:text-green-600 cursor-pointer hidden sm:block" />
+                <FaShoppingBag
+                  className="text-transparent stroke-black hover:stroke-green-600 cursor-pointer hidden sm:block"
+                  strokeWidth={20}
+                />
+                <FaBell
+                  className="text-transparent stroke-black hover:stroke-green-600 cursor-pointer hidden sm:block"
+                  strokeWidth={20}
+                />
+
                 <div className="relative" ref={userMenuRef}>
                   <img
                     src={user.avatarUrl || "https://via.placeholder.com/40"}
