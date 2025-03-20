@@ -28,24 +28,13 @@ const Header = () => {
   };
 
   useEffect(() => {
-    const checkUserQuizStatus = async () => {
-      if (user) {
-        try {
-          const response = await quizService.getUserPreference(user._id);
-          if (response.data.status === "success") {
-            setHasCompletedQuiz(true);
-          } else {
-            setHasCompletedQuiz(false);
-          }
-        } catch (error) {
-          console.error("Error fetching quiz status:", error);
-          setHasCompletedQuiz(false);
-        }
-      } else {
-        setHasCompletedQuiz(false);
-      }
-    };
-    checkUserQuizStatus();
+
+    console.log("user data", user)
+    if (user?.userPreferenceId) {
+      setHasCompletedQuiz(true);
+    } else {
+      setHasCompletedQuiz(false);
+    }
   }, [user]);
 
   const handleLogout = () => {
@@ -129,15 +118,25 @@ const Header = () => {
           <a href="/contact" className="hover:text-green-600 transition">
             Contact
           </a>
-          {!hasCompletedQuiz ? (
-            <a href="/survey/name" className="hover:text-green-600 transition">
-              Survey
-            </a>
-          ) : (
-            <a href="/foryou" className="hover:text-green-600 transition">
-              For You
+          {user?.role === "admin" && (
+            <a href="/admin" className="hover:text-black">
+              Management
             </a>
           )}
+
+          {user?.role !== "admin" &&
+            (!hasCompletedQuiz ? (
+              <a
+                href="/survey/name"
+                className="hover:text-green-600 transition"
+              >
+                Survey
+              </a>
+            ) : (
+              <a href="/foryou" className="hover:text-green-600 transition">
+                For You
+              </a>
+            ))}
         </nav>
 
         {/* Ẩn trên Tablet & Mobile - Chỉ hiện trên Desktop */}
@@ -338,6 +337,7 @@ const Header = () => {
                 <li className="px-4 py-2 text-gray-500">
                   No categories available
                 </li>
+                
               )}
             </ul>
           )}
@@ -369,6 +369,7 @@ const Header = () => {
                 <li className="px-4 py-2 text-gray-500">
                   No dish type available
                 </li>
+               
               )}
             </ul>
           )}

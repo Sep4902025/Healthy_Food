@@ -60,37 +60,18 @@ const quizService = {
     }
   },
 
-  deleteUserPreference: async (userId) => {
+  deleteUserPreference: async (userPreferenceId) => {
+    console.log("preferenceId", userPreferenceId);
     try {
-      await axios.delete(`${API_URL}/userPreference/s${userId}`);
-      return {
-        success: true,
-        message: "User preference deleted successfully.",
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message:
-          error.response?.data?.error || "Failed to delete user preference.",
-      };
-    }
-  },
-
-  resetUserPreference: async (userPreferenceId) => {
-    try {
-      const response = await axios.put(
-        `${API_URL}/userPreference/reset/${userPreferenceId}`
+      const response = await axios.delete(
+        `${API_URL}/userpreference/${userPreferenceId}`
       );
-      return {
-        success: true,
-        data: response.data,
-        message: "User preference reset successfully.",
-      };
+      return { success: true, data: response.data };
     } catch (error) {
       return {
         success: false,
         message:
-          error.response?.data?.error || "Failed to reset user preference.",
+          error.response?.data?.message || "Failed to delete user preference.",
       };
     }
   },

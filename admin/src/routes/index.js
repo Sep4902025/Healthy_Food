@@ -63,6 +63,10 @@ import Weight from "../pages/survey/Weight";
 import WeightGoal from "../pages/survey/WeightGoal";
 import ViewQuiz from "../pages/user/ViewQuiz";
 import ForYoyPage from "../pages/user/ForYouPage";
+import Quiz from "../pages/user/Quiz";
+import AddUser from "../pages/admin/pages/AddUserManagement";
+import AdminProfile from "../pages/user/AdminProfile";
+import EditAdmin from "../pages/user/EditAdmin";
 
 const AppRoutes = () => {
   return (
@@ -179,6 +183,8 @@ const AppRoutes = () => {
       >
         <Route index element={<HealthyDashboard />} />
         {/* ✅ Thêm route cho Footer Management */}
+        <Route path="profile" element={<AdminProfile/>}/>
+        <Route path="adduser" element={<AddUser />}/>
         <Route path="aboutusmanagement" element={<AboutUsManagement />} />
         <Route path="termofusemanagement" element={<TermOfUseManagement />} />
         <Route path="faqsManagement" element={<FAQsManagement />} />

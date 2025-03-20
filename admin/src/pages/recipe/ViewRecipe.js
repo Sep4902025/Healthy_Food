@@ -151,7 +151,7 @@ const RecipeApp = () => {
                 className="flex items-center bg-gray-50 rounded-lg p-4 shadow-md"
               >
                 <img
-                  src={Salad}
+                  src={ingredient.imageUrl}
                   alt={ingredient.name}
                   className="w-16 h-16 object-cover rounded-full mr-4"
                 />
