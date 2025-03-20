@@ -120,11 +120,12 @@ exports.updateDish = async (req, res) => {
 exports.deleteDish = async (req, res) => {
   try {
     const deletedDish = await Dish.findByIdAndDelete(req.params.dishId);
-
     if (!deletedDish) {
       return res.status(404).json({ status: "fail", message: "Dish not found" });
     }
-
+    if (deletedDish.recipeId) {
+      await Recipe.findByIdAndDelete(deletedDish.recipeId);
+    }
     res.status(200).json({ status: "success", message: "Dish permanently deleted" });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
@@ -141,6 +142,9 @@ exports.hideDish = async (req, res) => {
     );
     if (!hiddenDish) {
       return res.status(404).json({ status: "fail", message: "Dish not found" });
+    }
+    if (hiddenDish.recipeId) {
+      await Recipe.findByIdAndUpdate(hiddenDish.recipeId, { isVisible: false });
     }
     res.status(200).json({
       status: "success",
@@ -474,17 +478,41 @@ exports.createRecipe = async (req, res) => {
 
 exports.getRecipeById = async (req, res) => {
   try {
-    // Sử dụng populate để lấy thông tin Dish liên quan
-    const recipe = await Recipe.findById(req.params.recipeId).populate("dishId");
+    const { dishId, recipeId } = req.params;
+    const recipe = await Recipe.findById(recipeId)
+      .populate("dishId")
+      .populate({
+        path: "ingredients.ingredientId",
+        match: { isDelete: false, isVisible: true }, // Chỉ populate Ingredient không bị xóa mềm hoặc ẩn
+      });
     if (!recipe) {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }
+    if (!recipe.dishId) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Associated dish not found",
+      });
+    }
+    if (recipe.dishId._id.toString() !== dishId) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Dish ID does not match the recipe's associated dish",
+      });
+    }
+    if (recipe.dishId.isDelete || !recipe.dishId.isVisible) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Associated dish is deleted or hidden",
+      });
+    }
+    // Loại bỏ các ingredient mà ingredientId không được populate (vì không thỏa mãn điều kiện match)
+    recipe.ingredients = recipe.ingredients.filter((ing) => ing.ingredientId);
     res.status(200).json({ status: "success", data: recipe });
   } catch (error) {
     res.status(400).json({ status: "fail", message: error.message });
   }
 };
-
 // Update Recipe
 exports.updateRecipeById = async (req, res) => {
   try {
@@ -569,28 +597,61 @@ exports.updateRecipeById = async (req, res) => {
 // Delete Recipe
 exports.deleteRecipeById = async (req, res) => {
   try {
-    // Xóa Recipe
+    // Xóa công thức dựa trên recipeId
     const recipe = await Recipe.findByIdAndDelete(req.params.recipeId);
+    if (!recipe) {
+      return res.status(404).json({ status: "fail", message: "Công thức không tồn tại" });
+    }
+
+    // Kiểm tra món ăn liên quan (dishId từ công thức vừa xóa)
+    const dish = await Dish.findById(recipe.dishId);
+    if (!dish) {
+      // Nếu không tìm thấy món ăn, vẫn trả về thành công với thông báo
+      return res.status(200).json({
+        status: "success",
+        message: "Công thức đã được xóa, nhưng không tìm thấy món ăn liên quan",
+      });
+    }
+
+    // Nếu món ăn tồn tại, cập nhật thông tin món ăn
+    dish.recipeId = null;
+    dish.cookingTime = 0;
+    dish.calories = 0;
+    dish.protein = 0;
+    dish.carbs = 0;
+    dish.fat = 0;
+    dish.totalServing = 0;
+    await dish.save();
+
+    return res.status(200).json({ status: "success", message: "Công thức đã được xóa" });
+  } catch (error) {
+    console.error("Lỗi khi xóa công thức:", error);
+    return res.status(400).json({ status: "fail", message: error.message });
+  }
+};
+
+exports.getRecipeByDishId = async (req, res) => {
+  try {
+    const { recipeId } = req.params;
+
+    // 🔹 Tìm Recipe, populate Dish và Ingredients
+    const recipe = await Recipe.findById(recipeId)
+      .populate("dishId")
+      .populate("ingredients.ingredientId")
+      .lean();
+
     if (!recipe) {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }
 
-    // Xóa tham chiếu recipeId trong Dish và reset lại giá trị dinh dưỡng
-    const dish = await Dish.findById(recipe.dishId);
-    if (dish) {
-      dish.recipeId = null;
-      dish.cookingTime = 0;
-      dish.calories = 0;
-      dish.protein = 0;
-      dish.carbs = 0;
-      dish.fat = 0;
-      dish.totalServing = 0;
-      await dish.save();
+    // 🔹 Kiểm tra nếu Dish bị xóa hoặc ẩn
+    if (recipe.dishId?.isDelete || !recipe.dishId?.isVisible) {
+      return res.status(404).json({ status: "fail", message: "Associated dish is deleted or hidden" });
     }
 
-    res.status(200).json({ status: "success", message: "Recipe deleted" });
+    res.status(200).json({ status: "success", data: recipe });
   } catch (error) {
-    console.error("Error deleting recipe:", error);
     res.status(400).json({ status: "fail", message: error.message });
   }
 };
+

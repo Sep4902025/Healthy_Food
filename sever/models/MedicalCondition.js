@@ -1,26 +1,45 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const MedicalConditionSchema = new mongoose.Schema({
+const MedicalConditionSchema = new mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     description: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
-    restricted_foods: [{
+    restrictedFoods: [
+      {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Food'
-    }],
-    recommended_foods: [{
+        ref: "Dish",
+        validate: {
+          validator: function (value) {
+            return !this.recommendedFoods.includes(value);
+          },
+          message: "A dish cannot be both restricted and recommended.",
+        },
+      },
+    ],
+    recommendedFoods: [
+      {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Food'
-    }],
+        ref: "Dish",
+        validate: {
+          validator: function (value) {
+            return !this.restrictedFoods.includes(value);
+          },
+          message: "A dish cannot be both restricted and recommended.",
+        },
+      },
+    ],
     isDelete: {
-        type: Boolean,
-        default: false
-    }
-}, { timestamps: true });
+      type: Boolean,
+      default: false,
+    },
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('MedicalCondition', MedicalConditionSchema);
+module.exports = mongoose.model("MedicalCondition", MedicalConditionSchema);

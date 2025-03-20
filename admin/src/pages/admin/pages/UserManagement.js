@@ -57,9 +57,7 @@ const UserManagement = () => {
       toast.success("Cập nhật user thành công!");
       console.log("Cập nhật user thành công:", result.user);
       setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user._id === editData._id ? { ...user, ...updatedUser } : user
-        )
+        prevUsers.map((user) => (user._id === editData._id ? { ...user, ...updatedUser } : user))
       );
     } else {
       toast.error(`Cập nhật user thất bại: ${result.message}`);
@@ -104,11 +102,7 @@ const UserManagement = () => {
             <tbody>
               {currentUsers.map((user) => (
                 <tr key={user.id} className="border-b hover:bg-gray-50">
-                  <td
-                    className="p-4 text-left cursor-pointer"
-                  >
-                    {user.username}
-                  </td>
+                  <td className="p-4 text-left cursor-pointer">{user.username}</td>
                   <td className="p-4 text-left">{user.phone}</td>
                   <td className="p-4 text-left">{user.email}</td>
                   <td className="p-4 text-left">{user.role}</td>
@@ -116,9 +110,7 @@ const UserManagement = () => {
                   <td className="p-4 text-left">
                     <span
                       className={`px-3 py-1 rounded-full text-xs ${
-                        user.isBan
-                          ? "bg-red-100 text-red-600"
-                          : "bg-green-100 text-green-600"
+                        user.isBan ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
                       }`}
                     >
                       {user.isBan ? "Inactive" : "Active"}
@@ -152,9 +144,7 @@ const UserManagement = () => {
                 <select
                   className="w-full border p-2 mb-4 rounded"
                   value={formData.role}
-                  onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
@@ -213,28 +203,21 @@ const UserManagement = () => {
               >
                 &lt;
               </button>
-              {Array.from(
-                { length: Math.ceil(users.length / usersPerPage) },
-                (_, i) => (
-                  <button
-                    key={i}
-                    className={`px-3 py-1 rounded ${
-                      currentPage === i + 1
-                        ? "bg-green-500 text-white"
-                        : "border hover:bg-gray-100"
-                    }`}
-                    onClick={() => paginate(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                )
-              )}
+              {Array.from({ length: Math.ceil(users.length / usersPerPage) }, (_, i) => (
+                <button
+                  key={i}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                  }`}
+                  onClick={() => paginate(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
               <button
                 className="border rounded px-3 py-1 hover:bg-gray-100"
                 onClick={() => paginate(currentPage + 1)}
-                disabled={
-                  currentPage === Math.ceil(users.length / usersPerPage)
-                }
+                disabled={currentPage === Math.ceil(users.length / usersPerPage)}
               >
                 &gt;
               </button>

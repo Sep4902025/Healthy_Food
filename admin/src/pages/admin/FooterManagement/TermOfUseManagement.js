@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
 import termService from "../../../services/footer/termServices";
 import UploadComponent from "../../../components/UploadComponent";
-import {
-  PlusIcon,
-  EditIcon,
-  TrashIcon,
-  EyeOffIcon,
-  EyeIcon,
-} from "lucide-react";
-
+import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
 
 const TermOfUseManagement = () => {
   const [terms, setTerms] = useState([]);
@@ -66,10 +59,10 @@ const TermOfUseManagement = () => {
       if (response.success) {
         const updatedTerms = terms.filter((term) => term._id !== id);
         setTerms(updatedTerms);
-  
+
         // Tính lại tổng số trang
         const totalPages = Math.ceil(updatedTerms.length / usersPerPage);
-  
+
         // Nếu trang hiện tại không còn dữ liệu, quay về trang trước (nếu có)
         if (currentPage > totalPages) {
           setCurrentPage(totalPages > 0 ? totalPages : 1);
@@ -79,7 +72,6 @@ const TermOfUseManagement = () => {
       }
     }
   };
-  
 
   const handleOpenModal = (item = null) => {
     if (item) {
@@ -166,10 +158,9 @@ const TermOfUseManagement = () => {
                   <td className="p-3 text-left">{item.content}</td>
                   <td className="p-3 text-center">
                     <span
-                      className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold ${item.isVisible
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                        }`}
+                      className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold ${
+                        item.isVisible ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}
                     >
                       {item.isVisible ? "Visible" : "Hidden"}
                     </span>
@@ -186,10 +177,11 @@ const TermOfUseManagement = () => {
 
                       {/* Nút Ẩn/Hiện */}
                       <button
-                        className={`p-2 rounded-full text-white ${item.isVisible
-                          ? "bg-gray-500 hover:bg-gray-600"
-                          : "bg-green-500 hover:bg-green-600"
-                          }`}
+                        className={`p-2 rounded-full text-white ${
+                          item.isVisible
+                            ? "bg-gray-500 hover:bg-gray-600"
+                            : "bg-green-500 hover:bg-green-600"
+                        }`}
                         onClick={() => handleToggleVisibility(item)}
                       >
                         {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
@@ -237,28 +229,22 @@ const TermOfUseManagement = () => {
             >
               &lt;
             </button>
-            {Array.from(
-              { length: Math.ceil(terms.length / usersPerPage) },
-              (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${currentPage === i + 1
-                    ? "bg-green-500 text-white"
-                    : "border hover:bg-gray-100"
-                    }`}
-                  onClick={() => paginate(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              )
-            )}
+            {Array.from({ length: Math.ceil(terms.length / usersPerPage) }, (_, i) => (
+              <button
+                key={i}
+                className={`px-3 py-1 rounded ${
+                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                }`}
+                onClick={() => paginate(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
 
             <button
               className="border rounded px-3 py-1 hover:bg-gray-100"
               onClick={() => paginate(currentPage + 1)}
-              disabled={
-                currentPage === Math.ceil(terms.length / usersPerPage)
-              }
+              disabled={currentPage === Math.ceil(terms.length / usersPerPage)}
             >
               &gt;
             </button>
@@ -274,7 +260,6 @@ const TermOfUseManagement = () => {
 
             <label className="block mb-2">Banner URL:</label>
             <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.imageUrl === ""} />
-
 
             <label className="block mb-2">Content:</label>
             <textarea
