@@ -1,27 +1,16 @@
-import React, {
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import logo from "../assets/images/Logo.png";
 import HomeService from "../services/home.service";
 import quizService from "../services/quizService";
-import {
-  FaSearch,
-  FaBell,
-  FaShoppingBag,
-  FaBars,
-  FaTimes,
-  FaSignOutAlt,
-} from "react-icons/fa";
+import { FaSearch, FaBars, FaTimes, FaSignOutAlt } from "react-icons/fa";
+import { RiShoppingBag4Line } from "react-icons/ri";
 import { selectUser } from "../store/selectors/authSelectors";
 import { logoutUser } from "../store/actions/authActions";
 import { DarkModeContext } from "../pages/context/DarkModeContext";
+import ReminderNotification from "./Reminder/ReminderNotifiaction";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -141,18 +130,12 @@ const Header = () => {
         {/* Main Header */}
         <div className="flex items-center justify-between px-4">
           {/* Logo */}
-          <div
-            className="flex items-center cursor-pointer"
-            onClick={() => navigate("/")}
-          >
+          <div className="flex items-center cursor-pointer" onClick={() => navigate("/")}>
             <img src={logo} alt="Healthy Food" className="h-12" />
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden text-gray-700 focus:outline-none"
-            onClick={toggleMobileMenu}
-          >
+          <button className="lg:hidden text-gray-700 focus:outline-none" onClick={toggleMobileMenu}>
             {mobileMenuOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
           </button>
 
@@ -184,9 +167,7 @@ const Header = () => {
             <a
               href="/survey/name"
               className={`font-medium transition-colors ${
-                isActive("/survey/name")
-                  ? "text-green-600"
-                  : "text-gray-700 hover:text-green-600"
+                isActive("/survey/name") ? "text-green-600" : "text-gray-700 hover:text-green-600"
               }`}
             >
               Survey
@@ -194,9 +175,7 @@ const Header = () => {
             <a
               href="/mealplan"
               className={`font-medium transition-colors ${
-                isActive("/mealplan")
-                  ? "text-green-600"
-                  : "text-gray-700 hover:text-green-600"
+                isActive("/mealplan") ? "text-green-600" : "text-gray-700 hover:text-green-600"
               }`}
             >
               Meal Plan
@@ -218,14 +197,11 @@ const Header = () => {
             {/* Icons & Auth */}
             {user ? (
               <div className="flex items-center space-x-4">
-                <FaShoppingBag
-                  className="text-transparent stroke-black hover:stroke-green-600 cursor-pointer hidden sm:block"
-                  strokeWidth={20}
-                />
-                <FaBell
-                  className="text-transparent stroke-black hover:stroke-green-600 cursor-pointer hidden sm:block"
-                  strokeWidth={20}
-                />
+                {/**Cart */}
+                <RiShoppingBag4Line />
+
+                {/* Đặt ReminderNotification ở góc phải trên */}
+                <ReminderNotification userId={user?._id} />
 
                 <div className="relative" ref={userMenuRef}>
                   <img
@@ -276,9 +252,7 @@ const Header = () => {
               <button
                 onClick={() => toggleDropdown("dishes")}
                 className={`font-medium transition-colors ${
-                  isActive("/dishes")
-                    ? "text-green-600"
-                    : "text-gray-700 hover:text-green-600"
+                  isActive("/dishes") ? "text-green-600" : "text-gray-700 hover:text-green-600"
                 }`}
               >
                 Dishes {activeDropdown === "dishes" ? "▲" : "▼"}
@@ -299,9 +273,7 @@ const Header = () => {
                       </li>
                     ))
                   ) : (
-                    <li className="px-4 py-2 text-gray-500">
-                      No dish types available
-                    </li>
+                    <li className="px-4 py-2 text-gray-500">No dish types available</li>
                   )}
                 </ul>
               )}
@@ -311,9 +283,7 @@ const Header = () => {
               <button
                 onClick={() => toggleDropdown("ingredients")}
                 className={`font-medium transition-colors ${
-                  isActive("/ingredients")
-                    ? "text-green-600"
-                    : "text-gray-700 hover:text-green-600"
+                  isActive("/ingredients") ? "text-green-600" : "text-gray-700 hover:text-green-600"
                 }`}
               >
                 Ingredient {activeDropdown === "ingredients" ? "▲" : "▼"}
@@ -334,9 +304,7 @@ const Header = () => {
                       </li>
                     ))
                   ) : (
-                    <li className="px-4 py-2 text-gray-500">
-                      No categories available
-                    </li>
+                    <li className="px-4 py-2 text-gray-500">No categories available</li>
                   )}
                 </ul>
               )}
@@ -345,9 +313,7 @@ const Header = () => {
             <a
               href="/medical"
               className={`font-medium transition-colors ${
-                isActive("/medical")
-                  ? "text-green-600"
-                  : "text-gray-700 hover:text-green-600"
+                isActive("/medical") ? "text-green-600" : "text-gray-700 hover:text-green-600"
               }`}
             >
               Medical
@@ -373,9 +339,7 @@ const Header = () => {
               <a
                 href="/"
                 className={`font-medium py-2 ${
-                  isActive("/") && location.pathname === "/"
-                    ? "text-green-600"
-                    : "text-gray-700"
+                  isActive("/") && location.pathname === "/" ? "text-green-600" : "text-gray-700"
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -427,9 +391,7 @@ const Header = () => {
                         </li>
                       ))
                     ) : (
-                      <li className="py-2 text-gray-500">
-                        No dish types available
-                      </li>
+                      <li className="py-2 text-gray-500">No dish types available</li>
                     )}
                   </ul>
                 )}
@@ -438,16 +400,12 @@ const Header = () => {
               <div>
                 <div
                   className={`font-medium py-2 flex justify-between items-center ${
-                    isActive("/ingredients")
-                      ? "text-green-600"
-                      : "text-gray-700"
+                    isActive("/ingredients") ? "text-green-600" : "text-gray-700"
                   }`}
                   onClick={() => toggleDropdown("mobile-ingredients")}
                 >
                   <span>Ingredient</span>
-                  <span>
-                    {activeDropdown === "mobile-ingredients" ? "▲" : "▼"}
-                  </span>
+                  <span>{activeDropdown === "mobile-ingredients" ? "▲" : "▼"}</span>
                 </div>
                 {activeDropdown === "mobile-ingredients" && (
                   <ul className="pl-4 mt-1 border-l-2 border-gray-200">
@@ -466,9 +424,7 @@ const Header = () => {
                         </li>
                       ))
                     ) : (
-                      <li className="py-2 text-gray-500">
-                        No categories available
-                      </li>
+                      <li className="py-2 text-gray-500">No categories available</li>
                     )}
                   </ul>
                 )}

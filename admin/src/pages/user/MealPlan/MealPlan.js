@@ -101,8 +101,6 @@ const MealPlan = () => {
     <div className="w-full mx-auto p-4">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold text-green-600">Meal Plan</h1>
-        {/* Đặt ReminderNotification ở góc phải trên */}
-        <ReminderNotification userId={user?._id} />
       </div>
       {userMealPlan ? (
         <div className="bg-white p-6 rounded-lg shadow-md mt-6">
