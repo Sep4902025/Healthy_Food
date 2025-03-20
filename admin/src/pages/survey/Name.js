@@ -40,7 +40,7 @@ const Name = () => {
     <div className="max-w-md mx-auto p-4">
       {/* Header with back button & progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
-        <ProgressBar progress={10} />
+        <ProgressBar progress={5.25} />
       </div>
 
       {/* Title & description */}

@@ -54,7 +54,7 @@ const Age = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={42} />
       </div>
       <h2 className="text-2xl font-bold text-center">AGE</h2>
       <p className="text-center text-gray-600">Select your age</p>
@@ -70,8 +70,14 @@ const Age = () => {
             }`}
             onClick={() => setSelectedAge(item.age)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">{item.age}</span>
-            <img src={item.img} alt="" className="w-16 h-16 rounded-full object-cover" />
+            <span className="text-lg font-semibold flex-1 text-left">
+              {item.age}
+            </span>
+            <img
+              src={item.img}
+              alt=""
+              className="w-16 h-16 rounded-full object-cover"
+            />
           </div>
         ))}
       </div>

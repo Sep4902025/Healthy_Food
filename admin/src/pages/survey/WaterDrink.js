@@ -53,12 +53,14 @@ const WaterDrink = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={60} /> {/* Điều chỉnh progress theo flow */}
+        <ProgressBar progress={57.75} /> {/* Điều chỉnh progress theo flow */}
       </div>
 
       {/* Tiêu đề và mô tả */}
       <h2 className="text-2xl font-bold text-center">Water Drink</h2>
-      <p className="text-center text-gray-600">How much water do you drink per day?</p>
+      <p className="text-center text-gray-600">
+        How much water do you drink per day?
+      </p>
 
       {/* Danh sách lựa chọn */}
       <div className="space-y-4 mt-4">
@@ -72,7 +74,9 @@ const WaterDrink = () => {
             }`}
             onClick={() => setSelectedWaterDrink(item.waterdrink)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">{item.waterdrink}</span>
+            <span className="text-lg font-semibold flex-1 text-left">
+              {item.waterdrink}
+            </span>
           </div>
         ))}
       </div>

@@ -162,7 +162,7 @@ const Favorite = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={94.5} />
       </div>
 
       <h2 className="text-2xl font-bold text-center">Favorite</h2>
@@ -173,7 +173,10 @@ const Favorite = () => {
           type="checkbox"
           id="selectAll"
           onChange={handleSelectAllToggle}
-          checked={selectedItems.length === favoriteGroups.flatMap((c) => c.items).length}
+          checked={
+            selectedItems.length ===
+            favoriteGroups.flatMap((c) => c.items).length
+          }
         />
         <label htmlFor="selectAll">Select All</label>
       </div>
