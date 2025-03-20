@@ -1,98 +1,136 @@
 import React, { useState } from "react";
-import { Outlet, NavLink } from "react-router-dom";
-import { FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import {
+  UtensilsIcon,
+  LeafIcon,
+  BookOpenIcon,
+  HomeIcon,
+  HeartPulseIcon,
+  MessageSquareIcon,
+  ChevronDownIcon, // Thêm biểu tượng ChevronDown
+} from "lucide-react";
+
+const menuItems = [
+  {
+    icon: <MessageSquareIcon size={20} />,
+    name: "Chat Support",
+    path: "/nutritionist/chat-support",
+  },
+  {
+    icon: <UtensilsIcon size={20} />,
+    name: "Dish Management",
+    submenus: [
+      { name: "View Dishes", path: "/nutritionist/dishes" },
+      { name: "Add New Dish", path: "/nutritionist/dishes/add" },
+    ],
+  },
+  {
+    icon: <LeafIcon size={20} />,
+    name: "Ingredient Management",
+    submenus: [
+      { name: "View Ingredients", path: "/nutritionist/ingredients" },
+      { name: "Add New Ingredient", path: "/nutritionist/ingredients/add" },
+    ],
+  },
+  {
+    icon: <BookOpenIcon size={20} />,
+    name: "Recipe Management",
+    path: "/nutritionist/recipes",
+  },
+  {
+    icon: <HeartPulseIcon size={20} />,
+    name: "Medical Condition Management",
+    submenus: [
+      { name: "View Medical Conditions", path: "/nutritionist/medicalConditions" },
+      { name: "Add New Medical Condition", path: "/nutritionist/medicalConditions/add" },
+    ],
+  },
+];
 
 const NutritionistLayout = () => {
-  const [isDishOpen, setIsDishOpen] = useState(false);
-  const [isIngredientOpen, setIsIngredientOpen] = useState(false);
-  const [isRecipeOpen, setIsRecipeOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [activeMenu, setActiveMenu] = useState("");
+  const [openSubmenus, setOpenSubmenus] = useState({});
+
+  const toggleSubmenu = (menuName) => {
+    setOpenSubmenus((prev) => ({
+      ...prev,
+      [menuName]: !prev[menuName],
+    }));
+  };
+
+  const handleMenuClick = (item) => {
+    if (item.submenus) {
+      toggleSubmenu(item.name);
+    } else {
+      setActiveMenu(item.name);
+      navigate(item.path);
+    }
+  };
+
+  const handleSubmenuClick = (submenu) => {
+    setActiveMenu(submenu.name);
+    navigate(submenu.path);
+  };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-lg">
-        <div className="p-4 text-2xl font-bold text-green-700">Nutritionist Dashboard</div>
-        <nav className="mt-4">
-          <ul className="space-y-2">
-            {/* Dish Management */}
-            <li>
-              <button
-                onClick={() => setIsDishOpen(!isDishOpen)}
-                className="w-full flex justify-between items-center p-3 text-gray-600 font-semibold hover:bg-gray-200"
+      <aside className="w-64 bg-white border-r p-4 overflow-y-auto">
+        <div className="flex items-center mb-6">
+          <HomeIcon size={24} className="text-green-600 mr-2" />
+          <span className="text-xl font-bold text-green-700">Nutritionist</span>
+        </div>
+
+        <nav>
+          {menuItems.map((item) => (
+            <div key={item.name}>
+              <div
+                className={`flex items-center p-3 cursor-pointer rounded hover:bg-green-50 ${
+                  location.pathname === item.path || openSubmenus[item.name]
+                    ? "bg-green-100 text-green-600"
+                    : "text-gray-600"
+                }`}
+                onClick={() => handleMenuClick(item)}
               >
-                Dish Management
-                {isDishOpen ? <FaChevronUp /> : <FaChevronDown />}
-              </button>
-              {isDishOpen && (
-                <ul className="ml-4 space-y-1 transition-all">
-                  <li>
-                    <NavLink to="/nutritionist/dishes" className="block p-2 hover:bg-gray-200">
-                      View Dishes
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink to="/nutritionist/dishes/add" className="block p-2 hover:bg-gray-200">
-                      Add New Dish
-                    </NavLink>
-                  </li>
-                </ul>
+                <span className="mr-3">{item.icon}</span>
+                <span className="flex-grow">{item.name}</span>
+                {item.submenus && (
+                  <span className="ml-auto transition-transform duration-300 ease-in-out">
+                    <ChevronDownIcon
+                      size={20}
+                      className={`${openSubmenus[item.name] ? "rotate-180" : "rotate-0"}`}
+                    />
+                  </span>
+                )}
+              </div>
+
+              {item.submenus && openSubmenus[item.name] && (
+                <div className="ml-6 mt-1 space-y-1">
+                  {item.submenus.map((submenu) => (
+                    <div
+                      key={submenu.name}
+                      className={`p-2 cursor-pointer rounded hover:bg-green-50 ${
+                        location.pathname === submenu.path ? "bg-green-100 text-green-600" : "text-gray-600"
+                      }`}
+                      onClick={() => handleSubmenuClick(submenu)}
+                    >
+                      {submenu.name}
+                    </div>
+                  ))}
+                </div>
               )}
-            </li>
-            {/* Ingredient Management */}
-            <li>
-              <button
-                onClick={() => setIsIngredientOpen(!isIngredientOpen)}
-                className="w-full flex justify-between items-center p-3 text-gray-600 font-semibold hover:bg-gray-200"
-              >
-                Ingredient Management
-                {isIngredientOpen ? <FaChevronUp /> : <FaChevronDown />}
-              </button>
-              {isIngredientOpen && (
-                <ul className="ml-4 space-y-1 transition-all">
-                  <li>
-                    <NavLink to="/nutritionist/ingredients" className="block p-2 hover:bg-gray-200">
-                      View Ingredients
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink to="/nutritionist/ingredients/add" className="block p-2 hover:bg-gray-200">
-                      Add New Ingredient
-                    </NavLink>
-                  </li>
-                </ul>
-              )}
-            </li>
-            {/* Recipes Management */}
-            <li>
-              <button
-                onClick={() => setIsRecipeOpen(!isRecipeOpen)}
-                className="w-full flex justify-between items-center p-3 text-gray-600 font-semibold hover:bg-gray-200"
-              >
-                Recipes Management
-                {isRecipeOpen ? <FaChevronUp /> : <FaChevronDown />}
-              </button>
-              {isRecipeOpen && (
-                <ul className="ml-4 space-y-1 transition-all">
-                  <li>
-                    <NavLink to="/nutritionist/recipes" className="block p-2 hover:bg-gray-200">
-                      View Recipes
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink to="/nutritionist/recipes/add" className="block p-2 hover:bg-gray-200">
-                      Add New Recipe
-                    </NavLink>
-                  </li>
-                </ul>
-              )}
-            </li>
-          </ul>
+            </div>
+          ))}
         </nav>
       </aside>
+
       {/* Main Content */}
-      <div className="flex-1 p-6">
+      <main className="flex-1 p-6 overflow-auto">
         <Outlet />
-      </div>
+      </main>
     </div>
   );
 };
