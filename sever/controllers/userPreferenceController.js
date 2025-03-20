@@ -23,6 +23,7 @@ exports.createUserPreference = async (req, res) => {
       weight,
       weightGoal,
       height,
+      activityLevel,
       gender,
       phoneNumber,
       underDisease,
@@ -56,6 +57,7 @@ exports.createUserPreference = async (req, res) => {
       weight,
       weightGoal,
       height,
+      activityLevel,
       gender,
       phoneNumber,
       underDisease,
@@ -100,9 +102,7 @@ exports.getUserPreferenceById = async (req, res) => {
   try {
     const preference = await UserPreferenceModel.findById(req.params.id);
     if (!preference || preference.isDelete) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
     res.status(200).json({ status: "success", data: preference });
   } catch (error) {
@@ -113,15 +113,11 @@ exports.getUserPreferenceById = async (req, res) => {
 // Update User Preference
 exports.updateUserPreference = async (req, res) => {
   try {
-    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
+    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!updatedPreference || updatedPreference.isDelete) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
     res.status(200).json({ status: "success", data: updatedPreference });
   } catch (error) {
@@ -138,13 +134,9 @@ exports.softDeleteUserPreference = async (req, res) => {
       { new: true }
     );
     if (!preference) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
-    res
-      .status(200)
-      .json({ status: "success", message: "User Preference soft deleted" });
+    res.status(200).json({ status: "success", message: "User Preference soft deleted" });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
@@ -154,14 +146,10 @@ exports.softDeleteUserPreference = async (req, res) => {
 exports.deleteUserPreference = async (req, res) => {
   try {
     // Tìm UserPreference trước khi xóa để lấy userId
-    const deletedPreference = await UserPreferenceModel.findByIdAndDelete(
-      req.params.id
-    );
+    const deletedPreference = await UserPreferenceModel.findByIdAndDelete(req.params.id);
 
     if (!deletedPreference) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
 
     // Cập nhật userPreferenceId của User thành null
@@ -172,8 +160,7 @@ exports.deleteUserPreference = async (req, res) => {
 
     res.status(200).json({
       status: "success",
-      message:
-        "User Preference permanently deleted and userPreferenceId removed",
+      message: "User Preference permanently deleted and userPreferenceId removed",
     });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
@@ -185,9 +172,7 @@ exports.searchUserPreferencesByName = async (req, res) => {
   try {
     const { name } = req.query;
     if (!name) {
-      return res
-        .status(400)
-        .json({ status: "fail", message: "Name query parameter is required" });
+      return res.status(400).json({ status: "fail", message: "Name query parameter is required" });
     }
 
     const preferences = await UserPreferenceModel.find({
@@ -206,9 +191,7 @@ exports.filterUserPreferencesByDiet = async (req, res) => {
   try {
     const { diet } = req.query;
     if (!diet) {
-      return res
-        .status(400)
-        .json({ status: "fail", message: "Diet query parameter is required" });
+      return res.status(400).json({ status: "fail", message: "Diet query parameter is required" });
     }
 
     const preferences = await UserPreferenceModel.find({
@@ -233,9 +216,7 @@ exports.getUserPreferenceByUserId = async (req, res) => {
     });
 
     if (!preference) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
 
     res.status(200).json({ status: "success", data: preference });

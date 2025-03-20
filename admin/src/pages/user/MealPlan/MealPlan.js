@@ -5,6 +5,7 @@ import mealPlanService from "../../../services/mealPlanServices";
 import MealDays from "./MealDays";
 import CreateMealPlanForm from "./CreateMealPlanForm";
 import ReminderNotification from "../../../components/Reminder/ReminderNotifiaction";
+import MealPlanAimChart from "./MealPlanAimChart";
 
 const MealPlan = () => {
   const { user } = useSelector(selectAuth);
@@ -12,6 +13,7 @@ const MealPlan = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [processingAction, setProcessingAction] = useState(false);
+  const [nutritionTargets, setNutritionTargets] = useState(null);
 
   const fetchUserMealPlan = async () => {
     try {
@@ -88,10 +90,15 @@ const MealPlan = () => {
     }
   };
 
+  // Handle nutrition targets calculated from MealPlanAimChart
+  const handleNutritionTargetsCalculated = (targets) => {
+    setNutritionTargets(targets);
+  };
+
   if (loading) return <div>Đang tải...</div>;
 
   return (
-    <div className="max-full mx-auto p-4">
+    <div className="w-full mx-auto p-4">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold text-green-600">Meal Plan</h1>
         {/* Đặt ReminderNotification ở góc phải trên */}
@@ -100,7 +107,44 @@ const MealPlan = () => {
       {userMealPlan ? (
         <div className="bg-white p-6 rounded-lg shadow-md mt-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">{userMealPlan.title}</h2>
+            <div className="infor">
+              <p className="text-gray-600">
+                Title: <span className="font-medium">{userMealPlan.title}</span>
+              </p>
+              <p className="text-gray-600">
+                Start:{" "}
+                <span className="font-medium">
+                  {new Date(userMealPlan.startDate).toLocaleDateString()}
+                </span>
+              </p>
+              <p className="text-gray-600">
+                Time: <span className="font-medium">{userMealPlan.duration} Days</span>
+              </p>
+              <p className="text-gray-600">
+                Type:
+                <span className="font-medium">
+                  {userMealPlan.type === "fixed" ? "Fixed" : "Custom"}
+                </span>
+              </p>
+
+              <div>
+                <p className="text-gray-600">
+                  Status:
+                  <span
+                    className={`font-medium ml-1 ${
+                      userMealPlan.isPause ? "text-yellow-500" : "text-green-500"
+                    }`}
+                  >
+                    {userMealPlan.isPause ? "Inactive" : "Active"}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <MealPlanAimChart
+              mealPlanId={userMealPlan._id}
+              duration={userMealPlan.duration}
+              onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
+            />
             <div className="flex space-x-2">
               <button
                 onClick={handleToggleMealPlanStatus}
@@ -111,7 +155,7 @@ const MealPlan = () => {
                     : "bg-yellow-500 hover:bg-yellow-600"
                 } ${processingAction ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                {userMealPlan.isPause ? "▶️ Tiếp tục" : "⏸️ Tạm dừng"}
+                {userMealPlan.isPause ? "▶️ Continue" : "⏸️ Pause"}
               </button>
               <button
                 onClick={handleDeleteMealPlan}
@@ -120,52 +164,16 @@ const MealPlan = () => {
                   processingAction ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
-                🗑️ Xóa
+                🗑️ Delete
               </button>
             </div>
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-600">
-                  Bắt đầu:{" "}
-                  <span className="font-medium">
-                    {new Date(userMealPlan.startDate).toLocaleDateString()}
-                  </span>
-                </p>
-                <p className="text-gray-600">
-                  Thời gian: <span className="font-medium">{userMealPlan.duration} ngày</span>
-                </p>
-                <p className="text-gray-600">
-                  Loại:{" "}
-                  <span className="font-medium">
-                    {userMealPlan.type === "fixed" ? "Cố định" : "Tùy chỉnh"}
-                  </span>
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-600">
-                  Trạng thái:
-                  <span
-                    className={`font-medium ml-1 ${
-                      userMealPlan.isPause ? "text-yellow-500" : "text-green-500"
-                    }`}
-                  >
-                    {userMealPlan.isPause ? "Tạm dừng" : "Đang hoạt động"}
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Hiển thị mặc định */}
-          <MealDays mealPlanId={userMealPlan._id} />
+          {/* Pass nutritionTargets to MealDays */}
+          <MealDays mealPlanId={userMealPlan._id} nutritionTargets={nutritionTargets} />
         </div>
       ) : (
         <div className="bg-white p-6 rounded-lg shadow-md mt-6">
-          <p className="mb-4">Chưa có Meal Plan nào.</p>
-
           {!showCreateForm ? (
             <button
               onClick={() => setShowCreateForm(true)}

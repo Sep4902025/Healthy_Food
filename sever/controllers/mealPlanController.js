@@ -519,45 +519,61 @@ exports.getMealPlanReminders = async (req, res) => {
 };
 
 // CRUD Meal to Day operations
-// Add meal to Day
+// Add Meal To Day
 exports.addMealToDay = async (req, res) => {
   try {
     const { mealPlanId, mealDayId } = req.params;
-    const { userId, mealTime, mealName, dishes = [] } = req.body; // ✅ Lấy userId từ body
+    const { mealTime, mealName, dishes = [] } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ success: false, message: "Thiếu userId" });
+    // ✅ Get userId and role from token in header
+    const requestingUserId = req.user?.id;
+    const userRole = req.user?.role;
+    if (!requestingUserId) {
+      return res.status(401).json({ success: false, message: "You are not logged in" });
     }
 
-    // 🔍 Kiểm tra MealPlan tồn tại & thuộc về user
+    // 🔍 Check if MealPlan exists
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan does not exist" });
     }
-    if (
-      mealPlan.userId.toString() !== userId.toString() &&
-      mealPlan.createdBy.toString() !== userId.toString()
-    ) {
+
+    // 🔍 Check permission to edit
+    const isUserAuthorized =
+      mealPlan.userId.toString() === requestingUserId.toString() ||
+      mealPlan.createdBy.toString() === requestingUserId.toString();
+
+    let isNutritionistAuthorized = false;
+    if (userRole === "nutritionist") {
+      const mealPlanUser = await User.findById(mealPlan.userId);
+      if (mealPlanUser && mealPlanUser.nutritionistId?.toString() === requestingUserId.toString()) {
+        isNutritionistAuthorized = true;
+      }
+    }
+
+    if (!isUserAuthorized && !isNutritionistAuthorized) {
       return res
         .status(403)
-        .json({ success: false, message: "Bạn không có quyền chỉnh sửa MealPlan này" });
+        .json({ success: false, message: "You do not have permission to edit this MealPlan" });
     }
+
+    // 🔍 Check if MealPlan is locked
     if (mealPlan.isBlock) {
       return res
         .status(403)
-        .json({ success: false, message: "MealPlan bị khóa, không thể thêm bữa ăn" });
+        .json({ success: false, message: "MealPlan is locked, cannot add meal" });
     }
 
-    // 🔍 Kiểm tra MealDay tồn tại trong MealPlan
+    // 🔍 Check if MealDay exists in MealPlan
     const mealDay = await MealDay.findOne({
       _id: new mongoose.Types.ObjectId(mealDayId),
       mealPlanId: new mongoose.Types.ObjectId(mealPlanId),
     });
     if (!mealDay) {
-      return res.status(404).json({ success: false, message: "Ngày ăn không hợp lệ" });
+      return res.status(404).json({ success: false, message: "MealDay is invalid" });
     }
 
-    // ✅ Tạo Meal mới
+    // ✅ Create new Meal
     const newMeal = await Meal.create({
       mealDayId,
       mealTime,
@@ -567,62 +583,84 @@ exports.addMealToDay = async (req, res) => {
 
     res.status(201).json({ success: true, data: newMeal });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error in addMealToDay:", error);
+    res.status(500).json({ success: false, message: "Server error: " + error.message });
   }
 };
-// Remove meal from Day
+// Remove Meal From DayDay
 exports.removeMealFromDay = async (req, res) => {
   try {
     const { mealPlanId, mealDayId, mealId } = req.params;
-    // ✅ Lấy userId từ token trong header
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "Bạn chưa đăng nhập" });
+    // ✅ Get userId and role from token in header
+    const requestingUserId = req.user?.id;
+    const userRole = req.user?.role; // Assume middleware attaches role to req.user
+    if (!requestingUserId) {
+      return res.status(401).json({ success: false, message: "You are not logged in" });
     }
 
-    // 🔍 Kiểm tra MealPlan tồn tại & thuộc về user
+    // 🔍 Check if MealPlan exists
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan does not exist" });
     }
-    if (
-      mealPlan.userId.toString() !== userId.toString() &&
-      mealPlan.createdBy.toString() !== userId.toString()
-    ) {
+
+    // 🔍 Check permission to edit
+    const isUserAuthorized =
+      mealPlan.userId.toString() === requestingUserId.toString() ||
+      mealPlan.createdBy.toString() === requestingUserId.toString();
+
+    let isNutritionistAuthorized = false;
+    if (userRole === "nutritionist") {
+      // Find the user of the MealPlan to check if the nutritionist manages this user
+      const mealPlanUser = await User.findById(mealPlan.userId);
+      if (mealPlanUser && mealPlanUser.nutritionistId?.toString() === requestingUserId.toString()) {
+        isNutritionistAuthorized = true;
+      }
+    }
+
+    if (!isUserAuthorized && !isNutritionistAuthorized) {
       return res
         .status(403)
-        .json({ success: false, message: "Bạn không có quyền chỉnh sửa MealPlan này" });
+        .json({ success: false, message: "You do not have permission to edit this MealPlan" });
     }
+
+    // 🔍 Check if MealPlan is locked
     if (mealPlan.isBlock) {
       return res
         .status(403)
-        .json({ success: false, message: "MealPlan bị khóa, không thể xóa bữa ăn" });
+        .json({ success: false, message: "MealPlan is locked, cannot delete meal" });
     }
 
-    // 🔍 Kiểm tra MealDay tồn tại trong MealPlan
+    // 🔍 Check if MealDay exists in MealPlan
     const mealDay = await MealDay.findOne({
       _id: new mongoose.Types.ObjectId(mealDayId),
       mealPlanId: new mongoose.Types.ObjectId(mealPlanId),
     });
     if (!mealDay) {
-      return res.status(404).json({ success: false, message: "Ngày ăn không hợp lệ" });
+      return res.status(404).json({ success: false, message: "MealDay is invalid" });
     }
 
-    // 🔍 Kiểm tra Meal tồn tại trong MealDay
+    // 🔍 Check if Meal exists in MealDay
     const meal = await Meal.findOne({
       _id: new mongoose.Types.ObjectId(mealId),
       mealDayId: new mongoose.Types.ObjectId(mealDayId),
     });
     if (!meal) {
-      return res.status(404).json({ success: false, message: "Bữa ăn không tồn tại" });
+      return res.status(404).json({ success: false, message: "Meal does not exist" });
     }
 
-    // ✅ Xóa Meal
+    // ✅ Delete Meal
     await Meal.findByIdAndDelete(mealId);
 
-    res.status(200).json({ success: true, message: "Bữa ăn đã được xóa" });
+    // Return additional information
+    res.status(200).json({
+      success: true,
+      message: "Meal has been deleted",
+      data: { mealDayId: mealDay._id },
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error in removeMealFromDay:", error);
+    res.status(500).json({ success: false, message: "Server error: " + error.message });
   }
 };
 // Get Meals By Day
@@ -809,6 +847,7 @@ exports.deleteMealInDay = async (req, res) => {
 
 // CRUD Dish to Meal
 const moment = require("moment-timezone");
+const Recipe = require("../models/Recipe");
 const handleReminderAndJob = async (userId, mealPlanId, mealDayId, mealId, meal, mealDay) => {
   // Không tạo Reminder nếu không có món ăn
   if (!meal || !meal.dishes || meal.dishes.length === 0) {
@@ -1040,7 +1079,16 @@ exports.addDishesToMeal = async (req, res) => {
     const existingDishes = new Set(meal.dishes.map((dish) => JSON.stringify(dish)));
     dishes.forEach((dish) =>
       existingDishes.add(
-        JSON.stringify({ dishId: dish.dishId, name: dish.name, calories: dish.calories })
+        JSON.stringify({
+          dishId: dish.dishId,
+          recipeId: dish.recipeId,
+          imageUrl: dish.imageUrl,
+          name: dish.name,
+          calories: dish.calories,
+          protein: dish.protein,
+          carbs: dish.carbs,
+          fat: dish.fat,
+        })
       )
     );
     meal.dishes = Array.from(existingDishes).map((dish) => JSON.parse(dish));

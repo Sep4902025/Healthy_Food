@@ -25,8 +25,13 @@ const mealSchema = new mongoose.Schema({
   dishes: [
     {
       dishId: mongoose.Schema.Types.ObjectId,
+      recipeId: mongoose.Schema.Types.ObjectId,
+      imageUrl: String,
       name: String,
       calories: Number,
+      protein: Number,
+      carbs: Number,
+      fat: Number,
     },
   ],
 });

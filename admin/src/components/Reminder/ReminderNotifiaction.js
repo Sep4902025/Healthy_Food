@@ -3,6 +3,7 @@ import RemindService from "../../services/reminder.service";
 
 const ReminderNotification = ({ userId }) => {
   const [reminders, setReminders] = useState([]);
+  const [hasNewReminders, setHasNewReminders] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
@@ -13,6 +14,7 @@ const ReminderNotification = ({ userId }) => {
     RemindService.listenReminder((data) => {
       console.log("Nhận dữ liệu nhắc nhở:", data);
       setReminders((prevReminders) => [data, ...prevReminders]); // Thêm vào đầu mảng để hiển thị mới nhất lên đầu
+      setHasNewReminders(true); // Đánh dấu có thông báo mới
     });
 
     // Ngắt kết nối khi component unmount
@@ -48,6 +50,7 @@ const ReminderNotification = ({ userId }) => {
   // Toggle hiển thị thông báo
   const toggleNotifications = () => {
     setShowNotifications(!showNotifications);
+    setHasNewReminders(false);
   };
 
   return (
@@ -76,8 +79,8 @@ const ReminderNotification = ({ userId }) => {
           </svg>
 
           {/* Badge hiển thị số lượng thông báo */}
-          {reminders.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+          {hasNewReminders && reminders.length > 0 && (
+            <span className="absolute -top-1 -right-[10px] bg-red-500 text-white text-xs font-bold rounded-full h-4 w-5 flex items-center justify-center">
               {reminders.length > 9 ? "9+" : reminders.length}
             </span>
           )}

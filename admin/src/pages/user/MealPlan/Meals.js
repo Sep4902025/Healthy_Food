@@ -4,104 +4,123 @@ import AddDishToMeal from "./AddDishToMeal";
 import AddMealModal from "./AddMealModal";
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../../store/selectors/authSelectors";
+import DishCard from "./DishCard";
+import HomeService from "../../../services/home.service";
 
-const Meals = ({ mealPlanId, mealDayId, onClose }) => {
+const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
   const { user } = useSelector(selectAuth);
   const [meals, setMeals] = useState([]);
+  console.log("MEALS", meals);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddDishModal, setShowAddDishModal] = useState(false);
   const [showAddMealModal, setShowAddMealModal] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [mealDay, setMealDay] = useState(null);
-  console.log("meal DAya", mealDay);
+  const [dishDetails, setDishDetails] = useState([]);
+  console.log("MEALSDay", mealDay);
 
   const [isAddingDish, setIsAddingDish] = useState(false);
   const [deletingMealId, setDeletingMealId] = useState(null);
   const [deletingDishId, setDeletingDishId] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [mealPlanType, setMealPlanType] = useState(null);
-  const firstLoad = useRef(true);
-  const mealsRef = useRef([]);
 
+  // Used to track if initial data has been loaded
+  const dataLoaded = useRef(false);
+
+  // Fetch all data in a single useEffect to prevent multiple API calls
   useEffect(() => {
     const fetchData = async () => {
-      if (!firstLoad.current) {
-        // Không hiển thị loading nếu đã có dữ liệu
-        if (meals.length === 0) {
-          setLoading(true);
-        }
+      if (!dataLoaded.current) {
+        setLoading(true);
       }
 
       try {
-        // Lấy thông tin meal plan để kiểm tra type
-        const mealPlanResponse = await mealPlanService.getMealPlanById(mealPlanId);
+        // Gọi API lấy thông tin mealPlan, mealDay, meals
+        const [mealPlanResponse, mealDayResponse, mealsResponse] = await Promise.all([
+          mealPlanService.getMealPlanById(mealPlanId),
+          mealPlanService.getMealDayById(mealPlanId, mealDayId),
+          mealPlanService.getMealsByMealDay(mealPlanId, mealDayId),
+        ]);
+
         if (mealPlanResponse.success) {
           setMealPlanType(mealPlanResponse.data.type);
         }
 
-        // Lấy thông tin của meal day
-        const mealDayResponse = await mealPlanService.getMealDayById(mealPlanId, mealDayId);
         if (mealDayResponse.success) {
           setMealDay(mealDayResponse.data);
         }
 
-        // Lấy danh sách bữa ăn
-        const mealsResponse = await mealPlanService.getMealsByMealDay(mealPlanId, mealDayId);
         if (mealsResponse.success) {
           setMeals(mealsResponse.data);
-          mealsRef.current = mealsResponse.data;
+
+          // Gọi API lấy thông tin chi tiết từng dish
+          const dishPromises = mealsResponse.data.flatMap((meal) =>
+            meal.dishes.map((dish) => HomeService.getDishById(dish.dishId))
+          );
+
+          const dishResponses = await Promise.all(dishPromises);
+
+          // Lưu thông tin dishDetails (nếu có lỗi, bỏ qua món lỗi)
+          const dishData = dishResponses
+            .map((res) => (res.success ? res.data : null))
+            .filter((dish) => dish !== null);
+
+          setDishDetails(dishData);
         } else {
           setError(mealsResponse.message);
         }
       } catch (err) {
-        console.error("Lỗi khi lấy dữ liệu:", err);
-        setError("Lỗi khi lấy dữ liệu");
+        console.error("Error fetching data:", err);
+        setError("Error fetching data");
       } finally {
         setLoading(false);
-        firstLoad.current = false;
+        dataLoaded.current = true;
       }
     };
 
     fetchData();
   }, [mealPlanId, mealDayId]);
 
-  // Xử lý khi thêm món ăn thành công
-  const handleDishAdded = async () => {
-    setIsAddingDish(false);
+  // Refresh meals data without setting loading state
+  const refreshMeals = async () => {
     try {
       const response = await mealPlanService.getMealsByMealDay(mealPlanId, mealDayId);
       if (response.success) {
         setMeals(response.data);
-        mealsRef.current = response.data;
 
-        // Cập nhật món ăn trong meal đã chọn
+        // Update selected meal if it exists
         if (selectedMeal) {
           const updatedMeal = response.data.find((m) => m._id === selectedMeal._id);
           if (updatedMeal) {
             setSelectedMeal(updatedMeal);
           }
         }
+
+        // Call onNutritionChange to update nutrition data
+        if (onNutritionChange) {
+          onNutritionChange();
+        }
       }
     } catch (err) {
-      console.error("Lỗi khi refresh danh sách món ăn:", err);
+      console.error("Error refreshing meals:", err);
     }
   };
 
-  // Xử lý khi thêm bữa ăn thành công
-  const handleMealAdded = async () => {
-    try {
-      const mealsResponse = await mealPlanService.getMealsByMealDay(mealPlanId, mealDayId);
-      if (mealsResponse.success) {
-        setMeals(mealsResponse.data);
-        mealsRef.current = mealsResponse.data;
-      }
-    } catch (err) {
-      console.error("Lỗi khi refresh danh sách bữa ăn:", err);
-    }
+  // Handle dish added successfully
+  const handleDishAdded = () => {
+    setIsAddingDish(false);
+    refreshMeals();
   };
 
-  // Xử lý chọn meal với hiệu ứng chuyển tiếp
+  // Handle meal added successfully
+  const handleMealAdded = () => {
+    refreshMeals();
+  };
+
+  // Handle meal selection with transition effect
   const handleMealSelect = (meal) => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -110,7 +129,7 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
     }, 150);
   };
 
-  // Xử lý quay lại danh sách meal với hiệu ứng chuyển tiếp
+  // Handle return to meals list with transition effect
   const handleBackToMeals = () => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -118,11 +137,12 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
       setIsTransitioning(false);
     }, 150);
   };
-  // Xử lý xóa bữa ăn
+
+  // Handle meal removal
   const handleRemoveMealFromDay = async (mealId) => {
     if (!mealId) return;
 
-    const confirmDelete = window.confirm("Bạn có chắc chắn muốn xóa bữa ăn này?");
+    const confirmDelete = window.confirm("Are you sure you want to delete this meal?");
     if (!confirmDelete) return;
 
     setDeletingMealId(mealId);
@@ -130,20 +150,20 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
       const response = await mealPlanService.removeMealFromDay(mealPlanId, mealDayId, mealId);
 
       if (response.success) {
-        // Cập nhật danh sách bữa ăn sau khi xóa
-        handleMealAdded();
+        // Update meals list after deletion
+        refreshMeals();
       } else {
-        setError("Không thể xóa bữa ăn!");
+        setError("Could not delete meal!");
       }
     } catch (err) {
-      console.error("Lỗi khi xóa bữa ăn:", err);
-      setError("Không thể xóa bữa ăn!");
+      console.error("Error deleting meal:", err);
+      setError("Could not delete meal!");
     } finally {
       setDeletingMealId(null);
     }
   };
 
-  // Xử lý xóa món ăn
+  // Handle dish deletion
   const handleDeleteDish = async (dishId) => {
     if (!selectedMeal || !dishId) return;
 
@@ -157,14 +177,14 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
       );
 
       if (response.success) {
-        // Cập nhật danh sách món ăn sau khi xóa
-        handleDishAdded();
+        // Update dish list after deletion
+        refreshMeals();
       } else {
-        setError("Không thể xóa món ăn!");
+        setError("Could not delete dish!");
       }
     } catch (err) {
-      console.error("Lỗi khi xóa món ăn:", err);
-      setError("Không thể xóa món ăn!");
+      console.error("Error deleting dish:", err);
+      setError("Could not delete dish!");
     } finally {
       setDeletingDishId(null);
     }
@@ -191,41 +211,111 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
     setIsAddingDish(false);
   };
 
-  // Sử dụng useMemo để tránh re-render không cần thiết
+  // Determine color and icon for meal based on time
+  const getMealTimeStyle = (mealTime) => {
+    const time = mealTime.toLowerCase();
+
+    if (
+      time.includes("sáng") ||
+      time.includes("sang") ||
+      time.includes("breakfast") ||
+      time.match(/^([0-5]|0[0-9]):/) ||
+      time.match(/^([0-9]):/) ||
+      time.includes("am")
+    ) {
+      return {
+        borderColor: "border-yellow-400",
+        bgColor: "bg-yellow-50",
+        icon: <span className="text-yellow-500 text-xl mr-2">🌞</span>,
+      };
+    } else if (
+      time.includes("trưa") ||
+      time.includes("trua") ||
+      time.includes("lunch") ||
+      time.match(/^(1[0-2]|0[0-9]):/) ||
+      time.includes("pm")
+    ) {
+      return {
+        borderColor: "border-orange-400",
+        bgColor: "bg-orange-50",
+        icon: <span className="text-orange-500 text-xl mr-2">☀️</span>,
+      };
+    } else if (
+      time.includes("chiều") ||
+      time.includes("chieu") ||
+      time.includes("afternoon") ||
+      time.match(/^(1[3-7]):/) ||
+      time.includes("pm")
+    ) {
+      return {
+        borderColor: "border-blue-300",
+        bgColor: "bg-blue-50",
+        icon: <span className="text-blue-500 text-xl mr-2">🌤️</span>,
+      };
+    } else if (
+      time.includes("tối") ||
+      time.includes("toi") ||
+      time.includes("dinner") ||
+      time.includes("supper") ||
+      time.match(/^(1[8-9]|2[0-3]):/) ||
+      time.includes("pm")
+    ) {
+      return {
+        borderColor: "border-indigo-600",
+        bgColor: "bg-indigo-50",
+        icon: <span className="text-indigo-500 text-xl mr-2">🌙</span>,
+      };
+    } else {
+      return {
+        borderColor: "border-gray-300",
+        bgColor: "bg-gray-50",
+        icon: null,
+      };
+    }
+  };
+
+  // Use useMemo to avoid unnecessary re-renders
   const mealItems = useMemo(() => {
-    return meals.map((meal) => (
-      <div
-        key={meal._id}
-        className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:bg-gray-50 relative"
-        onClick={() => handleMealSelect(meal)}
-      >
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-medium">{meal.mealName}</h3>
-            <p className="text-sm text-gray-500">Thời gian: {meal.mealTime}</p>
-            <p>{meal.dishes?.length || 0} món ăn</p>
+    return meals.map((meal) => {
+      const { borderColor, bgColor, icon } = getMealTimeStyle(meal.mealTime);
+
+      return (
+        <div
+          key={meal._id}
+          className={`border-l-4 ${borderColor} border border-gray-200 rounded-lg p-4 cursor-pointer hover:${bgColor} transition-colors relative mb-4`}
+          onClick={() => handleMealSelect(meal)}
+        >
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-medium flex items-center">
+                {icon}
+                {meal.mealName}
+              </h3>
+              <p className="text-sm text-gray-500 ml-7">Time: {meal.mealTime}</p>
+              <p className="ml-7">{meal.dishes?.length || 0} dishes</p>
+            </div>
+            <button
+              className="text-red-500 hover:text-red-700 p-1"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event bubbling to parent div
+                handleRemoveMealFromDay(meal._id);
+              }}
+              disabled={deletingMealId === meal._id}
+            >
+              {deletingMealId === meal._id ? (
+                <span className="text-gray-400">Deleting...</span>
+              ) : (
+                <span>🗑️ Delete</span>
+              )}
+            </button>
           </div>
-          <button
-            className="text-red-500 hover:text-red-700 p-1"
-            onClick={(e) => {
-              e.stopPropagation(); // Ngăn không cho sự kiện click lan ra div cha
-              handleRemoveMealFromDay(meal._id);
-            }}
-            disabled={deletingMealId === meal._id}
-          >
-            {deletingMealId === meal._id ? (
-              <span className="text-gray-400">Đang xóa...</span>
-            ) : (
-              <span>🗑️ Xóa</span>
-            )}
-          </button>
         </div>
-      </div>
-    ));
-  }, [meals, deletingMealId, handleRemoveMealFromDay]);
+      );
+    });
+  }, [meals, deletingMealId]);
 
   if (loading && meals.length === 0) {
-    return <p className="text-center text-gray-500">Đang tải...</p>;
+    return <p className="text-center text-gray-500">Loading...</p>;
   }
 
   if (error) {
@@ -233,17 +323,17 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
   }
 
   return (
-    <div className="transition-all duration-300 ease-in-out h-full">
+    <div className="transition-all duration-300 ease-in-out h-full flex flex-col">
       <div
-        className={`h-full overflow-y-auto transition-opacity duration-300 ease-in-out ${
+        className={`transition-opacity duration-300 ease-in-out flex-grow ${
           isTransitioning ? "opacity-0" : "opacity-100"
         }`}
       >
         {!selectedMeal ? (
-          // Xem danh sách bữa ăn trong ngày
-          <div>
+          // View meal list in day
+          <div className="flex flex-col h-full">
             <div className="flex justify-between items-center mb-4">
-              <button onClick={onClose} className="flex items-center text-blue-600 hover:underline">
+              <button onClick={onBack} className="flex items-center text-blue-600 hover:underline">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -258,35 +348,36 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
                 >
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
-                Quay lại
+                Back
               </button>
 
-              {/* Hiển thị nút thêm bữa ăn chỉ khi type là custom */}
+              {/* Only show add meal button for custom type */}
               {mealPlanType === "custom" && (
                 <button
                   onClick={() => setShowAddMealModal(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
                 >
-                  Thêm bữa ăn
+                  Add Meal
                 </button>
               )}
             </div>
 
-            <h2 className="text-xl font-semibold mb-4">
-              Bữa ăn ngày {mealDay ? formatDate(mealDay.date) : "Hôm nay"}
-            </h2>
+            <h2 className="text-xl font-semibold mb-4">Meals Today</h2>
 
-            <div className="space-y-4">
+            {/* Card container with fixed height and scrolling */}
+            <div className="overflow-y-auto pr-2 flex-grow h-full max-h-[380px] pb-4">
               {meals && meals.length > 0 ? (
-                mealItems
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mealItems}
+                </div>
               ) : (
-                <p className="text-center text-gray-500">Chưa có bữa ăn nào trong ngày này.</p>
+                <p className="text-center text-gray-500 py-4">No meals for this day yet.</p>
               )}
             </div>
           </div>
         ) : (
-          // Xem chi tiết món ăn trong bữa ăn
-          <div>
+          // View dish details in meal
+          <div className="flex flex-col h-full">
             <div className="flex justify-between items-center mb-4">
               <button
                 onClick={handleBackToMeals}
@@ -306,7 +397,7 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
                 >
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
-                Quay lại
+                Back
               </button>
 
               <button
@@ -316,67 +407,38 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
                   isAddingDish ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
                 } text-white px-4 py-2 rounded`}
               >
-                {isAddingDish ? "Đang thêm..." : "Thêm món ăn"}
+                {isAddingDish ? "Adding..." : "Add Dish"}
               </button>
             </div>
 
-            <div className="mb-6">
+            <div className="mb-4">
               <h2 className="text-xl font-semibold">{selectedMeal.mealName}</h2>
-              <p className="text-gray-500">Thời gian: {selectedMeal.mealTime}</p>
+              <p className="text-gray-500">Time: {selectedMeal.mealTime}</p>
             </div>
 
-            <h3 className="font-medium mb-2">Danh sách món ăn:</h3>
-            <div className="space-y-2">
+            <h3 className="font-medium mb-2">Dish List:</h3>
+            {/** Card */}
+            <div className="overflow-y-auto pr-2 flex-grow max-h-[340px]">
               {selectedMeal.dishes && selectedMeal.dishes.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {selectedMeal.dishes.map((dish, index) => (
-                    <div key={index} className="border rounded-md p-3 bg-gray-50 relative">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">{dish.name}</p>
-                          <p className="text-sm text-gray-500">{dish.calories || 0} kcal</p>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDish(dish._id || dish.dishId);
-                          }}
-                          disabled={deletingDishId === (dish._id || dish.dishId)}
-                          className={`text-red-500 hover:text-red-700 ${
-                            deletingDishId === (dish._id || dish.dishId) ? "opacity-50" : ""
-                          }`}
-                        >
-                          {deletingDishId === (dish._id || dish.dishId) ? (
-                            <span>...</span>
-                          ) : (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                    </div>
+                    <DishCard
+                      key={index}
+                      dish={dish}
+                      onDelete={handleDeleteDish}
+                      deletingDishId={deletingDishId}
+                    />
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">Chưa có món ăn nào trong bữa này.</p>
+                <p className="text-gray-500">No dishes in this meal yet.</p>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {/* Modal thêm món ăn */}
+      {/* Add dish modal */}
       {showAddDishModal && selectedMeal && (
         <AddDishToMeal
           mealPlanId={mealPlanId}
@@ -388,7 +450,7 @@ const Meals = ({ mealPlanId, mealDayId, onClose }) => {
         />
       )}
 
-      {/* Modal thêm bữa ăn */}
+      {/* Add meal modal */}
       {showAddMealModal && (
         <AddMealModal
           mealPlanId={mealPlanId}
