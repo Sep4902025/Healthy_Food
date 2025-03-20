@@ -23,7 +23,6 @@ import { selectUser } from "../store/selectors/authSelectors";
 import { logoutUser } from "../store/actions/authActions";
 import { DarkModeContext } from "../pages/context/DarkModeContext";
 
-
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -169,11 +168,11 @@ const Header = () => {
             >
               Home
             </a>
-            {user?.role === "admin" && (
+            {(user?.role === "admin" || user?.role === "nutritionist") && (
               <a
-                href="/admin"
+                href={user?.role === "admin" ? "/admin" : "/nutritionist"}
                 className={`font-medium transition-colors ${
-                  isActive("/admin")
+                  isActive(user?.role === "admin" ? "/admin" : "/nutritionist")
                     ? "text-green-600"
                     : "text-gray-700 hover:text-green-600"
                 }`}
@@ -181,6 +180,7 @@ const Header = () => {
                 Management
               </a>
             )}
+
             <a
               href="/survey/name"
               className={`font-medium transition-colors ${

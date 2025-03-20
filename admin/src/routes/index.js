@@ -197,7 +197,7 @@ const AppRoutes = () => {
         <Route path="change-password" element={<ChangePassword />} />
         <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
-        <Route path="viewprofile" element={<ViewProfile />} />
+        <Route path="viewprofile/:id" element={<ViewProfile />} />
       </Route>
 
       {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist*/}

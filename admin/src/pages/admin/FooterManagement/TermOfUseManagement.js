@@ -224,9 +224,9 @@ const TermOfUseManagement = () => {
               className="border rounded px-2 py-1"
               onChange={(e) => setUsersPerPage(Number(e.target.value))}
             >
-              <option value="5">5 Users</option>
-              <option value="10">10 Users</option>
-              <option value="15">15 Users</option>
+              <option value="5">5 Terms</option>
+              <option value="10">10 Terms</option>
+              <option value="15">15 Terms</option>
             </select>
           </div>
           <div className="flex space-x-2">

@@ -3,8 +3,15 @@ import { toast } from "react-toastify";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { GoogleLogin } from "@react-oauth/google";
-import { loginWithEmail, loginWithGoogle } from "../../store/actions/authActions";
-import { selectIsAuthenticated, selectAuthLoading } from "../../store/selectors/authSelectors";
+import {
+  loginWithEmail,
+  loginWithGoogle,
+} from "../../store/actions/authActions";
+import {
+  selectIsAuthenticated,
+  selectAuthLoading,
+} from "../../store/selectors/authSelectors";
+import { loginFailure, logout } from "../../store/slices/authSlice";
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -22,6 +29,17 @@ const Login = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    dispatch(loginFailure(null)); // Reset lỗi và trạng thái loading
+  }, [dispatch]);
+
+  useEffect(() => {
+    localStorage.removeItem("authToken"); // Xóa token cũ
+    dispatch(logout()); // Reset Redux state
+  }, [dispatch]);
+  
+  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -34,9 +52,12 @@ const Login = () => {
     e.preventDefault();
     try {
       const response = await dispatch(loginWithEmail(formData));
-      console.log("Login response:", response);
+      if (!response) {
+        navigate("/signin");
+        return;
+      }
 
-      if (response && response.success) {
+      if (response.success) {
         const userRole = response.user.role;
         console.log("User role:", userRole);
 
@@ -45,7 +66,7 @@ const Login = () => {
         } else if (userRole === "nutritionist") {
           navigate("/nutritionist");
         } else {
-          navigate("/"); // Điều hướng user bình thường về trang chủ
+          navigate("/");
         }
       }
     } catch (error) {
@@ -55,11 +76,16 @@ const Login = () => {
 
   const handleGoogleLogin = async (credentialResponse) => {
     try {
-      const success = await dispatch(loginWithGoogle(credentialResponse.credential));
-      if (success) {
-        toast.success("Đăng nhập Google thành công!");
-        navigate("/");
+      const success = await dispatch(
+        loginWithGoogle(credentialResponse.credential)
+      );
+      if (!success) {
+        navigate("/signin");
+        return;
       }
+
+      toast.success("Đăng nhập Google thành công!");
+      navigate("/");
     } catch (error) {
       toast.error("Đăng nhập Google thất bại");
     }
@@ -98,7 +124,9 @@ const Login = () => {
 
         {/* Tiêu đề */}
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">Sign in with email</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Sign in with email
+          </h2>
         </div>
 
         {/* Form đăng nhập */}
@@ -137,7 +165,10 @@ const Login = () => {
           </div>
 
           <div className="flex items-center justify-end">
-            <Link to="/forgot-password" className="text-sm text-pink-500 hover:text-pink-600">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-pink-500 hover:text-pink-600"
+            >
               Forgot password?
             </Link>
           </div>
@@ -178,7 +209,10 @@ const Login = () => {
           {/* Link to Signup */}
           <div className="text-center text-sm">
             <span className="text-gray-500">Don't have an account?</span>
-            <Link to="/signup" className="ml-1 text-pink-500 hover:text-pink-600">
+            <Link
+              to="/signup"
+              className="ml-1 text-pink-500 hover:text-pink-600"
+            >
               Sign up
             </Link>
           </div>

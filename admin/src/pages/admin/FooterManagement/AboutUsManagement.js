@@ -205,9 +205,9 @@
                 className="border rounded px-2 py-1"
                 onChange={(e) => setUsersPerPage(Number(e.target.value))}
             >
-                <option value="5">5 Users</option>
-                <option value="10">10 Users</option>
-                <option value="15">15 Users</option>
+                <option value="5">5 About Us</option>
+                <option value="10">10 About Us</option>
+                <option value="15">15 About Us</option>
             </select>
         </div>
         <div className="flex space-x-2">
