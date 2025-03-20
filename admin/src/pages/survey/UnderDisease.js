@@ -62,12 +62,14 @@ const UnderDisease = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={80} />
+        <ProgressBar progress={84} />
       </div>
 
       {/* Tiêu đề và mô tả */}
       <h2 className="text-2xl font-bold text-center">Under Disease</h2>
-      <p className="text-center text-gray-600">Let me know your under disease</p>
+      <p className="text-center text-gray-600">
+        Let me know your under disease
+      </p>
 
       {/* Danh sách lựa chọn */}
       <div className="space-y-3 mt-4">
@@ -75,7 +77,9 @@ const UnderDisease = () => {
           <div
             key={underdisease.id}
             className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer ${
-              isSelected(underdisease.id) ? "bg-yellow-50 border-yellow-400" : "bg-gray-100"
+              isSelected(underdisease.id)
+                ? "bg-yellow-50 border-yellow-400"
+                : "bg-gray-100"
             }`}
             onClick={() => toggleItemSelection(underdisease.id)}
           >
@@ -88,14 +92,18 @@ const UnderDisease = () => {
               />
               <span
                 className={`font-medium ${
-                  isSelected(underdisease.id) ? "text-yellow-700" : "text-gray-700"
+                  isSelected(underdisease.id)
+                    ? "text-yellow-700"
+                    : "text-gray-700"
                 }`}
               >
                 {underdisease.label}
               </span>
             </div>
 
-            {underdisease.icon && <span className="text-2xl">{underdisease.icon}</span>}
+            {underdisease.icon && (
+              <span className="text-2xl">{underdisease.icon}</span>
+            )}
           </div>
         ))}
       </div>

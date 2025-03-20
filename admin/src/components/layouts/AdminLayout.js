@@ -57,18 +57,18 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
 
   const menuItems = [
     { icon: <HomeIcon size={20} />, name: "Dashboard" },
-    { icon: <ShoppingCartIcon size={20} />, name: "Order Management" },
+    // { icon: <ShoppingCartIcon size={20} />, name: "Order Management" },
     { icon: <BookOpenIcon size={20} />, name: "Meal Plan" },
     {
       icon: <UserIcon size={20} />,
       name: "User Management",
     },
-    {
-      icon: <BarChartIcon size={20} />,
-      name: "Analytics",
-    },
-    { icon: <HelpCircleIcon size={20} />, name: "Quiz Management" },
-    { icon: <BookOpenIcon size={20} />, name: "Dish Preferences" },
+    // {
+    //   icon: <BarChartIcon size={20} />,
+    //   name: "Analytics",
+    // },
+    // { icon: <HelpCircleIcon size={20} />, name: "Quiz Management" },
+    // { icon: <BookOpenIcon size={20} />, name: "Dish Preferences" },
     {
       icon: <HelpCircleIcon size={20} />,
       name: "Footer Management",
@@ -79,7 +79,7 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
         "Term of Use Management",
       ],
     },
-    { icon: <SettingsIcon size={20} />, name: "User Interface" },
+    // { icon: <SettingsIcon size={20} />, name: "User Interface" },
   ];
 
   const toggleSubmenu = (menuName) => {

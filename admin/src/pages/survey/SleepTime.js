@@ -53,12 +53,14 @@ const SleepTime = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={50} />
+        <ProgressBar progress={52.5} />
       </div>
 
       {/* Tiêu đề và mô tả */}
       <h2 className="text-2xl font-bold text-center">Sleep Time</h2>
-      <p className="text-center text-gray-600">How long do you sleep per day?</p>
+      <p className="text-center text-gray-600">
+        How long do you sleep per day?
+      </p>
 
       {/* Danh sách lựa chọn */}
       <div className="space-y-4 mt-4">
@@ -72,7 +74,9 @@ const SleepTime = () => {
             }`}
             onClick={() => setSelectedSleepTime(item.sleeptime)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">{item.sleeptime}</span>
+            <span className="text-lg font-semibold flex-1 text-left">
+              {item.sleeptime}
+            </span>
           </div>
         ))}
       </div>

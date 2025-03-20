@@ -67,6 +67,7 @@ import Quiz from "../pages/user/Quiz";
 import AddUser from "../pages/admin/pages/AddUserManagement";
 import AdminProfile from "../pages/user/AdminProfile";
 import EditAdmin from "../pages/user/EditAdmin";
+import ChangePassword from "../pages/user/Profile/Sections/ChangePassword";
 
 const AppRoutes = () => {
   return (
@@ -193,8 +194,10 @@ const AppRoutes = () => {
         <Route path="dishmanagement" element={<DishManagement />} />
         <Route path="ingredientsmanagement" element={<IngredientsManagement />} />
         <Route path="mealplan" element={<MealPlan />} />
+        <Route path="change-password" element={<ChangePassword />} />
+        <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
-        <Route path="viewprofile" element={<ViewProfile />} />
+        <Route path="viewprofile/:id" element={<ViewProfile />} />
       </Route>
 
       {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist*/}

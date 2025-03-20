@@ -2,19 +2,19 @@ import React, { useState, useEffect } from "react";
 import UserService from "../../../services/user.service";
 import { useNavigate } from "react-router-dom";
 import { EditIcon, TrashIcon, PlusIcon } from "lucide-react";
+import { toast } from "react-toastify";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editData, setEditData] = useState(null);
+  const [formData, setFormData] = useState({ role: "user", isBan: false });
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage, setUsersPerPage] = useState(5);
 
   const navigate = useNavigate(); // Hook để điều hướng
-
-  const handleEditUser = (user) => {
-    navigate(`/admin/edituser/${user._id}`, { state: { user } });
-  };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -30,6 +30,44 @@ const UserManagement = () => {
 
     fetchUsers();
   }, []);
+
+  const handleOpenEditModal = (user) => {
+    setEditData(user);
+    setFormData({
+      role: user.role,
+      isBan: user.isBan,
+    });
+    setModalOpen(true);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!editData || !editData._id) {
+      toast.error("Không tìm thấy ID user để cập nhật");
+      return;
+    }
+
+    const updatedUser = {
+      role: formData.role,
+      isBan: formData.isBan,
+    };
+
+    const result = await UserService.updateUser(editData._id, updatedUser);
+
+    if (result.success) {
+      toast.success("Cập nhật user thành công!");
+      console.log("Cập nhật user thành công:", result.user);
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user._id === editData._id ? { ...user, ...updatedUser } : user
+        )
+      );
+    } else {
+      toast.error(`Cập nhật user thất bại: ${result.message}`);
+      console.error("Cập nhật user thất bại:", result.message);
+    }
+
+    setModalOpen(false);
+  };
 
   const handleDeleteUser = (_id) => {
     setUsers((prevUsers) => prevUsers.filter((user) => user._id !== _id));
@@ -50,13 +88,6 @@ const UserManagement = () => {
       <div className="flex-grow p-6 bg-gray-100 overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">User Management</h1>
-          <button
-            onClick={() => navigate("/admin/adduser")}
-            className="bg-pink-500 text-white px-4 py-2 rounded-lg flex items-center"
-          >
-            <PlusIcon className="mr-2" size={20} />
-            Create user
-          </button>
         </div>
         <div className="bg-white rounded-lg shadow-md">
           <table className="w-full">
@@ -74,28 +105,30 @@ const UserManagement = () => {
               {currentUsers.map((user) => (
                 <tr key={user.id} className="border-b hover:bg-gray-50">
                   <td
-                    className="p-4 text-left cursor-pointer hover:underline"
-                    onClick={() => handleEditUser(user)}
-                    // Xử lý khi bấm vào username
+                    className="p-4 text-left cursor-pointer"
                   >
                     {user.username}
                   </td>
                   <td className="p-4 text-left">{user.phone}</td>
                   <td className="p-4 text-left">{user.email}</td>
                   <td className="p-4 text-left">{user.role}</td>
+
                   <td className="p-4 text-left">
                     <span
                       className={`px-3 py-1 rounded-full text-xs ${
-                        user.status === "Active"
-                          ? "bg-green-100 text-green-600"
-                          : "bg-red-100 text-red-600"
+                        user.isBan
+                          ? "bg-red-100 text-red-600"
+                          : "bg-green-100 text-green-600"
                       }`}
                     >
-                      {user.status}
+                      {user.isBan ? "Inactive" : "Active"}
                     </span>
                   </td>
                   <td className="p-4 flex space-x-2">
-                    <button className="text-green-500 hover:bg-green-100 p-2 rounded-full">
+                    <button
+                      onClick={() => handleOpenEditModal(user)}
+                      className="text-green-500 hover:bg-green-100 p-2 rounded-full"
+                    >
                       <EditIcon size={16} />
                     </button>
                     <button
@@ -109,6 +142,56 @@ const UserManagement = () => {
               ))}
             </tbody>
           </table>
+
+          {/* Modal chỉnh sửa */}
+          {modalOpen && (
+            <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <h2 className="text-2xl font-bold mb-4">Edit User</h2>
+                <label className="block mb-2">Role:</label>
+                <select
+                  className="w-full border p-2 mb-4 rounded"
+                  value={formData.role}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="nutritionist">Nutritionist</option>
+                </select>
+                <label className="block mb-2">Status:</label>
+                <select
+                  className="w-full border p-2 mb-4 rounded"
+                  value={formData.isBan ? "inactive" : "active"}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      isBan: e.target.value === "inactive",
+                    })
+                  }
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                    onClick={() => setModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                    onClick={handleSaveChanges}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Pagination */}
           <div className="p-4 flex justify-between items-center">
             <div className="flex items-center space-x-2">

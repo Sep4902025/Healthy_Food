@@ -38,7 +38,9 @@ const AuthService = {
 
   googleAuth: async (token) => {
     try {
-      const response = await axiosInstance.post("/users/login-google", { idToken: token });
+      const response = await axiosInstance.post("/users/login-google", {
+        idToken: token,
+      });
       if (response.data.token) {
         localStorage.setItem("token", response.data.token);
       }
@@ -71,13 +73,18 @@ const AuthService = {
       };
     } catch (error) {
       console.error("Lỗi đăng ký:", error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || "Đăng ký thất bại, vui lòng thử lại");
+      throw new Error(
+        error.response?.data?.message || "Đăng ký thất bại, vui lòng thử lại"
+      );
     }
   },
 
   verifyOTP: async (email, otp) => {
     try {
-      const response = await axiosInstance.post("/users/verify", { email, otp });
+      const response = await axiosInstance.post("/users/verify", {
+        email,
+        otp,
+      });
       return response.data;
     } catch (error) {
       console.error("Lỗi xác thực OTP:", error.response?.data || error);
@@ -90,7 +97,10 @@ const AuthService = {
       const response = await axiosInstance.post("/users/resend-otp", { email });
       return response.data;
     } catch (error) {
-      console.error("Lỗi gửi lại OTP:", error.response?.data?.message || error.message);
+      console.error(
+        "Lỗi gửi lại OTP:",
+        error.response?.data?.message || error.message
+      );
       throw error;
     }
   },
@@ -124,7 +134,9 @@ const AuthService = {
       console.error("Lỗi đăng nhập:", error.response?.data || error.message);
       return {
         success: false,
-        message: error.response?.data?.message || "Đăng nhập thất bại, vui lòng thử lại",
+        message:
+          error.response?.data?.message ||
+          "Đăng nhập thất bại, vui lòng thử lại",
       };
     }
   },
@@ -146,9 +158,35 @@ const AuthService = {
     }
   },
 
+  changePassword: async ({ oldPassword, newPassword, confirmPassword }) => {
+    try {
+      console.log("Request gửi lên:", {
+        oldPassword,
+        newPassword,
+        confirmPassword,
+      });
+
+      const response = await axiosInstance.post(
+        "/users/change-password",
+        { oldPassword, newPassword, confirmPassword },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      console.log("Response từ server:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi đổi mật khẩu:", error.response?.data || error.message);
+      throw error.response?.data || error;
+    }
+  },
+
   forgetPassword: async (email) => {
     try {
-      const response = await axiosInstance.post("/users/forget-password", { email });
+      const response = await axiosInstance.post("/users/forget-password", {
+        email,
+      });
       return response.data;
     } catch (error) {
       console.error("Lỗi quên mật khẩu:", error);

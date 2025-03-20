@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
 import { FaUser, FaUpload, FaCheck, FaBan } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "./EditUser.css"; // Reusing EditUser CSS
 import UserService from "../../services/user.service";
+import { updateUserSuccess } from "../../store/slices/authSlice";
 
 const EditAdmin = () => {
   const location = useLocation();
+  const dispatch = useDispatch();
   const userData = location.state?.user || {};
   const { id } = useParams();
   const navigate = useNavigate();
@@ -154,14 +156,12 @@ const EditAdmin = () => {
         profileImage: user.profileImage,
       };
 
-      const userRole = "admin"; // Hoặc lấy từ context, redux, localStorage, v.v.
-
-      // Truyền thêm userRole vào UserService.updateUser
       const response = await UserService.updateUser(id, userData);
 
       if (response.success) {
+        dispatch(updateUserSuccess(response.user)); // Cập nhật Redux store
         toast.success("Admin profile updated successfully");
-        navigate("/admin/profile");
+        navigate("/admin/profile", { state: { updatedUser: response.user } });
       } else {
         toast.error(response.message || "Failed to update profile");
       }

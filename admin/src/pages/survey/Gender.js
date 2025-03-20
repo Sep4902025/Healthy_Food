@@ -52,7 +52,7 @@ const Gender = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={36.75} />
       </div>
       <h2 className="text-2xl font-bold text-center">Gender</h2>
       <p className="text-center text-gray-600">Select your gender</p>
@@ -68,8 +68,14 @@ const Gender = () => {
             }`}
             onClick={() => setSelectedGender(item.gender)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">{item.gender}</span>
-            <img src={item.img} alt={item.gender} className="w-16 h-16 rounded-full object-cover" />
+            <span className="text-lg font-semibold flex-1 text-left">
+              {item.gender}
+            </span>
+            <img
+              src={item.img}
+              alt={item.gender}
+              className="w-16 h-16 rounded-full object-cover"
+            />
           </div>
         ))}
       </div>

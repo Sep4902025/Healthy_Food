@@ -52,11 +52,13 @@ const LongOfPlan = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={73.5} />
       </div>
 
       <h2 className="text-2xl font-bold text-center">Long Of Plan</h2>
-      <p className="text-center text-gray-600">How long do you want to use the plan?</p>
+      <p className="text-center text-gray-600">
+        How long do you want to use the plan?
+      </p>
 
       <div className="space-y-4 mt-4">
         {longofplanGroups.map((item, index) => (
@@ -69,7 +71,9 @@ const LongOfPlan = () => {
             }`}
             onClick={() => setSelectedLongOfPlan(item.longofplan)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">{item.longofplan}</span>
+            <span className="text-lg font-semibold flex-1 text-left">
+              {item.longofplan}
+            </span>
           </div>
         ))}
       </div>

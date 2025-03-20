@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from "react";
 import termService from "../../../services/footer/termServices";
 import UploadComponent from "../../../components/UploadComponent";
+import {
+  PlusIcon,
+  EditIcon,
+  TrashIcon,
+  EyeOffIcon,
+  EyeIcon,
+} from "lucide-react";
 
 
 const TermOfUseManagement = () => {
@@ -11,10 +18,20 @@ const TermOfUseManagement = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [usersPerPage, setUsersPerPage] = useState(5);
 
   useEffect(() => {
     fetchTerms();
   }, []);
+
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentTerms = terms.slice(indexOfFirstUser, indexOfLastUser);
+
+  const paginate = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
 
   const fetchTerms = async () => {
     setLoading(true);
@@ -47,12 +64,22 @@ const TermOfUseManagement = () => {
     if (window.confirm("Are you sure you want to delete this term?")) {
       const response = await termService.hardDeleteTerm(id);
       if (response.success) {
-        setTerms(terms.filter((term) => term._id !== id)); // ✅ Cập nhật UI ngay lập tức
+        const updatedTerms = terms.filter((term) => term._id !== id);
+        setTerms(updatedTerms);
+  
+        // Tính lại tổng số trang
+        const totalPages = Math.ceil(updatedTerms.length / usersPerPage);
+  
+        // Nếu trang hiện tại không còn dữ liệu, quay về trang trước (nếu có)
+        if (currentPage > totalPages) {
+          setCurrentPage(totalPages > 0 ? totalPages : 1);
+        }
       } else {
         console.error("Error while deleting:", response.message);
       }
     }
   };
+  
 
   const handleOpenModal = (item = null) => {
     if (item) {
@@ -69,11 +96,11 @@ const TermOfUseManagement = () => {
     if (!formData.bannerUrl.trim()) {
       alert("Banner cannot be empty!");
       return;
-  }
-  if (!formData.content.trim()) {
+    }
+    if (!formData.content.trim()) {
       alert("Content cannot be empty!");
       return;
-  }
+    }
 
     let response;
     if (editData) {
@@ -97,11 +124,14 @@ const TermOfUseManagement = () => {
 
   const handleImageUpload = (imageUrl) => {
     setFormData({ ...formData, bannerUrl: imageUrl });
-};
+  };
+
+  if (loading) return <p className="text-center text-blue-500">Loading...</p>;
+  if (error) return <p className="text-center text-red-500">Error: {error}</p>;
 
   return (
-    <div className="container mx-auto px-6 py-12">
-      <h1 className="text-3xl font-bold text-green-700 mb-6">Terms of Use Management</h1>
+    <div className="container mx-auto px-4">
+      <h1 className="text-2xl font-bold">Terms of Use Management</h1>
 
       <button
         className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
@@ -110,53 +140,67 @@ const TermOfUseManagement = () => {
         + Add new
       </button>
 
-      {loading && <p className="text-center text-blue-500">Loading...</p>}
-      {error && <p className="text-center text-red-500">Error: {error}</p>}
-
-      <div className="bg-white shadow-lg rounded-lg p-6">
-        <table className="w-full border-collapse border border-gray-300">
+      <div className="bg-white shadow-lg rounded-2xl p-6">
+        <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-gray-200">
-              <th className="border border-gray-300 p-2">No.</th>
-              <th className="border border-gray-300 p-2">Banner</th>
-              <th className="border border-gray-300 p-2">Content</th>
-              <th className="border border-gray-300 p-2">Action</th>
+            <tr className="bg-gray-100 text-gray-700">
+              <th className="p-3 text-left">No.</th>
+              <th className="p-3 text-left">Banner</th>
+              <th className="p-3 text-left">Content</th>
+              <th className="p-3 text-center">Status</th>
+              <th className="p-3 text-center">Action</th>
             </tr>
           </thead>
           <tbody>
-            {terms.length > 0 ? (
-              terms.map((item, index) => (
-                <tr key={index} className="text-center border border-gray-300">
-                  <td className="p-2">{index + 1}</td>
-                  <td className="p-2">
+            {currentTerms.length > 0 ? (
+              currentTerms.map((item, index) => (
+                <tr key={index} className="border-b border-gray-200 text-gray-900">
+                  <td className="p-3">{index + 1}</td>
+                  <td className="p-3">
                     <img
                       src={item.bannerUrl}
                       alt="Banner"
                       className="w-20 h-12 object-cover rounded"
                     />
                   </td>
-                  <td className="p-2 text-left">{item.content}</td>
-                  <td className="p-2">
-                    <div className="flex justify-center space-x-2">
+                  <td className="p-3 text-left">{item.content}</td>
+                  <td className="p-3 text-center">
+                    <span
+                      className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold ${item.isVisible
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                        }`}
+                    >
+                      {item.isVisible ? "Visible" : "Hidden"}
+                    </span>
+                  </td>
+                  <td className="p-3 text-center">
+                    <div className="flex items-center justify-center space-x-2">
+                      {/* Nút chỉnh sửa */}
                       <button
-                        className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
                         onClick={() => handleOpenModal(item)}
                       >
-                        Edit
+                        <EditIcon size={16} />
                       </button>
+
+                      {/* Nút Ẩn/Hiện */}
                       <button
-                        className={`px-2 py-1 text-white rounded transition ${
-                          item.isVisible ? "bg-gray-500" : "bg-green-500"
-                        }`}
+                        className={`p-2 rounded-full text-white ${item.isVisible
+                          ? "bg-gray-500 hover:bg-gray-600"
+                          : "bg-green-500 hover:bg-green-600"
+                          }`}
                         onClick={() => handleToggleVisibility(item)}
                       >
-                        {item.isVisible ? "Hidden" : "Visible"}
+                        {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
                       </button>
+
+                      {/* Nút Xóa vĩnh viễn */}
                       <button
-                        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                        className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
                         onClick={() => handleHardDelete(item._id)}
                       >
-                        Delete
+                        <TrashIcon size={16} />
                       </button>
                     </div>
                   </td>
@@ -165,12 +209,61 @@ const TermOfUseManagement = () => {
             ) : (
               <tr>
                 <td colSpan="4" className="text-center text-gray-500 p-4">
-                No terms.
+                  No terms.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+
+        {/* Pagination */}
+        <div className="p-4 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <span>Show</span>
+            <select
+              className="border rounded px-2 py-1"
+              onChange={(e) => setUsersPerPage(Number(e.target.value))}
+            >
+              <option value="5">5 Terms</option>
+              <option value="10">10 Terms</option>
+              <option value="15">15 Terms</option>
+            </select>
+          </div>
+          <div className="flex space-x-2">
+            <button
+              className="border rounded px-3 py-1 hover:bg-gray-100"
+              onClick={() => paginate(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              &lt;
+            </button>
+            {Array.from(
+              { length: Math.ceil(terms.length / usersPerPage) },
+              (_, i) => (
+                <button
+                  key={i}
+                  className={`px-3 py-1 rounded ${currentPage === i + 1
+                    ? "bg-green-500 text-white"
+                    : "border hover:bg-gray-100"
+                    }`}
+                  onClick={() => paginate(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              )
+            )}
+
+            <button
+              className="border rounded px-3 py-1 hover:bg-gray-100"
+              onClick={() => paginate(currentPage + 1)}
+              disabled={
+                currentPage === Math.ceil(terms.length / usersPerPage)
+              }
+            >
+              &gt;
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Modal Form */}
