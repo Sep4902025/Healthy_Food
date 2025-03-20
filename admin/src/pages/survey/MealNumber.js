@@ -53,12 +53,14 @@ const MealNumber = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={68.25} />
       </div>
 
       {/* Title & description */}
       <h2 className="text-2xl font-bold text-center">Meal Number</h2>
-      <p className="text-center text-gray-600">How many meals do you eat per day?</p>
+      <p className="text-center text-gray-600">
+        How many meals do you eat per day?
+      </p>
 
       {/* Meal options */}
       <div className="space-y-4 mt-4">
@@ -72,7 +74,9 @@ const MealNumber = () => {
             }`}
             onClick={() => setSelectedMealNumber(item.mealnumber)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">{item.mealnumber}</span>
+            <span className="text-lg font-semibold flex-1 text-left">
+              {item.mealnumber}
+            </span>
           </div>
         ))}
       </div>

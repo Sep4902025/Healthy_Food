@@ -6,7 +6,7 @@ const { isAuthenticated, isAdmin, isNutritionist } = require("../middlewares/isA
 // Import Controllers
 const { getAllFAQs, createFAQ, updateFAQ, hardDeleteFAQ } = require("../controllers/footer/faqController");
 const { getAllAboutUs, createAboutUs, updateAboutUs, hardDeleteAboutUs } = require("../controllers/footer/aboutController");
-const { getAllContactUs, createContactUs, hardDeleteContactUs } = require("../controllers/footer/contactController");
+const { getAllContactUs,updateContactUs,createContactUs, hardDeleteContactUs } = require("../controllers/footer/contactController");
 const { getAllTerms, createTerm, updateTerm, hardDeleteTerm } = require("../controllers/footer/termController");
 
 // APIs FAQs
@@ -23,9 +23,10 @@ router.delete("/about/hard/:id",isAuthenticated, isAdmin, hardDeleteAboutUs); //
 
 // APIs ContactUs
 router.get("/contact", getAllContactUs);
-router.post("/contact", createContactUs);
-// router.put("/contact/:id", updateContactUs);
-router.delete("/contact/hard/:id",isAuthenticated, hardDeleteContactUs); // Xóa cứng
+router.delete("/contact/hard/:id",isAuthenticated, isAdmin, hardDeleteContactUs); // Xóa cứng
+router.put("/contact/:id",isAuthenticated, isAdmin, updateContactUs);
+router.post("/contact",isAuthenticated, createContactUs);
+
 
 // APIs TermsOfUse
 router.get("/terms", getAllTerms);

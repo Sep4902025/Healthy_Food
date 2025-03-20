@@ -57,18 +57,18 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
 
   const menuItems = [
     { icon: <HomeIcon size={20} />, name: "Dashboard" },
-    { icon: <ShoppingCartIcon size={20} />, name: "Order Management" },
+    // { icon: <ShoppingCartIcon size={20} />, name: "Order Management" },
     { icon: <BookOpenIcon size={20} />, name: "Meal Plan" },
     {
       icon: <UserIcon size={20} />,
       name: "User Management",
     },
-    {
-      icon: <BarChartIcon size={20} />,
-      name: "Analytics",
-    },
-    { icon: <HelpCircleIcon size={20} />, name: "Quiz Management" },
-    { icon: <BookOpenIcon size={20} />, name: "Dish Preferences" },
+    // {
+    //   icon: <BarChartIcon size={20} />,
+    //   name: "Analytics",
+    // },
+    // { icon: <HelpCircleIcon size={20} />, name: "Quiz Management" },
+    // { icon: <BookOpenIcon size={20} />, name: "Dish Preferences" },
     {
       icon: <HelpCircleIcon size={20} />,
       name: "Footer Management",
@@ -79,7 +79,7 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
         "Term of Use Management",
       ],
     },
-    { icon: <SettingsIcon size={20} />, name: "User Interface" },
+    // { icon: <SettingsIcon size={20} />, name: "User Interface" },
   ];
 
   const toggleSubmenu = (menuName) => {
@@ -90,7 +90,7 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
   };
 
   return (
-    <div className="flex flex-col bg-gray-50 min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gray-100">
       <Header />
       <div className="flex-grow flex">
         {/* Sidebar */}
@@ -104,18 +104,14 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
               <div key={item.name}>
                 <div
                   className={`flex items-center p-3 cursor-pointer rounded hover:bg-green-50 ${
-                    activeMenu === item.name
-                      ? "bg-green-100 text-green-600"
-                      : "text-gray-600"
+                    activeMenu === item.name ? "bg-green-100 text-green-600" : "text-gray-600"
                   }`}
                   onClick={() => handleMenuClick(item)}
                 >
                   <span className="mr-3">{item.icon}</span>
                   <span className="flex-grow">{item.name}</span>
                   {item.submenus && (
-                    <span className="ml-auto">
-                      {openSubmenus[item.name] ? "▲" : "▼"}
-                    </span>
+                    <span className="ml-auto">{openSubmenus[item.name] ? "▲" : "▼"}</span>
                   )}
                 </div>
                 {item.submenus && openSubmenus[item.name] && (
@@ -124,9 +120,7 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
                       <div
                         key={submenu}
                         className={`p-2 cursor-pointer rounded hover:bg-green-50 ${
-                          activeMenu === submenu
-                            ? "bg-green-100 text-green-600"
-                            : "text-gray-600"
+                          activeMenu === submenu ? "bg-green-100 text-green-600" : "text-gray-600"
                         }`}
                         onClick={() => handleSubmenuClick(item.name, submenu)}
                       >
@@ -139,7 +133,6 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
             ))}
           </nav>
         </div>
-
         {/* Main Content */}
         <div className="flex-grow p-6 bg-white shadow">
           <Outlet />

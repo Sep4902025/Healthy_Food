@@ -46,7 +46,7 @@ const WeightGoal = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={30} />
+        <ProgressBar progress={31.5} />
       </div>
 
       {/* Tiêu đề và mô tả */}

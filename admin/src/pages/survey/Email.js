@@ -40,7 +40,7 @@ const Email = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={15.75} />
       </div>
 
       <h2 className="text-2xl font-bold text-center">Email</h2>

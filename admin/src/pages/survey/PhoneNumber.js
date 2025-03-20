@@ -57,12 +57,14 @@ const PhoneNumber = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={20} />
+        <ProgressBar progress={10.5} />
       </div>
 
       {/* Title & description */}
       <h2 className="text-2xl font-bold text-center">Phone Number</h2>
-      <p className="text-center text-gray-600">Please enter your phone number</p>
+      <p className="text-center text-gray-600">
+        Please enter your phone number
+      </p>
 
       {/* Input field */}
       <div className="mt-4">

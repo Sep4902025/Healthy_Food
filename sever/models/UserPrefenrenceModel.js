@@ -68,6 +68,10 @@ const userPreferenceSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    activityLevel: {
+      type: Number,
+      default: 0,
+    },
     gender: {
       type: String,
       default: null,
@@ -94,8 +98,5 @@ const userPreferenceSchema = new mongoose.Schema(
   }
 );
 
-const UserPreferenceModel = mongoose.model(
-  "UserPreferenceModel",
-  userPreferenceSchema
-);
+const UserPreferenceModel = mongoose.model("UserPreferenceModel", userPreferenceSchema);
 module.exports = UserPreferenceModel;

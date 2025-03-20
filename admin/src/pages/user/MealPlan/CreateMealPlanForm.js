@@ -98,10 +98,9 @@ const CreateMealPlanForm = ({ userId, onSuccess }) => {
         onChange={(e) => setDuration(Number(e.target.value))}
         className="input-field"
       >
-        <option value={3}>3 ngày</option>
-        <option value={5}>5 ngày</option>
         <option value={7}>7 ngày</option>
         <option value={14}>14 ngày</option>
+        <option value={14}>30 ngày</option>
       </select>
 
       {/* Danh sách bữa ăn - Chỉ hiển thị nếu type === "fixed" */}

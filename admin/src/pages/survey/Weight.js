@@ -46,7 +46,7 @@ const Weight = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={20} /> {/* Điều chỉnh progress theo flow */}
+        <ProgressBar progress={21} /> {/* Điều chỉnh progress theo flow */}
       </div>
 
       {/* Tiêu đề và mô tả */}

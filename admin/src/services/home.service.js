@@ -33,9 +33,7 @@ const HomeService = {
 
   getIngredientsByType: async (type) => {
     try {
-      const response = await axiosInstance.get(
-        `/Home/ingredients/type/${type}`
-      );
+      const response = await axiosInstance.get(`/Home/ingredients/type/${type}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching ingredients for type ${type}:`, error);
@@ -85,24 +83,22 @@ const HomeService = {
 
   getFavoriteDishes: async (userId) => {
     try {
-        const response = await axiosInstance.get(`/favoriteDishes/${userId}`);
-        console.log("UserId", userId)
-        if (response.data.status === "success") {
-            return response.data.data
-                .filter((item) => item.isLike) // 🔥 Chỉ lấy món có isLike = true
-                .map((item) => ({
-                    dishId: item.dishId._id, 
-                    isLike: item.isLike 
-                }));
-        }
-        return [];
+      const response = await axiosInstance.get(`/favoriteDishes/${userId}`);
+      console.log("UserId", userId);
+      if (response.data.status === "success") {
+        return response.data.data
+          .filter((item) => item.isLike) // 🔥 Chỉ lấy món có isLike = true
+          .map((item) => ({
+            dishId: item.dishId._id,
+            isLike: item.isLike,
+          }));
+      }
+      return [];
     } catch (error) {
-        console.error("Lỗi khi tải danh sách yêu thích:", error);
-        return [];
+      console.error("Lỗi khi tải danh sách yêu thích:", error);
+      return [];
     }
-},
-
-
+  },
 
   // 🟢 Toggle Like / Unlike món ăn
   toggleFavoriteDish: async (userId, dishId, isLiked) => {
@@ -118,9 +114,6 @@ const HomeService = {
       return isLiked; // Nếu lỗi, giữ nguyên trạng thái cũ
     }
   },
-
 };
-
-
 
 export default HomeService;
