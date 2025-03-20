@@ -39,150 +39,12 @@ code {
 }
 
 /* Custome Homepage */
-.home-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 100vh;
-  padding: 20px;
-  background-color: #ffffff; /* Tailwind's bg-gray-100 */
-}
-
-.home-content {
-  flex: 1;
-  padding: 20px;
-}
-
-.home-picture {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-
-
-.text-green {
-  color: #39db4a;
-}
-
-.home-title-s {
-  padding: 20px;
-  font-size: 32px; /* Adjust the font size as needed */
-  font-weight: 700;
-  color: #000000; /* Tailwind's text-gray-800 */
-  text-align: left;
-}
-
-.home-description {
-  padding-top: 50px;
-  font-size: 18px;
-  text-align: left;
-  width: 80%;
-}
-
-.btn-discover {
-  margin: 20px 0;
-  background-color: #549a0a;
-  padding: 15px 30px;
-  border-radius: 100px;
-}
-
-.cate-title {
-  font-size: 60px;
-  font-weight: 800;
-  color: #000000;
-  text-align: center;
-}
-
-.cate-list {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.cate-item {
-  width: 300px;
-  height: 300px;
-  margin: 50px 0px;
-}
-
-.cate-i-container {
-  background-color: #c1f1c6;
-  width: 153px;
-  height: 153px;
-  border-radius: 100px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
 
 .center-con {
   display: flex;
   justify-content: center;
   align-items: center;
 }
-
-.cate-item-title {
-  font-size: 30px;
-  font-weight: 500;
-  text-align: center;
-}
-
-.cate-item-count {
-  font-size: 22px;
-  font-weight: 400;
-  color: #555555;
-}
-
-/* food css */
-.food-slogan {
-  font-size: 50px;
-  text-align: left;
-  color: #ff6868;
-  margin-left: 80px;
-}
-
-.food-title-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: space-between;
-  margin: 20px 0;
-}
-
-.food-title {
-  font-size: 60px;
-  font-weight: 800;
-  color: #000000;
-  width: 100%;
-  text-align: center;
-  margin: 20px 40px 20px 80px;
-}
-
-.food-btn-slide {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  width: 15%;
-}
-
-.food-btn-s {
-  background-color: #39db4a;
-  width: 80px;
-  height: 80px;
-  border-radius: 100px;
-}
-
-.food-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: space-between;
-  margin: 20px 40px 20px 80px;
-}
-
-
-
 .food-i-container {
   width: 80%;
   height: 70%;
@@ -203,7 +65,14 @@ code {
   color: #555555;
   text-align: left;
   margin-left: 46px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Số dòng tối đa */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
 }
+
 .food-item-rating {
   display: flex;
   justify-content: space-between;

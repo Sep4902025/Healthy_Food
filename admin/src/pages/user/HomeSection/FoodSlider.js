@@ -4,10 +4,10 @@ import "swiper/css";
 import "swiper/css/navigation";
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
-import HomeService from "../../services/home.service";
+import HomeService from "../../../services/home.service";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import commentService from "./../../services/comment.service";
+import commentService from "../../../services/comment.service";
 
 const FoodSlider = ({ userId, dishes = [] }) => {
   const swiperRef = useRef(null);
@@ -95,7 +95,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
         <ChevronLeft size={24} />
       </button>
 
-      <div className="w-full max-w-6xl mx-auto px-4">
+      <div className="px-4">
       <Swiper
         modules={[Navigation]}
         breakpoints={{
@@ -116,7 +116,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
               {/* Nút Like (Chỉ hiển thị, không có sự kiện onClick) */}
               <div className="food-like-container flex items-center justify-center">
                 <div
-                  className="w-[87px] h-[75px] bg-[#39da49] rounded-tr-[37.5px] rounded-bl-[42.5px] flex items-center justify-center relative"
+                  className="w-[87px] h-[75px] bg-[#40B491] rounded-tr-[37.5px] rounded-bl-[42.5px] flex items-center justify-center relative"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleLike(food._id);
