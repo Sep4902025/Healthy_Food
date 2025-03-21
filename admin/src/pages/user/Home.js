@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import homePicture from "../../assets/images/homePic.png";
 import HomeService from "../../services/home.service";
 import FoodSlider from "./HomeSection/FoodSlider";
-import CategorySection from "./HomeSection/CategorySection";
+import SeasonSection from "./HomeSection/SeasonSection";
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
 
@@ -12,6 +12,9 @@ const Home = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
   const userId = useSelector(selectAuth)?.user?._id;
+  const [selectedSeason, setSelectedSeason] = useState("All seasons");
+  const filteredSeasonDishes = dishes.filter(dish => dish.season === selectedSeason);
+
 
   useEffect(() => {
     const fetchDishes = async () => {
@@ -72,14 +75,14 @@ const Home = () => {
 
         <hr className="w-full border-t border-gray-300 my-6" />
 
-        <FoodByCateSection/>
+        {/* Category Section */}
+        <SeasonSection onSelectSeason={setSelectedSeason} />
 
         <hr className="w-full border-t border-gray-300 my-6" />
 
-        {/* Category Section */}
-        <CategorySection />
+        <FoodByCateSection userId={userId} selectedSeason={selectedSeason} dishes={filteredSeasonDishes}/>
 
-        
+        <hr className="w-full border-t border-gray-300 my-6" />
       </div>
     </div>
   );

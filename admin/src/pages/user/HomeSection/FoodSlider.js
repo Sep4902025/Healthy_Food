@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import commentService from "../../../services/comment.service";
 
+
 const FoodSlider = ({ userId, dishes = [] }) => {
   const swiperRef = useRef(null);
   const [likedFoods, setLikedFoods] = useState([]);
