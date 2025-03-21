@@ -7,14 +7,15 @@ import SeasonSection from "./HomeSection/SeasonSection";
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
 
-import FoodByCateSection from './HomeSection/FoodByCateSection';
+import FoodBySeasonSection from "./HomeSection/FoodBySeasonSection";
 const Home = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
   const userId = useSelector(selectAuth)?.user?._id;
   const [selectedSeason, setSelectedSeason] = useState("All seasons");
-  const filteredSeasonDishes = dishes.filter(dish => dish.season === selectedSeason);
-
+  const filteredSeasonDishes = dishes.filter(
+    (dish) => dish.season === selectedSeason
+  );
 
   useEffect(() => {
     const fetchDishes = async () => {
@@ -59,8 +60,10 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Danh sách món ăn từ API */}
+      <hr className="w-full border-t border-gray-300 my-6" />
+
       <div>
+        {/* Danh sách món ăn từ API */}
         <h3 className="p-10 text-2xl md:text-2xl lg:text-[50px] font-extrabold leading-normal text-[#ff6868]">
           Recommended Dishes
         </h3>
@@ -70,17 +73,18 @@ const Home = () => {
             Standout Foods From Our Menu
           </h1>
         </div>
-
         <FoodSlider userId={userId} dishes={dishes} />
-
         <hr className="w-full border-t border-gray-300 my-6" />
 
-        {/* Category Section */}
+        {/* Season Section */}
         <SeasonSection onSelectSeason={setSelectedSeason} />
-
         <hr className="w-full border-t border-gray-300 my-6" />
 
-        <FoodByCateSection userId={userId} selectedSeason={selectedSeason} dishes={filteredSeasonDishes}/>
+        <FoodBySeasonSection
+          userId={userId}
+          selectedSeason={selectedSeason}
+          dishes={filteredSeasonDishes}
+        />
 
         <hr className="w-full border-t border-gray-300 my-6" />
       </div>
