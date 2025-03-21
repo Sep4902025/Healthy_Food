@@ -1,20 +1,43 @@
 import React, { useState, useEffect } from "react";
 import UserService from "../../../services/user.service";
-import { useNavigate } from "react-router-dom";
-import { EditIcon, TrashIcon, PlusIcon } from "lucide-react";
+import { EditIcon, TrashIcon, SearchIcon } from "lucide-react";
 import { toast } from "react-toastify";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ role: "user", isBan: false });
   const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage, setUsersPerPage] = useState(5);
+  const [usersPerPage, setUsersPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(""); 
+  const [roleFilter, setRoleFilter] = useState("all"); 
 
-  const navigate = useNavigate(); // Hook để điều hướng
+  // Hàm lấy danh sách người dùng từ API
+  const fetchUsers = async (page, limit) => {
+    const result = await UserService.getAllUsers(page, limit);
+    if (result.success) {
+      setUsers(result.users);
+      setTotalPages(result.totalPages);
+      setCurrentPage(result.currentPage);
+    }
+  };
+
+  // Gọi API khi component mount hoặc khi page/usersPerPage thay đổi
+  useEffect(() => {
+    fetchUsers(currentPage, usersPerPage);
+  }, [currentPage, usersPerPage]);
+
+  // Hàm chuyển trang
+  const paginate = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -22,6 +45,7 @@ const UserManagement = () => {
       const response = await UserService.getAllUsers();
       if (response.success) {
         setUsers(response.users);
+        setFilteredUsers(response.users); // Khởi tạo filteredUsers
       } else {
         setError(response.message);
       }
@@ -30,6 +54,31 @@ const UserManagement = () => {
 
     fetchUsers();
   }, []);
+
+  // Hàm xử lý search và filter
+  useEffect(() => {
+    let result = [...users];
+
+    // Search theo username, email, phoneNumber
+    if (searchTerm) {
+      result = result.filter(
+        (user) =>
+          user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.userPreferenceId?.phoneNumber
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter theo role
+    if (roleFilter !== "all") {
+      result = result.filter((user) => user.role === roleFilter);
+    }
+
+    setFilteredUsers(result);
+    setCurrentPage(1); // Reset về trang 1 khi search/filter
+  }, [searchTerm, roleFilter, users]);
 
   const handleOpenEditModal = (user) => {
     setEditData(user);
@@ -55,15 +104,18 @@ const UserManagement = () => {
 
     if (result.success) {
       toast.success("Cập nhật user thành công!");
-      console.log("Cập nhật user thành công:", result.user);
       setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user._id === editData._id ? { ...user, ...updatedUser } : user
+        )
+      );
+      setFilteredUsers((prevUsers) =>
         prevUsers.map((user) =>
           user._id === editData._id ? { ...user, ...updatedUser } : user
         )
       );
     } else {
       toast.error(`Cập nhật user thất bại: ${result.message}`);
-      console.error("Cập nhật user thất bại:", result.message);
     }
 
     setModalOpen(false);
@@ -71,24 +123,51 @@ const UserManagement = () => {
 
   const handleDeleteUser = (_id) => {
     setUsers((prevUsers) => prevUsers.filter((user) => user._id !== _id));
+    setFilteredUsers((prevUsers) =>
+      prevUsers.filter((user) => user._id !== _id)
+    );
   };
 
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
 
   if (loading) return <p>Loading users...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div className="flex h-screen">
-      {/* Main Content */}
       <div className="flex-grow p-6 bg-gray-100 overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">User Management</h1>
         </div>
+
+        {/* Search bar và Filter */}
+        <div className="mb-6 flex gap-4">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search by username, email, or phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <SearchIcon
+              size={20}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+          </div>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="all">All Roles</option>
+            <option value="user">User</option>
+            <option value="nutritionist">Nutritionist</option>
+          </select>
+        </div>
+
         <div className="bg-white rounded-lg shadow-md">
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
@@ -103,16 +182,15 @@ const UserManagement = () => {
             </thead>
             <tbody>
               {currentUsers.map((user) => (
-                <tr key={user.id} className="border-b hover:bg-gray-50">
-                  <td
-                    className="p-4 text-left cursor-pointer"
-                  >
+                <tr key={user._id} className="border-b hover:bg-gray-50">
+                  <td className="p-4 text-left cursor-pointer">
                     {user.username}
                   </td>
-                  <td className="p-4 text-left">{user.phone}</td>
+                  <td className="p-4 text-left">
+                    {user.userPreferenceId?.phoneNumber || "N/A"}
+                  </td>
                   <td className="p-4 text-left">{user.email}</td>
                   <td className="p-4 text-left">{user.role}</td>
-
                   <td className="p-4 text-left">
                     <span
                       className={`px-3 py-1 rounded-full text-xs ${
@@ -198,6 +276,7 @@ const UserManagement = () => {
               <span>Show</span>
               <select
                 className="border rounded px-2 py-1"
+                value={usersPerPage}
                 onChange={(e) => setUsersPerPage(Number(e.target.value))}
               >
                 <option value="5">5 Users</option>
@@ -211,32 +290,27 @@ const UserManagement = () => {
                 onClick={() => paginate(currentPage - 1)}
                 disabled={currentPage === 1}
               >
-                &lt;
+                {"<"}
               </button>
-              {Array.from(
-                { length: Math.ceil(users.length / usersPerPage) },
-                (_, i) => (
-                  <button
-                    key={i}
-                    className={`px-3 py-1 rounded ${
-                      currentPage === i + 1
-                        ? "bg-green-500 text-white"
-                        : "border hover:bg-gray-100"
-                    }`}
-                    onClick={() => paginate(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                )
-              )}
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === i + 1
+                      ? "bg-green-500 text-white"
+                      : "border hover:bg-gray-100"
+                  }`}
+                  onClick={() => paginate(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
               <button
                 className="border rounded px-3 py-1 hover:bg-gray-100"
                 onClick={() => paginate(currentPage + 1)}
-                disabled={
-                  currentPage === Math.ceil(users.length / usersPerPage)
-                }
+                disabled={currentPage === totalPages}
               >
-                &gt;
+                {">"}
               </button>
             </div>
           </div>
