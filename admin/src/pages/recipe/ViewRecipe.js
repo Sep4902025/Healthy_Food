@@ -34,10 +34,11 @@ const RecipeApp = () => {
         setDish(dishResponse.data);
 
         const ingredientPromises = recipeResponse.data.ingredients.map((item) =>
-          IngredientService.getIngredientById(item.ingredientId)
+          IngredientService.getIngredientById(item.ingredientId._id)
         );
         const ingredientResults = await Promise.all(ingredientPromises);
         setIngredients(ingredientResults.map((res) => res.data.data));
+        
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
       }
@@ -120,7 +121,7 @@ const RecipeApp = () => {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recipe.ingredients.map((item, index) => {
-            const ingredient = ingredients.find((ing) => ing._id === item.ingredientId);
+            const ingredient = ingredients.find((ing) => ing._id === item.ingredientId._id);
             return ingredient ? (
               <div key={index} className="flex items-center bg-gray-50 rounded-lg p-4 shadow-md">
                 <img
