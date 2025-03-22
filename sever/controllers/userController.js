@@ -6,9 +6,7 @@ const mongoose = require("mongoose");
 
 // 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await UserModel.find({ isDelete: false }).populate(
-    "userPreferenceId"
-  );
+  const users = await UserModel.find({ isDelete: false }).populate("userPreferenceId");
 
   res.status(200).json({
     status: "success",
@@ -53,22 +51,14 @@ exports.updateUserById = catchAsync(async (req, res, next) => {
   });
 });
 
-
-
-
-
-
-
 // 📌 Xóa người dùng (Soft Delete) - chỉ xóa nếu user chưa bị xóa trước đó
 exports.deleteUser = catchAsync(async (req, res, next) => {
   const user = await UserModel.findByIdAndUpdate(
-    
     req.params.id,
-   
+
     { isDelete: true },
-   
+
     { new: true }
-  
   );
 
   if (!user) {
@@ -84,13 +74,11 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 // 🟢 Restore user (Chỉ admin)
 exports.restoreUser = catchAsync(async (req, res, next) => {
   const user = await UserModel.findByIdAndUpdate(
-    
     req.params.id,
-   
+
     { isDelete: false },
-   
+
     { new: true }
-  
   );
 
   if (!user) return next(new AppError("User not found", 404));
