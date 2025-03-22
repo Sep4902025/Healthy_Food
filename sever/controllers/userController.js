@@ -6,11 +6,34 @@ const mongoose = require("mongoose");
 
 // 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await UserModel.find({ isDelete: false }).populate("userPreferenceId");
+  // Lấy các query parameters từ request
+  const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
+  const limit = parseInt(req.query.limit) || 10; // Mặc định 10 users mỗi trang
+  const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
+
+  const currentAdminId = req.user?._id;
+
+  // Điều kiện lọc: không bao gồm người dùng đã xóa và không phải admin đang đăng nhập
+  const query = {
+    isDelete: false,
+    _id: { $ne: currentAdminId }, // Loại trừ admin đang đăng nhập
+  };
+
+  // Đếm tổng số người dùng thỏa mãn điều kiện
+  const totalUsers = await UserModel.countDocuments(query);
+
+  // Lấy danh sách người dùng với phân trang
+  const users = await UserModel.find(query).skip(skip).limit(limit).populate("userPreferenceId");
+
+  // Tính tổng số trang
+  const totalPages = Math.ceil(totalUsers / limit);
 
   res.status(200).json({
     status: "success",
     results: users.length,
+    total: totalUsers,
+    totalPages: totalPages,
+    currentPage: page,
     data: { users },
   });
 });
