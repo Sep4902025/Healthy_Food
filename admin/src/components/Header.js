@@ -12,6 +12,7 @@ import { logoutUser } from "../store/actions/authActions";
 import { DarkModeContext } from "../pages/context/DarkModeContext";
 import ReminderNotification from "./Reminder/ReminderNotifiaction";
 import PreviewModal from "../pages/user/MealPlan/PreviewModal";
+import HomeService from "../services/home.service";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -62,10 +63,8 @@ const Header = () => {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-
   useEffect(() => {
-
-    console.log("user data", user)
+    console.log("user data", user);
     if (user?.userPreferenceId) {
       setHasCompletedQuiz(true);
     } else {
@@ -115,7 +114,7 @@ const Header = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await mealPlanService.getIngredientsGroupedByType();
+        const response = await HomeService.getIngredientsGroupedByType();
         if (response.status === "success") {
           setCategories(response.data.map((group) => group._id));
         }
@@ -129,7 +128,7 @@ const Header = () => {
   useEffect(() => {
     const fetchDishTypes = async () => {
       try {
-        const response = await mealPlanService.getDishesGroupedByType();
+        const response = await HomeService.getDishesGroupedByType();
         if (response.status === "success") {
           setDishTypes(response.data.map((group) => group._id));
         }
