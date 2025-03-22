@@ -60,25 +60,17 @@ const Header = () => {
     [location.pathname]
   );
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+
   useEffect(() => {
-    const checkUserQuizStatus = async () => {
-      if (user) {
-        try {
-          const response = await quizService.getUserPreference(user._id);
-          if (response.data.status === "success") {
-            setHasCompletedQuiz(true);
-          } else {
-            setHasCompletedQuiz(false);
-          }
-        } catch (error) {
-          console.error("Error fetching quiz status:", error);
-          setHasCompletedQuiz(false);
-        }
-      } else {
-        setHasCompletedQuiz(false);
-      }
-    };
-    checkUserQuizStatus();
+
+    console.log("user data", user)
+    if (user?.userPreferenceId) {
+      setHasCompletedQuiz(true);
+    } else {
+      setHasCompletedQuiz(false);
+    }
   }, [user]);
 
   useEffect(() => {

@@ -79,6 +79,7 @@ const AppRoutes = () => {
         <Route path="reset-password" element={<ResetPassword />} />
         <Route index element={<Home />} />
         <Route path="viewprofile" element={<ViewProfile />} />
+        <Route path="viewquiz" element={<ViewQuiz />} />
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
         {/* Router mealPlan */}

@@ -3,7 +3,6 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { useParams } from "react-router-dom";
 import RecipeService from "../../services/recipe.service";
-
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
 import commentService from "./../../services/comment.service";
@@ -34,12 +33,12 @@ const RecipeApp = () => {
         setDish(dishResponse.data);
 
         const ingredientPromises = recipeResponse.data.ingredients.map((item) =>
-          IngredientService.getIngredientById(item.ingredientId)
+          IngredientService.getIngredientById(item.ingredientId._id)
         );
         const ingredientResults = await Promise.all(ingredientPromises);
         setIngredients(ingredientResults.map((res) => res.data.data));
       } catch (error) {
-        console.error("Lỗi khi tải dữ liệu:", error);
+        console.error("Error loading data:", error);
       }
     };
 
@@ -48,7 +47,7 @@ const RecipeApp = () => {
         const response = await commentService.getRatingsByRecipe(recipeId);
         setRatings(response.data);
       } catch (error) {
-        console.error("Lỗi khi tải đánh giá:", error);
+        console.error("Error loading ratings:", error);
       }
     };
 
@@ -56,42 +55,40 @@ const RecipeApp = () => {
     fetchRatings();
   }, [recipeId]);
 
-  if (!recipe || !dish)
-    return <p className="text-center mt-10 text-gray-500">Không tìm thấy công thức!</p>;
+  if (!recipe || !dish) return <p className="text-center mt-10 text-gray-500">Recipe not found!</p>;
 
   const handleRateRecipe = async () => {
     try {
       const response = await commentService.rateRecipe(recipeId, user?._id, rating);
 
       if (response.success) {
-        toast.success(`Rating thành công ⭐`);
+        toast.success(`Rating successful ⭐`);
 
-        // Lấy thông tin người dùng từ Redux (hoặc API nếu cần)
-
+        // Get user info from Redux (or API if needed)
         setRatings((prevRatings) => {
-          // Kiểm tra xem người dùng đã có đánh giá trước đó chưa
+          // Check if the user has already rated
           const existingIndex = prevRatings.findIndex((r) => r.userId._id === user?._id);
 
           const newRating = {
             ...response.data.data,
-            userId: { _id: user._id, email: user.email }, // Thêm tên
+            userId: { _id: user._id, email: user.email }, // Add name
           };
 
           if (existingIndex !== -1) {
-            // Nếu đã có, cập nhật đánh giá cũ
+            // If exists, update the old rating
             const updatedRatings = [...prevRatings];
             updatedRatings[existingIndex] = newRating;
             return updatedRatings;
           }
 
-          // Nếu chưa có, thêm mới vào danh sách
+          // If not, add a new one to the list
           return [...prevRatings, newRating];
         });
       } else {
-        toast.error("Lỗi khi gửi đánh giá");
+        toast.error("Error submitting rating");
       }
     } catch (error) {
-      console.error("Lỗi khi gửi đánh giá:", error);
+      console.error("Error submitting rating:", error);
     }
   };
 
@@ -106,32 +103,33 @@ const RecipeApp = () => {
         />
 
         <p className="text-gray-700 text-lg mb-4 text-center">{dish.description}</p>
-        <p className="text-gray-600 mt-1">🍽 Loại: {dish.type} </p>
-        <p className="text-gray-700 text-lg mb-4 text-center">🌞 Mùa: {dish.season}</p>
+        <p className="text-gray-600 mt-1">🍽 Type: {dish.type} </p>
+        <p className="text-gray-700 text-lg mb-4 text-center">🌞 Season: {dish.season}</p>
         <p className="text-lg font-semibold flex items-center justify-center mt-3 text-gray-800">
-          <Timer className="w-5 h-5 mr-2 text-gray-600" /> Thời gian nấu: {recipe.cookingTime} phút
+          <Timer className="w-5 h-5 mr-2 text-gray-600" /> Cooking time: {recipe.cookingTime}{" "}
+          minutes
         </p>
       </div>
 
-      {/* Danh sách nguyên liệu */}
+      {/* Ingredients List */}
       <div className="bg-white shadow-xl rounded-2xl p-6 max-w-3xl w-full mt-8">
         <h3 className="text-2xl font-bold text-gray-800 mb-4">
-          🍽️ Nguyên liệu cho {recipe.totalServing} người ăn
+          🍽️ Ingredients for {recipe.totalServing} servings
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recipe.ingredients.map((item, index) => {
-            const ingredient = ingredients.find((ing) => ing._id === item.ingredientId);
+            const ingredient = ingredients.find((ing) => ing._id === item.ingredientId._id);
             return ingredient ? (
               <div key={index} className="flex items-center bg-gray-50 rounded-lg p-4 shadow-md">
                 <img
-                  src={Salad}
+                  src={ingredient.imageUrl}
                   alt={ingredient.name}
                   className="w-16 h-16 object-cover rounded-full mr-4"
                 />
                 <div>
                   <h4 className="font-semibold text-gray-900">{ingredient.name}</h4>
                   <p className="text-gray-600">
-                    Số lượng: {item.quantity} {item.unit}
+                    Quantity: {item.quantity} {item.unit}
                   </p>
                 </div>
               </div>
@@ -140,19 +138,18 @@ const RecipeApp = () => {
         </div>
       </div>
 
-      {/* Card thông tin dinh dưỡng */}
+      {/* Nutrition Info Card */}
       <Card className="mt-6 max-w-3xl w-full bg-white p-6 rounded-xl shadow-md">
-        <h3 className="text-2xl font-bold mb-4">🍏 Thông tin dinh dưỡng</h3>
-
+        <h3 className="text-2xl font-bold mb-4">🍏 Nutrition Information</h3>
         <p className="text-gray-700">
           🔥 {recipe.totalCalories} cal | 🥩 {recipe.totalProtein}g Protein | 🥑 {recipe.totalFat}g
           Fat | 🌾 {recipe.totalCarbs}g
         </p>
       </Card>
 
-      {/* Card hướng dẫn nấu ăn */}
+      {/* Cooking Instructions Card */}
       <Card className="mt-6 max-w-3xl w-full bg-white p-6 rounded-xl shadow-md">
-        <h3 className="text-2xl font-bold mb-4">📖 Hướng dẫn nấu ăn</h3>
+        <h3 className="text-2xl font-bold mb-4">📖 Cooking Instructions</h3>
         <ol className="list-decimal pl-5 text-gray-700">
           {recipe.instruction?.map((step) => (
             <li key={step._id} className="mb-2 flex items-start">
@@ -164,11 +161,10 @@ const RecipeApp = () => {
 
       <div className="w-full max-w-3xl mt-6 bg-white p-6 rounded-lg shadow-md">
         <div className="mt-6 bg-gray-100 p-4 rounded-xl shadow-md">
-          {/* Phần đánh giá sao */}
+          {/* Rating Section */}
           <label className="block mb-2 text-lg font-semibold text-gray-700">
-            ⭐ Đánh giá món ăn:
+            ⭐ Rate this dish:
           </label>
-
           <div className="relative">
             <select
               value={rating}
@@ -177,30 +173,27 @@ const RecipeApp = () => {
             >
               {[1, 2, 3, 4, 5].map((star) => (
                 <option key={star} value={star}>
-                  {`⭐`.repeat(star)} {star} sao
+                  {`⭐`.repeat(star)} {star} stars
                 </option>
               ))}
             </select>
-
             <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
               ⭐
             </div>
           </div>
-
           <Button
             onClick={handleRateRecipe}
             className="mt-4 w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg shadow-md transition-all duration-300"
           >
-            🚀 Gửi đánh giá
+            🚀 Submit Rating
           </Button>
         </div>
 
-        {/* Phần hiển thị đánh giá */}
+        {/* Reviews Display Section */}
         <div className="mt-6 bg-white p-4 rounded-xl shadow-md">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">📢 Đánh giá từ người dùng</h3>
-
+          <h3 className="text-xl font-bold text-gray-800 mb-4">📢 User Reviews</h3>
           {ratings.length === 0 ? (
-            <p className="text-gray-500 text-center">Chưa có đánh giá nào.</p>
+            <p className="text-gray-500 text-center">No reviews yet.</p>
           ) : (
             ratings.map((review, index) => (
               <div key={index} className="border-b border-gray-200 pb-4 mb-4">
@@ -209,7 +202,7 @@ const RecipeApp = () => {
                   <div>
                     <p className="font-semibold text-gray-800">{review.userId?.email}</p>
                     <p className="text-sm text-gray-500 text-left">
-                      {new Date(review.updatedAt || review.createdAt).toLocaleDateString("vi-VN", {
+                      {new Date(review.updatedAt || review.createdAt).toLocaleDateString("en-US", {
                         day: "2-digit",
                         month: "2-digit",
                         year: "numeric",
@@ -217,8 +210,7 @@ const RecipeApp = () => {
                     </p>
                   </div>
                 </div>
-
-                {/* Hiển thị số sao đã đánh giá */}
+                {/* Display rated stars */}
                 <div className="flex mt-2">
                   {[...Array(5)].map((_, i) => (
                     <span
@@ -231,7 +223,6 @@ const RecipeApp = () => {
                     </span>
                   ))}
                 </div>
-
                 <p className="text-gray-700 mt-2">{review.comment}</p>
               </div>
             ))
