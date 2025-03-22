@@ -17,7 +17,9 @@ const createSendToken = (user, statusCode, res, message) => {
   const token = signToken(user._id);
 
   const cookieOptions = {
-    expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+    ),
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "Lax",
@@ -77,7 +79,9 @@ exports.signup = catchAsync(async (req, res, next) => {
     // Xóa user nếu có lỗi gửi email
     await UserModel.findByIdAndDelete(newUser._id);
 
-    return next(new AppError("There is an error sending the email. Try again", 500));
+    return next(
+      new AppError("There is an error sending the email. Try again", 500)
+    );
   }
 });
 
@@ -154,7 +158,12 @@ exports.resendOTP = catchAsync(async (req, res, next) => {
     user.otp = undefined;
     user.otpExpires = undefined;
     await user.save({ validateBeforeSave: false });
-    return next(new AppError("There was an error sending the email. Please try again.", 500));
+    return next(
+      new AppError(
+        "There was an error sending the email. Please try again.",
+        500
+      )
+    );
   }
 });
 
@@ -257,7 +266,12 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
     user.otpExpires = undefined;
     await user.save({ validateBeforeSave: false });
 
-    return next(new AppError("There was an error sending the email. Try again later!", 500));
+    return next(
+      new AppError(
+        "There was an error sending the email. Try again later!",
+        500
+      )
+    );
   }
 });
 // Reset Password
@@ -286,11 +300,33 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res, "Password reset successfully!");
 });
 
+exports.changePassword = catchAsync(async (req, res, next) => {
+  const { currentPassword, newPassword, newPasswordConfirm } = req.body;
+
+  if (!currentPassword || !newPassword || !newPasswordConfirm) {
+    return next(new AppError("Please provide all required fields", 400));
+  }
+
+  const user = await UserModel.findById(req.user.id).select("+password");
+
+  if (!user || !(await user.correctPassword(currentPassword, user.password))) {
+    return next(new AppError("Current password is incorrect", 401));
+  }
+
+  user.password = newPassword;
+  user.passwordConfirm = newPasswordConfirm;
+  await user.save();
+
+  createSendToken(user, 200, res, "Password changed successfully!");
+});
+
 //
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return next(new AppError("You do not have permission to perform this action", 403));
+      return next(
+        new AppError("You do not have permission to perform this action", 403)
+      );
     }
     next();
   };

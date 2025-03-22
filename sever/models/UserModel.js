@@ -101,6 +101,19 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+// 🚫 Kiểm tra chỉ cho phép 1 admin
+userSchema.pre("save", async function (next) {
+  if (this.role !== "admin" || this.isModified("role") === false) return next();
+
+  const adminCount = await mongoose
+    .model("User")
+    .countDocuments({ role: "admin" });
+  if (adminCount >= 1 && this.isNew) {
+    return next(new Error("Hệ thống chỉ cho phép 1 tài khoản admin"));
+  }
+  next();
+});
+
 // ✅ Kiểm tra password khi đăng nhập thường
 userSchema.methods.correctPassword = async function (
   candidatePassword,
