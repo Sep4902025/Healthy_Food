@@ -22,7 +22,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.description.trim()) newErrors.description = "Description is required";
     if (!formData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required";
@@ -30,11 +30,13 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
     if (formData.flavor.length === 0) newErrors.flavor = "At least one flavor is required";
     if (!formData.type) newErrors.type = "Type is required";
     if (!formData.season) newErrors.season = "Season is required";
-    
+
     if (formData.videoUrl) {
-      const youtubeEmbedRegex = /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
+      const youtubeEmbedRegex =
+        /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
       if (!youtubeEmbedRegex.test(formData.videoUrl)) {
-        newErrors.videoUrl = "Video URL must be a valid YouTube embed link (e.g., https://www.youtube.com/embed/video_id)";
+        newErrors.videoUrl =
+          "Video URL must be a valid YouTube embed link (e.g., https://www.youtube.com/embed/video_id)";
       }
     }
 
@@ -67,7 +69,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
     let value = e.target.value;
     value = value.replace(/[^0-9]/g, "");
     value = value === "" ? "" : parseInt(value, 10);
-    
+
     if (value < 0 || isNaN(value)) value = 0;
     else if (value > 1440) value = 1440;
 
@@ -86,7 +88,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
       ...formData,
       flavor: formData.flavor.join(", "),
     });
-    
+
     if (response.success) {
       alert("Dish added successfully!");
       setFormData({
@@ -112,10 +114,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
       <div className="flex items-center mb-6 py-4">
         <label className="text-xl font-bold mb-4">Add new dish</label>
         <div className="ml-auto">
-          <button
-            onClick={handleSubmit}
-            className="bg-green-500 text-white px-4 py-2 rounded-md"
-          >
+          <button onClick={handleSubmit} className="bg-green-500 text-white px-4 py-2 rounded-md">
             Save Dish
           </button>
         </div>
@@ -131,14 +130,18 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter dish name"
-              className={`w-full border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+              className={`w-full border ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cooking Time (minutes)*</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cooking Time (minutes)*
+              </label>
               <input
                 type="number"
                 name="cookingTime"
@@ -148,9 +151,13 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                 placeholder="Time for cooking"
                 min="1"
                 max="1440"
-                className={`w-full border ${errors.cookingTime ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                className={`w-full border ${
+                  errors.cookingTime ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
               />
-              {errors.cookingTime && <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>}
+              {errors.cookingTime && (
+                <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
@@ -158,11 +165,15 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                className={`w-full border ${errors.type ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                className={`w-full border ${
+                  errors.type ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
               >
                 <option value="">Select Type</option>
                 {TYPE_OPTIONS.map((type) => (
-                  <option key={type} value={type}>{type}</option>
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
                 ))}
               </select>
               {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
@@ -177,7 +188,9 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
               value={formData.videoUrl}
               onChange={handleChange}
               placeholder="https://www.youtube.com/embed/video_id"
-              className={`w-full border ${errors.videoUrl ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+              className={`w-full border ${
+                errors.videoUrl ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
             />
             {errors.videoUrl && <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>}
           </div>
@@ -188,11 +201,15 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
               name="season"
               value={formData.season}
               onChange={handleChange}
-              className={`w-full border ${errors.season ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+              className={`w-full border ${
+                errors.season ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
             >
               <option value="">Select Season</option>
               {SEASON_OPTIONS.map((season) => (
-                <option key={season} value={season}>{season}</option>
+                <option key={season} value={season}>
+                  {season}
+                </option>
               ))}
             </select>
             {errors.season && <p className="text-red-500 text-sm mt-1">{errors.season}</p>}
@@ -227,8 +244,18 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                 />
               ) : (
                 <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  <svg
+                    className="w-8 h-8 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    ></path>
                   </svg>
                 </div>
               )}
@@ -246,7 +273,9 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                 value={formData.imageUrl}
                 onChange={(e) => handleImageUpload(e.target.value)}
                 placeholder="Enter image URL"
-                className={`w-full border ${errors.imageUrl ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                className={`w-full border ${
+                  errors.imageUrl ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
               />
               {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
             </div>
@@ -256,7 +285,9 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="mb-4">
             <div className="flex border-b border-gray-200 justify-center">
-              <label className="block text-sm font-medium text-gray-700 mb-1 text-center">Description *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
+                Description *
+              </label>
             </div>
           </div>
           <div className="mb-4">
@@ -265,9 +296,13 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
               value={formData.description}
               onChange={handleChange}
               placeholder="Enter description"
-              className={`w-full border ${errors.description ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
+              className={`w-full border ${
+                errors.description ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
             ></textarea>
-            {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+            {errors.description && (
+              <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+            )}
           </div>
         </div>
       </div>

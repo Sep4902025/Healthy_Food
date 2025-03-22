@@ -61,7 +61,6 @@ import AddUser from "../pages/admin/pages/AddUserManagement";
 import AdminProfile from "../pages/user/AdminProfile";
 import EditAdmin from "../pages/user/EditAdmin";
 import ChangePassword from "../pages/user/Profile/Sections/ChangePassword";
-
 import TableMedicalConditions from "../pages/nutritionist/Medical Condition Management/TableMedicalConditions";
 import AddMedicalCondition from "../pages/nutritionist/Medical Condition Management/AddMedicalCondition";
 import CreateMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/CreateMealPlanPage";
@@ -79,7 +78,7 @@ const AppRoutes = () => {
         <Route path="reset-password" element={<ResetPassword />} />
         <Route index element={<Home />} />
         <Route path="viewprofile" element={<ViewProfile />} />
-        <Route path="viewquiz" element={<ViewQuiz />} />
+
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
         {/* Router mealPlan */}
