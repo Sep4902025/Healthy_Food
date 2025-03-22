@@ -415,58 +415,69 @@ exports.toggleMealPlanStatus = async (req, res) => {
     if (typeof isPause !== "boolean") {
       return res.status(400).json({
         success: false,
-        message: "Trạng thái isPause phải là true hoặc false",
+        message: "isPause must be true or false",
       });
     }
 
-    // Tìm MealPlan
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan not found" });
     }
 
-    // Kiểm tra quyền
     if (
       mealPlan.userId.toString() !== userId.toString() &&
       mealPlan.createdBy.toString() !== userId.toString()
     ) {
       return res.status(403).json({
         success: false,
-        message: "Bạn không có quyền cập nhật MealPlan này",
+        message: "You do not have permission to update this MealPlan",
       });
     }
 
-    // Nếu MealPlan đã bị khóa và người dùng không phải là nutritionist
     if (mealPlan.isBlock && mealPlan.createdBy.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
-        message: "MealPlan đang bị khóa, bạn không thể thay đổi trạng thái",
+        message: "MealPlan is locked, you cannot change its status",
       });
     }
 
-    // Không cần cập nhật nếu trạng thái không thay đổi
     if (mealPlan.isPause === isPause) {
       return res.status(200).json({
         success: true,
-        message: `MealPlan đã ở trạng thái ${isPause ? "tạm dừng" : "hoạt động"}`,
+        message: `MealPlan is already ${isPause ? "paused" : "active"}`,
         data: mealPlan,
       });
     }
 
-    // Cập nhật trạng thái
     mealPlan.isPause = isPause;
     await mealPlan.save();
 
-    // Cập nhật trạng thái của tất cả reminder và job liên quan
-    await updateRemindersForMealPlan(mealPlanId, isPause);
+    // Update reminders, but don't let this fail the entire request
+    let reminderError = null;
+    try {
+      await updateRemindersForMealPlan(mealPlanId, isPause);
+    } catch (error) {
+      console.error("🔥 Error updating reminders for MealPlan:", error);
+      reminderError = error.message;
+    }
+
+    if (reminderError) {
+      return res.status(200).json({
+        success: true,
+        message: `MealPlan has been ${
+          isPause ? "paused" : "resumed"
+        } successfully, but failed to update reminders: ${reminderError}`,
+        data: mealPlan,
+      });
+    }
 
     res.status(200).json({
       success: true,
-      message: `MealPlan đã được ${isPause ? "tạm dừng" : "tiếp tục"} thành công`,
+      message: `MealPlan has been ${isPause ? "paused" : "resumed"} successfully`,
       data: mealPlan,
     });
   } catch (error) {
-    console.error("🔥 Lỗi khi thay đổi trạng thái MealPlan:", error);
+    console.error("🔥 Error while changing MealPlan status:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -510,7 +521,7 @@ const updateRemindersForMealPlan = async (mealPlanId, isPaused) => {
           reminder.jobId = job.attrs._id;
           reminder.status = "scheduled";
         } else {
-          reminder.status = "expired";
+          reminder.status = "cancelled"; // Use 'cancelled' instead of 'expired'
         }
       }
 

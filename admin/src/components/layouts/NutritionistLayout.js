@@ -140,7 +140,7 @@ const NutritionistLayout = () => {
         </div>
 
         {/* Main Content */}
-        <div className="w-3/4 bg-white shadow overflow-y-auto">
+        <div className="w-3/4 bg-white shadow">
           <Outlet />
         </div>
       </div>

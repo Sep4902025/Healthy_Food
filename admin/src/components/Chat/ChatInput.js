@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { FiPaperclip, FiSend } from "react-icons/fi";
 
 const ChatInput = ({
@@ -9,13 +9,30 @@ const ChatInput = ({
   isUploading,
   onCancelUpload,
 }) => {
-  const [text, setText] = React.useState("");
+  const [text, setText] = useState("");
+  const [previewUrl, setPreviewUrl] = useState(null); // State for the preview URL
+
+  // Generate a preview URL when a file is selected
+  useEffect(() => {
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setPreviewUrl(url);
+
+      // Cleanup the URL when the component unmounts or the file changes
+      return () => {
+        URL.revokeObjectURL(url);
+        setPreviewUrl(null);
+      };
+    }
+  }, [selectedFile]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (text.trim() || selectedFile) {
       onSendMessage(text);
       setText("");
+      setSelectedFile(null); // Clear the file after sending
+      setPreviewUrl(null); // Clear the preview
     }
   };
 
@@ -23,6 +40,11 @@ const ChatInput = ({
     if (e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
     }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
   };
 
   return (
@@ -41,14 +63,44 @@ const ChatInput = ({
         </div>
       )}
       {selectedFile && !isUploading && (
-        <div className="mb-2 text-sm text-gray-500">
-          File: {selectedFile.name}
-          <button
-            onClick={() => setSelectedFile(null)}
-            className="ml-2 text-red-500 hover:underline"
-          >
-            Remove
-          </button>
+        <div className="mb-2">
+          {/* Display preview for image or video */}
+          {previewUrl && (
+            <div className="relative w-32 h-32 mb-2">
+              {selectedFile.type.startsWith("image/") ? (
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              ) : selectedFile.type.startsWith("video/") ? (
+                <video
+                  src={previewUrl}
+                  controls
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              ) : (
+                <p className="text-sm text-gray-500">
+                  File: {selectedFile.name} (Preview not available)
+                </p>
+              )}
+              {/* Remove button overlay */}
+              <button
+                onClick={handleRemoveFile}
+                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          {!previewUrl && (
+            <div className="text-sm text-gray-500">
+              File: {selectedFile.name}
+              <button onClick={handleRemoveFile} className="ml-2 text-red-500 hover:underline">
+                Remove
+              </button>
+            </div>
+          )}
         </div>
       )}
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
@@ -59,6 +111,7 @@ const ChatInput = ({
             className="hidden"
             onChange={handleFileChange}
             disabled={isUploading}
+            accept="image/*,video/*" // Restrict to images and videos
           />
         </label>
         <input

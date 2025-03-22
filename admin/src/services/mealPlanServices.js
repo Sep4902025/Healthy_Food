@@ -312,20 +312,33 @@ const mealPlanService = {
   // Status MealPlan Pause/Resume
   toggleMealPlanStatus: async (mealPlanId, isPause) => {
     try {
-      console.log(`📤 ${isPause ? "Tạm dừng" : "Tiếp tục"} MealPlan ID: ${mealPlanId}`);
+      console.log(`📤 ${isPause ? "Pausing" : "Resuming"} MealPlan ID: ${mealPlanId}`);
 
       const response = await api.patch(`/mealPlan/${mealPlanId}/toggle`, { isPause });
 
-      console.log(`✅ MealPlan đã được ${isPause ? "tạm dừng" : "tiếp tục"}:`, response.data);
-      return { success: true, data: response.data.data };
+      console.log(`✅ MealPlan has been ${isPause ? "paused" : "resumed"}:`, response.data);
+
+      // Check if the response indicates success, even if reminders failed
+      if (response.data.success) {
+        if (response.data.message.includes("failed to update reminders")) {
+          console.warn("⚠️ Reminders could not be updated:", response.data.message);
+        }
+        return { success: true, data: response.data.data };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || `Could not ${isPause ? "pause" : "resume"} MealPlan!`,
+        };
+      }
     } catch (error) {
       console.error(
-        `❌ Lỗi khi ${isPause ? "tạm dừng" : "tiếp tục"} MealPlan:`,
+        `❌ Error while ${isPause ? "pausing" : "resuming"} MealPlan:`,
         error.response?.data || error.message
       );
       return {
         success: false,
-        message: `Không thể ${isPause ? "tạm dừng" : "tiếp tục"} MealPlan!`,
+        message:
+          error.response?.data?.message || `Could not ${isPause ? "pause" : "resume"} MealPlan!`,
       };
     }
   },
