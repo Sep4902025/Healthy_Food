@@ -167,7 +167,9 @@ exports.vnpayReturn = async (req, res) => {
     console.log("Secure Hash tự ký lại:", signed);
 
     if (secureHash !== signed) {
-      return res.status(400).json({ status: "error", message: "Invalid signature" });
+      return res
+        .status(400)
+        .redirect("http://localhost:3000/mealplan?status=error&message=Invalid+signature");
     }
 
     // 🔹 Xử lý logic sau khi kiểm tra chữ ký thành công
@@ -184,7 +186,9 @@ exports.vnpayReturn = async (req, res) => {
     );
 
     if (!payment) {
-      return res.status(404).json({ status: "error", message: "Payment not found" });
+      return res
+        .status(404)
+        .redirect("http://localhost:3000/mealplan?status=error&message=Payment+not+found");
     }
 
     // Nếu thanh toán thành công
@@ -255,13 +259,14 @@ exports.vnpayReturn = async (req, res) => {
       }
     }
 
-    res.json({
-      status,
-      message: status === "success" ? "Thanh toán thành công!" : "Thanh toán thất bại!",
-    });
+    // Chuyển hướng về localhost:3000/mealplan với query parameters
+    const redirectUrl = `http://localhost:3000/mealplan?status=${status}&message=${
+      status === "success" ? "Thanh+toán+thành+công" : "Thanh+toán+thất+bại"
+    }`;
+    res.redirect(redirectUrl);
   } catch (error) {
     console.error("❌ Lỗi xử lý VNPay:", error);
-    res.status(500).json({ status: "error", message: "Lỗi xử lý phản hồi VNPAY" });
+    res.redirect("http://localhost:3000/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY");
   }
 };
 // Lấy lịch sử thanh toán của user
