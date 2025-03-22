@@ -3,14 +3,15 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import logo from "../assets/images/Logo.png";
-import HomeService from "../services/home.service";
 import quizService from "../services/quizService";
+import mealPlanService from "../services/mealPlanServices";
 import { FaSearch, FaBars, FaTimes, FaSignOutAlt } from "react-icons/fa";
 import { RiShoppingBag4Line } from "react-icons/ri";
 import { selectUser } from "../store/selectors/authSelectors";
 import { logoutUser } from "../store/actions/authActions";
 import { DarkModeContext } from "../pages/context/DarkModeContext";
 import ReminderNotification from "./Reminder/ReminderNotifiaction";
+import PreviewModal from "../pages/user/MealPlan/PreviewModal";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -19,14 +20,37 @@ const Header = () => {
   const user = useSelector(selectUser);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [cartMenuOpen, setCartMenuOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [dishTypes, setDishTypes] = useState([]);
   const { darkMode, toggleDarkMode } = useContext(DarkModeContext);
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mealPlans, setMealPlans] = useState([]);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [activeTab, setActiveTab] = useState("mealPlan");
   const userMenuRef = useRef(null);
+  const cartMenuRef = useRef(null);
 
-  // Function to check if a path is active
+  // Kiểm tra query parameters để hiển thị toast
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const paymentStatus = query.get("paymentStatus");
+    const message = query.get("message");
+
+    if (paymentStatus && message) {
+      if (paymentStatus === "success") {
+        toast.success(message);
+      } else {
+        toast.error(message);
+      }
+      // Xóa query parameters sau khi hiển thị toast
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate]);
+
   const isActive = useCallback(
     (path) => {
       if (path === "/" && location.pathname === "/") return true;
@@ -57,17 +81,49 @@ const Header = () => {
     checkUserQuizStatus();
   }, [user]);
 
-  const handleLogout = () => {
-    dispatch(logoutUser());
-    setHasCompletedQuiz(false);
-    navigate("/signin");
-    toast.success("Đăng xuất thành công!");
-  };
+  useEffect(() => {
+    const fetchUnpaidMealPlans = async () => {
+      if (user) {
+        try {
+          const response = await mealPlanService.getUnpaidMealPlanForUser(user._id);
+          if (response.success) {
+            console.log("Danh sách meal plans chưa thanh toán:", response.data);
+            setMealPlans(response.data);
+          } else {
+            setMealPlans([]);
+          }
+        } catch (error) {
+          console.error("Error fetching unpaid meal plans:", error);
+          setMealPlans([]);
+        }
+      }
+    };
+    fetchUnpaidMealPlans();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchPaymentHistory = async () => {
+      if (user) {
+        try {
+          const response = await mealPlanService.getPaymentHistory(user._id, 1, 5);
+          if (response.success) {
+            setPaymentHistory(response.data);
+          } else {
+            setPaymentHistory([]);
+          }
+        } catch (error) {
+          console.error("Error fetching payment history:", error);
+          setPaymentHistory([]);
+        }
+      }
+    };
+    fetchPaymentHistory();
+  }, [user]);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await HomeService.getIngredientsGroupedByType();
+        const response = await mealPlanService.getIngredientsGroupedByType();
         if (response.status === "success") {
           setCategories(response.data.map((group) => group._id));
         }
@@ -81,7 +137,7 @@ const Header = () => {
   useEffect(() => {
     const fetchDishTypes = async () => {
       try {
-        const response = await HomeService.getDishesGroupedByType();
+        const response = await mealPlanService.getDishesGroupedByType();
         if (response.status === "success") {
           setDishTypes(response.data.map((group) => group._id));
         }
@@ -94,14 +150,14 @@ const Header = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Handle dropdown menu close
       if (!event.target.closest(".dropdown-container")) {
         setActiveDropdown(null);
       }
-
-      // Handle user menu close
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
+      }
+      if (cartMenuRef.current && !cartMenuRef.current.contains(event.target)) {
+        setCartMenuOpen(false);
       }
     };
 
@@ -120,12 +176,58 @@ const Header = () => {
   };
 
   const toggleUserMenu = (e) => {
-    e.stopPropagation(); // Prevent event from bubbling up
+    e.stopPropagation();
     setUserMenuOpen(!userMenuOpen);
   };
 
+  const toggleCartMenu = (e) => {
+    e.stopPropagation();
+    setCartMenuOpen(!cartMenuOpen);
+  };
+
+  const handleLogout = () => {
+    dispatch(logoutUser());
+    setHasCompletedQuiz(false);
+    navigate("/signin");
+    toast.success("Đăng xuất thành công!");
+  };
+
+  const handlePayMealPlan = async (mealPlan) => {
+    try {
+      const response = await mealPlanService.createMealPlanPayment(
+        user._id,
+        mealPlan._id,
+        mealPlan.price || 1500000
+      );
+
+      if (response.success && response.paymentUrl) {
+        window.location.href = response.paymentUrl;
+      } else {
+        toast.error(response.message || "Không thể khởi tạo thanh toán");
+      }
+    } catch (error) {
+      console.error("Error initiating payment:", error);
+      toast.error("Lỗi khi khởi tạo thanh toán");
+    }
+  };
+
+  const handlePreviewMealPlan = async (mealPlan) => {
+    try {
+      const response = await mealPlanService.getMealPlanDetails(mealPlan._id);
+      if (response.success) {
+        setPreviewData(response.data);
+        setPreviewModalOpen(true);
+      } else {
+        toast.error(response.message || "Không thể tải thông tin xem trước");
+      }
+    } catch (error) {
+      console.error("Error fetching meal plan details:", error);
+      toast.error("Lỗi khi tải thông tin xem trước");
+    }
+  };
+
   return (
-    <div className="w-screen bg-white shadow-sm py-2 sticky top-0 z-50">
+    <div className="w-full bg-white shadow-sm py-2 sticky top-0 z-50">
       {/* Main Header */}
       <div className="flex items-center justify-between px-4">
         {/* Logo */}
@@ -184,7 +286,7 @@ const Header = () => {
           )}
         </div>
 
-        {/* Right Side - Search, Icons, User (some elements hidden on mobile) */}
+        {/* Right Side - Search, Icons, User */}
         <div className="flex items-center space-x-4">
           {/* Search Bar (hidden on small mobile) */}
           <div className="hidden sm:relative sm:block">
@@ -199,12 +301,116 @@ const Header = () => {
           {/* Icons & Auth */}
           {user ? (
             <div className="flex items-center space-x-4">
-              {/**Cart */}
-              <RiShoppingBag4Line />
+              {/* Cart Dropdown */}
+              <div className="relative" ref={cartMenuRef}>
+                <RiShoppingBag4Line className="cursor-pointer" onClick={toggleCartMenu} />
+                {cartMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white border rounded-lg shadow-lg z-10">
+                    {/* Tabs */}
+                    <div className="flex border-b">
+                      <button
+                        className={`flex-1 py-2 text-center ${
+                          activeTab === "mealPlan"
+                            ? "border-b-2 border-green-500 text-green-600"
+                            : "text-gray-600"
+                        }`}
+                        onClick={() => setActiveTab("mealPlan")}
+                      >
+                        Meal Plans
+                      </button>
+                      <button
+                        className={`flex-1 py-2 text-center ${
+                          activeTab === "history"
+                            ? "border-b-2 border-green-500 text-green-600"
+                            : "text-gray-600"
+                        }`}
+                        onClick={() => setActiveTab("history")}
+                      >
+                        Lịch sử thanh toán
+                      </button>
+                    </div>
 
-              {/* Đặt ReminderNotification ở góc phải trên */}
+                    {/* Tab Content */}
+                    <div className="p-4">
+                      {activeTab === "mealPlan" ? (
+                        mealPlans.length > 0 ? (
+                          <div className="max-h-48 overflow-y-auto">
+                            {mealPlans.map((mealPlan) => (
+                              <div key={mealPlan._id} className="border-b py-2 last:border-b-0">
+                                <p className="font-medium text-gray-700">Tên: {mealPlan.title}</p>
+                                <p className="text-sm text-gray-600">
+                                  Bắt đầu: {new Date(mealPlan.startDate).toLocaleDateString()}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  Giá: {(mealPlan.price || 1500000).toLocaleString()} VND
+                                </p>
+                                <div className="mt-2 flex space-x-2">
+                                  <button
+                                    onClick={() => handlePayMealPlan(mealPlan)}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-md text-sm font-medium"
+                                  >
+                                    Thanh toán ngay
+                                  </button>
+                                  <button
+                                    onClick={() => handlePreviewMealPlan(mealPlan)}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded-md text-sm font-medium"
+                                  >
+                                    Xem trước
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">
+                            Không có meal plan cần thanh toán.
+                          </p>
+                        )
+                      ) : (
+                        <div>
+                          {paymentHistory.length > 0 ? (
+                            <div className="max-h-48 overflow-y-auto">
+                              {paymentHistory.map((payment) => (
+                                <div
+                                  key={payment._id}
+                                  className="border-b py-2 text-sm text-gray-600"
+                                >
+                                  <p>
+                                    <strong>Meal Plan:</strong> {payment.mealPlanName || "N/A"}
+                                  </p>
+                                  <p>
+                                    <strong>Số tiền:</strong> {payment.amount.toLocaleString()} VND
+                                  </p>
+                                  <p>
+                                    <strong>Trạng thái:</strong> {payment.status}
+                                  </p>
+                                  <p>
+                                    <strong>Ngày:</strong>{" "}
+                                    {new Date(payment.createdAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              ))}
+                              <button
+                                onClick={() => navigate("/payment-history")}
+                                className="mt-2 w-full text-center text-blue-500 hover:underline"
+                              >
+                                Xem thêm
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500">Không có lịch sử thanh toán.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ReminderNotification */}
               <ReminderNotification userId={user?._id} />
 
+              {/* User Menu */}
               <div className="relative" ref={userMenuRef}>
                 <img
                   src={
@@ -249,6 +455,13 @@ const Header = () => {
           )}
         </div>
       </div>
+
+      {/* Preview Modal */}
+      <PreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        previewData={previewData}
+      />
 
       {/* Secondary Navigation - Categories (hidden on mobile) */}
       <div className="border-t mt-2 pt-2 hidden lg:block">
@@ -455,7 +668,82 @@ const Header = () => {
               <FaSearch className="absolute left-3 top-4 text-gray-500" />
             </div>
 
-            {/* User profile and logout on mobile when logged in */}
+            {/* Cart Menu on Mobile */}
+            {user && (
+              <div className="border-t pt-2">
+                <div className="py-2">
+                  <p className="font-medium text-gray-700">Giỏ hàng</p>
+                  {mealPlans.length > 0 ? (
+                    <div className="max-h-48 overflow-y-auto">
+                      {mealPlans.map((mealPlan) => (
+                        <div key={mealPlan._id} className="border-b py-2 last:border-b-0">
+                          <p className="text-sm text-gray-600">Tên: {mealPlan.title}</p>
+                          <p className="text-sm text-gray-600">
+                            Bắt đầu: {new Date(mealPlan.startDate).toLocaleDateString()}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Giá: {(mealPlan.price || 1500000).toLocaleString()} VND
+                          </p>
+                          <div className="mt-2 flex space-x-2">
+                            <button
+                              onClick={() => handlePayMealPlan(mealPlan)}
+                              className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-md text-sm font-medium"
+                            >
+                              Thanh toán ngay
+                            </button>
+                            <button
+                              onClick={() => handlePreviewMealPlan(mealPlan)}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded-md text-sm font-medium"
+                            >
+                              Xem trước
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Không có meal plan cần thanh toán.</p>
+                  )}
+                </div>
+                <div className="py-2 border-t">
+                  <p className="font-medium text-gray-700">Lịch sử thanh toán</p>
+                  {paymentHistory.length > 0 ? (
+                    <div className="max-h-48 overflow-y-auto">
+                      {paymentHistory.map((payment) => (
+                        <div key={payment._id} className="border-b py-2 text-sm text-gray-600">
+                          <p>
+                            <strong>Meal Plan:</strong> {payment.mealPlanName || "N/A"}
+                          </p>
+                          <p>
+                            <strong>Số tiền:</strong> {payment.amount.toLocaleString()} VND
+                          </p>
+                          <p>
+                            <strong>Trạng thái:</strong> {payment.status}
+                          </p>
+                          <p>
+                            <strong>Ngày:</strong>{" "}
+                            {new Date(payment.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          navigate("/payment-history");
+                          setMobileMenuOpen(false);
+                        }}
+                        className="mt-2 w-full text-center text-blue-500 hover:underline"
+                      >
+                        Xem thêm
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Không có lịch sử thanh toán.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* User profile and logout on mobile */}
             {user && (
               <div className="border-t pt-2">
                 <a

@@ -51,14 +51,10 @@ const UserService = {
         total: response.data.results,
       };
     } catch (error) {
-      console.error(
-        "Lỗi lấy danh sách người dùng:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi lấy danh sách người dùng:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể lấy danh sách người dùng",
+        message: error.response?.data?.message || "Không thể lấy danh sách người dùng",
       };
     }
   },
@@ -72,18 +68,30 @@ const UserService = {
         user: response.data.data.user,
       };
     } catch (error) {
-      console.error(
-        "Lỗi lấy thông tin người dùng:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi lấy thông tin người dùng:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể lấy thông tin người dùng",
+        message: error.response?.data?.message || "Không thể lấy thông tin người dùng",
       };
     }
   },
-
+  // Tìm kiếm người dùng theo email
+  searchUserByEmail: async (email) => {
+    try {
+      const response = await axiosInstance.get(`/users/search?email=${email}`);
+      return {
+        success: true,
+        users: response.data.data.users,
+        total: response.data.results,
+      };
+    } catch (error) {
+      console.error("Error searching users by email:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Unable to search users by email",
+      };
+    }
+  },
   // Lấy thông tin người dùng hiện tại
   getCurrentUser: async () => {
     try {
@@ -93,14 +101,10 @@ const UserService = {
         user: response.data.data.user,
       };
     } catch (error) {
-      console.error(
-        "Lỗi lấy thông tin người dùng:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi lấy thông tin người dùng:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể lấy thông tin người dùng",
+        message: error.response?.data?.message || "Không thể lấy thông tin người dùng",
       };
     }
   },
@@ -121,14 +125,10 @@ const UserService = {
         user: response.data.data.user,
       };
     } catch (error) {
-      console.error(
-        "❌ Lỗi khi cập nhật user:",
-        error.response?.data || error.message
-      );
+      console.error("❌ Lỗi khi cập nhật user:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Cập nhật thông tin thất bại!",
+        message: error.response?.data?.message || "Cập nhật thông tin thất bại!",
       };
     }
   },
@@ -143,10 +143,7 @@ const UserService = {
         user: response.data.data.user,
       };
     } catch (error) {
-      console.error(
-        "Lỗi cập nhật thông tin:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi cập nhật thông tin:", error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || "Cập nhật thông tin thất bại",
@@ -163,10 +160,7 @@ const UserService = {
         message: "Xóa người dùng thành công",
       };
     } catch (error) {
-      console.error(
-        "Lỗi xóa người dùng:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi xóa người dùng:", error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || "Không thể xóa người dùng",
@@ -184,14 +178,10 @@ const UserService = {
         user: response.data.data.user,
       };
     } catch (error) {
-      console.error(
-        "Lỗi khôi phục người dùng:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi khôi phục người dùng:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể khôi phục người dùng",
+        message: error.response?.data?.message || "Không thể khôi phục người dùng",
       };
     }
   },
@@ -215,10 +205,7 @@ const UserService = {
         token: response.data.token,
       };
     } catch (error) {
-      console.error(
-        "Lỗi thay đổi mật khẩu:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi thay đổi mật khẩu:", error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || "Thay đổi mật khẩu thất bại",
@@ -236,14 +223,10 @@ const UserService = {
         message: "Tài khoản đã được vô hiệu hóa",
       };
     } catch (error) {
-      console.error(
-        "Lỗi vô hiệu hóa tài khoản:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi vô hiệu hóa tài khoản:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể vô hiệu hóa tài khoản",
+        message: error.response?.data?.message || "Không thể vô hiệu hóa tài khoản",
       };
     }
   },
@@ -251,9 +234,7 @@ const UserService = {
   // Lấy lịch sử hoạt động
   getActivityHistory: async (page = 1, limit = 10) => {
     try {
-      const response = await axiosInstance.get(
-        `/users/activities?page=${page}&limit=${limit}`
-      );
+      const response = await axiosInstance.get(`/users/activities?page=${page}&limit=${limit}`);
       return {
         success: true,
         activities: response.data.data.activities,
@@ -261,14 +242,10 @@ const UserService = {
         currentPage: response.data.page,
       };
     } catch (error) {
-      console.error(
-        "Lỗi lấy lịch sử hoạt động:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi lấy lịch sử hoạt động:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể lấy lịch sử hoạt động",
+        message: error.response?.data?.message || "Không thể lấy lịch sử hoạt động",
       };
     }
   },
@@ -279,15 +256,11 @@ const UserService = {
       const formData = new FormData();
       formData.append("avatar", fileData);
 
-      const response = await axiosInstance.patch(
-        "/users/update-avatar",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await axiosInstance.patch("/users/update-avatar", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       return {
         success: true,
@@ -295,14 +268,10 @@ const UserService = {
         avatarUrl: response.data.data.user.photo,
       };
     } catch (error) {
-      console.error(
-        "Lỗi cập nhật ảnh đại diện:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi cập nhật ảnh đại diện:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Cập nhật ảnh đại diện thất bại",
+        message: error.response?.data?.message || "Cập nhật ảnh đại diện thất bại",
       };
     }
   },
@@ -310,9 +279,7 @@ const UserService = {
   // Lấy danh sách thông báo
   getNotifications: async (page = 1, limit = 10) => {
     try {
-      const response = await axiosInstance.get(
-        `/users/notifications?page=${page}&limit=${limit}`
-      );
+      const response = await axiosInstance.get(`/users/notifications?page=${page}&limit=${limit}`);
       return {
         success: true,
         notifications: response.data.data.notifications,
@@ -320,10 +287,7 @@ const UserService = {
         currentPage: response.data.page,
       };
     } catch (error) {
-      console.error(
-        "Lỗi lấy thông báo:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi lấy thông báo:", error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || "Không thể lấy thông báo",
@@ -334,22 +298,16 @@ const UserService = {
   // Đánh dấu thông báo đã đọc
   markNotificationAsRead: async (notificationId) => {
     try {
-      const response = await axiosInstance.patch(
-        `/users/notifications/${notificationId}`
-      );
+      const response = await axiosInstance.patch(`/users/notifications/${notificationId}`);
       return {
         success: true,
         message: "Đã đánh dấu thông báo là đã đọc",
       };
     } catch (error) {
-      console.error(
-        "Lỗi đánh dấu thông báo:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi đánh dấu thông báo:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể đánh dấu thông báo",
+        message: error.response?.data?.message || "Không thể đánh dấu thông báo",
       };
     }
   },
@@ -363,14 +321,10 @@ const UserService = {
         settings: response.data.data.settings,
       };
     } catch (error) {
-      console.error(
-        "Lỗi lấy thiết lập người dùng:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi lấy thiết lập người dùng:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể lấy thiết lập người dùng",
+        message: error.response?.data?.message || "Không thể lấy thiết lập người dùng",
       };
     }
   },
@@ -385,14 +339,10 @@ const UserService = {
         settings: response.data.data.settings,
       };
     } catch (error) {
-      console.error(
-        "Lỗi cập nhật thiết lập:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi cập nhật thiết lập:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể cập nhật thiết lập",
+        message: error.response?.data?.message || "Không thể cập nhật thiết lập",
       };
     }
   },

@@ -55,9 +55,8 @@ exports.getUserConversations = catchAsync(async (req, res) => {
 // Cập nhật trạng thái cuộc trò chuyện
 exports.updateStatusConversation = catchAsync(async (req, res) => {
   const { conversationId } = req.params;
-  const { nutritionistId } = req.body; // Lấy nutritionistId từ body
+  const { nutritionistId, status } = req.body; // Lấy thêm status từ body
 
-  // Kiểm tra đầu vào
   if (!conversationId || !nutritionistId) {
     return res.status(400).json({
       status: "fail",
@@ -65,7 +64,6 @@ exports.updateStatusConversation = catchAsync(async (req, res) => {
     });
   }
 
-  // Tìm cuộc trò chuyện
   const conversation = await Conversation.findById(conversationId);
   if (!conversation) {
     return res.status(404).json({
@@ -74,7 +72,7 @@ exports.updateStatusConversation = catchAsync(async (req, res) => {
     });
   }
 
-  // Nếu đã có nutritionistId => đã được nhận tư vấn, không thể check nữa
+  // Nếu đã có nutritionistId => không cho phép thay đổi trạng thái
   if (conversation.nutritionistId) {
     return res.status(400).json({
       status: "fail",
@@ -82,22 +80,27 @@ exports.updateStatusConversation = catchAsync(async (req, res) => {
     });
   }
 
-  // Nếu nutritionist chưa check trước đó, thêm vào danh sách checkedBy
-  if (!conversation.checkedBy.includes(nutritionistId)) {
+  // Cập nhật trạng thái và checkedBy
+  if (status === "checked" && !conversation.checkedBy.includes(nutritionistId)) {
     conversation.checkedBy.push(nutritionistId);
+    conversation.status = "checked"; // Cập nhật trạng thái thành "checked"
+    await conversation.save();
+  } else if (status === "active") {
+    conversation.nutritionistId = nutritionistId;
+    conversation.status = "active"; // Cập nhật trạng thái thành "active"
     await conversation.save();
   }
 
   res.status(200).json({
     status: "success",
-    message: "Conversation checked successfully",
+    message: "Conversation updated successfully",
     data: conversation,
   });
 });
 
 // Tạo tin nhắn mới
 exports.createMessage = catchAsync(async (req, res) => {
-  const { senderId, text, imageUrl, videoUrl } = req.body;
+  const { senderId, text, imageUrl, videoUrl, type } = req.body;
   const { conversationId } = req.params;
 
   // 1. Kiểm tra đầu vào
@@ -147,11 +150,12 @@ exports.createMessage = catchAsync(async (req, res) => {
     text,
     imageUrl,
     videoUrl,
+    type: type || "text", // Lưu trường type, mặc định là "text" nếu không có
   });
 
   // 6. Cập nhật conversation với tin nhắn mới nhất
   conversation.messages.push(message._id);
-  conversation.lastMessage = text || "New message";
+  conversation.lastMessage = text || imageUrl || videoUrl || "New message";
   conversation.updatedAt = Date.now();
   await conversation.save();
 
@@ -190,9 +194,8 @@ exports.getMessages = catchAsync(async (req, res) => {
 // Lấy các cuộc trò chuyện đã xem (Checked)
 // Controller xử lý lấy các cuộc trò chuyện nutritionist đã xem (Checked)
 exports.getCheckedConversations = catchAsync(async (req, res) => {
-  const { userId } = req.params; // userId ở đây là của nutritionist đang đăng nhập
+  const { userId } = req.params;
 
-  // Kiểm tra đầu vào
   if (!userId) {
     return res.status(400).json({
       status: "fail",
@@ -200,10 +203,9 @@ exports.getCheckedConversations = catchAsync(async (req, res) => {
     });
   }
 
-  // Lấy tất cả conversation có chứa userId trong checkedBy
   const checkedConversations = await Conversation.find({
-    checkedBy: userId, // Chỉ lấy những cuộc trò chuyện nutritionist này đã check
-    nutritionistId: null, // Chỉ lấy những cuộc trò chuyện chưa có ai nhận
+    checkedBy: userId,
+    status: "checked", // Chỉ lấy các cuộc trò chuyện có trạng thái "checked"
   }).populate("userId", "username email");
 
   res.status(200).json({
@@ -268,16 +270,9 @@ exports.getPendingConversations = catchAsync(async (req, res) => {
       .populate("nutritionistId", "name email")
       .exec();
 
-    if (!conversations || conversations.length === 0) {
-      return res.status(404).json({
-        status: "fail",
-        message: "No pending conversations found",
-      });
-    }
-
     res.status(200).json({
       status: "success",
-      data: conversations,
+      data: conversations || [], // Trả về mảng rỗng nếu không có dữ liệu
     });
   } catch (error) {
     console.error("Error fetching pending conversations:", error);

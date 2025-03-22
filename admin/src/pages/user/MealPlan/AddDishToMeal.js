@@ -10,7 +10,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const [isAdding, setIsAdding] = useState(false);
   const [existingDishes, setExistingDishes] = useState([]);
   const [favoriteDishes, setFavoriteDishes] = useState([]);
-  console.log("FDDDD", favoriteDishes);
+  console.log("FAVORITE_DISHES", favoriteDishes);
 
   const [activeFilter, setActiveFilter] = useState("all");
   const [dishTypes, setDishTypes] = useState([]);
@@ -40,23 +40,23 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
 
           setDishTypes(types);
         } else {
-          setError(dishesResponse.message || "Không thể lấy danh sách món ăn");
+          setError(dishesResponse.message || "Could not fetch dishes");
         }
 
         // Process meal data
         if (mealResponse.success && mealResponse.data && mealResponse.data.dishes) {
           setExistingDishes(mealResponse.data.dishes);
         }
-        console.log("FAV", favoritesResponse);
+        console.log("FAVORITES_RESPONSE", favoritesResponse);
         // Process favorites
         if (Array.isArray(favoritesResponse)) {
           const dishIds = favoritesResponse.map((dish) => dish.dishId);
-          console.log("Mapped Dish IDs:", dishIds); // Kiểm tra kết quả sau khi map
+          console.log("Mapped Dish IDs:", dishIds);
           setFavoriteDishes(dishIds);
         }
       } catch (error) {
-        console.error("❌ Lỗi khi lấy dữ liệu:", error);
-        setError("Không thể lấy dữ liệu món ăn");
+        console.error("❌ Error fetching data:", error);
+        setError("Could not fetch dishes data");
       } finally {
         setLoading(false);
       }
@@ -65,7 +65,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     fetchAllData();
   }, [mealPlanId, mealDayId, mealId, userId]);
 
-  // Kiểm tra xem món ăn đã có trong bữa ăn chưa
+  // Check if dish is already added to the meal
   const isDishAlreadyAdded = (dish) => {
     if (!existingDishes || existingDishes.length === 0) return false;
 
@@ -84,13 +84,13 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
 
   const handleAddDish = async () => {
     if (!selectedDish) {
-      alert("Vui lòng chọn một món ăn!");
+      alert("Please select a dish!");
       return;
     }
 
-    // Kiểm tra nếu món ăn đã tồn tại
+    // Check if the dish is already added
     if (isDishAlreadyAdded(selectedDish)) {
-      alert("Món ăn này đã được thêm vào bữa ăn!");
+      alert("This dish has already been added to the meal!");
       return;
     }
 
@@ -115,20 +115,20 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
         userId
       );
       if (response.success) {
-        onDishAdded(); // Callback để cập nhật danh sách món ăn sau khi thêm thành công
-        onClose(); // Đóng modal
+        onDishAdded();
+        onClose();
       } else {
-        setError(response.message || "Thêm món ăn thất bại");
+        setError(response.message || "Failed to add dish");
         setIsAdding(false);
       }
     } catch (error) {
-      console.error("❌ Lỗi khi thêm món ăn:", error);
-      setError("Không thể thêm món ăn");
+      console.error("❌ Error adding dish:", error);
+      setError("Could not add dish");
       setIsAdding(false);
     }
   };
 
-  // Filter dishes based on active filter, selected type and search query
+  // Filter dishes based on active filter, selected type, and search query
   const filteredDishes = dishes.filter((dish) => {
     // Filter by favorite status
     if (activeFilter === "favorites" && !isFavorite(dish._id)) {
@@ -148,20 +148,21 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     return true;
   });
 
-  // Nếu không lấy được danh sách món ăn, hiển thị lỗi và nút đóng
+  // If loading, show a spinner
   if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
         <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl">
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            <p className="ml-4">Đang tải danh sách món ăn...</p>
+            <p className="ml-4">Loading dishes...</p>
           </div>
         </div>
       </div>
     );
   }
 
+  // If there's an error, show the error message
   if (error) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -172,7 +173,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               onClick={onClose}
               className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg"
             >
-              Đóng
+              Close
             </button>
           </div>
         </div>
@@ -184,7 +185,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Chọn món ăn</h2>
+          <h2 className="text-xl font-semibold">Select a Dish</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             ✕
           </button>
@@ -196,7 +197,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
           <div className="relative flex-grow">
             <input
               type="text"
-              placeholder="Tìm kiếm món ăn..."
+              placeholder="Search for a dish..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full"
@@ -214,7 +215,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
                   : "bg-gray-200 text-gray-800 hover:bg-gray-300"
               }`}
             >
-              Tất cả
+              All
             </button>
             <button
               onClick={() => setActiveFilter("favorites")}
@@ -225,7 +226,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               }`}
             >
               <span className="mr-1">⭐</span>
-              Yêu thích
+              Favorites
             </button>
 
             {/* Type selection dropdown */}
@@ -234,7 +235,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               onChange={(e) => setSelectedType(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white"
             >
-              <option value="all">Tất cả loại</option>
+              <option value="all">All Types</option>
               {dishTypes.map((type) => (
                 <option key={type} value={type}>
                   {type}
@@ -277,7 +278,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
                       )}
                       {isAlreadyAdded && (
                         <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-                          <span className="text-white font-semibold">Đã thêm</span>
+                          <span className="text-white font-semibold">Added</span>
                         </div>
                       )}
                     </div>
@@ -326,7 +327,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
                   d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 ></path>
               </svg>
-              <p className="text-gray-500 mt-4">Không có món ăn nào phù hợp với tìm kiếm của bạn</p>
+              <p className="text-gray-500 mt-4">No dishes match your search criteria</p>
             </div>
           )}
         </div>
@@ -334,7 +335,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
         {/* Selected dish information */}
         {selectedDish && (
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <h3 className="font-medium text-blue-800">Món ăn đã chọn</h3>
+            <h3 className="font-medium text-blue-800">Selected Dish</h3>
             <div className="flex items-center mt-2">
               <div className="w-16 h-16 bg-gray-200 rounded-md overflow-hidden">
                 {selectedDish.imageUrl ? (
@@ -375,14 +376,14 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               isAdding || !selectedDish || (selectedDish && isDishAlreadyAdded(selectedDish))
             }
           >
-            {isAdding ? "Đang thêm..." : "Thêm món ăn"}
+            {isAdding ? "Adding..." : "Add Dish"}
           </button>
           <button
             onClick={onClose}
             className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg"
             disabled={isAdding}
           >
-            Hủy
+            Cancel
           </button>
         </div>
       </div>

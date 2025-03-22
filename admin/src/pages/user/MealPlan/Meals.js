@@ -6,12 +6,11 @@ import { useSelector } from "react-redux";
 import { selectAuth } from "../../../store/selectors/authSelectors";
 import DishCard from "./DishCard";
 import HomeService from "../../../services/home.service";
+import ConfirmationDialog from "../../../components/ui/ConfirmDialog";
 
-const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
+const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
   const { user } = useSelector(selectAuth);
   const [meals, setMeals] = useState([]);
-  console.log("MEALS", meals);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddDishModal, setShowAddDishModal] = useState(false);
@@ -19,18 +18,18 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [mealDay, setMealDay] = useState(null);
   const [dishDetails, setDishDetails] = useState([]);
-  console.log("MEALSDay", mealDay);
-
   const [isAddingDish, setIsAddingDish] = useState(false);
   const [deletingMealId, setDeletingMealId] = useState(null);
   const [deletingDishId, setDeletingDishId] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [mealPlanType, setMealPlanType] = useState(null);
 
-  // Used to track if initial data has been loaded
+  // State cho ConfirmationDialog
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [mealToDelete, setMealToDelete] = useState(null);
+
   const dataLoaded = useRef(false);
 
-  // Fetch all data in a single useEffect to prevent multiple API calls
   useEffect(() => {
     const fetchData = async () => {
       if (!dataLoaded.current) {
@@ -38,7 +37,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
       }
 
       try {
-        // Gọi API lấy thông tin mealPlan, mealDay, meals
         const [mealPlanResponse, mealDayResponse, mealsResponse] = await Promise.all([
           mealPlanService.getMealPlanById(mealPlanId),
           mealPlanService.getMealDayById(mealPlanId, mealDayId),
@@ -56,14 +54,11 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
         if (mealsResponse.success) {
           setMeals(mealsResponse.data);
 
-          // Gọi API lấy thông tin chi tiết từng dish
           const dishPromises = mealsResponse.data.flatMap((meal) =>
             meal.dishes.map((dish) => HomeService.getDishById(dish.dishId))
           );
 
           const dishResponses = await Promise.all(dishPromises);
-
-          // Lưu thông tin dishDetails (nếu có lỗi, bỏ qua món lỗi)
           const dishData = dishResponses
             .map((res) => (res.success ? res.data : null))
             .filter((dish) => dish !== null);
@@ -84,14 +79,12 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
     fetchData();
   }, [mealPlanId, mealDayId]);
 
-  // Refresh meals data without setting loading state
   const refreshMeals = async () => {
     try {
       const response = await mealPlanService.getMealsByMealDay(mealPlanId, mealDayId);
       if (response.success) {
         setMeals(response.data);
 
-        // Update selected meal if it exists
         if (selectedMeal) {
           const updatedMeal = response.data.find((m) => m._id === selectedMeal._id);
           if (updatedMeal) {
@@ -99,7 +92,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
           }
         }
 
-        // Call onNutritionChange to update nutrition data
         if (onNutritionChange) {
           onNutritionChange();
         }
@@ -109,18 +101,15 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
     }
   };
 
-  // Handle dish added successfully
   const handleDishAdded = () => {
     setIsAddingDish(false);
     refreshMeals();
   };
 
-  // Handle meal added successfully
   const handleMealAdded = () => {
     refreshMeals();
   };
 
-  // Handle meal selection with transition effect
   const handleMealSelect = (meal) => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -129,7 +118,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
     }, 150);
   };
 
-  // Handle return to meals list with transition effect
   const handleBackToMeals = () => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -138,19 +126,22 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
     }, 150);
   };
 
-  // Handle meal removal
   const handleRemoveMealFromDay = async (mealId) => {
     if (!mealId) return;
 
-    const confirmDelete = window.confirm("Are you sure you want to delete this meal?");
-    if (!confirmDelete) return;
+    // Mở ConfirmationDialog thay vì window.confirm
+    setMealToDelete(mealId);
+    setShowConfirmDialog(true);
+  };
 
-    setDeletingMealId(mealId);
+  const confirmDeleteMeal = async () => {
+    if (!mealToDelete) return;
+
+    setDeletingMealId(mealToDelete);
     try {
-      const response = await mealPlanService.removeMealFromDay(mealPlanId, mealDayId, mealId);
+      const response = await mealPlanService.removeMealFromDay(mealPlanId, mealDayId, mealToDelete);
 
       if (response.success) {
-        // Update meals list after deletion
         refreshMeals();
       } else {
         setError("Could not delete meal!");
@@ -160,10 +151,16 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
       setError("Could not delete meal!");
     } finally {
       setDeletingMealId(null);
+      setShowConfirmDialog(false);
+      setMealToDelete(null);
     }
   };
 
-  // Handle dish deletion
+  const cancelDeleteMeal = () => {
+    setShowConfirmDialog(false);
+    setMealToDelete(null);
+  };
+
   const handleDeleteDish = async (dishId) => {
     if (!selectedMeal || !dishId) return;
 
@@ -177,7 +174,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
       );
 
       if (response.success) {
-        // Update dish list after deletion
         refreshMeals();
       } else {
         setError("Could not delete dish!");
@@ -190,17 +186,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("vi-VN", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   const handleOpenAddDishModal = () => {
     setIsAddingDish(true);
     setShowAddDishModal(true);
@@ -211,7 +196,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
     setIsAddingDish(false);
   };
 
-  // Determine color and icon for meal based on time
   const getMealTimeStyle = (mealTime) => {
     const time = mealTime.toLowerCase();
 
@@ -274,7 +258,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
     }
   };
 
-  // Use useMemo to avoid unnecessary re-renders
   const mealItems = useMemo(() => {
     return meals.map((meal) => {
       const { borderColor, bgColor, icon } = getMealTimeStyle(meal.mealTime);
@@ -297,7 +280,7 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
             <button
               className="text-red-500 hover:text-red-700 p-1"
               onClick={(e) => {
-                e.stopPropagation(); // Prevent event bubbling to parent div
+                e.stopPropagation();
                 handleRemoveMealFromDay(meal._id);
               }}
               disabled={deletingMealId === meal._id}
@@ -330,7 +313,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
         }`}
       >
         {!selectedMeal ? (
-          // View meal list in day
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-center mb-4">
               <button onClick={onBack} className="flex items-center text-blue-600 hover:underline">
@@ -351,7 +333,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
                 Back
               </button>
 
-              {/* Only show add meal button for custom type */}
               {mealPlanType === "custom" && (
                 <button
                   onClick={() => setShowAddMealModal(true)}
@@ -362,9 +343,8 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
               )}
             </div>
 
-            <h2 className="text-xl font-semibold mb-4">Meals Today</h2>
+            <h2 className="text-xl font-semibold mb-4">Meals on {date}</h2>
 
-            {/* Card container with fixed height and scrolling */}
             <div className="overflow-y-auto pr-2 flex-grow h-full max-h-[380px] pb-4">
               {meals && meals.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -376,7 +356,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
             </div>
           </div>
         ) : (
-          // View dish details in meal
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-center mb-4">
               <button
@@ -412,12 +391,11 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
             </div>
 
             <div className="mb-4">
-              <h2 className="text-xl font-semibold">{selectedMeal.mealName}</h2>
+              <h2 className="text-xl font-semibold">Meal {selectedMeal.mealName}</h2>
               <p className="text-gray-500">Time: {selectedMeal.mealTime}</p>
             </div>
 
             <h3 className="font-medium mb-2">Dish List:</h3>
-            {/** Card */}
             <div className="overflow-y-auto pr-2 flex-grow max-h-[340px]">
               {selectedMeal.dishes && selectedMeal.dishes.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -438,7 +416,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
         )}
       </div>
 
-      {/* Add dish modal */}
       {showAddDishModal && selectedMeal && (
         <AddDishToMeal
           mealPlanId={mealPlanId}
@@ -450,7 +427,6 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
         />
       )}
 
-      {/* Add meal modal */}
       {showAddMealModal && (
         <AddMealModal
           mealPlanId={mealPlanId}
@@ -460,6 +436,14 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange }) => {
           onMealAdded={handleMealAdded}
         />
       )}
+
+      {/* Thêm ConfirmationDialog */}
+      <ConfirmationDialog
+        isOpen={showConfirmDialog}
+        onConfirm={confirmDeleteMeal}
+        onCancel={cancelDeleteMeal}
+        message="Are you sure you want to delete this meal?"
+      />
     </div>
   );
 };

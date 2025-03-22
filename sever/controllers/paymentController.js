@@ -264,3 +264,88 @@ exports.vnpayReturn = async (req, res) => {
     res.status(500).json({ status: "error", message: "Lỗi xử lý phản hồi VNPAY" });
   }
 };
+// Lấy lịch sử thanh toán của user
+exports.getPaymentHistory = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
+    const limit = parseInt(req.query.limit) || 10; // Mặc định 10 giao dịch mỗi trang
+    const skip = (page - 1) * limit;
+
+    // Tìm các giao dịch của user
+    const payments = await Payment.find({ userId })
+      .sort({ createdAt: -1 }) // Sắp xếp theo thời gian tạo, mới nhất trước
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Chuyển thành plain JavaScript object để dễ xử lý
+
+    // Nếu không có giao dịch nào
+    if (!payments || payments.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Không tìm thấy lịch sử thanh toán",
+      });
+    }
+
+    // Lấy thông tin meal plan cho từng giao dịch
+    const paymentDetails = await Promise.all(
+      payments.map(async (payment) => {
+        const mealPlan = await MealPlan.findById(payment.mealPlanId).select("title").lean();
+        return {
+          _id: payment._id,
+          mealPlanName: mealPlan ? mealPlan.title : "N/A",
+          amount: payment.amount,
+          status: payment.status,
+          createdAt: payment.createdAt,
+          vnpayTransactionId: payment.vnpayTransactionId || "N/A",
+        };
+      })
+    );
+
+    // Đếm tổng số giao dịch để hỗ trợ phân trang
+    const totalPayments = await Payment.countDocuments({ userId });
+
+    return res.json({
+      status: "success",
+      data: paymentDetails,
+      pagination: {
+        total: totalPayments,
+        page,
+        limit,
+        totalPages: Math.ceil(totalPayments / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching payment history:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Lỗi khi lấy lịch sử thanh toán",
+    });
+  }
+};
+
+exports.checkPaymentStatus = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({ status: "error", message: "Payment not found" });
+    }
+
+    return res.json({
+      status: "success",
+      data: {
+        paymentId: payment._id,
+        status: payment.status,
+        amount: payment.amount,
+        mealPlanId: payment.mealPlanId,
+        mealPlanName: payment.mealPlanName,
+        createdAt: payment.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error checking payment status:", error);
+    return res.status(500).json({ status: "error", message: "Error checking payment status" });
+  }
+};

@@ -17,7 +17,7 @@ const MainLayout = () => {
       <Header />
 
       {/* Main Content */}
-      <main className="container mx-auto">
+      <main className="flex flex-col">
         <Outlet />
       </main>
 

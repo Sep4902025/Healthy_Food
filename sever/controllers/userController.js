@@ -6,9 +6,7 @@ const mongoose = require("mongoose");
 
 // 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await UserModel.find({ isDelete: false }).populate(
-    "userPreferenceId"
-  );
+  const users = await UserModel.find({ isDelete: false }).populate("userPreferenceId");
 
   res.status(200).json({
     status: "success",
@@ -33,7 +31,34 @@ exports.getUserById = catchAsync(async (req, res, next) => {
     data: { user },
   });
 });
+exports.searchUserByEmail = catchAsync(async (req, res, next) => {
+  const { email } = req.query;
 
+  if (!email) {
+    return next(new AppError("Please provide an email to search", 400));
+  }
+
+  const users = await UserModel.find({
+    email: { $regex: email, $options: "i" }, // Tìm kiếm gần đúng, không phân biệt hoa/thường
+    isDelete: false,
+  })
+    .select("_id username email avatarUrl role") // Thêm _id vào kết quả
+    .limit(10); // Giới hạn 10 kết quả
+
+  if (!users.length) {
+    return res.status(200).json({
+      status: "success",
+      results: 0,
+      data: { users: [] },
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    results: users.length,
+    data: { users },
+  });
+});
 // Update User By ID
 exports.updateUserById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
@@ -53,22 +78,14 @@ exports.updateUserById = catchAsync(async (req, res, next) => {
   });
 });
 
-
-
-
-
-
-
 // 📌 Xóa người dùng (Soft Delete) - chỉ xóa nếu user chưa bị xóa trước đó
 exports.deleteUser = catchAsync(async (req, res, next) => {
   const user = await UserModel.findByIdAndUpdate(
-    
     req.params.id,
-   
+
     { isDelete: true },
-   
+
     { new: true }
-  
   );
 
   if (!user) {
@@ -84,13 +101,11 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 // 🟢 Restore user (Chỉ admin)
 exports.restoreUser = catchAsync(async (req, res, next) => {
   const user = await UserModel.findByIdAndUpdate(
-    
     req.params.id,
-   
+
     { isDelete: false },
-   
+
     { new: true }
-  
   );
 
   if (!user) return next(new AppError("User not found", 404));

@@ -190,7 +190,11 @@ const MealPlan = () => {
                   ❌ Hủy
                 </button>
               </div>
-              <CreateMealPlanForm userId={user._id} onSuccess={handleCreateSuccess} />
+              <CreateMealPlanForm
+                userId={user._id}
+                userRole={user.role}
+                onSuccess={handleCreateSuccess}
+              />
             </div>
           )}
         </div>
