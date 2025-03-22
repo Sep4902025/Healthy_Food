@@ -42,13 +42,17 @@ axiosInstance.interceptors.response.use(
 
 const UserService = {
   // Lấy tất cả người dùng (Admin only)
-  getAllUsers: async () => {
+  getAllUsers: async (page = 1, limit = 10) => {
     try {
-      const response = await axiosInstance.get("/users");
+      const response = await axiosInstance.get(
+        `/users?page=${page}&limit=${limit}`
+      );
       return {
         success: true,
         users: response.data.data.users,
-        total: response.data.results,
+        total: response.data.total,
+        totalPages: response.data.totalPages,
+        currentPage: response.data.currentPage,
       };
     } catch (error) {
       console.error("Lỗi lấy danh sách người dùng:", error.response?.data || error.message);
