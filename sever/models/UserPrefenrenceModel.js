@@ -48,12 +48,18 @@ const userPreferenceSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    activityLevel: {
+      type: String,
+      default: null,
+    },
     waterDrink: {
       type: String,
       default: null,
     },
     hate: {
-      type: [String], // Mảng String
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Ingredient",
+      required: true,
       default: [],
     },
     weight: {

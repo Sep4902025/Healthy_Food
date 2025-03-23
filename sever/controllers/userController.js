@@ -3,6 +3,7 @@ const UserModel = require("../models/UserModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const mongoose = require("mongoose");
+const UserPreferenceModel = require("../models/UserPrefenrenceModel");
 
 // 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
@@ -53,27 +54,26 @@ exports.updateUserById = catchAsync(async (req, res, next) => {
   });
 });
 
-
-
-
-
-
-
-// 📌 Xóa người dùng (Soft Delete) - chỉ xóa nếu user chưa bị xóa trước đó
 exports.deleteUser = catchAsync(async (req, res, next) => {
-  const user = await UserModel.findByIdAndUpdate(
-    
-    req.params.id,
-   
-    { isDelete: true },
-   
-    { new: true }
-  
-  );
+  const { id } = req.params; // Lấy userId từ URL
 
-  if (!user) {
+  // Tìm user theo ID
+  const user = await UserModel.findOne({ _id: id });
+
+  if (!user || user.isDelete) {
     return next(new AppError("User not found or has been deleted", 404));
   }
+
+  // Nếu user có userPreferenceId, xóa mềm luôn dữ liệu preference
+  if (user.userPreferenceId) {
+    await UserPreferenceModel.findByIdAndUpdate(user.userPreferenceId, {
+      isDelete: true,
+    });
+  }
+
+  // Xóa mềm user bằng cách đặt isDelete = true
+  user.isDelete = true;
+  await user.save();
 
   res.status(200).json({
     status: "success",
@@ -84,13 +84,11 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 // 🟢 Restore user (Chỉ admin)
 exports.restoreUser = catchAsync(async (req, res, next) => {
   const user = await UserModel.findByIdAndUpdate(
-    
     req.params.id,
-   
+
     { isDelete: false },
-   
+
     { new: true }
-  
   );
 
   if (!user) return next(new AppError("User not found", 404));
