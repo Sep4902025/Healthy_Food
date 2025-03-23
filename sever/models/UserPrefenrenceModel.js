@@ -83,7 +83,9 @@ const userPreferenceSchema = new mongoose.Schema(
       default: null,
     },
     underDisease: {
-      type: [String], // Chấp nhận nhiều giá trị
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MedicalCondition",
+      required: true,
       default: [],
     },
     theme: {
