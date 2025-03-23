@@ -41,7 +41,6 @@ import MealPlan from "../pages/admin/pages/MealPlan";
 import EditUser from "../pages/user/EditUser";
 import ViewProfile from "../pages/user/ViewProfile";
 import DishDetail from "../pages/user/DishDetail";
-
 import QuizLayout from "../components/layouts/QuizLayout";
 import Favorite from "../pages/survey/Favorite";
 import Age from "../pages/survey/Age";
@@ -67,6 +66,8 @@ import Quiz from "../pages/user/Quiz";
 import AddUser from "../pages/admin/pages/AddUserManagement";
 import AdminProfile from "../pages/user/AdminProfile";
 import EditAdmin from "../pages/user/EditAdmin";
+import EditProfile from "../pages/user/UpdateUser";
+import Activity from "../pages/survey/Activity";
 
 const AppRoutes = () => {
   return (
@@ -79,9 +80,28 @@ const AppRoutes = () => {
         <Route path="forgot-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
         <Route index element={<Home />} />
-        <Route path="viewprofile" element={<ViewProfile />} />
+
+        {/* Route cho xem và chỉnh sửa hồ sơ user */}
+        <Route
+          path="viewprofile"
+          element={
+            <PrivateRoute>
+              <ViewProfile />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="edit-profile/:id"
+          element={
+            <PrivateRoute>
+              <EditProfile />
+            </PrivateRoute>
+          }
+        />
+
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
+
         {/* Router mealPlan */}
         <Route
           path="mealplan"
@@ -127,7 +147,25 @@ const AppRoutes = () => {
           }
         />
 
-        {/* ✅ Bảo vệ trang chat, chỉ user mới vào được */}
+        {/* Route cho khảo sát và xem kết quả khảo sát */}
+        <Route
+          path="quiz"
+          element={
+            <PrivateRoute>
+              <Quiz />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="viewquiz"
+          element={
+            <PrivateRoute>
+              <ViewQuiz />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Bảo vệ trang chat, chỉ user mới vào được */}
         <Route
           path="chat"
           element={
@@ -136,17 +174,21 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* Footer routes */}
         <Route path="faqs" element={<FAQs />} />
         <Route path="about" element={<About />} />
         <Route path="contact" element={<Contact />} />
         <Route path="term" element={<Term />} />
 
-        {/* ✅ Gom các route của quiz vào đây */}
+        {/* Gom các route của khảo sát vào đây */}
         <Route
           path="/survey"
           element={
             <PrivateRoute>
-              <Outlet />
+              <QuizLayout>
+                <Outlet />
+              </QuizLayout>
             </PrivateRoute>
           }
         >
@@ -164,6 +206,7 @@ const AppRoutes = () => {
           <Route path="name" element={<Name />} />
           <Route path="phonenumber" element={<PhoneNumber />} />
           <Route path="sleeptime" element={<SleepTime />} />
+          <Route path="activity" element={<Activity />} />
           <Route path="underdisease" element={<UnderDisease />} />
           <Route path="waterdrink" element={<WaterDrink />} />
           <Route path="weight" element={<Weight />} />
@@ -171,7 +214,7 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-      {/* Các route cần đăng nhập AdminLayout Admin*/}
+      {/* Các route cần đăng nhập AdminLayout Admin */}
       <Route
         path="/admin"
         element={
@@ -181,23 +224,28 @@ const AppRoutes = () => {
         }
       >
         <Route index element={<HealthyDashboard />} />
-        {/* ✅ Thêm route cho Footer Management */}
-        <Route path="profile" element={<AdminProfile/>}/>
-        <Route path="adduser" element={<AddUser />}/>
+        {/* Route cho xem và chỉnh sửa hồ sơ admin */}
+        <Route path="profile" element={<AdminProfile />} />
+        <Route path="edit-profile/:id" element={<EditAdmin />} />
+        {/* Footer Management */}
         <Route path="aboutusmanagement" element={<AboutUsManagement />} />
         <Route path="termofusemanagement" element={<TermOfUseManagement />} />
-        <Route path="faqsManagement" element={<FAQsManagement />} />
+        <Route path="faqsmanagement" element={<FAQsManagement />} />
         <Route path="contactusmanagement" element={<ContactUsManagement />} />
-
+        {/* Quản lý user, dish, ingredient, mealplan */}
         <Route path="usermanagement" element={<UserManagement />} />
         <Route path="dishmanagement" element={<DishManagement />} />
-        <Route path="ingredientsmanagement" element={<IngredientsManagement />} />
+        <Route
+          path="ingredientsmanagement"
+          element={<IngredientsManagement />}
+        />
         <Route path="mealplan" element={<MealPlan />} />
-        <Route path="edituser/:id" element={<EditUser />} />
-        <Route path="viewprofile" element={<ViewProfile />} />
+        <Route path="adduser" element={<AddUser />} />
+        <Route path="edit-user/:id" element={<EditUser />} />{" "}
+        {/* Đổi tên từ edituser thành edit-user để nhất quán */}
       </Route>
 
-      {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist*/}
+      {/* Bảo vệ toàn bộ route NutritionistLayout Nutritionist */}
       <Route
         path="/nutritionist"
         element={
@@ -208,17 +256,14 @@ const AppRoutes = () => {
       >
         <Route path="chat" element={<NutritionChat />} />
         <Route path="mealplan" element={<TableMealPlan />} />
-        {/* <Route path="dishes" element={<TableDishes />} /> */}
         <Route path="dishes">
           <Route index element={<TableDishes />} />
           <Route path="add" element={<AddDishes />} />
         </Route>
-
         <Route path="ingredients">
           <Route index element={<TableIngredient />} />
           <Route path="add" element={<AddIngredient />} />
         </Route>
-
         <Route path="recipes">
           <Route index element={<TableRecipes />} />
           <Route path="add" element={<AddRecipes />} />

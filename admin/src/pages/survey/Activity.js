@@ -2,28 +2,30 @@ import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 
-const sleeptimeGroups = [
-  { sleeptime: "Less than 5 hours" },
-  { sleeptime: "5-6 hours" },
-  { sleeptime: "7-8 hours" },
-  { sleeptime: "More than 8 hours" },
+// Danh sách mức độ hoạt động kèm theo giá trị số
+const activityGroups = [
+  { activity: "Sedentary", value: 1.2 },
+  { activity: "Lightly active", value: 1.375 },
+  { activity: "Moderately active", value: 1.55 },
+  { activity: "Highly active", value: 1.725 },
+  { activity: "Very active", value: 1.9 },
 ];
 
-const SleepTime = () => {
+const Activity = () => {
   const navigate = useNavigate();
-  const [selectedSleepTime, setSelectedSleepTime] = useState(null);
+  const [selectedActivity, setSelectedActivity] = useState(null);
 
   // Load dữ liệu từ sessionStorage khi mở trang
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
-    if (savedData.sleepTime) {
-      setSelectedSleepTime(savedData.sleepTime);
+    if (savedData.activity) {
+      setSelectedActivity(savedData.activity);
     }
   }, []);
 
   const handleNext = () => {
-    if (!selectedSleepTime) {
-      alert("Please select how long you sleep per day.");
+    if (!selectedActivity) {
+      alert("Please select your daily activity level.");
       return;
     }
 
@@ -33,14 +35,14 @@ const SleepTime = () => {
     // Cập nhật dữ liệu mới
     const updatedData = {
       ...currentData,
-      sleepTime: selectedSleepTime,
+      activity: selectedActivity, // Lưu giá trị số
     };
 
     // Lưu vào sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
     // Điều hướng trang tiếp theo
-    navigate("/survey/activity");
+    navigate("/survey/waterdrink");
   };
 
   return (
@@ -48,7 +50,7 @@ const SleepTime = () => {
       {/* Header với back button và progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
-          onClick={() => navigate("/survey/goal")}
+          onClick={() => navigate("/survey/sleeptime")}
           className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
@@ -57,25 +59,25 @@ const SleepTime = () => {
       </div>
 
       {/* Tiêu đề và mô tả */}
-      <h2 className="text-2xl font-bold text-center">Sleep Time</h2>
+      <h2 className="text-2xl font-bold text-center">Physical Activity</h2>
       <p className="text-center text-gray-600">
-        How long do you sleep per day?
+        How many hours of physical activity do you do per day?
       </p>
 
       {/* Danh sách lựa chọn */}
       <div className="space-y-4 mt-4">
-        {sleeptimeGroups.map((item, index) => (
+        {activityGroups.map((item, index) => (
           <div
             key={index}
             className={`flex items-center p-4 rounded-lg shadow cursor-pointer transition duration-300 ${
-              selectedSleepTime === item.sleeptime
+              selectedActivity === item.value
                 ? "bg-green-400 text-black"
                 : "bg-gray-100 hover:bg-green-200"
             }`}
-            onClick={() => setSelectedSleepTime(item.sleeptime)}
+            onClick={() => setSelectedActivity(item.value)} // Lưu giá trị số
           >
             <span className="text-lg font-semibold flex-1 text-left">
-              {item.sleeptime}
+              {item.activity}
             </span>
           </div>
         ))}
@@ -92,4 +94,4 @@ const SleepTime = () => {
   );
 };
 
-export default SleepTime;
+export default Activity;

@@ -17,21 +17,40 @@ const UserProfile = () => {
   const user = useSelector(selectUser);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [reviews, setReviews] = useState([]);
-  const [favoriteCategories, setFavoriteCategories] = useState([]);
   const [userData, setUserData] = useState(null);
   const [resetInProgress, setResetInProgress] = useState(false);
+  const [deleteInProgress, setDeleteInProgress] = useState(false); // Thêm state cho trạng thái xóa tài khoản
 
   const fetchUserData = async () => {
-    if (user && user._id) {
-      const { success, data, message } = await quizService.getUserPreference(
-        user._id
-      );
+    if (!user || !user._id) {
+      console.error("🚨 User hoặc user._id không tồn tại:", user);
+      setLoading(false);
+      return;
+    }
+
+    if (!user.userPreferenceId) {
+      console.warn("🚨 userPreferenceId không tồn tại trong user:", user);
+      setUserData(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { success, data, message } =
+        await quizService.getUserPreferenceByUserPreferenceId(
+          user.userPreferenceId
+        );
       if (success) {
         setUserData(data);
+        console.log("✅ Đã lấy dữ liệu userPreference:", data);
       } else {
-        console.error(message);
+        console.error("🚨 Lỗi khi lấy dữ liệu userPreference:", message);
+        setUserData(null);
       }
+    } catch (error) {
+      console.error("🚨 Lỗi trong fetchUserData:", error);
+      setUserData(null);
+    } finally {
       setLoading(false);
     }
   };
@@ -48,11 +67,14 @@ const UserProfile = () => {
   }, [user, navigate]);
 
   const handleEditClick = () => {
-    navigate(`/edituser/${user._id}`, { state: { user } });
+    navigate(`/edit-profile/${user._id}`, { state: { user } });
   };
 
   const handleReset = async () => {
-    if (!user || !user._id) return;
+    if (!user || !user.userPreferenceId) {
+      alert("Không tìm thấy userPreferenceId để xóa!");
+      return;
+    }
 
     const confirmReset = window.confirm(
       "Bạn có chắc chắn muốn xóa tất cả thông tin cá nhân? Hành động này không thể hoàn tác."
@@ -74,24 +96,57 @@ const UserProfile = () => {
       }
     } catch (error) {
       alert("Đã xảy ra lỗi khi xóa dữ liệu");
-      console.error("Reset error:", error);
+      console.error("🚨 Reset error:", error);
     } finally {
       setResetInProgress(false);
     }
   };
 
-  // Calculate BMI
-  const calculateBMI = () => {
-    if (userData?.data) {
-      const weight = parseFloat(userData.data.weight);
-      const heightCm = parseFloat(userData.data.height);
+  // Thêm hàm xóa tài khoản
+  const handleDeleteUser = async () => {
+    if (!user || !user._id) {
+      alert("Không tìm thấy thông tin người dùng để xóa!");
+      return;
+    }
 
-      // Kiểm tra nếu weight hoặc height không hợp lệ (null, undefined, NaN, <= 0)
+    const confirmDelete = window.confirm(
+      "Bạn có chắc chắn muốn xóa tài khoản này? Hành động này không thể hoàn tác và bạn sẽ bị đăng xuất!"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      setDeleteInProgress(true);
+      const { success, message } = await quizService.deleteUserByUserId(
+        user._id
+      );
+      if (success) {
+        alert("Tài khoản đã được xóa thành công!");
+        // Xóa token và đăng xuất
+        localStorage.removeItem("token");
+        // Chuyển hướng về trang đăng nhập
+        navigate("/signin");
+      } else {
+        alert(`Lỗi khi xóa tài khoản: ${message}`);
+      }
+    } catch (error) {
+      alert("Đã xảy ra lỗi khi xóa tài khoản!");
+      console.error("🚨 Delete user error:", error);
+    } finally {
+      setDeleteInProgress(false);
+    }
+  };
+
+  const calculateBMI = () => {
+    if (userData) {
+      const weight = parseFloat(userData.weight);
+      const heightCm = parseFloat(userData.height);
+
       if (!weight || !heightCm || weight <= 0 || heightCm <= 0) {
         return "No data";
       }
 
-      const heightM = heightCm / 100; // Chuyển cm → m
+      const heightM = heightCm / 100;
       return (weight / (heightM * heightM)).toFixed(2);
     }
     return "No data";
@@ -100,6 +155,13 @@ const UserProfile = () => {
   const getBMIStatus = () => {
     const bmi = parseFloat(calculateBMI());
 
+    if (isNaN(bmi)) {
+      return {
+        text: "Không có dữ liệu",
+        color: "text-gray-600",
+        bg: "bg-gray-100",
+      };
+    }
     if (bmi < 18)
       return { text: "Thiếu cân", color: "text-blue-600", bg: "bg-blue-100" };
     if (bmi < 30)
@@ -199,18 +261,28 @@ const UserProfile = () => {
               {/* User Info Section */}
               <div className="flex-grow text-center md:text-left">
                 <h2 className="text-3xl font-bold mb-2">
-                  {userData?.data?.name || user.username || "Người dùng"}
+                  {userData?.name || user.username || "Người dùng"}
                 </h2>
                 <p className="text-indigo-100 mb-4">
-                  {userData?.data?.email || "No email"}
+                  {userData?.email || user.email || "No email"}
                 </p>
-                <button
-                  className="px-6 py-2 bg-white text-indigo-600 rounded-full shadow-md transition-all duration-300 font-bold hover:bg-opacity-90 transform hover:scale-105"
-                  onClick={handleEditClick}
-                >
-                  <FaEdit className="inline mr-2" />
-                  Chỉnh sửa hồ sơ
-                </button>
+                <div className="flex flex-col md:flex-row gap-4">
+                  <button
+                    className="px-6 py-2 bg-white text-indigo-600 rounded-full shadow-md transition-all duration-300 font-bold hover:bg-opacity-90 transform hover:scale-105"
+                    onClick={handleEditClick}
+                  >
+                    <FaEdit className="inline mr-2" />
+                    Chỉnh sửa hồ sơ
+                  </button>
+                  {/* Thêm nút xóa tài khoản */}
+                  <button
+                    className="px-6 py-2 bg-red-600 text-white rounded-full shadow-md transition-all duration-300 font-bold hover:bg-red-700 transform hover:scale-105 disabled:bg-gray-400 disabled:transform-none"
+                    onClick={handleDeleteUser}
+                    disabled={deleteInProgress}
+                  >
+                    {deleteInProgress ? "Đang xóa..." : "Xóa tài khoản"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -228,7 +300,7 @@ const UserProfile = () => {
                   <span className="text-gray-600 font-medium">Cân nặng</span>
                 </div>
                 <div className="text-3xl font-bold text-blue-600 flex items-baseline">
-                  {userData?.data?.weight || "?"}
+                  {userData?.weight || "?"}
                   <span className="text-sm font-normal text-gray-500 ml-1">
                     kg
                   </span>
@@ -241,7 +313,7 @@ const UserProfile = () => {
                   <span className="text-gray-600 font-medium">Chiều cao</span>
                 </div>
                 <div className="text-3xl font-bold text-green-600 flex items-baseline">
-                  {userData?.data?.height || "?"}
+                  {userData?.height || "?"}
                   <span className="text-sm font-normal text-gray-500 ml-1">
                     cm
                   </span>
@@ -272,7 +344,7 @@ const UserProfile = () => {
             </div>
 
             {/* Personal Details Section */}
-            {userData?.data ? (
+            {userData ? (
               <div className="mt-8">
                 <SectionTitle
                   title="Thông tin cá nhân"
@@ -287,19 +359,19 @@ const UserProfile = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <InfoItem
                       label="Tuổi"
-                      value={userData?.data?.age || "Chưa có dữ liệu"}
+                      value={userData.age || "Chưa có dữ liệu"}
                       colorClass="bg-blue-50"
                       textClass="text-blue-700"
                     />
                     <InfoItem
                       label="Giới tính"
-                      value={userData?.data?.gender || "Chưa có dữ liệu"}
+                      value={userData.gender || "Chưa có dữ liệu"}
                       colorClass="bg-purple-50"
                       textClass="text-purple-700"
                     />
                     <InfoItem
                       label="Số điện thoại"
-                      value={userData?.data?.phoneNumber || "Chưa có dữ liệu"}
+                      value={userData.phoneNumber || "Chưa có dữ liệu"}
                       colorClass="bg-indigo-50"
                       textClass="text-indigo-700"
                     />
@@ -314,13 +386,13 @@ const UserProfile = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InfoItem
                       label="Mục tiêu"
-                      value={userData?.data?.goal || "Chưa có dữ liệu"}
+                      value={userData.goal || "Chưa có dữ liệu"}
                       colorClass="bg-green-50"
                       textClass="text-green-700"
                     />
                     <InfoItem
                       label="Thời hạn kế hoạch"
-                      value={userData?.data?.longOfPlan || "Chưa có dữ liệu"}
+                      value={userData.longOfPlan || "Chưa có dữ liệu"}
                       colorClass="bg-teal-50"
                       textClass="text-teal-700"
                     />
@@ -335,39 +407,31 @@ const UserProfile = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InfoItem
                       label="Chế độ ăn"
-                      value={userData?.data?.diet || "Chưa có dữ liệu"}
+                      value={userData.diet || "Chưa có dữ liệu"}
                       colorClass="bg-amber-50"
                       textClass="text-amber-700"
                     />
                     <InfoItem
                       label="Thói quen ăn uống"
-                      value={
-                        userData?.data?.eatHabit?.join(", ") ||
-                        "Chưa có dữ liệu"
-                      }
+                      value={userData.eatHabit?.join(", ") || "Chưa có dữ liệu"}
                       colorClass="bg-orange-50"
                       textClass="text-orange-700"
                     />
                     <InfoItem
                       label="Thực phẩm ưa thích"
-                      value={
-                        userData?.data?.favorite?.join(", ") ||
-                        "Chưa có dữ liệu"
-                      }
+                      value={userData.favorite?.join(", ") || "Chưa có dữ liệu"}
                       colorClass="bg-yellow-50"
                       textClass="text-yellow-700"
                     />
                     <InfoItem
                       label="Dị ứng thực phẩm"
-                      value={
-                        userData?.data?.hate?.join(", ") || "Chưa có dữ liệu"
-                      }
+                      value={userData.hate?.join(", ") || "Chưa có dữ liệu"}
                       colorClass="bg-red-50"
                       textClass="text-red-700"
                     />
                     <InfoItem
                       label="Số bữa ăn mỗi ngày"
-                      value={userData?.data?.mealNumber || "Chưa có dữ liệu"}
+                      value={userData.mealNumber || "Chưa có dữ liệu"}
                       colorClass="bg-amber-50"
                       textClass="text-amber-700"
                     />
@@ -382,19 +446,19 @@ const UserProfile = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <InfoItem
                       label="Thời gian ngủ"
-                      value={userData?.data?.sleepTime || "Chưa có dữ liệu"}
+                      value={userData.sleepTime || "Chưa có dữ liệu"}
                       colorClass="bg-purple-50"
                       textClass="text-purple-700"
                     />
                     <InfoItem
                       label="Lượng nước uống (L)"
-                      value={userData?.data?.waterDrink || "Chưa có dữ liệu"}
+                      value={userData.waterDrink || "Chưa có dữ liệu"}
                       colorClass="bg-blue-50"
                       textClass="text-blue-700"
                     />
                     <InfoItem
                       label="Bệnh nền"
-                      value={userData?.data?.underDisease || "Không có"}
+                      value={userData.underDisease || "Không có"}
                       colorClass="bg-pink-50"
                       textClass="text-pink-700"
                     />

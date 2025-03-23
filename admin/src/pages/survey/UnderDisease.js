@@ -3,11 +3,11 @@ import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 
 const underdiseaseGroups = [
-  { id: "diabetes", label: "I am diabetic", icon: "🍭" },
-  { id: "hypertension", label: "I have high blood pressure", icon: "💗" },
-  { id: "gout", label: "I have gout", icon: "🥩" },
-  { id: "dyslipidemia", label: "I have high cholesterol", icon: "🍟" },
-  { id: "none", label: "There's none below", icon: "❌" },
+  { id: 1, label: "Tôi bị tiểu đường", icon: "🍭" },
+  { id: 2, label: "Tôi bị cao huyết áp", icon: "💗" },
+  { id: 3, label: "Tôi bị bệnh gút", icon: "🥩" },
+  { id: 4, label: "Tôi bị mỡ máu cao", icon: "🍟" },
+  { id: 5, label: "Tôi không mắc bệnh nào dưới đây", icon: "❌" },
 ];
 
 const UnderDisease = () => {
@@ -32,21 +32,22 @@ const UnderDisease = () => {
 
   const handleNext = () => {
     if (selectedItems.length === 0) {
-      alert("Please select at least one option.");
+      alert("Vui lòng chọn ít nhất một lựa chọn.");
       return;
     }
 
     // Lấy dữ liệu hiện tại từ sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật dữ liệu mới
+    // Cập nhật dữ liệu mới (chỉ lưu ID)
     const updatedData = {
       ...currentData,
-      underDisease: selectedItems,
+      underDisease: selectedItems, // Lưu ID
     };
 
     // Lưu vào sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
+    console.log("🚀 Dữ liệu UnderDisease đã lưu:", updatedData);
 
     // Điều hướng sang trang tiếp theo
     navigate("/survey/favorite");
@@ -66,9 +67,9 @@ const UnderDisease = () => {
       </div>
 
       {/* Tiêu đề và mô tả */}
-      <h2 className="text-2xl font-bold text-center">Under Disease</h2>
+      <h2 className="text-2xl font-bold text-center">Bệnh nền</h2>
       <p className="text-center text-gray-600">
-        Let me know your under disease
+        Hãy cho tôi biết về bệnh nền của bạn
       </p>
 
       {/* Danh sách lựa chọn */}
@@ -108,12 +109,12 @@ const UnderDisease = () => {
         ))}
       </div>
 
-      {/* Nút Next */}
+      {/* Nút Tiếp theo */}
       <button
         onClick={handleNext}
         className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
       >
-        Next
+        Tiếp theo
       </button>
     </div>
   );
