@@ -1,292 +1,302 @@
-import React, { useState } from 'react';
-import { 
-  HomeIcon, 
-  ShoppingCartIcon, 
-  UserIcon, 
-  BarChartIcon, 
-  BookOpenIcon, 
-  HelpCircleIcon, 
-  SettingsIcon,
-  SearchIcon,
-  BellIcon,
-  MessageCircleIcon,
-  GiftIcon,
-  CogIcon,
-  UploadIcon
-} from 'lucide-react';
+import React, { useState } from "react";
+import { UploadIcon } from "lucide-react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 const AddUser = () => {
-  const [userName, setUserName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [gender, setGender] = useState('');
-  const [status, setStatus] = useState('');
-  const [role, setRole] = useState('');
+  const [userName, setUserName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [gender, setGender] = useState("");
+  const [status, setStatus] = useState("");
+  const [role, setRole] = useState("");
+  const [profileImage, setProfileImage] = useState(null);
+  const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [activeMenu, setActiveMenu] = useState('User Management');
-  const [openSubmenus, setOpenSubmenus] = useState({
-    'User Management': false,
-    'Analytics': false,
-    'Quiz Management': false,
-    'User Interface': false
-  });
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  const menuItems = [
-    { icon: <HomeIcon size={20} />, name: 'Dashboard' },
-    { icon: <ShoppingCartIcon size={20} />, name: 'Order Management' },
-    { icon: <BookOpenIcon size={20} />, name: 'Meal Plant' },
-    { 
-      icon: <UserIcon size={20} />, 
-      name: 'User Management', 
-      submenus: ['Manage Users', 'User Roles', 'Permissions'] 
-    },
-    { 
-      icon: <BarChartIcon size={20} />, 
-      name: 'Analytics', 
-      submenus: ['Sales Analytics', 'User Analytics', 'Performance'] 
-    },
-    { icon: <HelpCircleIcon size={20} />, name: 'Quiz Management' },
-    { icon: <BookOpenIcon size={20} />, name: 'Dish Preferences' },
-    { icon: <HelpCircleIcon size={20} />, name: 'FAQs Management' },
-    { icon: <SettingsIcon size={20} />, name: 'User Interface' }
-  ];
+    // Display preview image immediately
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result);
+    };
+    reader.readAsDataURL(file);
 
-  const toggleSubmenu = (menuName) => {
-    setOpenSubmenus(prev => ({
-      ...prev,
-      [menuName]: !prev[menuName]
-    }));
+    // Upload image to Cloudinary
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "upload-image");
+
+      const cloudName =
+        process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || "dds8jiclc";
+
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        formData
+      );
+
+      if (response.data && response.data.secure_url) {
+        setProfileImageUrl(response.data.secure_url);
+        setProfileImage(response.data.public_id);
+        toast.success("Image uploaded successfully");
+      }
+    } catch (error) {
+      console.error("Error uploading image to Cloudinary:", error);
+      toast.error(
+        "Failed to upload image: " +
+          (error.response?.data?.message || error.message)
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleSave = () => {
-    // Implement save logic here
-    console.log('Saving user:', { userName, email, phoneNumber, gender, status, role });
+  const navigate = useNavigate();
+
+  const handleSave = async () => {
+    // Form validation
+    if (!userName || !email || !role) {
+      toast.error("Please fill in required fields: Name, Email, and Role");
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const newUser = {
+        userName,
+        email,
+        phoneNumber,
+        gender,
+        status: status || "active",
+        role,
+        profileImage: profileImageUrl,
+      };
+
+      // Display what's being sent for debugging
+      console.log("Sending user data:", newUser);
+
+      // Using the correct API endpoint
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/users",
+        newUser,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.status === 201 || response.status === 200) {
+        toast.success("User created successfully!");
+
+        // If a temporary password was returned, show it to the admin
+        if (response.data?.data?.tempPassword) {
+          toast.info(`Temporary password: ${response.data.data.tempPassword}`);
+        }
+
+        navigate("/admin/usermanagement"); // Navigate to user list
+      }
+    } catch (error) {
+      console.error("Error creating user:", error);
+
+      // Better error handling with specific messages
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        if (error.response.status === 404) {
+          toast.error(
+            "API endpoint not found. Please check server configuration."
+          );
+        } else if (error.response.status === 409) {
+          toast.error("User with this email already exists.");
+        } else {
+          const errorMessage =
+            error.response.data?.message ||
+            error.response.data?.error ||
+            "Unknown server error";
+          toast.error(`Server error: ${errorMessage}`);
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        toast.error(
+          "No response from server. Please check your connection or server status."
+        );
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        toast.error("Error creating user: " + error.message);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r p-4 overflow-y-auto">
-        <div className="flex items-center mb-8">
-          <span className="text-2xl font-bold text-green-600">Healthy</span>
-          <span className="text-sm ml-1 text-gray-500">.Admin</span>
-        </div>
-
-        <nav>
-          {menuItems.map((item) => (
-            <div key={item.name}>
-              <div 
-                className={`flex items-center p-3 cursor-pointer rounded hover:bg-green-50 ${
-                  activeMenu === item.name ? 'bg-green-100 text-green-600' : 'text-gray-600'
-                }`}
-                onClick={() => {
-                  setActiveMenu(item.name);
-                  if (item.submenus) {
-                    toggleSubmenu(item.name);
-                  }
-                }}
-              >
-                <span className="mr-3">{item.icon}</span>
-                <span className="flex-grow">{item.name}</span>
-                {item.submenus && (
-                  <span className="ml-auto">
-                    {openSubmenus[item.name] ? '▲' : '▼'}
-                  </span>
-                )}
-              </div>
-              {item.submenus && openSubmenus[item.name] && (
-                <div className="pl-10 mt-1">
-                  {item.submenus.map((submenu) => (
-                    <div 
-                      key={submenu} 
-                      className="p-2 text-sm text-gray-500 hover:bg-green-50 cursor-pointer"
-                    >
-                      {submenu}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-      </div>
-
       {/* Main Content */}
       <div className="flex-grow flex flex-col">
-        {/* Top Header with Search and Buttons */}
-        <div className="bg-white border-b p-4 flex items-center justify-between">
-          {/* Search Bar */}
-          <div className="flex-grow max-w-xl mr-4 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <SearchIcon className="text-gray-400" size={20} />
-            </div>
-            <input 
-              type="text" 
-              placeholder="Search here..." 
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-3">
-            <button className="p-2 hover:bg-gray-100 rounded-full relative">
-              <BellIcon className="text-gray-600" size={20} />
-              <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full relative">
-              <MessageCircleIcon className="text-gray-600" size={20} />
-              <span className="absolute top-0 right-0 h-2 w-2 bg-green-500 rounded-full"></span>
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <GiftIcon className="text-gray-600" size={20} />
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <CogIcon className="text-gray-600" size={20} />
-            </button>
-
-            {/* User Profile */}
-            <div className="flex items-center ml-4">
-              <span className="mr-2 text-gray-700">Hello, Samantha</span>
-              <img 
-                src="/api/placeholder/40/40" 
-                alt="Profile" 
-                className="rounded-full w-10 h-10 border-2 border-green-500"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Add User Content */}
         <div className="flex-grow p-6 bg-gray-100 overflow-y-auto">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold">User Management</h1>
-            <p className="text-gray-500">Hi, Samantha. Welcome back to Sedap Admin!</p>
+            <h1 className="text-2xl font-bold">Create User</h1>
           </div>
 
           {/* Add User Form */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-6">Create user</h2>
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left column */}
             <div className="space-y-4">
               {/* User Name */}
               <div>
-                <label className="block text-gray-700 mb-2">User Name</label>
-                <input 
-                  type="text" 
+                <label className="block text-gray-700 mb-2">
+                  User Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
                 />
               </div>
 
               {/* Email Address */}
               <div>
-                <label className="block text-gray-700 mb-2">Email address</label>
-                <input 
-                  type="email" 
+                <label className="block text-gray-700 mb-2">
+                  Email Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
                 />
               </div>
 
               {/* Phone Number */}
               <div>
-                <label className="block text-gray-700 mb-2">Phone number</label>
-                <input 
-                  type="tel" 
+                <label className="block text-gray-700 mb-2">Phone Number</label>
+                <input
+                  type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
+            </div>
 
-              {/* Dropdowns Row */}
-              <div className="grid grid-cols-3 gap-4">
-                {/* Gender Dropdown */}
-                <div>
-                  <label className="block text-gray-700 mb-2">Gender</label>
-                  <div className="relative">
-                    <select 
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2 appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status Dropdown */}
-                <div>
-                  <label className="block text-gray-700 mb-2">Status</label>
-                  <div className="relative">
-                    <select 
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2 appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                    >
-                      <option value="">Select Status</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Role Dropdown */}
-                <div>
-                  <label className="block text-gray-700 mb-2">Role</label>
-                  <div className="relative">
-                    <select 
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2 appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                    >
-                      <option value="">Select Role</option>
-                      <option value="admin">Admin</option>
-                      <option value="user">User</option>
-                      <option value="nutritionist">Nutritionist</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Image Upload */}
+            {/* Right column */}
+            <div className="space-y-4">
+              {/* Gender */}
               <div>
-                <label className="block text-gray-700 mb-2">Image</label>
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center">
-                  <UploadIcon className="mr-2" size={20} />
-                  Import Image
-                </button>
+                <label className="block text-gray-700 mb-2">Gender</label>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
               </div>
 
-              {/* Save Button */}
-              <div className="mt-6">
-                <button 
-                  onClick={handleSave}
-                  className="bg-red-500 text-white px-6 py-2 rounded-lg w-full hover:bg-red-600 transition duration-300"
+              {/* Status */}
+              <div>
+                <label className="block text-gray-700 mb-2">Status</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  SAVE
-                </button>
+                  <option value="">Select Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              {/* Role */}
+              <div>
+                <label className="block text-gray-700 mb-2">
+                  Role <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                >
+                  <option value="">Select Role</option>
+                  <option value="admin">Admin</option>
+                  <option value="user">User</option>
+                  <option value="nutritionist">Nutritionist</option>
+                </select>
               </div>
             </div>
+          </div>
+
+          {/* Image Upload */}
+          <div className="mt-6">
+            <label className="block text-gray-700 mb-2">Profile Image</label>
+            <div className="flex flex-col items-center space-y-2">
+              {/* Display preview image if available */}
+              {previewImage ? (
+                <img
+                  src={previewImage}
+                  alt="Profile Preview"
+                  className="w-28 h-28 rounded-full border object-cover"
+                />
+              ) : (
+                <div className="w-28 h-28 flex items-center justify-center bg-gray-200 rounded-full border">
+                  <span className="text-gray-500">No Image</span>
+                </div>
+              )}
+
+              <button
+                className="bg-blue-600 text-white px-3 py-1.5 rounded-lg flex items-center justify-center disabled:bg-blue-400"
+                onClick={() =>
+                  document.getElementById("profile-image-input").click()
+                }
+                disabled={uploading}
+              >
+                <UploadIcon className="mr-1" size={18} />
+                {uploading ? "Uploading..." : "Import Image"}
+              </button>
+
+              <input
+                type="file"
+                id="profile-image-input"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: "none" }}
+                disabled={uploading}
+              />
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={handleSave}
+              disabled={isSubmitting}
+              className="bg-red-500 text-white px-5 py-2 rounded-lg hover:bg-red-600 transition duration-300 disabled:bg-red-300"
+            >
+              {isSubmitting ? "Saving..." : "Save"}
+            </button>
           </div>
         </div>
       </div>

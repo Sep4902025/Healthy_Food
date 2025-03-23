@@ -22,7 +22,7 @@ const DishDetail = () => {
         console.log("Fetched Dish:", response.data); // Debug API response
         setDish(response.data);
       } catch (error) {
-        console.error("Lỗi khi tải chi tiết món ăn:", error);
+        console.error("Error loading dish details:", error);
       }
     };
 
@@ -38,7 +38,7 @@ const DishDetail = () => {
 
         console.log("Fetched Comments:", cmts); // Debug API response
       } catch (error) {
-        console.error("Lỗi khi tải bình luận:", error);
+        console.error("Error loading comments:", error);
       }
     };
 
@@ -53,7 +53,7 @@ const DishDetail = () => {
       setComments([...comments, response.data]);
       setNewComment("");
     } catch (error) {
-      console.error("Lỗi khi thêm bình luận:", error);
+      console.error("Error adding comment:", error);
     }
   };
 
@@ -68,14 +68,14 @@ const DishDetail = () => {
                 isLiked: !comment.isLiked,
                 likeCount: comment.isLiked ? comment.likeCount - 1 : comment.likeCount + 1,
                 likedBy: comment.isLiked
-                  ? comment.likedBy.filter((id) => id !== userId) // Xóa user khỏi likedBy khi unlike
-                  : [...comment.likedBy, userId], // Thêm user vào likedBy khi like
+                  ? comment.likedBy.filter((id) => id !== userId) // Remove user from likedBy when unliking
+                  : [...comment.likedBy, userId], // Add user to likedBy when liking
               }
             : comment
         )
       );
     } catch (error) {
-      console.error("Lỗi khi thích bình luận:", error);
+      console.error("Error liking comment:", error);
     }
   };
 
@@ -96,27 +96,27 @@ const DishDetail = () => {
           className="mt-6 px-6 py-3 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition"
           onClick={() => navigate(`/${dish._id}/recipes/${dish.recipeId}`)}
         >
-          Xem công thức
+          View Recipe
         </Button>
       )}
 
-      {/* Hiển thị bình luận */}
+      {/* Display Comments */}
       <div className="mt-8 w-full max-w-lg">
-        <h2 className="text-2xl font-semibold mb-4">Bình luận</h2>
+        <h2 className="text-2xl font-semibold mb-4">Comments</h2>
         <div className="mb-4">
           <textarea
             className="w-full p-2 border rounded-lg"
             rows="3"
-            placeholder="Nhập bình luận của bạn..."
+            placeholder="Enter your comment..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
           />
           <Button className="mt-2 bg-blue-500 text-white" onClick={handleCommentSubmit}>
-            Gửi bình luận
+            Submit Comment
           </Button>
         </div>
         {comments.length === 0 ? (
-          <p className="text-gray-500 text-center">Chưa có bình luận nào.</p>
+          <p className="text-gray-500 text-center">No comments yet.</p>
         ) : (
           <div className="space-y-4">
             {comments.map((comment) => (

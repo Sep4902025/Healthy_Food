@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   FaUser,
@@ -19,6 +19,7 @@ const EditUser = () => {
   const location = useLocation();
   const userData = location.state?.user || {};
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [user, setUser] = useState({
     username: "",
@@ -37,9 +38,14 @@ const EditUser = () => {
 
   useEffect(() => {
     if (userData && Object.keys(userData).length > 0) {
-      setUser(userData);
-      if (userData.profileImageUrl) {
-        setPreviewImage(userData.profileImageUrl);
+      setUser({
+        ...userData,
+        profileImageUrl: userData.avatar_url || "",
+        profileImage: null,
+      });
+      
+      if (userData.avatar_url) {
+        setPreviewImage(userData.avatar_url);
       }
     } else if (id) {
       fetchUserData(id);
@@ -52,9 +58,14 @@ const EditUser = () => {
       const response = await UserService.getUserById(userId);
 
       if (response.success) {
-        setUser(response.user);
-        if (response.user.profileImageUrl) {
-          setPreviewImage(response.user.profileImageUrl);
+        setUser({
+          ...response.user,
+          profileImageUrl: response.user.avatar_url || "",
+          profileImage: null,
+        });
+        
+        if (response.user.avatar_url) {
+          setPreviewImage(response.user.avatar_url);
         }
       } else {
         toast.error(response.message || "Failed to load user data");
@@ -99,7 +110,6 @@ const EditUser = () => {
       const cloudName =
         process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || "dds8jiclc";
 
-      // Make sure your cloud name is correct and upload preset is properly configured in Cloudinary
       const response = await axios.post(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         formData
@@ -139,12 +149,7 @@ const EditUser = () => {
   };
 
   const handleCancel = () => {
-    // Restore original data
-    if (id) {
-      fetchUserData(id);
-    } else {
-      handleClear();
-    }
+    navigate("/admin/usermanagement");
     toast.info("Changes cancelled");
   };
 
@@ -157,36 +162,25 @@ const EditUser = () => {
     try {
       setLoading(true);
 
-      // Optional: Validate data before sending
       const userData = {
-        id: id, // Make sure to include the user ID
+        id: user._id,
         username: user.username,
         email: user.email,
         phoneNumber: user.phoneNumber,
         gender: user.gender,
         weight: user.weight,
         height: user.height,
-        profileImageUrl: user.profileImageUrl,
+        avatar_url: user.profileImageUrl,
         profileImage: user.profileImage,
       };
 
-      // Make sure your API endpoint is correct
-      // Consider using a base URL from environment variables
-      const apiUrl = process.env.REACT_APP_API_URL || "";
-      const response = await axios.put(
-        `${apiUrl}/api/users/update/${id}`,
-        userData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            // Include authentication token if required
-            // "Authorization": `Bearer ${localStorage.getItem('token')}`
-          },
-        }
-      );
+      const response = await UserService.updateUser(id, userData);
 
-      if (response.status === 200) {
-        toast.success("Profile updated successfully");
+      if (response.success) {
+        toast.success("User profile updated successfully");
+        navigate("/admin/usermanagement");
+      } else {
+        toast.error(response.message || "Failed to update profile");
       }
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -206,7 +200,7 @@ const EditUser = () => {
           <span className="profile-initial">
             {user.username ? user.username.charAt(0).toUpperCase() : "G"}
           </span>
-          <h2>My Profile</h2>
+          <h2>User Profile</h2>
         </div>
 
         <ul className="sidebar-menu">
@@ -235,7 +229,7 @@ const EditUser = () => {
 
       <div className="edit-profile-content">
         <div className="edit-profile-header">
-          <h1>Edit Profile</h1>
+          <h1>Edit User Profile</h1>
         </div>
 
         <div className="edit-profile-form">
@@ -384,7 +378,7 @@ const EditUser = () => {
               onClick={handleCancel}
               disabled={loading || uploading}
             >
-              <FaCheck /> Cancel
+              <FaBan /> Cancel
             </button>
             <button
               className="btn btn-save"

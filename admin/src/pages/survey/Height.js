@@ -45,7 +45,7 @@ const Height = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={10} />
+        <ProgressBar progress={26.25} />
       </div>
 
       <h2 className="text-2xl font-bold text-center">Height</h2>

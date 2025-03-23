@@ -36,9 +36,13 @@ const authSlice = createSlice({
       state.token = null;
       state.error = null;
     },
+    updateUserSuccess: (state, action) => {
+      state.user = action.payload; // Cập nhật thông tin user mới
+    },
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout, updateUserSuccess } =
+  authSlice.actions;
 
 export default authSlice.reducer;

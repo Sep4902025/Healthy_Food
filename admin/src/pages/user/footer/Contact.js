@@ -23,7 +23,12 @@ const ContactUs = () => {
       setStatus({ success: true, message: "Gửi thành công!" });
       setFormData({ name: "", mail: "", subject: "", message: "" });
     } else {
-      setStatus({ success: false, message: result.message });
+      // ✅ Chuyển message về string nếu là object
+      const errorMessage =
+        typeof result.message === "string"
+          ? result.message
+          : JSON.stringify(result.message);
+      setStatus({ success: false, message: errorMessage });
     }
   };
 

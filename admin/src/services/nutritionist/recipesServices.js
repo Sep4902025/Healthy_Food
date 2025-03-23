@@ -40,9 +40,11 @@ const recipesService = {
   },
 
   // 🔹 Lấy công thức theo `recipeId`
-  getRecipeById: async (recipeId) => {
+  getRecipeById: async (dishId, recipeId) => {
     try {
-      const response = await axios.get(`${API_URL}/recipes/${recipeId}`, {
+      const url = `${API_URL}/dishes/${dishId}/recipes/${recipeId}`;
+      console.log(`📡 Gọi API tới: ${url}`);
+      const response = await axios.get(url, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
@@ -50,53 +52,50 @@ const recipesService = {
       return { success: true, data: response.data };
     } catch (error) {
       console.error("❌ Lỗi khi lấy công thức:", error.response?.data || error.message);
-      return { success: false, message: "Không thể lấy công thức." };
+      return { success: false, message: error.response?.data?.message || "Không thể lấy công thức." };
     }
   },
 
   // 🔹 Tạo công thức mới
-  createRecipe: async (data) => {
+  createRecipe: async (dishId, data) => {
     try {
       console.log("📤 Gửi dữ liệu tạo công thức:", data);
-      const response = await axios.post(`${API_URL}/recipes`, data, {
+      const response = await axios.post(`${API_URL}/dishes/${dishId}/recipes`, data, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
       console.log("✅ Phản hồi từ server:", response.data);
-      return { success: true };
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("❌ Lỗi khi thêm công thức:", error.response?.data || error.message);
-      return { success: false, message: "Thêm công thức thất bại!" };
+      return { success: false, message: error.response?.data?.message || "Thêm công thức thất bại!" };
     }
   },
-
-  // 🔹 Cập nhật công thức theo `recipeId`
+  
   updateRecipe: async (recipeId, data) => {
     try {
-      console.log(`✏️ Cập nhật công thức ID ${recipeId}:`, data);
-      await axios.put(`${API_URL}/recipes/${recipeId}`, data, {
+      console.log("✏️ Cập nhật công thức ID:", recipeId, data);
+      const response = await axios.put(`${API_URL}/dishes/${data.dishId}/recipes/${recipeId}`, data, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-      return { success: true };
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("❌ Lỗi khi cập nhật công thức:", error.response?.data || error.message);
-      return { success: false, message: "Cập nhật công thức thất bại!" };
+      return { success: false, message: error.response?.data?.message || "Cập nhật công thức thất bại!" };
     }
   },
-
-  // 🔹 Xóa mềm công thức theo `recipeId`
-  deleteRecipe: async (recipeId) => {
+  deleteRecipe: async (dishId, recipeId) => {
     try {
-      console.log(`🗑 Xóa mềm công thức ID: ${recipeId}`);
-      await axios.delete(`${API_URL}/recipes/${recipeId}`, {
+      console.log(`🗑 Xóa công thức ID: ${recipeId} thuộc món ID: ${dishId}`);
+      const response = await axios.delete(`${API_URL}/dishes/${dishId}/recipes/${recipeId}`, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-      return { success: true };
+      return { success: true, message: response.data.message || "Công thức đã được xóa" };
     } catch (error) {
       console.error("❌ Lỗi khi xóa công thức:", error.response?.data || error.message);
-      return { success: false, message: "Xóa công thức thất bại!" };
+      return { success: false, message: error.response?.data?.message || "Xóa thất bại!" };
     }
   },
 

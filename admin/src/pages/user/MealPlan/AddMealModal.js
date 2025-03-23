@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import mealPlanService from "../../../services/mealPlanServices";
 
 const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) => {
+  console.log("USERID", userId);
+
   const [newMealData, setNewMealData] = useState({
     mealName: "",
     mealTime: "",
@@ -14,7 +16,7 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
     e.preventDefault();
 
     if (!newMealData.mealName || !newMealData.mealTime) {
-      setError("Vui lòng điền đầy đủ thông tin bữa ăn!");
+      setError("Please fill in all meal information!");
       return;
     }
 
@@ -27,11 +29,11 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
         onMealAdded();
         onClose();
       } else {
-        setError("Không thể thêm bữa ăn!");
+        setError("Could not add the meal!");
       }
     } catch (err) {
-      console.error("Lỗi khi thêm bữa ăn:", err);
-      setError("Không thể thêm bữa ăn!");
+      console.error("Error adding meal:", err);
+      setError("Could not add the meal!");
     } finally {
       setIsSubmitting(false);
     }
@@ -41,7 +43,7 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-lg w-full max-w-md p-6 shadow-lg">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Thêm bữa ăn mới</h2>
+          <h2 className="text-lg font-semibold">Add New Meal</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -69,18 +71,18 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tên bữa ăn</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Meal Name</label>
               <input
                 type="text"
                 value={newMealData.mealName}
                 onChange={(e) => setNewMealData({ ...newMealData, mealName: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ví dụ: Bữa sáng, Bữa trưa..."
+                placeholder="E.g., Breakfast, Lunch..."
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Thời gian</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
               <input
                 type="time"
                 value={newMealData.mealTime}
@@ -95,7 +97,7 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
                 onClick={onClose}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
-                Hủy
+                Cancel
               </button>
               <button
                 type="submit"
@@ -104,7 +106,7 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
                   isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
                 } text-white px-4 py-2 rounded`}
               >
-                {isSubmitting ? "Đang thêm..." : "Thêm"}
+                {isSubmitting ? "Adding..." : "Add"}
               </button>
             </div>
           </div>

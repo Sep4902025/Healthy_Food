@@ -1,77 +1,42 @@
 import React, { useState, useEffect } from "react";
 import UserService from "../../../services/user.service";
-import { useNavigate } from "react-router-dom";
-import {
-  SearchIcon,
-  BellIcon,
-  MessageCircleIcon,
-  GiftIcon,
-  CogIcon,
-  EditIcon,
-  TrashIcon,
-  PlusIcon,
-  HomeIcon,
-  ShoppingCartIcon,
-  BookOpenIcon,
-  UserIcon,
-  BarChartIcon,
-  HelpCircleIcon,
-  SettingsIcon,
-} from "lucide-react";
-
-const menuItems = [
-  { icon: <HomeIcon size={20} />, name: "Dashboard" },
-  { icon: <ShoppingCartIcon size={20} />, name: "Order Management" },
-  { icon: <BookOpenIcon size={20} />, name: "Meal Plan" },
-  {
-    icon: <UserIcon size={20} />,
-    name: "User Management",
-  },
-  {
-    icon: <BarChartIcon size={20} />,
-    name: "Analytics",
-  },
-  { icon: <HelpCircleIcon size={20} />, name: "Quiz Management" },
-  { icon: <BookOpenIcon size={20} />, name: "Dish Preferences" },
-  {
-    icon: <HelpCircleIcon size={20} />,
-    name: "Footer Management",
-    submenus: [
-      "About Us Management",
-      "Contact Us Management",
-      "FAQs Management",
-      " Term of Use Management",
-    ],
-  },
-  { icon: <SettingsIcon size={20} />, name: "User Interface" },
-];
+import { EditIcon, TrashIcon, SearchIcon } from "lucide-react";
+import { toast } from "react-toastify";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editData, setEditData] = useState(null);
+  const [formData, setFormData] = useState({ role: "user", isBan: false });
   const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage, setUsersPerPage] = useState(5);
+  const [usersPerPage, setUsersPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeMenu, setActiveMenu] = useState("User Management");
-  const [openSubmenus, setOpenSubmenus] = useState({
-    "User Management": false,
-    Analytics: false,
-    "Quiz Management": false,
-    "User Interface": false,
-  });
+  const [roleFilter, setRoleFilter] = useState("all");
 
-  const toggleSubmenu = (menuName) => {
-    setOpenSubmenus((prev) => ({
-      ...prev,
-      [menuName]: !prev[menuName],
-    }));
+  // Hàm lấy danh sách người dùng từ API
+  const fetchUsers = async (page, limit) => {
+    const result = await UserService.getAllUsers(page, limit);
+    if (result.success) {
+      setUsers(result.users);
+      setTotalPages(result.totalPages);
+      setCurrentPage(result.currentPage);
+    }
   };
 
-  const navigate = useNavigate(); // Hook để điều hướng
+  // Gọi API khi component mount hoặc khi page/usersPerPage thay đổi
+  useEffect(() => {
+    fetchUsers(currentPage, usersPerPage);
+  }, [currentPage, usersPerPage]);
 
-  const handleEditUser = (user) => {
-    navigate(`/admin/edituser/${user._id}`, { state: { user } });
+  // Hàm chuyển trang
+  const paginate = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
   };
 
   useEffect(() => {
@@ -80,6 +45,7 @@ const UserManagement = () => {
       const response = await UserService.getAllUsers();
       if (response.success) {
         setUsers(response.users);
+        setFilteredUsers(response.users); // Khởi tạo filteredUsers
       } else {
         setError(response.message);
       }
@@ -89,94 +55,114 @@ const UserManagement = () => {
     fetchUsers();
   }, []);
 
+  // Hàm xử lý search và filter
+  useEffect(() => {
+    let result = [...users];
+
+    // Search theo username, email, phoneNumber
+    if (searchTerm) {
+      result = result.filter(
+        (user) =>
+          user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.userPreferenceId?.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter theo role
+    if (roleFilter !== "all") {
+      result = result.filter((user) => user.role === roleFilter);
+    }
+
+    setFilteredUsers(result);
+    setCurrentPage(1); // Reset về trang 1 khi search/filter
+  }, [searchTerm, roleFilter, users]);
+
+  const handleOpenEditModal = (user) => {
+    setEditData(user);
+    setFormData({
+      role: user.role,
+      isBan: user.isBan,
+    });
+    setModalOpen(true);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!editData || !editData._id) {
+      toast.error("Không tìm thấy ID user để cập nhật");
+      return;
+    }
+
+    const updatedUser = {
+      role: formData.role,
+      isBan: formData.isBan,
+    };
+
+    const result = await UserService.updateUser(editData._id, updatedUser);
+
+    if (result.success) {
+      toast.success("Cập nhật user thành công!");
+      setUsers((prevUsers) =>
+        prevUsers.map((user) => (user._id === editData._id ? { ...user, ...updatedUser } : user))
+      );
+      setFilteredUsers((prevUsers) =>
+        prevUsers.map((user) => (user._id === editData._id ? { ...user, ...updatedUser } : user))
+      );
+      setFilteredUsers((prevUsers) =>
+        prevUsers.map((user) => (user._id === editData._id ? { ...user, ...updatedUser } : user))
+      );
+    } else {
+      toast.error(`Cập nhật user thất bại: ${result.message}`);
+    }
+
+    setModalOpen(false);
+  };
+
   const handleDeleteUser = (_id) => {
     setUsers((prevUsers) => prevUsers.filter((user) => user._id !== _id));
-  };
-
-  const handleMenuClick = (menu) => {
-    setActiveMenu(menu.name);
-    if (menu.submenus) {
-      toggleSubmenu(menu.name);
-    } else {
-      const route = `/admin/${menu.name.toLowerCase().replace(/\s+/g, "")}`;
-      navigate(route); // Chuyển trang
-    }
-  };
-
-  const handleSubmenuClick = (mainMenu, submenu) => {
-    setActiveMenu(submenu);
-    const route = `/admin/${submenu.toLowerCase().replace(/\s+/g, "")}`;
-    navigate(route);
+    setFilteredUsers((prevUsers) => prevUsers.filter((user) => user._id !== _id));
   };
 
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
 
   if (loading) return <p>Loading users...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r p-4 overflow-y-auto">
-        <div className="flex items-center mb-8">
-          <span className="text-2xl font-bold text-green-600">Healthy</span>
-          <span className="text-sm ml-1 text-gray-500">.Admin</span>
-        </div>
-
-        <nav>
-          {menuItems.map((item) => (
-            <div key={item.name}>
-              <div
-                className={`flex items-center p-3 cursor-pointer rounded hover:bg-green-50 ${
-                  activeMenu === item.name
-                    ? "bg-green-100 text-green-600"
-                    : "text-gray-600"
-                }`}
-                onClick={() => handleMenuClick(item)}
-              >
-                <span className="mr-3">{item.icon}</span>
-                <span className="flex-grow">{item.name}</span>
-                {item.submenus && (
-                  <span className="ml-auto">
-                    {openSubmenus[item.name] ? "▲" : "▼"}
-                  </span>
-                )}
-              </div>
-              {item.submenus && openSubmenus[item.name] && (
-                <div className="ml-8 mt-1 space-y-1">
-                  {item.submenus.map((submenu) => (
-                    <div
-                      key={submenu}
-                      className={`p-2 cursor-pointer rounded hover:bg-green-50 ${
-                        activeMenu === submenu
-                          ? "bg-green-100 text-green-600"
-                          : "text-gray-600"
-                      }`}
-                      onClick={() => handleSubmenuClick(item.name, submenu)}
-                    >
-                      {submenu}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-      </div>
-
-      {/* Main Content */}
       <div className="flex-grow p-6 bg-gray-100 overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">User Management</h1>
-          <button className="bg-pink-500 text-white px-4 py-2 rounded-lg flex items-center">
-            <PlusIcon className="mr-2" size={20} />
-            Create user
-          </button>
         </div>
+
+        {/* Search bar và Filter */}
+        <div className="mb-6 flex gap-4">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search by username, email, or phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <SearchIcon
+              size={20}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+          </div>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="all">All Roles</option>
+            <option value="user">User</option>
+            <option value="nutritionist">Nutritionist</option>
+          </select>
+        </div>
+
         <div className="bg-white rounded-lg shadow-md">
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
@@ -191,30 +177,25 @@ const UserManagement = () => {
             </thead>
             <tbody>
               {currentUsers.map((user) => (
-                <tr key={user.id} className="border-b hover:bg-gray-50">
-                  <td
-                    className="p-4 text-left cursor-pointer hover:underline"
-                    onClick={() => handleEditUser(user)}
-                    // Xử lý khi bấm vào username
-                  >
-                    {user.username}
-                  </td>
-                  <td className="p-4 text-left">{user.phone}</td>
+                <tr key={user._id} className="border-b hover:bg-gray-50">
+                  <td className="p-4 text-left cursor-pointer">{user.username}</td>
+                  <td className="p-4 text-left">{user.userPreferenceId?.phoneNumber || "N/A"}</td>
                   <td className="p-4 text-left">{user.email}</td>
                   <td className="p-4 text-left">{user.role}</td>
                   <td className="p-4 text-left">
                     <span
                       className={`px-3 py-1 rounded-full text-xs ${
-                        user.status === "Active"
-                          ? "bg-green-100 text-green-600"
-                          : "bg-red-100 text-red-600"
+                        user.isBan ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
                       }`}
                     >
-                      {user.status}
+                      {user.isBan ? "Inactive" : "Active"}
                     </span>
                   </td>
                   <td className="p-4 flex space-x-2">
-                    <button className="text-green-500 hover:bg-green-100 p-2 rounded-full">
+                    <button
+                      onClick={() => handleOpenEditModal(user)}
+                      className="text-green-500 hover:bg-green-100 p-2 rounded-full"
+                    >
                       <EditIcon size={16} />
                     </button>
                     <button
@@ -228,12 +209,61 @@ const UserManagement = () => {
               ))}
             </tbody>
           </table>
+
+          {/* Modal chỉnh sửa */}
+          {modalOpen && (
+            <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <h2 className="text-2xl font-bold mb-4">Edit User</h2>
+                <label className="block mb-2">Role:</label>
+                <select
+                  className="w-full border p-2 mb-4 rounded"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="nutritionist">Nutritionist</option>
+                </select>
+                <label className="block mb-2">Status:</label>
+                <select
+                  className="w-full border p-2 mb-4 rounded"
+                  value={formData.isBan ? "inactive" : "active"}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      isBan: e.target.value === "inactive",
+                    })
+                  }
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                    onClick={() => setModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                    onClick={handleSaveChanges}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Pagination */}
           <div className="p-4 flex justify-between items-center">
             <div className="flex items-center space-x-2">
               <span>Show</span>
               <select
                 className="border rounded px-2 py-1"
+                value={usersPerPage}
                 onChange={(e) => setUsersPerPage(Number(e.target.value))}
               >
                 <option value="5">5 Users</option>
@@ -247,32 +277,25 @@ const UserManagement = () => {
                 onClick={() => paginate(currentPage - 1)}
                 disabled={currentPage === 1}
               >
-                &lt;
+                {"<"}
               </button>
-              {Array.from(
-                { length: Math.ceil(users.length / usersPerPage) },
-                (_, i) => (
-                  <button
-                    key={i}
-                    className={`px-3 py-1 rounded ${
-                      currentPage === i + 1
-                        ? "bg-green-500 text-white"
-                        : "border hover:bg-gray-100"
-                    }`}
-                    onClick={() => paginate(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                )
-              )}
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                  }`}
+                  onClick={() => paginate(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
               <button
                 className="border rounded px-3 py-1 hover:bg-gray-100"
                 onClick={() => paginate(currentPage + 1)}
-                disabled={
-                  currentPage === Math.ceil(users.length / usersPerPage)
-                }
+                disabled={currentPage === totalPages}
               >
-                &gt;
+                {">"}
               </button>
             </div>
           </div>

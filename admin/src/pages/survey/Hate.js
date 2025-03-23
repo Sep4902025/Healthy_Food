@@ -188,7 +188,9 @@ const Hate = () => {
           type="checkbox"
           id="selectAll"
           onChange={handleSelectAllToggle}
-          checked={selectedItems.length === hateGroups.flatMap((c) => c.items).length}
+          checked={
+            selectedItems.length === hateGroups.flatMap((c) => c.items).length
+          }
         />
         <label htmlFor="selectAll">Select All</label>
       </div>

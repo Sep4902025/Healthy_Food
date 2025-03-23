@@ -34,38 +34,44 @@ const quizService = {
   getUserPreference: async (userId) => {
     try {
       const response = await axios.get(`${API_URL}/userPreference/${userId}`);
-      return { success: true, data: response.data };
+      return { success: true, data: response.data.data };
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.error || "Failed to fetch user preference.",
+        message:
+          error.response?.data?.error || "Failed to fetch user preference.",
       };
     }
   },
 
   updateUserPreference: async (userId, updatedData) => {
     try {
-      const response = await axios.put(`${API_URL}/userPreference/${userId}`, updatedData);
+      const response = await axios.put(
+        `${API_URL}/userPreference/${userId}`,
+        updatedData
+      );
       return { success: true, data: response.data };
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.error || "Failed to update user preference.",
+        message:
+          error.response?.data?.error || "Failed to update user preference.",
       };
     }
   },
 
-  deleteUserPreference: async (userId) => {
+  deleteUserPreference: async (userPreferenceId) => {
+    console.log("preferenceId", userPreferenceId);
     try {
-      await axios.delete(`${API_URL}/userPreference/s${userId}`);
-      return {
-        success: true,
-        message: "User preference deleted successfully.",
-      };
+      const response = await axios.delete(
+        `${API_URL}/userpreference/${userPreferenceId}`
+      );
+      return { success: true, data: response.data };
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.error || "Failed to delete user preference.",
+        message:
+          error.response?.data?.message || "Failed to delete user preference.",
       };
     }
   },
