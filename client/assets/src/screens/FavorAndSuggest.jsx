@@ -23,6 +23,7 @@ import SpinnerLoading from "../components/common/SpinnerLoading";
 import Rating from "../components/common/Rating";
 import { getIngredient } from "../services/ingredient";
 import { useTheme } from "../contexts/ThemeContext";
+import YouTubePlayer from "../components/common/YoutubePlayer";
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
 
@@ -54,7 +55,7 @@ function FavorAndSuggest({ route }) {
         setLoading(true);
         const detailsObj = [];
 
-        // Create an array of promises for all ingredient fetches
+       
         const promises = recipe.ingredients.map(async (ingredient) => {
           if (!ingredient?.ingredientId) return;
 
@@ -68,7 +69,7 @@ function FavorAndSuggest({ route }) {
           }
         });
 
-        
+      
         await Promise.all(promises);
 
         setIngredientDetails(detailsObj);
@@ -95,6 +96,12 @@ function FavorAndSuggest({ route }) {
 
   const handleOnSavePress = (dish) => {
     dispatch(toggleFavorite({ id: dish._id }));
+  };
+
+  const handleOnPlayPress = (dish) => {
+    if (dish?.videoUrl) {
+      console.log(dish?.videoUrl);
+    }
   };
 
   const handleRate = (ratePoint) => {
@@ -144,6 +151,7 @@ function FavorAndSuggest({ route }) {
 
     const InstructionsRoute = () => (
       <ScrollView style={styles.tabContent}>
+        {dish?.videoUrl && <YouTubePlayer videoId={dish?.videoUrl} />}
         {recipe?.instruction?.map((instruction, idx) => (
           <Text
             key={idx}
@@ -182,7 +190,7 @@ function FavorAndSuggest({ route }) {
 
     return (
       <View key={dish._id} style={styles.recipeCard}>
-        <Image source={{ uri: dish?.image_url }} style={styles.recipeImage} />
+        <Image source={{ uri: dish?.imageUrl }} style={styles.recipeImage} />
         <TouchableOpacity
           style={styles.heartIcon}
           onPress={() => handleOnSavePress(dish)}
@@ -198,6 +206,16 @@ function FavorAndSuggest({ route }) {
           ) : (
             <Ionicons name="heart-outline" size={24} color="#FF8A65" />
           )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.playIcon}
+          onPress={() => handleOnPlayPress(dish)}
+        >
+          <MaterialCommunityIcons
+            name="play-circle-outline"
+            size={24}
+            color="#FF8A65"
+          />
         </TouchableOpacity>
         <View
           style={{
@@ -312,12 +330,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
   },
+  playIcon: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    borderRadius: 20,
+    padding: 8,
+  },
   cardContent: {
     padding: 16,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     transform: [{ translateY: -10 }],
-    // backgroundColor: "white",
+    
   },
   recipeHeader: {
     flexDirection: "row",
@@ -367,7 +393,7 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     paddingTop: 16,
-    
+  
     paddingHorizontal: 12,
   },
   sectionTitle: {

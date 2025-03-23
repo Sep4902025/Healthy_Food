@@ -1,12 +1,12 @@
-// App.js
+
 import "react-native-gesture-handler";
 import { Provider } from "react-redux";
-import { NavigationContainer } from "@react-navigation/native";
 import { ActivityIndicator, Text, View } from "react-native";
 import store from "./src/redux/store";
 import Navigator from "./src/router/Navigator";
-import React from "react";
+import React, { useEffect } from "react";
 import Toast from "react-native-toast-message";
+
 
 import {
   useFonts,
@@ -18,8 +18,9 @@ import {
   Aleo_700Bold_Italic,
 } from "@expo-google-fonts/aleo";
 import { ThemeProvider } from "./src/contexts/ThemeContext";
+import messageSocket from "./src/services/messageSocket";
 
-// Create a custom Text component wrapper
+
 const DefaultText = Text.render;
 const customTextRender = function (...args) {
   const originText = DefaultText.apply(this, args);
@@ -44,7 +45,7 @@ export default function App() {
     return <ActivityIndicator size="large" />;
   }
 
-  // Register the custom toast configuration
+  
   const toastConfig = {
     success: ({ text1, text2, props }) => (
       <View style={{ backgroundColor: "green", padding: 10, borderRadius: 5 }}>

@@ -18,12 +18,12 @@ const InputOtpModal = ({
 }) => {
   const [verificationCode, setVerificationCode] = useState("");
 
-  // Handle OTP input change
+ 
   const handleCodeChange = (code) => {
     setVerificationCode(code);
   };
 
-  // Handle verify action
+  
   const handleVerify = () => {
     onVerify(verificationCode);
     setVerificationCode("");
@@ -48,15 +48,12 @@ const InputOtpModal = ({
             />
           </View>
 
-          {/* Verify Button */}
+          
           <TouchableOpacity style={styles.verifyButton} onPress={handleVerify}>
             <Text style={styles.buttonText}>Confirm</Text>
           </TouchableOpacity>
 
-          {/* Close Button */}
-          {/* <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.buttonText}>Close</Text>
-          </TouchableOpacity> */}
+         
         </View>
       </TouchableOpacity>
     </Modal>
@@ -68,7 +65,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContainer: {
     backgroundColor: "white",

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -18,24 +18,23 @@ import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
 import { useTheme } from "../../contexts/ThemeContext";
 const HEIGHT = Dimensions.get("window").height;
-export const EditHealthModal = ({ visible, onClose, onSave }) => {
+export const EditHealthModal = ({
+  visible,
+  onClose,
+  onSave,
+  userPreference,
+}) => {
   const { theme } = useTheme();
   const [healthData, setHealthData] = useState({
-    height: "",
-    weight: "",
-    age: "",
-    bmi: "",
-    bloodType: "",
-    allergies: "",
-    medication: "",
-    healthIssues: "",
-    goal: "",
-    dietRestrictions: "",
+    ...userPreference,
   });
+
+  useEffect(() => {
+    setHealthData(userPreference);
+  }, [userPreference]);
 
   const handleSave = () => {
     onSave(healthData);
-    onClose();
   };
 
   return (
@@ -67,7 +66,7 @@ export const EditHealthModal = ({ visible, onClose, onSave }) => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.weight}
+                    value={String(healthData.weight)}
                     onChangeText={(text) =>
                       setHealthData({ ...healthData, weight: text })
                     }
@@ -83,9 +82,9 @@ export const EditHealthModal = ({ visible, onClose, onSave }) => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.dietRestrictions}
+                    value={healthData.diet}
                     onChangeText={(text) =>
-                      setHealthData({ ...healthData, dietRestrictions: text })
+                      setHealthData({ ...healthData, diet: text })
                     }
                   />
                 </View>
@@ -100,7 +99,7 @@ export const EditHealthModal = ({ visible, onClose, onSave }) => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.height}
+                    value={String(healthData.height)}
                     onChangeText={(text) =>
                       setHealthData({ ...healthData, height: text })
                     }
@@ -110,15 +109,18 @@ export const EditHealthModal = ({ visible, onClose, onSave }) => {
 
               <View style={styles.formItem}>
                 <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  UnderDisease
+                  UnderDisease (disable)
                 </Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.underDisease}
+                    value={healthData.underDisease
+                      ?.map((item) => item)
+                      .join(", ")}
                     onChangeText={(text) =>
                       setHealthData({ ...healthData, underDisease: text })
                     }
+                    editable={false}
                   />
                 </View>
               </View>
@@ -127,7 +129,7 @@ export const EditHealthModal = ({ visible, onClose, onSave }) => {
             <View style={styles.formRow}>
               <View style={styles.formItem}>
                 <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  BMI
+                  BMI (Not updated yet)
                 </Text>
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -198,7 +200,7 @@ export const EditHealthModal = ({ visible, onClose, onSave }) => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.weightGoal}
+                    value={String(healthData.weightGoal)}
                     onChangeText={(text) =>
                       setHealthData({ ...healthData, weightGoal: text })
                     }
@@ -208,15 +210,16 @@ export const EditHealthModal = ({ visible, onClose, onSave }) => {
 
               <View style={styles.formItem}>
                 <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  EatHabit
+                  EatHabit (disable)
                 </Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.eatHabit}
+                    value={healthData.eatHabit?.map((item) => item).join(", ")}
                     onChangeText={(text) =>
                       setHealthData({ ...healthData, eatHabit: text })
                     }
+                    editable={false}
                   />
                 </View>
               </View>

@@ -5,7 +5,7 @@ import {
   Text, 
   View, 
   Dimensions, 
-  Image,
+  Image, 
   Platform, 
   KeyboardAvoidingView, 
 } from "react-native";
@@ -14,15 +14,18 @@ import {
 import SafeAreaWrapper from "../components/layout/SafeAreaWrapper"; 
 import SigninInputField from "../components/common/SigninInputField"; 
 import Ionicons from "../components/common/VectorIcons/Ionicons"; 
-import MaterialIcons from "../components/common/VectorIcons/MaterialIcons"; 
+import MaterialIcons from "../components/common/VectorIcons/MaterialIcons";
 import DecorationDot from "../components/common/DecorationDot"; 
 import { TouchableOpacity } from "react-native"; 
 import RippleButton from "../components/common/RippleButton"; 
 
 
 import googleIcon from "../../assets/image/google_icon.png"; 
+import fbIcon from "../../assets/image/fb_round.png"; 
+import appleIcon from "../../assets/image/apple_logo.png"; 
 import loginHeaderIcon from "../../assets/image/login_bg.png"; 
 import { ScreensName } from "../constants/ScreensName"; 
+import Toast from "react-native-toast-message";
 import ShowToast from "../components/common/CustomToast"; 
 import { loginThunk } from "../redux/actions/userThunk"; 
 import { useDispatch } from "react-redux"; 
@@ -43,7 +46,7 @@ function Signin({ navigation }) {
 
   
   const loginMethod = [
-    
+   
     {
       name: "Google",
       icon: googleIcon,
@@ -52,7 +55,7 @@ function Signin({ navigation }) {
         await loginGoogle();
       },
     },
-    
+   
   ];
 
   const loginGoogle = async () => {
@@ -89,7 +92,7 @@ function Signin({ navigation }) {
     setLoading(false);
   };
 
-  
+ 
   const renderLoginMethod = () => {
     return loginMethod.map((item, index) => (
       <RippleButton
@@ -112,7 +115,7 @@ function Signin({ navigation }) {
     ));
   };
 
-  
+
   return (
     <NonBottomTabWrapper headerHidden={true} style={styles.container}>
       
@@ -121,7 +124,7 @@ function Signin({ navigation }) {
 
       
       <View style={styles.formContainer}>
-        
+       
         <SigninInputField
           state={email}
           setState={setEmail}
@@ -131,7 +134,7 @@ function Signin({ navigation }) {
           inputType="email-address"
           keyboardType="email-address"
         />
-        
+       
         <SigninInputField
           state={password}
           setState={setPassword}
@@ -140,7 +143,7 @@ function Signin({ navigation }) {
           placeholder="Password"
           secureTextEntry
         />
-       
+        
         <TouchableOpacity
           onPress={() => {
             navigation.navigate(ScreensName.verifyEmail);
@@ -158,13 +161,13 @@ function Signin({ navigation }) {
         />
       </View>
 
-    
+      
       <View style={styles.loginMethodContainer}>{renderLoginMethod()}</View>
       <Text style={styles.alreadyText}>
         Don't have account?{" "}
         <Text
           style={{
-            textDecorationLine: "underline",
+            textDecorationLine: "underline", 
             fontSize: 16, 
           }}
           onPress={() => navigation.navigate(ScreensName.signup)}
@@ -183,11 +186,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backgroundImage: {
-   
-    height: "30%", 
+    
+    height: "30%",
     resizeMode: "contain", 
     
-  
   },
   title: {
     fontSize: 30, 
@@ -219,23 +221,23 @@ const styles = StyleSheet.create({
     textAlign: "center", 
     color: "#fff", 
     fontSize: 18, 
-    
+   
     fontFamily: "Aleo_700Bold",
   },
   loginMethodContainer: {
     flexDirection: "row", 
-    gap: 20,
-    justifyContent: "center",
+    gap: 20, 
+    justifyContent: "center", 
     alignItems: "center", 
     marginTop: 20, 
   },
   loginMethod: {
-    backgroundColor: "white",
+    backgroundColor: "white", 
     borderRadius: 50, 
     padding: 20, 
     width: 80, 
     height: 80, 
-    justifyContent: "center", 
+    justifyContent: "center",
     alignItems: "center", 
   },
   alreadyText: {

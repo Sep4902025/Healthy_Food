@@ -31,9 +31,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     borderColor: "rgba(0, 0, 0, 0.1)",
     borderWidth: 1,
-    // borderRadius: 10,
+    
     backgroundColor: "white",
-    // overflow: "hidden",
+    
     zIndex: 9999,
     borderRadius: 12,
     overflow: "hidden",
@@ -49,12 +49,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 5,
     fontWeight: "bold",
-    // color: 'white',
+    
   },
   message: {
     fontSize: 14,
     opacity: 0.5,
-    // color: 'white',
+    
   },
 });
 

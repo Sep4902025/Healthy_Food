@@ -49,7 +49,7 @@ const DishedV1 = ({
         backgroundColor: theme.cardBackgroundColor,
       }}
     >
-      <Image source={{ uri: dish.image_url }} style={styles.dishImage} />
+      <Image source={{ uri: dish.imageUrl }} style={styles.dishImage} />
       <View style={styles.dishInfo}>
         <Text style={{ ...styles.dishTitle, color: theme.textColor }}>
           {dish.name}

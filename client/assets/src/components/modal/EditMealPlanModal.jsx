@@ -49,10 +49,7 @@ export const EditMealPlanModal = ({ visible, onClose, onSave }) => {
         <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
           Meal Planning
         </Text>
-        {/* <TouchableOpacity style={styles.backButton} onPress={onClose}>
-            <Ionicons name="chevron-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Meal Planning</Text> */}
+      
 
         <ScrollView style={styles.scrollContent}>
           <View style={styles.formGrid}>

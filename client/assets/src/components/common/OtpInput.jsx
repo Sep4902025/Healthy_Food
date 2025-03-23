@@ -5,7 +5,7 @@ const OTPInput = ({ length = 6, value = "", onChange }) => {
   const inputRefs = useRef([]);
   const [otp, setOtp] = useState(new Array(length).fill(""));
 
-  // Handle paste functionality
+  
   const handlePaste = async (index) => {
     try {
       const paste = await Clipboard.getString();
@@ -22,7 +22,7 @@ const OTPInput = ({ length = 6, value = "", onChange }) => {
         setOtp(newOtp);
         onChange(newOtp.join(""));
 
-        // Focus on the next empty input or last input
+        
         const nextIndex = Math.min(index + pasteArray.length, length - 1);
         inputRefs.current[nextIndex]?.focus();
       }
@@ -31,7 +31,7 @@ const OTPInput = ({ length = 6, value = "", onChange }) => {
     }
   };
 
-  // Handle individual digit change
+  
   const handleChange = (index, digit) => {
     if (/^\d?$/.test(digit)) {
       const newOtp = [...otp];
@@ -39,14 +39,14 @@ const OTPInput = ({ length = 6, value = "", onChange }) => {
       setOtp(newOtp);
       onChange(newOtp.join(""));
 
-      // Auto focus next input
+     
       if (digit !== "" && index < length - 1) {
         inputRefs.current[index + 1]?.focus();
       }
     }
   };
 
-  // Handle backspace
+  
   const handleKeyPress = (event, index) => {
     if (event.nativeEvent.key === "Backspace" && index > 0 && !otp[index]) {
       inputRefs.current[index - 1]?.focus();
@@ -98,12 +98,5 @@ const styles = StyleSheet.create({
   },
 });
 
-// Usage example:
-// const [otpValue, setOtpValue] = useState('');
-// <OTPInput
-//   length={6}
-//   value={otpValue}
-//   onChange={(value) => setOtpValue(value)}
-// />
 
 export default OTPInput;

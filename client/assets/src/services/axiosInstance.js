@@ -5,8 +5,6 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ShowToast from "../components/common/CustomToast";
 
-
-
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
 
@@ -23,11 +21,8 @@ const axiosInstance = axios.create({
 console.log(process.env.EXPO_PUBLIC_API_URL);
 
 
-
-
 axiosInstance.interceptors.request.use(
-  
-  async (config) => {
+    async (config) => {
     
     const accessToken = await AsyncStorage.getItem("accessToken");
 
@@ -45,7 +40,8 @@ axiosInstance.interceptors.request.use(
 
 
 axiosInstance.interceptors.response.use(
-    (response) => {
+  
+  (response) => {
     return response;
   },
   

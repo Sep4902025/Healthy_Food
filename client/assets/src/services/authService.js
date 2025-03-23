@@ -1,7 +1,7 @@
 import axiosInstance from "./axiosInstance"; 
 
 export const login = async ({ email, password }) => {
-  
+ 
   try {
     
     const data = {
@@ -12,8 +12,8 @@ export const login = async ({ email, password }) => {
    
     return response;
   } catch (error) {
-    
-    console.log("login in service/auth error : ", error); 
+   
+    console.log("login in service/auth error : ", error);
     return error;
   }
 };
@@ -30,7 +30,7 @@ export const signup = async ({
     const response = await axiosInstance.post("api/v1/users/signup", data);
     return response;
   } catch (error) {
-   
+  
     return error;
   }
 };
@@ -94,6 +94,16 @@ export const changePassword = async ({ email, password, passwordConfirm }) => {
     return response;
   } catch (error) {
     console.log("changePassword error: ", error);
+    return error;
+  }
+};
+
+export const updateUser = async (user) => {
+  try {
+    const response = await axiosInstance.put(`api/v1/users/${user?._id}`, user);
+    return response;
+  } catch (error) {
+    console.log("updateUser error: ", error);
     return error;
   }
 };

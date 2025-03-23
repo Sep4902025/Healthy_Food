@@ -15,3 +15,4 @@ export const ScreensName = {
   heartBeat: "heartBeat",
   profile: "profile",
 };
+

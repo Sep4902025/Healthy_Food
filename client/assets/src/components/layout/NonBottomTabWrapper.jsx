@@ -6,7 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import DecorationDot from "../common/DecorationDot";
 import { useTheme } from "../../contexts/ThemeContext";
 
-// Lấy kích thước màn hình
+
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
 
@@ -30,7 +30,7 @@ function NonBottomTabWrapper({ children, headerHidden, style }) {
           {children}
         </KeyboardAvoidingView>
       </LinearGradient>
-      {/* {children} */}
+    
       <>
         <DecorationDot
           size={HEIGHT * 0.25}

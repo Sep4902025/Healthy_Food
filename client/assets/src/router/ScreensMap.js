@@ -23,7 +23,6 @@ import OcticonsIcon from "../components/common/VectorIcons/OcticonsIcon";
 import HeartBeat from "../screens/HeartBeat";
 import Profile from "../screens/Profile";
 
-
 export const ScreensMap = [
  
   {
@@ -32,7 +31,7 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-
+    
   },
   {
     
@@ -40,11 +39,11 @@ export const ScreensMap = [
     
 
     component: Signup,
-    
+   
 
     options: {
       tabBarButton: () => null,
-     
+      
     },
 
     hiddenBottomTab: true,
@@ -60,7 +59,7 @@ export const ScreensMap = [
     },
     hiddenBottomTab: true,
 
-  
+    
   },
   {
     name: ScreensName.verifyEmail,
@@ -78,7 +77,7 @@ export const ScreensMap = [
     },
     hiddenBottomTab: true,
   },
- 
+  
   {
     name: ScreensName.favorList,
     component: FavorList,
@@ -86,7 +85,7 @@ export const ScreensMap = [
       tabBarIcon: ({ color, focused }) => (
         <Ionicons
           name="heart-outline" 
-          size={28}
+          size={28} 
           color={color} 
         />
       ),
@@ -105,7 +104,9 @@ export const ScreensMap = [
         />
       ),
       iconStyles: { transform: [{ translateX: -25 }] },
+      requireAuthen: true,
     },
+    hiddenBottomTab: true,
   },
   {
     name: ScreensName.heartBeat,
@@ -145,7 +146,7 @@ export const ScreensMap = [
       tabBarIcon: ({ color, focused }) => (
         <AntDesignIcon
           name="setting" 
-          size={28}
+          size={28} 
           color={color}
         />
       ),
