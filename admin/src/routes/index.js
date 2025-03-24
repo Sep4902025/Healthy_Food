@@ -195,6 +195,7 @@ const AppRoutes = () => {
         <Route path="ingredientsmanagement" element={<IngredientsManagement />} />
         <Route path="mealplan" element={<MealPlan />} />
         <Route path="change-password" element={<ChangePassword />} />
+        <Route path="adminprofile/:id" element={<AdminProfile />} />
         <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
         <Route path="viewprofile/:id" element={<ViewProfile />} />

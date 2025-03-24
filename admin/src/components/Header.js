@@ -75,6 +75,17 @@ const Header = () => {
     toast.success("Đăng xuất thành công!");
   };
 
+  // Hàm xử lý khi nhấp vào "Thông tin cá nhân"
+  const handleProfileClick = () => {
+    if (user?.role === "admin") {
+      // Nếu là admin, chuyển đến trang admin profile
+      navigate(`/admin/adminprofile/${user._id}`, { state: { user } });
+    } else {
+      // Nếu không phải admin, chuyển đến trang user thông thường
+      navigate("/user");
+    }
+  };
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -105,17 +116,13 @@ const Header = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Handle dropdown menu close
       if (!event.target.closest(".dropdown-container")) {
         setActiveDropdown(null);
       }
-
-      // Handle user menu close
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
       }
     };
-
     document.addEventListener("click", handleClickOutside);
     return () => {
       document.removeEventListener("click", handleClickOutside);
@@ -131,7 +138,7 @@ const Header = () => {
   };
 
   const toggleUserMenu = (e) => {
-    e.stopPropagation(); // Prevent event from bubbling up
+    e.stopPropagation();
     setUserMenuOpen(!userMenuOpen);
   };
 
@@ -140,7 +147,6 @@ const Header = () => {
       <div className="container mx-auto">
         {/* Main Header */}
         <div className="flex items-center justify-between px-4">
-          {/* Logo */}
           <div
             className="flex items-center cursor-pointer"
             onClick={() => navigate("/")}
@@ -148,7 +154,6 @@ const Header = () => {
             <img src={logo} alt="Healthy Food" className="h-12" />
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             className="lg:hidden text-gray-700 focus:outline-none"
             onClick={toggleMobileMenu}
@@ -156,7 +161,6 @@ const Header = () => {
             {mobileMenuOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
           </button>
 
-          {/* Primary Navigation - Center (hidden on mobile) */}
           <div className="hidden lg:flex items-center space-x-6">
             <a
               href="/"
@@ -180,7 +184,6 @@ const Header = () => {
                 Management
               </a>
             )}
-
             <a
               href="/survey/name"
               className={`font-medium transition-colors ${
@@ -203,9 +206,7 @@ const Header = () => {
             </a>
           </div>
 
-          {/* Right Side - Search, Icons, User (some elements hidden on mobile) */}
           <div className="flex items-center space-x-4">
-            {/* Search Bar (hidden on small mobile) */}
             <div className="hidden sm:relative sm:block">
               <input
                 type="text"
@@ -215,7 +216,6 @@ const Header = () => {
               <FaSearch className="absolute left-3 top-2 text-gray-500 text-sm" />
             </div>
 
-            {/* Icons & Auth */}
             {user ? (
               <div className="flex items-center space-x-4">
                 <FaShoppingBag
@@ -226,7 +226,6 @@ const Header = () => {
                   className="text-transparent stroke-black hover:stroke-green-600 cursor-pointer hidden sm:block"
                   strokeWidth={20}
                 />
-
                 <div className="relative" ref={userMenuRef}>
                   <img
                     src={user.avatarUrl || "https://via.placeholder.com/40"}
@@ -242,7 +241,7 @@ const Header = () => {
                       </div>
                       <div className="py-1">
                         <button
-                          onClick={() => navigate("/user")}
+                          onClick={handleProfileClick} // Sử dụng hàm mới
                           className="w-full text-left px-4 py-2 hover:bg-gray-100"
                         >
                           Thông tin cá nhân
@@ -269,7 +268,7 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Secondary Navigation - Categories (hidden on mobile) */}
+        {/* Secondary Navigation - Categories */}
         <div className="border-t mt-2 pt-2 hidden lg:block">
           <div className="flex px-4 space-x-6">
             <div className="relative dropdown-container">
@@ -484,7 +483,6 @@ const Header = () => {
                 Medical
               </a>
 
-              {/* Mobile search */}
               <div className="relative py-2">
                 <input
                   type="text"
@@ -494,13 +492,14 @@ const Header = () => {
                 <FaSearch className="absolute left-3 top-4 text-gray-500" />
               </div>
 
-              {/* User profile and logout on mobile when logged in */}
               {user && (
                 <div className="border-t pt-2">
-                  <a
-                    href="/user"
-                    className="flex items-center py-2 text-gray-700"
-                    onClick={() => setMobileMenuOpen(false)}
+                  <button
+                    onClick={() => {
+                      handleProfileClick(); // Sử dụng hàm mới cho mobile
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center py-2 text-gray-700 w-full"
                   >
                     <img
                       src={user.avatarUrl || "https://via.placeholder.com/40"}
@@ -508,7 +507,7 @@ const Header = () => {
                       className="w-6 h-6 rounded-full mr-2"
                     />
                     Thông tin cá nhân
-                  </a>
+                  </button>
                   <button
                     onClick={() => {
                       handleLogout();
