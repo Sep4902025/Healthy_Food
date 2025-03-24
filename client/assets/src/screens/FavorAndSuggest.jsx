@@ -23,7 +23,7 @@ import SpinnerLoading from "../components/common/SpinnerLoading";
 import Rating from "../components/common/Rating";
 import { useTheme } from "../contexts/ThemeContext";
 import YoutubePlayer from "react-native-youtube-iframe";
-import HomeService from "../services/dishes";
+import HomeService from "../services/HomeService";
 
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;

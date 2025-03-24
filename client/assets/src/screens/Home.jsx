@@ -21,7 +21,7 @@ import { loadFavorites } from "../redux/actions/favoriteThunk";
 import { favorSelector, userSelector } from "../redux/selectors/selector";
 import SpinnerLoading from "../components/common/SpinnerLoading";
 import PaddingScrollViewBottom from "../components/common/PaddingScrollViewBottom";
-import HomeService from "../services/dishes";
+import HomeService from "../services/HomeService";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -36,8 +36,6 @@ function Home({ navigation }) {
   const dispatch = useDispatch();
 
   const season = useCurrentSeason();
-
-
 
   useEffect(() => {
     loadDishes();
@@ -107,7 +105,7 @@ function Home({ navigation }) {
           onSubmit={() => handleSearch(searchQuery)}
           onClear={handleClear}
         />
-       
+
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Browse by category</Text>
           <ScrollView
@@ -133,7 +131,6 @@ function Home({ navigation }) {
           </ScrollView>
         </View>
 
-       
         <View style={styles.seasonalSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Seasonal Dishes</Text>
@@ -169,7 +166,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
-  
+
   categoriesSection: {
     marginTop: 16,
   },
@@ -182,9 +179,8 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    
   },
-  
+
   seasonalSection: {
     marginVertical: 16,
   },
