@@ -58,6 +58,12 @@ export default function App() {
         {text2 && <Text style={{ color: "white" }}>{text2}</Text>}
       </View>
     ),
+    warning: ({ text1, text2, props }) => (
+      <View style={{ backgroundColor: "yellow", padding: 10, borderRadius: 5 }}>
+        <Text style={{ color: "white" }}>{text1}</Text>
+        {text2 && <Text style={{ color: "white" }}>{text2}</Text>}
+      </View>
+    ),
     info: ({ text1, text2, props }) => (
       <View style={{ backgroundColor: "blue", padding: 10, borderRadius: 5 }}>
         <Text style={{ color: "white" }}>{text1}</Text>

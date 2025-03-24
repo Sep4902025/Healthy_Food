@@ -3,7 +3,7 @@ import axiosInstance from "./axiosInstance";
 export const getIngredient = async (ingredientId) => {
   try {
     const response = await axiosInstance.get(
-      `api/v1/ingredients${ingredientId ? `/${ingredientId}` : ""}`
+      `/ingredients${ingredientId ? `/${ingredientId}` : ""}`
     );
     return response;
   } catch (error) {
@@ -14,7 +14,7 @@ export const getIngredient = async (ingredientId) => {
 
 export const getIngredientByName = async (name) => {
   try {
-    const response = await axiosInstance.get(`api/v1/ingredients/search`, {
+    const response = await axiosInstance.get(`/ingredients/search`, {
       params: { name },
     });
     return response;
@@ -26,7 +26,7 @@ export const getIngredientByName = async (name) => {
 
 export const getIngredientByType = async (type) => {
   try {
-    const response = await axiosInstance.get(`api/v1/ingredients/filter`, {
+    const response = await axiosInstance.get(`/ingredients/filter`, {
       params: { type },
     });
     return response;

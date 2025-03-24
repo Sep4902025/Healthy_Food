@@ -2,7 +2,7 @@ import axiosInstance from "./axiosInstance";
 
 export const getFavoriteList = async (userId) => {
   try {
-    const response = await axiosInstance.get(`api/v1/favoriteDishes/${userId}`);
+    const response = await axiosInstance.get(`/favoriteDishes/${userId}`);
     return response;
   } catch (error) {
     console.log("getFavoriteList in service/dishes error : ", error);
@@ -17,7 +17,7 @@ export const addDishFavorite = async (userId, dishId) => {
       dishId,
     };
 
-    const response = await axiosInstance.post(`api/v1/favoriteDishes`, data);
+    const response = await axiosInstance.post(`/favoriteDishes`, data);
     return response;
   } catch (error) {
     console.log("getFavoriteList in service/dishes error : ", error);
@@ -33,7 +33,7 @@ export const removeDishFavorite = async (userId, dishId) => {
     };
     console.log(data);
 
-    const response = await axiosInstance.delete(`api/v1/favoriteDishes`, {
+    const response = await axiosInstance.delete(`/favoriteDishes`, {
       data,
     });
     return response;
