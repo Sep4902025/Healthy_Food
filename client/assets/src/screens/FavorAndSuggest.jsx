@@ -92,8 +92,9 @@ function FavorAndSuggest({ route }) {
       setLoading(true);
       const detailsObj = [];
 
-      const promises = recipe.ingredients.map(async (ingredient) => {
-        if (!ingredient?.ingredientId) return;
+        // Create an array of promises for all ingredient fetches
+        const promises = recipe.ingredients.map(async (ingredient) => {
+          if (!ingredient?.ingredientId) return;
 
         const response = await HomeService.getIngredientById(ingredient.ingredientId);
         if (response?.status === "success" && response.data) {
@@ -134,6 +135,12 @@ function FavorAndSuggest({ route }) {
     } catch (error) {
       console.error("Error toggling favorite:", error);
       Alert.alert("Error", "Failed to toggle favorite.");
+    }
+  };
+
+  const handleOnPlayPress = (dish) => {
+    if (dish?.videoUrl) {
+      console.log(dish?.videoUrl);
     }
   };
 
@@ -266,6 +273,20 @@ function FavorAndSuggest({ route }) {
       );
     };
 
+    const InstructionsRoute = () => (
+      <ScrollView style={styles.tabContent}>
+        {recipe?.instruction?.map((instruction, idx) => (
+          <Text
+            key={idx}
+            style={{ ...styles.instructionText, color: theme.greyTextColor }}
+          >
+            • {instruction?.description}
+          </Text>
+        ))}
+        <PaddingScrollViewBottom />
+      </ScrollView>
+    );
+
     const renderScene = SceneMap({
       ingredient: IngredientsRoute,
       instructions: InstructionsRoute,
@@ -312,7 +333,12 @@ function FavorAndSuggest({ route }) {
             <Ionicons name="heart-outline" size={24} color="#FF8A65" />
           )}
         </TouchableOpacity>
-        <View style={{ ...styles.cardContent, backgroundColor: theme.cardBackgroundColor }}>
+        <View
+          style={{
+            ...styles.cardContent,
+            backgroundColor: theme.cardBackgroundColor,
+          }}
+        >
           <View style={styles.recipeHeader}>
             <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>{dish.name}</Text>
             <View style={styles.recipeRate}>
@@ -397,11 +423,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
   },
+  playIcon: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    borderRadius: 20,
+    padding: 8,
+  },
   cardContent: {
     padding: 16,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     transform: [{ translateY: -10 }],
+    
   },
   recipeHeader: {
     flexDirection: "row",
@@ -451,6 +486,7 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     paddingTop: 16,
+    
     paddingHorizontal: 12,
   },
   sectionTitle: {

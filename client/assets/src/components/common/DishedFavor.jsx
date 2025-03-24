@@ -15,7 +15,7 @@ import { toggleFavorite } from "../../redux/actions/favoriteThunk";
 import MaterialCommunityIcons from "./VectorIcons/MaterialCommunityIcons";
 import { useTheme } from "../../contexts/ThemeContext";
 const HEIGHT = Dimensions.get("window").height;
-// DishedFavor component for individual food items
+
 const DishedFavor = ({ item }) => {
   const dispatch = useDispatch();
   const { theme } = useTheme();
@@ -46,7 +46,7 @@ const DishedFavor = ({ item }) => {
           activeOpacity={0.9}
           onPress={handleOnChangeFavorite}
         >
-          {/* <Text style={styles.videoIcon}>▶</Text> */}
+         
           <MaterialCommunityIcons
             name="heart-multiple"
             size={24}
@@ -57,12 +57,7 @@ const DishedFavor = ({ item }) => {
       <Text style={{ ...styles.dishTitle, color: theme.textColor }}>
         {item.name}
       </Text>
-      {/* <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={handleOnChangeFavorite}
-      >
-        <AntDesignIcon name="delete" size={24} color="#FF0000" />
-      </TouchableOpacity> */}
+      
     </TouchableOpacity>
   );
 };

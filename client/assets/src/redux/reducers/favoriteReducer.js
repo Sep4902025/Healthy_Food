@@ -3,6 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import { loadFavorites, toggleFavorite } from "../actions/favoriteThunk";
 
 
+
 const initialState = {
   favoriteList: [], 
   isLoading: false, 
@@ -12,7 +13,7 @@ const initialState = {
 
 const favoritesSlice = createSlice({
   name: "favorites", 
-  initialState, 
+  initialState,
 
   
   reducers: {
@@ -22,10 +23,10 @@ const favoritesSlice = createSlice({
     },
   },
 
- 
+  
   extraReducers: (builder) => {
     builder
-     
+      
       .addCase(loadFavorites.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -39,7 +40,7 @@ const favoritesSlice = createSlice({
         state.isLoading = false;
       })
 
-      
+     
       .addCase(toggleFavorite.pending, (state) => {
         state.isLoading = true;
         state.error = null;

@@ -37,6 +37,8 @@ function Home({ navigation }) {
 
   const season = useCurrentSeason();
 
+
+
   useEffect(() => {
     loadDishes();
   }, []);
@@ -105,7 +107,7 @@ function Home({ navigation }) {
           onSubmit={() => handleSearch(searchQuery)}
           onClear={handleClear}
         />
-        {/* Categories Section */}
+       
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Browse by category</Text>
           <ScrollView
@@ -131,6 +133,7 @@ function Home({ navigation }) {
           </ScrollView>
         </View>
 
+       
         <View style={styles.seasonalSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Seasonal Dishes</Text>
@@ -166,6 +169,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
+  
   categoriesSection: {
     marginTop: 16,
   },
@@ -178,7 +182,9 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    
   },
+  
   seasonalSection: {
     marginVertical: 16,
   },

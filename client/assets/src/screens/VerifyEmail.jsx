@@ -8,40 +8,39 @@ import {
   TextInput, 
   Dimensions, 
   Platform,
-  KeyboardAvoidingView,
+  KeyboardAvoidingView, 
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native"; 
 
 
 import SafeAreaWrapper from "../components/layout/SafeAreaWrapper"; 
 import RippleButton from "../components/common/RippleButton"; 
-import { ScreensName } from "../constants/ScreensName"; 
+import { ScreensName } from "../constants/ScreensName";
 
 
 import sadCactusIcon from "../../assets/image/sad_cactus.png"; 
 import happyCactusIcon from "../../assets/image/happy_cactus.png"; 
-import { forgetPassword, verifyOtp } from "../services/authService"; 
+import { forgetPassword, verifyOtp } from "../services/authService";
 import OTPInput from "../components/common/OtpInput";
-
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
 
 function VerifyEmail({ navigation }) {
- 
-  const [email, setEmail] = useState("");
+  
+  const [email, setEmail] = useState(""); 
   const [verificationCode, setVerificationCode] = useState(""); 
-  const [otpAmount] = useState(4); 
-  const [isCodeSent, setIsCodeSent] = useState(false); 
+  const [otpAmount] = useState(4);
+  const [isCodeSent, setIsCodeSent] = useState(false);
 
- 
+  
   useFocusEffect(
     React.useCallback(() => {
       setIsCodeSent(false);
     }, [])
   );
 
-
+ 
   const handleSubmitEmail = async () => {
     const response = await forgetPassword({ email: email.trim() });
     if (response.status === 200) {
@@ -51,7 +50,7 @@ function VerifyEmail({ navigation }) {
     }
   };
 
-
+ 
   const handleVerifyCode = async (value) => {
     const response = await verifyOtp({
       email: email.trim(),
@@ -64,18 +63,17 @@ function VerifyEmail({ navigation }) {
     }
   };
 
-  
   const handleResendCode = async () => {
     await handleSubmitEmail();
   };
 
-
+ 
   const handleBackToEmail = () => {
     setIsCodeSent(false);
     setVerificationCode("");
   };
 
-
+ 
   const handleCodeChange = (value) => {
     setVerificationCode(value);
     if (value.length === otpAmount) {
@@ -97,22 +95,22 @@ function VerifyEmail({ navigation }) {
             style={styles.cactusIcon}
           />
 
-         
+          
           <Text style={styles.title}>
             {isCodeSent ? "Success" : "Forget Password"}
           </Text>
 
-
+          
           <Text style={styles.subtitle}>
             {isCodeSent
               ? "Please check your email for create\na new password"
               : "Enter your registered email below"}
           </Text>
 
-        
+          
           {!isCodeSent ? (
             <>
-             
+           
               <Text style={styles.label}>Email address</Text>
               <TextInput
                 style={styles.emailInput}
@@ -124,7 +122,7 @@ function VerifyEmail({ navigation }) {
                 autoCapitalize="none"
               />
 
-          
+             
               <RippleButton
                 buttonStyle={styles.submitButton}
                 buttonText="Submit"
@@ -132,7 +130,7 @@ function VerifyEmail({ navigation }) {
                 onPress={handleSubmitEmail}
               />
 
-
+           
               <Text style={styles.bottomText}>
                 Remember the password?{" "}
                 <Text
@@ -145,7 +143,7 @@ function VerifyEmail({ navigation }) {
             </>
           ) : (
             <>
-            
+              
               <View style={styles.codeContainer}>
                 <OTPInput
                   length={otpAmount}
@@ -154,7 +152,7 @@ function VerifyEmail({ navigation }) {
                 />
               </View>
 
-              
+           
               <Text style={styles.bottomText}>
                 Can't get email?{" "}
                 <Text style={styles.linkText} onPress={handleResendCode}>
@@ -162,7 +160,7 @@ function VerifyEmail({ navigation }) {
                 </Text>
               </Text>
 
-            
+             
               <RippleButton
                 buttonStyle={styles.backButton}
                 buttonText="Back Email"

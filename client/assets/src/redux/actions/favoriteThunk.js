@@ -7,7 +7,6 @@ import {
 } from "../../services/favoriteService";
 import ShowToast from "../../components/common/CustomToast";
 
-
 export const loadFavorites = createAsyncThunk(
   "favorites/loadFavorites",
   async (_, { getState, rejectWithValue }) => {
@@ -28,7 +27,6 @@ export const loadFavorites = createAsyncThunk(
   }
 );
 
-
 export const toggleFavorite = createAsyncThunk(
   "favorites/toggleFavorite",
   async ({ id }, { getState, rejectWithValue }) => {
@@ -37,11 +35,11 @@ export const toggleFavorite = createAsyncThunk(
         ShowToast("error", "Please, login to use this feature");
         return [];
       }
-   
+      
       const favoriteList = getState().favorite.favoriteList;
 
       if (favoriteList?.includes(id)) {
-   
+        
         const response = await removeDishFavorite(
           getState()?.user?.user?._id,
           id
@@ -52,7 +50,7 @@ export const toggleFavorite = createAsyncThunk(
         }
       } else {
         const response = await addDishFavorite(getState()?.user?.user?._id, id);
-      
+       
         if (response?.status === 201) {
           ShowToast("success", "Add to favorite successfull");
           return [...favoriteList, id];

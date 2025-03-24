@@ -14,11 +14,9 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 
 
-
 import SafeAreaWrapper from "../components/layout/SafeAreaWrapper";
 import RippleButton from "../components/common/RippleButton";
 import SplitLine from "../components/common/SplitLine";
-
 
 import backgroundImage from "../../assets/image/welcome_bg.png";
 import googleIcon from "../../assets/image/google_icon.png";
@@ -37,15 +35,15 @@ function Welcome({ navigation }) {
 
 
   const onPressGoogleButton = () => {
-
+   
   };
 
   const onPressFacebookButton = () => {
-  
+   
   };
 
   const onPressAppleButton = () => {
-    
+ 
   };
 
   const onPressSignupButton = () => {
@@ -71,18 +69,18 @@ function Welcome({ navigation }) {
       getTextWidth(text, 18, "Aleo_700Bold")
     );
 
-    
+ 
     const maxWidth = Math.min(Math.max(...textWidths), WIDTH * 0.8);
 
     setButtonWidth(maxWidth);
   };
 
-  
+
   useEffect(() => {
     calculateMaxButtonWidth();
   }, []);
 
-  
+
   const buttonList = [
     {
       text: "Continue with Google",
@@ -117,12 +115,12 @@ function Welcome({ navigation }) {
     },
   ];
 
-
+ 
   return (
     <SafeAreaWrapper
       headerStyle={{ theme: "light", backgroundColor: "transparent" }}
     >
- 
+     
       <Image source={backgroundImage} style={styles.backgroundImage} />
 
      
@@ -149,7 +147,7 @@ function Welcome({ navigation }) {
       >
        
         <View style={styles.view}>
-         
+          {/* Sign up with email button */}
           <RippleButton
             buttonStyle={{
               ...styles.socialButtonStyle,
@@ -161,7 +159,7 @@ function Welcome({ navigation }) {
             onPress={onPressSignupButton}
           />
 
-       
+          
           <SplitLine
             text="or use social sign up"
             textStyle={styles.splitTextStyle}
@@ -191,7 +189,7 @@ function Welcome({ navigation }) {
           
           <Text style={styles.alreadyText}>
             Already have account?{" "}
-           
+            
             <Text
               style={{
                 textDecorationLine: "underline",
@@ -202,7 +200,6 @@ function Welcome({ navigation }) {
             >
               Log In
             </Text>
-            
           </Text>
         </View>
       </LinearGradient>
@@ -236,7 +233,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 16,
     backgroundColor: "#ffffff",
-   
+    // Shadow styles
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.05,

@@ -6,16 +6,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 
+
 export const loginThunk = createAsyncThunk(
   "user/login", 
-  
+
   
   async (credentials, { rejectWithValue }) => {
-  
+    
     try {
       const response = await login(credentials);
       if (response?.data?.token) {
-        
+       
         await AsyncStorage.setItem("accessToken", response.data.token);
       }
       return {
@@ -24,7 +25,7 @@ export const loginThunk = createAsyncThunk(
         message: response?.response?.data?.message,
         
       };
-    
+      
     } catch (error) {
       
       return rejectWithValue(error.response?.data || "Something went wrong");

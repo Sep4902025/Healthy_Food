@@ -37,7 +37,6 @@ function HomeStack() {
   );
 }
 
-
 const TabNavigator = () => {
   const { theme } = useTheme();
 
@@ -50,7 +49,7 @@ const TabNavigator = () => {
         animation: "shift",
         gestureEnabled: true,
         gestureDirection: "horizontal",
-      
+        
         tabBarStyle: {
           backgroundColor: theme.tabBarBackgroundColor,
           borderTopColor: theme.border,
@@ -67,7 +66,7 @@ const TabNavigator = () => {
 const Navigator = () => {
   const { theme, themeMode } = useTheme();
 
- 
+  
   const navigationTheme = {
     ...(themeMode === "dark" ? DarkTheme : DefaultTheme),
     colors: {
@@ -77,7 +76,7 @@ const Navigator = () => {
       border: theme.border,
       primary: theme.primary,
       notification: theme.accent,
-   
+      
     },
   };
 

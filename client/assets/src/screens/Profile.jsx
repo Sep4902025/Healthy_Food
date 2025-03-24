@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -21,30 +21,71 @@ import { useTheme } from "../contexts/ThemeContext";
 import { EditProfileModal } from "../components/modal/EditProfileModal";
 import { EditMealPlanModal } from "../components/modal/EditMealPlanModal";
 import { ScreensName } from "../constants/ScreensName";
+import ShowToast from "../components/common/CustomToast";
+import { updateUser } from "../services/authService";
+import { updateUserAct } from "../redux/reducers/userReducer";
+import {
+  getUserPreference,
+  updateUserPreference,
+} from "../services/userPreference";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
 
 function Profile({ navigation }) {
+  const dispatch = useDispatch();
   const { themeMode, toggleTheme, theme } = useTheme();
   const [modalVisible, setModalVisible] = useState({
     EditHealthModal: false,
     EditProfileModal: false,
     EditMealPlanModal: false,
   });
+  const [userPreference, setUserPreference] = useState({});
   const user = useSelector(userSelector);
+
+  useEffect(() => {
+    loadUserPreference();
+  }, []);
+
+  const loadUserPreference = async () => {
+    const response = await getUserPreference(user?._id);
+
+    if (response.status === 200) {
+      setUserPreference(response.data?.data || {});
+    } else {
+      ShowToast("error", "Get user preference fail");
+    }
+  };
+
   const changeLightMode = () => {
     toggleTheme();
   };
 
-  const handleEditHealth = (data) => {
+  const handleEditHealth = async (data) => {
+    const response = await updateUserPreference(data);
+
+    if (response.status === 200) {
+      ShowToast("success", "Update edit health successfull");
+    } else {
+      ShowToast("error", "Update edit health fail");
+    }
+    
+
     setModalVisible({
       ...modalVisible,
       EditHealthModal: false,
     });
   };
 
-  const handleEditProfile = (data) => {
+  const handleEditProfile = async (data) => {
+    const response = await updateUser(data);
+
+    if (response.status === 200) {
+      ShowToast("success", "Update user profile successfull");
+      dispatch(updateUserAct(response.data?.data?.user || {})); 
+    } else {
+      ShowToast("error", "Update user profile fail");
+    }
     setModalVisible({
       ...modalVisible,
       EditProfileModal: false,
@@ -73,7 +114,7 @@ function Profile({ navigation }) {
         </Text>
       </View>
 
-      
+     
       <View style={styles.profileSection}>
         <Image
           source={
@@ -182,6 +223,7 @@ function Profile({ navigation }) {
         onSave={(data) => {
           handleEditHealth(data);
         }}
+        userPreference={userPreference}
       />
       <EditMealPlanModal
         visible={modalVisible.EditMealPlanModal}

@@ -31,7 +31,7 @@ const SafeAreaWrapper = ({
   children,
 }) => {
   const { backgroundColor, textColor, height } = headerStyle;
-  const insets = useSafeAreaInsets(); // Lấy kích thước vùng an toàn
+  const insets = useSafeAreaInsets(); 
 
   const { theme, themeMode } = useTheme();
 
@@ -50,14 +50,14 @@ const SafeAreaWrapper = ({
       true
     );
     if (Platform.OS === "android") {
-      StatusBar.setBackgroundColor(theme.safeAreaBackgroundColor); // Đặt màu trực tiếp
+      StatusBar.setBackgroundColor(theme.safeAreaBackgroundColor); 
       StatusBar.setTranslucent(true);
     }
   }, [themeMode]);
 
   return (
     <SafeAreaProvider>
-      {/* View này sẽ phủ lên vùng StatusBar để đảm bảo màu nền chính xác */}
+     
       <View
         style={{
           position: "absolute",
@@ -65,18 +65,12 @@ const SafeAreaWrapper = ({
           left: 0,
           right: 0,
           height: height ?? insets.top,
-          backgroundColor: theme.safeAreaBackgroundColor, // Đặt màu trực tiếp
+          backgroundColor: theme.safeAreaBackgroundColor, 
           zIndex: 2,
         }}
       />
 
-      {/* <StatusBar
-        barStyle={
-          backgroundColor === "light" ? "light-content" : "dark-content"
-        }
-        backgroundColor={theme.safeAreaBackgroundColor} // Đặt màu trực tiếp
-        translucent={true}
-      /> */}
+     
 
       <SafeAreaView style={styles.container}>
         {backgroundImage ? (

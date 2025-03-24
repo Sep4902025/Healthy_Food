@@ -12,16 +12,16 @@ export const SeasonType = {
   Summer: {
     name: "summer",
     season: "Summer",
-    color: "#FFD700", 
+    color: "#FFD700",
   },
   Autumn: {
     name: "autumn",
     season: "Autumn",
-    color: "#8B4513",
+    color: "#8B4513", 
   },
   Winter: {
     name: "winter",
     season: "Winter",
-    color: "#87CEEB",
+    color: "#87CEEB", 
   },
 };

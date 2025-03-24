@@ -40,7 +40,6 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
 
   const handleSave = () => {
     onSave(profile);
-    onClose();
   };
 
   const [showGenderPicker, setShowGenderPicker] = useState(false);
@@ -53,7 +52,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
     { label: "Prefer not to say", value: "prefer-not-to-say" },
   ];
 
-  // For iOS, we'll use a modal with the picker
+  
   const renderGenderPickerModal = () => {
     if (Platform.OS !== "ios") return null;
 
@@ -114,7 +113,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
             Edit Profile
           </Text>
 
-          {/* Profile Image */}
+         
           <View style={styles.profileImageContainer}>
             <View style={styles.profileImageWrapper}>
               {profile?.avatar_url ? (
@@ -164,7 +163,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
               <View style={styles.phoneInputContainer}>
                 <TouchableOpacity
                   style={styles.countryCodeContainer}
-                  onPress={() => setShowChooseCountry(true)}
+                  
                 >
                   <Text style={styles.countryCode}>{profile.countryCode}</Text>
                 </TouchableOpacity>
@@ -176,6 +175,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
                   }
                   placeholder="Phone number"
                   keyboardType="phone-pad"
+                  editable={false}
                 />
               </View>
 
@@ -215,10 +215,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
                   </Picker>
                 </View>
               )}
-              {/* <TouchableOpacity style={styles.genderSelector}>
-                <Text>{profile.gender || "Select gender"}</Text>
-                <Ionicons name="chevron-down" size={20} color="#000" />
-              </TouchableOpacity> */}
+              
             </View>
           </ScrollView>
           {renderGenderPickerModal()}
@@ -228,7 +225,6 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
         </View>
         <CountryPicker
           show={showChooseCountry}
-          // when picker button press you will get the country object with dial code
           pickerButtonOnPress={(item) => {
             setProfile({ ...profile, countryCode: item.dial_code });
             setShowChooseCountry(false);

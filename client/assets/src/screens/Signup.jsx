@@ -9,7 +9,7 @@ import {
   Platform, 
   Dimensions, 
   PixelRatio, 
-  TextInput, 
+  TextInput,
   KeyboardAvoidingView, 
   Alert, 
 } from "react-native";
@@ -22,6 +22,7 @@ import SafeAreaWrapper from "../components/layout/SafeAreaWrapper";
 import RippleButton from "../components/common/RippleButton";
 
 import SplitLine from "../components/common/SplitLine";
+
 
 import backgroundImage from "../../assets/image/welcome_bg.png";
 
@@ -53,7 +54,7 @@ const HEIGHT = Dimensions.get("window").height;
 function Signup({ navigation }) {
   
   const [buttonWidth, setButtonWidth] = useState(WIDTH);
- 
+  
   const [formData, setFormData] = useState({
     fullName: "", 
     email: "", 
@@ -62,7 +63,7 @@ function Signup({ navigation }) {
   });
   
   const [isOpen, setIsOpen] = useState({ otpModal: false });
-  
+ 
   const { signIn, userInfo, error } = useGoogleAuth();
  
   const dispatch = useDispatch();
@@ -71,11 +72,10 @@ function Signup({ navigation }) {
   
   useEffect(() => {
     if (error) {
-      
+     
       ShowToast("error", `Lỗi đăng nhập: ${error}`);
     }
   }, [error]); 
-
   
   const handleInputChange = (field, value) => {
     
@@ -93,7 +93,7 @@ function Signup({ navigation }) {
 
   
   const onPressRegisterButton = async () => {
-   
+    
     const response = await signup({
       username: formData.fullName.trim(), 
       email: formData.email.trim(), 
@@ -102,20 +102,20 @@ function Signup({ navigation }) {
       passwordConfirm: formData.password.trim(), 
     });
 
-  
+    
     if (response.status === 200) {
-     
+      
       const credentials = {
         email: formData.email, 
         password: formData.password, 
       };
       try {
-       
+        
         const responseLogin = await dispatch(loginThunk(credentials));
 
-        
+       
         if (responseLogin.type.endsWith("fulfilled")) {
-          
+         
           setIsOpen({ ...isOpen, otpModal: true });
           
           ShowToast(
@@ -124,18 +124,18 @@ function Signup({ navigation }) {
           );
         }
       } catch (error) {
-        
+       
         ShowToast("error", "Login fail after register.");
       }
     } else {
-      
+  
       ShowToast("error", `${response?.response?.data?.error?.message}`);
     }
   };
 
  
   const getTextWidth = (text, fontSize, fontFamily) => {
-  
+    
     const scaledFontSize = fontSize * PixelRatio.getFontScale();
     
     const extraPadding = 0;
@@ -143,7 +143,7 @@ function Signup({ navigation }) {
     return text.length * scaledFontSize * 0.6 + extraPadding;
   };
 
- 
+  
   const calculateMaxButtonWidth = () => {
     
     const buttonTexts = ["Register", "Continue with Google"];
@@ -166,13 +166,13 @@ function Signup({ navigation }) {
 
   
   const handleVerifyAccount = async (code) => {
-   
+    
     const response = await verifyAccount({ otp: code });
     
     if (response.status === 200) {
      
       ShowToast("success", "Verify account successfully.");
-     
+      
       navigation.navigate(ScreensName.home);
     } else {
       
@@ -184,14 +184,14 @@ function Signup({ navigation }) {
 
   
   return (
-   
+  
     <SafeAreaWrapper
       headerStyle={{ theme: "light", backgroundColor: "transparent" }}
     >
-      
+     
       <Image source={backgroundImage} style={styles.backgroundImage} />
 
-     
+      
       <LinearGradient
         colors={[
           "transparent", 
@@ -234,15 +234,15 @@ function Signup({ navigation }) {
          
           <Text style={styles.title}>REGISTER</Text>
 
-          
+         
           <View style={styles.formContainer}>
-           
+            
             <TextInput
               style={styles.input} 
               placeholder="Full name *" 
               placeholderTextColor="#666" 
               value={formData.fullName} 
-              onChangeText={(text) => handleInputChange("fullName", text)} 
+              onChangeText={(text) => handleInputChange("fullName", text)}
             />
 
            
@@ -255,7 +255,7 @@ function Signup({ navigation }) {
               onChangeText={(text) => handleInputChange("email", text)}
             />
 
-            
+          
             <TextInput
               style={styles.input}
               placeholder="Phone number *"
@@ -265,7 +265,7 @@ function Signup({ navigation }) {
               onChangeText={(text) => handleInputChange("phoneNumber", text)}
             />
 
-          
+         
             <TextInput
               style={styles.input}
               placeholder="Password *"
@@ -275,44 +275,42 @@ function Signup({ navigation }) {
               onChangeText={(text) => handleInputChange("password", text)}
             />
 
-          
+         
             <RippleButton
               buttonStyle={{
                 ...styles.socialButtonStyle, 
-                backgroundColor: "#191C32", 
-                justifyContent: "center", 
+                backgroundColor: "#191C32",
+                justifyContent: "center",
               }}
-              buttonText="Register" 
+              buttonText="Register"
               textStyle={{ ...styles.textStyle, color: "#ffffff" }} 
+              onPress={async () => await onPressRegisterButton()} 
               
-              onPress={() => {
-                console.log(user);
-              }} 
             />
 
            
             <SplitLine
-              text="or use social sign up" 
+              text="or use social sign up"
               textStyle={styles.splitTextStyle} 
               lineStyle={styles.splitLineStyle} 
             />
 
-
+           
             <RippleButton
-              buttonStyle={styles.socialButtonStyle} 
+              buttonStyle={styles.socialButtonStyle}
               leftButtonIcon={
-                
+               
                 <Image
                   source={googleIcon} 
                   style={{ width: 20, height: 20, ...styles.iconStyle }} 
                 />
               }
-              buttonText="Continue with Google" 
+              buttonText="Continue with Google"
               textStyle={styles.textStyle} 
               contentContainerStyle={{
-               
+                
                 ...styles.buttonContainerStyle,
-                width: buttonWidth, 
+                width: buttonWidth,
               }}
               onPress={onPressGoogleButton} 
               backgroundColor={"rgba(0, 0, 0, 0.2)"} 
@@ -335,9 +333,10 @@ function Signup({ navigation }) {
           </View>
         </KeyboardAwareScrollView>
 
-        
+      
         <InputOtpModal
           isOpen={isOpen.otpModal} 
+          otpAmount={4} 
           onClose={() => setIsOpen({ ...isOpen, otpModal: false })} 
           onVerify={(code) => {
             handleVerifyAccount(code); 
@@ -345,7 +344,7 @@ function Signup({ navigation }) {
         />
       </LinearGradient>
 
-    
+   
       <Toast />
     </SafeAreaWrapper>
   );
@@ -354,12 +353,12 @@ function Signup({ navigation }) {
 
 const styles = StyleSheet.create({
   backgroundImage: {
-    position: "absolute", 
+    position: "absolute",
     top: -HEIGHT * 0.08, 
     width: "100%", 
     height: "65%", 
     resizeMode: "cover", 
-    borderRadius: 20,
+    borderRadius: 20, 
     transform: [{ translateY: Platform.OS === "ios" ? -15 : -10 }], 
   },
   view: {
@@ -369,38 +368,38 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24, 
-    color: "#FFFFFF",
-    fontFamily: "Aleo_700Bold", 
+    color: "#FFFFFF", 
+    fontFamily: "Aleo_700Bold",
     marginBottom: 20, 
   },
   formContainer: {
-    width: "80%", 
-    alignItems: "center", 
+    width: "80%",
+    alignItems: "center",
   },
   input: {
-    width: "100%", 
+    width: "100%",
     height: 60, 
-    backgroundColor: "rgba(256, 256, 256, 0.1)", 
-    color: "#FFFFFF", 
+    backgroundColor: "rgba(256, 256, 256, 0.1)",
+    color: "#FFFFFF",
     borderRadius: 6, 
     borderWidth: 1, 
     borderColor: "#FFFFFF", 
     paddingHorizontal: 15, 
     marginBottom: 15, 
     fontSize: 16, 
-    fontFamily: "Aleo_400Regular", 
+    fontFamily: "Aleo_400Regular",
   },
   socialButtonStyle: {
     flexDirection: "row", 
     width: "100%", 
-    justifyContent: "center", 
+    justifyContent: "center",
     padding: 18, 
     paddingHorizontal: 32, 
     marginTop: 16, 
     borderRadius: 16, 
     backgroundColor: "#ffffff", 
     shadowColor: "#000", 
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: { width: 0, height: 5 }, 
     shadowOpacity: 0.05, 
     shadowRadius: 4.65, 
     elevation: 6, 
@@ -417,7 +416,7 @@ const styles = StyleSheet.create({
     resizeMode: "contain", 
   },
   buttonContainerStyle: {
-    width: "80%", 
+    width: "80%",
     justifyContent: "flex-start", 
   },
   splitLineStyle: {

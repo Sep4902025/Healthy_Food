@@ -11,17 +11,17 @@ const Rating = ({
   inactiveColor = "#CCCCCC",
   disabled = false,
 }) => {
-  // Ensure rate is within bounds
+ 
   const currentRate = Math.min(Math.max(0, rate), maxStars);
 
-  // Handle star press
+  
   const handleStarPress = (selectedRate) => {
     if (!disabled && starClick) {
       starClick(selectedRate);
     }
   };
 
-  // Render stars
+  
   const renderStars = () => {
     const stars = [];
 
@@ -34,7 +34,7 @@ const Rating = ({
           onPress={() => handleStarPress(i)}
           disabled={disabled}
           style={styles.starContainer}
-          // activeOpacity={0.7}
+          
         >
           <Ionicons
             name={active ? "star" : "star-outline"}
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   starContainer: {
     justifyContent: "center",
     alignItems: "center",
-    padding: 2, // Add padding for better touch area
+    padding: 2, 
   },
 });
 

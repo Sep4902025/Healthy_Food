@@ -11,7 +11,7 @@ function Header() {
   const navigation = useNavigation();
   const user = useSelector(userSelector);
   const { theme } = useTheme();
-  // console.log(navigation.canGoBack());
+  
 
   const checkAuth = () => {
     if (user) {
@@ -34,9 +34,9 @@ function Header() {
           onPress={() => navigation.goBack()}
         >
           <Ionicons
-            name="chevron-back" // Tên icon
-            size={32} // Kích thước icon
-            color={theme.backButtonColor} // Màu sắc (active/inactive)
+            name="chevron-back"
+            size={32} 
+            color={theme.backButtonColor} 
           />
         </TouchableOpacity>
       )}
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   profileImage: {
     height: 40,
     width: 40,
-    // borderRadius: 100,
+    
   },
   avtImage: {
     borderRadius: 100,

@@ -50,11 +50,11 @@ const List = () => {
 
     return filteredDishes;
   }, [dishes, sortType]); 
-
   return (
     <MainLayoutWrapper>
       <View style={styles.container}>
-       
+        
+
         <View style={styles.sortHeader}>
           <View />
           <TouchableOpacity

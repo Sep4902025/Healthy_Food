@@ -14,9 +14,12 @@ const axiosInstance = axios.create({
   timeout: 30000,
   validateStatus: (status) => status >= 200 && status < 300,
 });
+console.log(process.env.EXPO_PUBLIC_API_URL);
+
 
 axiosInstance.interceptors.request.use(
-  async (config) => {
+    async (config) => {
+    
     const accessToken = await AsyncStorage.getItem("accessToken");
 
     if (accessToken) {
@@ -31,6 +34,7 @@ axiosInstance.interceptors.request.use(
 );
 
 axiosInstance.interceptors.response.use(
+  
   (response) => {
     return response;
   },

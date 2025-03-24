@@ -7,7 +7,7 @@ const PaddingScrollViewBottom = () => {
   return <View style={styles.container}></View>;
 };
 
-// Định nghĩa styles cho component
+
 const styles = StyleSheet.create({
   container: {
     width: "100%",
@@ -15,5 +15,5 @@ const styles = StyleSheet.create({
   },
 });
 
-// Export component để sử dụng ở nơi khác
+
 export default PaddingScrollViewBottom;
