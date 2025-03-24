@@ -7,8 +7,7 @@ import { selectUser } from "../../store/selectors/authSelectors";
 import UserChatButton from "../Chat/UserChatButton";
 import { FaSearch } from "react-icons/fa";
 
-import logo from '../../assets/images/Logo.png'; 
-
+import logo from "../../assets/images/Logo.png";
 
 const MainLayout = () => {
   const navigate = useNavigate();
@@ -43,9 +42,15 @@ const MainLayout = () => {
                 <FaSearch className="absolute right-3 top-3 text-gray-500" />
               </div>
               <nav className="flex space-x-4">
-                <a href="/" className="text-gray-700 hover:text-gray-900">Home</a>
-                <a href="/about" className="text-gray-700 hover:text-gray-900">About</a>
-                <a href="/contact" className="text-gray-700 hover:text-gray-900">Contact</a>
+                <a href="/" className="text-gray-700 hover:text-gray-900">
+                  Home
+                </a>
+                <a href="/about" className="text-gray-700 hover:text-gray-900">
+                  About
+                </a>
+                <a href="/contact" className="text-gray-700 hover:text-gray-900">
+                  Contact
+                </a>
               </nav>
               {user ? (
                 <>
@@ -77,14 +82,14 @@ const MainLayout = () => {
       {/* Main Content */}
       <main>
         <Outlet />
-</main>
+      </main>
       {/* Footer */}
       <footer className="bg-white shadow-md mt-auto">
         <div className="container mx-auto px-4 py-4">
           <p className="text-center text-gray-600">© 2025 Your Company. All rights reserved.</p>
         </div>
       </footer>
-      {user?.role === "customer" && <UserChatButton />}
+      {user?.role === "user" && <UserChatButton />}
     </div>
   );
 };

@@ -9,7 +9,8 @@ import {
   HomeIcon,
   HeartPulseIcon,
   MessageSquareIcon,
-  ChevronDownIcon, // Thêm biểu tượng ChevronDown
+  ChevronDownIcon,
+  CalendarHeart,
 } from "lucide-react";
 
 const menuItems = [
@@ -17,6 +18,11 @@ const menuItems = [
     icon: <MessageSquareIcon size={20} />,
     name: "Chat Support",
     path: "/nutritionist/chat",
+  },
+  {
+    icon: <CalendarHeart size={20} />,
+    name: "Meal Plan",
+    path: "/nutritionist/mealPlan",
   },
   {
     icon: <UtensilsIcon size={20} />,
@@ -80,9 +86,9 @@ const NutritionistLayout = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       <Header />
-      <div className="flex-grow flex">
+      <div className="flex flex-grow bg-white">
         {/* Sidebar */}
-        <div className="w-64 bg-white border-r p-4 overflow-y-auto">
+        <div className="w-1/4 h-[450px]  p-4 border-r overflow-y-auto">
           <div className="flex items-center mb-6">
             <HomeIcon size={24} className="text-green-600 mr-2" />
             <span className="text-xl font-bold text-green-700">Nutritionist</span>
@@ -134,7 +140,7 @@ const NutritionistLayout = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-grow p-6 bg-white shadow">
+        <div className="w-3/4 bg-white shadow">
           <Outlet />
         </div>
       </div>

@@ -1,16 +1,20 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { Link } from "react-router-dom";
 import mealPlanService from "../../../services/mealPlanServices";
 import quizService from "../../../services/quizService";
 
 const Modal = ({ isOpen, onClose, children }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20">
-      <div className="bg-white p-4 rounded-lg shadow-lg w-80">
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
         {children}
-        <button className="mt-3 w-full bg-blue-500 text-white py-1 rounded" onClick={onClose}>
-          Đóng
+        <button
+          className="mt-4 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition"
+          onClick={onClose}
+        >
+          Close
         </button>
       </div>
     </div>
@@ -23,21 +27,41 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
   const [showModal, setShowModal] = useState(false);
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [calculationComplete, setCalculationComplete] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [needsSurvey, setNeedsSurvey] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch meal plan data
         const mealPlanData = await mealPlanService.getMealPlanById(mealPlanId);
         if (!isMounted) return;
 
+        if (!mealPlanData.success) {
+          throw new Error(mealPlanData.message || "Unable to fetch MealPlan data");
+        }
+        setMealPlan(mealPlanData.data);
+
+        // Fetch user preferences
         const userData = await quizService.getUserPreference(mealPlanData.data.userId);
         if (!isMounted) return;
 
-        setMealPlan(mealPlanData.data);
-        setUserPreference(userData.data);
+        if (!userData.success || !userData.data) {
+          setNeedsSurvey(true);
+        } else {
+          setUserPreference(userData.data);
+          setNeedsSurvey(false);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
+        setError(error.message || "An error occurred while fetching data");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -59,7 +83,16 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
     const age = convertAge(preferences.age);
     const { height, weight, activityLevel, gender } = preferences;
 
-    if (!age || !weight || !height || !activityLevel) return null;
+    if (!age || !weight || !height || !activityLevel || !gender) {
+      console.log("Missing required fields for nutrition calculation:", {
+        age,
+        height,
+        weight,
+        activityLevel,
+        gender,
+      });
+      return null;
+    }
 
     const BMR =
       gender === "female"
@@ -69,7 +102,7 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
     const TDEE = BMR * activityLevel;
     const dailyCalories = TDEE;
 
-    const protein = weight * 1.5; // Điều chỉnh xuống 1.5g/kg
+    const protein = weight * 1.5;
     const fat = weight * 0.8;
     const carbs = (dailyCalories - (protein * 4 + fat * 9)) / 4;
 
@@ -101,7 +134,10 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
     if (!userPreference || !mealPlan || calculationComplete) return;
 
     const targets = calculateNutritionTargets(userPreference);
-    if (!targets) return;
+    if (!targets) {
+      setNeedsSurvey(true);
+      return;
+    }
 
     setNutritionTargets(targets);
     setCalculationComplete(true);
@@ -137,12 +173,46 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
     setShowModal(false);
   }, []);
 
-  if (!userPreference || !mealPlan || !nutritionTargets) {
+  if (loading) {
     return <p className="text-center">Loading...</p>;
   }
 
-  // Tính số tuần cần thiết để đạt mục tiêu
-  const weightToLose = userPreference.weight - userPreference.weightGoal;
+  if (error) {
+    return <p className="text-center text-red-500">{error}</p>;
+  }
+
+  if (needsSurvey) {
+    return (
+      <div className="text-center">
+        <p className="mb-4">
+          You need to complete the survey so we can calculate nutrition targets tailored for you.
+        </p>
+        <Link to="/survey/name">
+          <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            Take the Survey Now
+          </button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (!nutritionTargets) {
+    return (
+      <div className="text-center">
+        <p className="mb-4">
+          Unable to calculate nutrition targets due to missing information. Please complete the
+          survey.
+        </p>
+        <Link to="/survey">
+          <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            Take the Survey Now
+          </button>
+        </Link>
+      </div>
+    );
+  }
+
+  const weightToLose = userPreference ? userPreference.weight - userPreference.weightGoal : 0;
   const weeksToGoal = Math.ceil(weightToLose / 0.5);
 
   return (
@@ -194,33 +264,43 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
       </div>
 
       <Modal isOpen={showModal} onClose={handleCloseModal}>
-        <h3 className="text-lg font-semibold mb-2">Thông tin mục tiêu</h3>
-        <p>
-          <strong>Your Weight:</strong>{" "}
-          {userPreference.weight ? `(${userPreference.weight} kg)` : ""}
-        </p>
-        <p>
-          <strong>Weight Goal:</strong>
-          {userPreference.weightGoal ? `(${userPreference.weightGoal} kg)` : ""}
-        </p>
-        <p>
-          <strong>Time Plan:</strong> {duration} days
-        </p>
-        <p>
-          Để đạt mục tiêu giảm {weightToLose} kg, bạn cần duy trì chế độ ăn phù hợp trong khoảng
-          <strong> {weeksToGoal} tuần</strong>.
-        </p>
-        <p>
-          Hãy thử trải nghiệm kế hoạch này trong {duration} ngày đầu tiên. Sau đó, liên hệ chuyên
-          gia dinh dưỡng để được hỗ trợ dài hạn!
-        </p>
-        <p>
-          <strong>Nutrition Targets:</strong>
-        </p>
-        <p>Calories: {nutritionTargets.calories.target} kcal (±10%)</p>
-        <p>Protein: {nutritionTargets.protein.target}g (±15g)</p>
-        <p>Carbs: {nutritionTargets.carbs.target}g (±15g)</p>
-        <p>Fat: {nutritionTargets.fat.target}g (±10g)</p>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Goal Information</h3>
+        <div className="space-y-3 text-sm text-gray-700">
+          <div>
+            <p>
+              <strong>Current Weight:</strong>{" "}
+              {userPreference.weight ? `${userPreference.weight} kg` : "No data available"}
+            </p>
+            <p>
+              <strong>Weight Goal:</strong>{" "}
+              {userPreference.weightGoal ? `${userPreference.weightGoal} kg` : "No data available"}
+            </p>
+            <p>
+              <strong>Plan Duration:</strong> {duration} days
+            </p>
+          </div>
+
+          {weightToLose > 0 && (
+            <p>
+              To achieve your goal of losing {weightToLose} kg, you need to maintain a proper diet
+              for about <strong>{weeksToGoal} weeks</strong>.
+            </p>
+          )}
+          <p>
+            Try this plan for the first {duration} days. After that, contact a nutritionist for
+            long-term support!
+          </p>
+
+          <div>
+            <p className="font-semibold">Nutrition Targets:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Calories: {nutritionTargets.calories.target} kcal (±10%)</li>
+              <li>Protein: {nutritionTargets.protein.target}g (±15g)</li>
+              <li>Carbs: {nutritionTargets.carbs.target}g (±15g)</li>
+              <li>Fat: {nutritionTargets.fat.target}g (±10g)</li>
+            </ul>
+          </div>
+        </div>
       </Modal>
     </div>
   );

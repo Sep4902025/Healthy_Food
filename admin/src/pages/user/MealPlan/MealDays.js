@@ -18,48 +18,48 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
     const advice = [];
 
     if (caloriesDiff < 0) {
-      advice.push(`Tăng thêm ${Math.abs(Math.round(caloriesDiff))} kcal để đạt mục tiêu.`);
+      advice.push(`Increase by ${Math.abs(Math.round(caloriesDiff))} kcal to meet your goal.`);
     } else if (caloriesDiff > 0) {
-      advice.push(`Giảm ${Math.round(caloriesDiff)} kcal để phù hợp với mục tiêu.`);
+      advice.push(`Reduce by ${Math.round(caloriesDiff)} kcal to align with your goal.`);
     }
 
     if (proteinDiff < -5) {
       advice.push(
-        `Bổ sung thêm ${Math.abs(
+        `Add ${Math.abs(
           Math.round(proteinDiff)
-        )}g protein từ các thực phẩm như thịt nạc, trứng, đậu phụ.`
+        )}g of protein from foods like lean meat, eggs, or tofu.`
       );
     } else if (proteinDiff > 15) {
-      advice.push(`Giảm ${Math.round(proteinDiff)}g protein để phù hợp với mục tiêu.`);
+      advice.push(`Reduce by ${Math.round(proteinDiff)}g of protein to align with your goal.`);
     }
 
     if (carbsDiff < -10) {
       advice.push(
-        `Bổ sung thêm ${Math.abs(
+        `Add ${Math.abs(
           Math.round(carbsDiff)
-        )}g carbs từ gạo lứt, khoai lang, ngũ cốc nguyên hạt.`
+        )}g of carbs from brown rice, sweet potatoes, or whole grains.`
       );
     } else if (carbsDiff > 15) {
-      advice.push(`Giảm ${Math.round(carbsDiff)}g carbs để phù hợp với mục tiêu.`);
+      advice.push(`Reduce by ${Math.round(carbsDiff)}g of carbs to align with your goal.`);
     }
 
     if (fatDiff < -5) {
       advice.push(
-        `Bổ sung thêm ${Math.abs(
-          Math.round(fatDiff)
-        )}g chất béo lành mạnh từ quả bơ, dầu oliu, các loại hạt.`
+        `Add ${Math.abs(Math.round(fatDiff))}g of healthy fats from avocados, olive oil, or nuts.`
       );
     } else if (fatDiff > 10) {
-      advice.push(`Giảm ${Math.round(fatDiff)}g chất béo để phù hợp với mục tiêu.`);
+      advice.push(`Reduce by ${Math.round(fatDiff)}g of fat to align with your goal.`);
     }
 
-    return advice.length > 0 ? advice : ["Chỉ số dinh dưỡng của bạn khá cân đối với mục tiêu!"];
+    return advice.length > 0
+      ? advice
+      : ["Your nutrition levels are well-balanced with your goals!"];
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-96 max-h-[80vh] overflow-y-auto">
-        <h3 className="text-xl font-semibold mb-4">Gợi ý dinh dưỡng</h3>
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
+        <h3 className="text-xl font-semibold mb-4 text-gray-800">Nutrition Advice</h3>
 
         <div className="mb-4">
           <div className="flex justify-between mb-2">
@@ -163,8 +163,8 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
         </div>
 
         <div className="mb-6">
-          <h4 className="font-medium mb-2">Gợi ý:</h4>
-          <ul className="list-disc pl-5 space-y-1">
+          <h4 className="font-medium mb-2">Suggestions:</h4>
+          <ul className="list-disc pl-5 space-y-1 text-gray-700">
             {generateAdvice().map((advice, index) => (
               <li key={index}>{advice}</li>
             ))}
@@ -175,7 +175,7 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
           className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition-colors"
           onClick={onClose}
         >
-          Đóng
+          Close
         </button>
       </div>
     </div>
@@ -220,7 +220,7 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
         setError(data.message);
       }
     } catch (err) {
-      setError("Lỗi khi lấy dữ liệu");
+      setError("Error fetching data");
     } finally {
       setLoading(false);
       firstLoad.current = false;
@@ -241,26 +241,26 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
           let totalCarbs = 0;
           let totalFat = 0;
 
-          // Duyệt qua từng bữa ăn trong ngày
+          // Iterate through each meal in the day
           for (const meal of mealsResponse.data) {
             if (meal.dishes && meal.dishes.length > 0) {
-              // Duyệt qua từng món ăn trong bữa
+              // Iterate through each dish in the meal
               for (const dish of meal.dishes) {
-                // Lấy calories từ dữ liệu trả về
+                // Get calories from the response data
                 totalCalories += Number(dish.calories || 0);
 
                 try {
-                  // Gọi API để lấy thông tin chi tiết về món ăn
+                  // Call API to get detailed dish information
                   const dishResponse = await dishService.getDishById(dish.dishId);
                   if (dishResponse.success) {
                     const dishDetails = dishResponse.data;
-                    // Lấy thông tin dinh dưỡng từ API
+                    // Get nutrition info from API
                     totalProtein += Number(dishDetails.protein || 0);
                     totalCarbs += Number(dishDetails.carbs || 0);
                     totalFat += Number(dishDetails.fat || 0);
                   }
                 } catch (dishErr) {
-                  console.error(`Lỗi khi lấy thông tin món ăn ${dish.dishId}:`, dishErr);
+                  console.error(`Error fetching dish info for ${dish.dishId}:`, dishErr);
                 }
               }
             }
@@ -274,7 +274,7 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
           };
         }
       } catch (err) {
-        console.error(`Lỗi khi lấy dữ liệu dinh dưỡng cho ngày ${mealDay._id}:`, err);
+        console.error(`Error fetching nutrition data for day ${mealDay._id}:`, err);
       }
     }
 
@@ -346,7 +346,7 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
     }
   };
 
-  // Xử lý chọn ngày với hiệu ứng chuyển tiếp
+  // Handle day selection with transition effect
   const handleMealDaySelect = (mealDay) => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -355,7 +355,7 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
     }, 150);
   };
 
-  // Xử lý đóng Meals với hiệu ứng chuyển tiếp
+  // Handle closing Meals with transition effect
   const handleMealsClose = () => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -417,7 +417,7 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
             </PieChart>
           </ResponsiveContainer>
 
-          {/* Số calo ở giữa vòng tròn */}
+          {/* Calories in the center of the circle */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <div className="text-lg font-bold">{Math.round(calories)}</div>
@@ -445,25 +445,29 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg w-full">
-      {/* Container cố định chiều cao */}
-      <div className="h-[500px]">
+    <div className="bg-white rounded-lg w-full relative">
+      {/* Fixed height container */}
+      <div className="h-[500px] relative">
         {loading && mealDays.length === 0 ? (
-          <p className="text-center text-gray-500">Đang tải danh sách ngày...</p>
+          <p className="text-center text-gray-500 absolute inset-0 flex items-center justify-center">
+            Loading meal days...
+          </p>
         ) : error ? (
-          <p className="text-center text-red-500">{error}</p>
+          <p className="text-center text-red-500 absolute inset-0 flex items-center justify-center">
+            {error}
+          </p>
         ) : (
           <>
-            {/* Sử dụng hiệu ứng fade để chuyển đổi giữa hai phần */}
+            {/* Use fade effect for transition between sections */}
             <div
               className={`transition-all duration-300 ease-in-out ${
                 isTransitioning ? "opacity-0" : "opacity-100"
-              }`}
+              } h-full`}
             >
               {!selectedMealDay ? (
-                <div className="h-[490px] overflow-y-auto p-2 border border-gray-200 rounded-lg">
+                <div className="h-[490px] overflow-y-auto p-4 border border-gray-200 rounded-lg">
                   {mealDays.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {mealDays.map((mealDay, index) => {
                         const borderColorClass = getNutritionStatusColor(mealDay._id);
                         const nutrition = mealDayNutrition[mealDay._id];
@@ -476,21 +480,21 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
                           switch (nutritionStatus) {
                             case "exceeded":
                               statusIcon = (
-                                <span title="Vượt quá mục tiêu" className="text-red-500">
+                                <span title="Exceeded target" className="text-red-500">
                                   ❗
                                 </span>
                               );
                               break;
                             case "optimal":
                               statusIcon = (
-                                <span title="Đạt mục tiêu" className="text-green-500">
+                                <span title="Target met" className="text-green-500">
                                   ✅
                                 </span>
                               );
                               break;
                             case "insufficient":
                               statusIcon = (
-                                <span title="Chưa đạt mục tiêu" className="text-yellow-500">
+                                <span title="Below target" className="text-yellow-500">
                                   ⚠️
                                 </span>
                               );
@@ -501,10 +505,10 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
                         return (
                           <div
                             key={mealDay._id}
-                            className={`border-2 ${borderColorClass} rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer`}
+                            className={`border-2 ${borderColorClass} rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer shadow-sm`}
                             onClick={() => handleMealDaySelect(mealDay)}
                           >
-                            <div className="flex justify-between items-start mb-2 ">
+                            <div className="flex justify-between items-start mb-2">
                               <h3 className="text-lg font-semibold">
                                 Day {index + 1} {statusIcon}
                               </h3>
@@ -530,24 +534,27 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
                     </div>
                   ) : (
                     <p className="text-center text-gray-500 py-10">
-                      Chưa có ngày ăn nào được thiết lập cho kế hoạch này.
+                      No meal days have been set for this plan.
                     </p>
                   )}
                 </div>
               ) : (
-                <Meals
-                  mealPlanId={mealPlanId}
-                  mealDayId={selectedMealDay._id}
-                  onBack={handleMealsClose}
-                  onNutritionChange={() => fetchAllMealDaysNutrition(mealDays)}
-                />
+                <div className="h-full">
+                  <Meals
+                    mealPlanId={mealPlanId}
+                    mealDayId={selectedMealDay._id}
+                    onBack={handleMealsClose}
+                    onNutritionChange={() => fetchAllMealDaysNutrition(mealDays)}
+                    date={formatDate(selectedMealDay.date)} // Pass the formatted date
+                  />
+                </div>
               )}
             </div>
           </>
         )}
       </div>
 
-      {/* Modal hiển thị gợi ý dinh dưỡng */}
+      {/* Nutrition advice modal */}
       <NutritionAdviceModal
         isOpen={showNutritionAdvice}
         onClose={() => setShowNutritionAdvice(false)}

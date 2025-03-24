@@ -25,7 +25,7 @@ const MealPlan = () => {
         setUserMealPlan(null);
       }
     } catch (error) {
-      console.error("❌ Lỗi lấy MealPlan:", error);
+      console.error("❌ Error fetching MealPlan:", error);
       setUserMealPlan(null);
     } finally {
       setLoading(false);
@@ -44,19 +44,44 @@ const MealPlan = () => {
   const handleToggleMealPlanStatus = async () => {
     if (!userMealPlan) return;
 
+    const newIsPause = !userMealPlan.isPause;
+
     try {
       setProcessingAction(true);
-      const isPause = !userMealPlan.isPause;
-      const response = await mealPlanService.toggleMealPlanStatus(userMealPlan._id, isPause);
+
+      // Optimistic update
+      setUserMealPlan((prev) => ({
+        ...prev,
+        isPause: newIsPause,
+      }));
+
+      console.log(
+        `📤 Sending toggle request: mealPlanId=${userMealPlan._id}, isPause=${newIsPause}`
+      );
+
+      const response = await mealPlanService.toggleMealPlanStatus(userMealPlan._id, newIsPause);
+
+      console.log("📥 Toggle response:", response);
 
       if (response.success) {
-        alert(`🔔 MealPlan đã được ${isPause ? "tạm dừng" : "tiếp tục"} thành công!`);
-        fetchUserMealPlan();
+        alert(`🔔 MealPlan has been ${newIsPause ? "paused" : "resumed"} successfully!`);
+        await fetchUserMealPlan(); // Fetch the latest data to ensure consistency
       } else {
-        alert(`❌ Lỗi: ${response.message}`);
+        // Revert the optimistic update if the API call fails
+        setUserMealPlan((prev) => ({
+          ...prev,
+          isPause: !newIsPause,
+        }));
+        alert(`❌ Error: ${response.message}`);
       }
     } catch (error) {
-      alert("❌ Có lỗi xảy ra khi thay đổi trạng thái MealPlan");
+      // Revert the optimistic update on error
+      setUserMealPlan((prev) => ({
+        ...prev,
+        isPause: !newIsPause,
+      }));
+      console.error("❌ Unexpected error while toggling MealPlan status:", error);
+      alert("❌ An unexpected error occurred while changing the MealPlan status");
     } finally {
       setProcessingAction(false);
     }
@@ -65,9 +90,10 @@ const MealPlan = () => {
   const handleDeleteMealPlan = async () => {
     if (!userMealPlan) return;
 
-    // Xác nhận xóa
     if (
-      !window.confirm("Bạn có chắc chắn muốn xóa MealPlan này? Hành động này không thể hoàn tác.")
+      !window.confirm(
+        "Are you sure you want to delete this MealPlan? This action cannot be undone."
+      )
     ) {
       return;
     }
@@ -77,25 +103,25 @@ const MealPlan = () => {
       const response = await mealPlanService.deleteMealPlan(userMealPlan._id);
 
       if (response.success) {
-        alert("🗑️ MealPlan đã được xóa thành công!");
+        alert("🗑️ MealPlan has been deleted successfully!");
         setUserMealPlan(null);
         setShowCreateForm(true);
       } else {
-        alert(`❌ Lỗi: ${response.message}`);
+        alert(`❌ Error: ${response.message}`);
       }
     } catch (error) {
-      alert("❌ Có lỗi xảy ra khi xóa MealPlan");
+      console.error("❌ Error deleting MealPlan:", error);
+      alert("❌ An error occurred while deleting the MealPlan");
     } finally {
       setProcessingAction(false);
     }
   };
 
-  // Handle nutrition targets calculated from MealPlanAimChart
   const handleNutritionTargetsCalculated = (targets) => {
     setNutritionTargets(targets);
   };
 
-  if (loading) return <div>Đang tải...</div>;
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="w-full mx-auto p-4">
@@ -124,7 +150,6 @@ const MealPlan = () => {
                   {userMealPlan.type === "fixed" ? "Fixed" : "Custom"}
                 </span>
               </p>
-
               <div>
                 <p className="text-gray-600">
                   Status:
@@ -166,8 +191,6 @@ const MealPlan = () => {
               </button>
             </div>
           </div>
-
-          {/* Pass nutritionTargets to MealDays */}
           <MealDays mealPlanId={userMealPlan._id} nutritionTargets={nutritionTargets} />
         </div>
       ) : (
@@ -177,20 +200,24 @@ const MealPlan = () => {
               onClick={() => setShowCreateForm(true)}
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
             >
-              ✏️ Tạo Meal Plan mới
+              ✏️ Create New Meal Plan
             </button>
           ) : (
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Tạo Meal Plan mới</h3>
+                <h3 className="text-lg font-medium">Create New Meal Plan</h3>
                 <button
                   onClick={() => setShowCreateForm(false)}
                   className="text-gray-600 hover:text-gray-800"
                 >
-                  ❌ Hủy
+                  ❌ Cancel
                 </button>
               </div>
-              <CreateMealPlanForm userId={user._id} onSuccess={handleCreateSuccess} />
+              <CreateMealPlanForm
+                userId={user._id}
+                userRole={user.role}
+                onSuccess={handleCreateSuccess}
+              />
             </div>
           )}
         </div>
