@@ -2,15 +2,22 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import ChatService from "../../services/chat.service";
 import MessageList from "./MessageList";
-import MessageInput from "./MessageInput";
+import ChatInput from "./ChatInput";
+import uploadFile from "../../helpers/uploadFile";
 
-const ChatWindow = ({ conversation }) => {
+const ChatWindow = ({ conversation, setCurrentConversation }) => {
   const [messages, setMessages] = useState([]);
   const [initialLoading, setInitialLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const user = useSelector((state) => state.auth.user);
   const socketRef = useRef();
   const isFirstLoad = useRef(true);
+  const chatContainerRef = useRef(null);
+  const cancelUploadRef = useRef(null);
 
   useEffect(() => {
     if (!conversation?._id || !user?._id) return;
@@ -51,10 +58,16 @@ const ChatWindow = ({ conversation }) => {
 
     const interval = setInterval(() => {
       refreshMessages();
-    }, 10000); // đổi time reset ở đây
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [conversation?._id]);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const loadMessages = async () => {
     try {
@@ -64,7 +77,8 @@ const ChatWindow = ({ conversation }) => {
         setMessages(response.data.data);
       }
     } catch (error) {
-      console.error("Lỗi load tin nhắn:", error);
+      console.error("Error loading messages:", error);
+      setError("Failed to load messages. Please try again.");
     } finally {
       setInitialLoading(false);
       isFirstLoad.current = false;
@@ -83,7 +97,7 @@ const ChatWindow = ({ conversation }) => {
         });
       }
     } catch (error) {
-      console.error("Lỗi refresh tin nhắn:", error);
+      console.error("Error refreshing messages:", error);
     } finally {
       setRefreshing(false);
     }
@@ -91,53 +105,144 @@ const ChatWindow = ({ conversation }) => {
 
   const handleSendMessage = async (text) => {
     try {
-      const messageData = {
-        senderId: user._id,
-        text,
-        conversationId: conversation._id,
-      };
+      if (!text.trim() && !selectedFile) return;
 
-      const response = await ChatService.sendMessage(conversation._id, messageData);
-      if (response?.data?.data) {
-        setMessages((prev) => [...prev, response.data.data]);
-        socketRef.current.emit("send_message", {
-          ...response.data.data,
+      if (selectedFile) {
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (selectedFile.size > maxSize) {
+          setError("File is too large! Maximum size is 10MB.");
+          setTimeout(() => setError(null), 5000);
+          return;
+        }
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        const responseData = await uploadFile(
+          selectedFile,
+          (progress) => setUploadProgress(progress),
+          (cancel) => (cancelUploadRef.current = cancel)
+        );
+
+        setUploadProgress(100);
+
+        const messageData = {
+          senderId: user._id,
           conversationId: conversation._id,
-        });
+          type: selectedFile.type.startsWith("image") ? "image" : "video",
+          ...(selectedFile.type.startsWith("image")
+            ? { imageUrl: responseData.secure_url }
+            : { videoUrl: responseData.secure_url }),
+        };
+
+        const response = await ChatService.sendMessage(conversation._id, messageData);
+        if (response?.data?.data) {
+          setMessages((prev) => [...prev, response.data.data]);
+          socketRef.current.emit("send_message", {
+            ...response.data.data,
+            conversationId: conversation._id,
+          });
+
+          const updatedConversation = {
+            ...conversation,
+            messages: [...(conversation.messages || []), response.data.data],
+          };
+          setCurrentConversation(updatedConversation);
+          localStorage.setItem("currentConversation", JSON.stringify(updatedConversation));
+        }
+
+        setSelectedFile(null);
+        setUploadProgress(0);
+        setIsUploading(false);
+      }
+
+      if (text.trim()) {
+        const messageData = {
+          senderId: user._id,
+          text,
+          conversationId: conversation._id,
+          type: "text",
+        };
+
+        const response = await ChatService.sendMessage(conversation._id, messageData);
+        if (response?.data?.data) {
+          setMessages((prev) => [...prev, response.data.data]);
+          socketRef.current.emit("send_message", {
+            ...response.data.data,
+            conversationId: conversation._id,
+          });
+
+          const updatedConversation = {
+            ...conversation,
+            messages: [...(conversation.messages || []), response.data.data],
+          };
+          setCurrentConversation(updatedConversation);
+          localStorage.setItem("currentConversation", JSON.stringify(updatedConversation));
+        }
       }
     } catch (error) {
-      console.error("Lỗi gửi tin nhắn:", error);
+      console.error("Error sending message:", error);
+      setError("Failed to send message or upload file. Please try again.");
+      setIsUploading(false);
+      setUploadProgress(0);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
+  const handleCancelUpload = () => {
+    if (cancelUploadRef.current) {
+      cancelUploadRef.current();
+    }
+    setIsUploading(false);
+    setUploadProgress(0);
+    setSelectedFile(null);
+  };
+
   const renderHeader = () => (
-    <div className="p-4 border-b">
-      <h2 className="font-medium">{conversation?.userId?.email}</h2>
-      <p className="text-sm text-gray-500">{conversation?.topic}</p>
+    <div className="p-3 border-b border-gray-200">
+      <h2 className="font-medium text-sm">{conversation?.userId?.email}</h2>
+      <p className="text-xs text-gray-500">{conversation?.topic}</p>
     </div>
   );
 
   if (initialLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <span>Đang tải tin nhắn...</span>
+        <span className="text-sm text-gray-500">Loading messages...</span>
       </div>
     );
   }
 
   if (!conversation) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500">
-        Chọn một cuộc trò chuyện để bắt đầu
+      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+        Select a conversation to start
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full">
       {renderHeader()}
-      <MessageList messages={messages} currentUserId={user._id} />
-      <MessageInput onSendMessage={handleSendMessage} />
+      {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
+      <div ref={chatContainerRef} className="flex h-[310px] overflow-y-auto overflow-x-hidden p-3">
+        <MessageList messages={messages} currentUserId={user._id} />
+      </div>
+      <div className="border-t border-gray-200">
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          conversation={conversation}
+          setCurrentConversation={setCurrentConversation}
+          selectedFile={selectedFile}
+          setSelectedFile={setSelectedFile}
+          uploadProgress={uploadProgress}
+          setUploadProgress={setUploadProgress}
+          isUploading={isUploading}
+          setIsUploading={setIsUploading}
+          user={user}
+          onCancelUpload={handleCancelUpload}
+        />
+      </div>
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const WeightGoal = () => {
   const navigate = useNavigate();
-  const [selectedWeightGoal, setSelectedWeightGoal] = useState(0);
+  const [selectedWeightGoal, setSelectedWeightGoal] = useState("");
 
   // Load dữ liệu từ sessionStorage khi vào trang
   useEffect(() => {
@@ -46,7 +46,7 @@ const WeightGoal = () => {
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>
         </button>
-        <ProgressBar progress={30} />
+        <ProgressBar progress={31.5} />
       </div>
 
       {/* Tiêu đề và mô tả */}

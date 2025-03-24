@@ -2,14 +2,23 @@ import api from "./api";
 const API_URL = process.env.REACT_APP_API_URL;
 
 const mealPlanService = {
-  getAllMealPlans: async () => {
+  // Lấy danh sách meal plans với phân trang
+  getAllMealPlans: async (page = 1, limit = 10) => {
     try {
-      const response = await api.get(`/mealPlan`);
-      console.log("🔍 Danh sách MealPlans từ API:", response.data);
-      return { success: true, data: response.data.data || [] };
+      const response = await api.get(`/mealPlan?page=${page}&limit=${limit}`);
+      return {
+        success: true,
+        data: response.data.data.mealPlans,
+        total: response.data.results,
+        currentPage: response.data.page,
+        totalPages: response.data.totalPages,
+      };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy MealPlans:", error.response?.data || error.message);
-      return { success: false, message: "Lỗi khi tải danh sách MealPlans" };
+      console.error("Error fetching meal plans:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Unable to fetch meal plans",
+      };
     }
   },
 
@@ -22,6 +31,110 @@ const mealPlanService = {
     } catch (error) {
       console.error("❌ Lỗi khi lấy MealPlan:", error.response?.data || error.message);
       return { success: false, message: "Không tìm thấy MealPlan!" };
+    }
+  },
+  // 🔹 Lấy meal plan cần thanh toán của user
+  getUnpaidMealPlanForUser: async (userId) => {
+    try {
+      const response = await api.get(`/mealPlan/user/${userId}/unpaid`);
+      if (response.data.status === "success") {
+        console.log("🔍 MealPlan cần thanh toán:", response.data.data);
+        return { success: true, data: response.data.data };
+      } else {
+        return { success: false, message: response.data.message || "No unpaid meal plan found" };
+      }
+    } catch (error) {
+      console.error(
+        "❌ Lỗi khi lấy MealPlan cần thanh toán:",
+        error.response?.data || error.message
+      );
+      return { success: false, message: "Không tìm thấy MealPlan cần thanh toán!" };
+    }
+  },
+
+  // 🔹 Xem chi tiết meal plan (bao gồm các ngày và món ăn)
+  getMealPlanDetails: async (mealPlanId) => {
+    try {
+      const response = await api.get(`/mealPlan/details/${mealPlanId}`);
+      if (response.data.status === "success") {
+        console.log("🔍 Chi tiết MealPlan (bao gồm ngày và món ăn):", response.data.data);
+        return { success: true, data: response.data.data };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || "Cannot fetch meal plan details",
+        };
+      }
+    } catch (error) {
+      console.error("❌ Lỗi khi lấy chi tiết MealPlan:", error.response?.data || error.message);
+      return { success: false, message: "Không thể lấy chi tiết MealPlan!" };
+    }
+  },
+
+  // 🔹 Lấy lịch sử giao dịch của user
+  getPaymentHistory: async (userId, page = 1, limit = 10) => {
+    try {
+      const response = await api.get(`/payment/history/${userId}?page=${page}&limit=${limit}`);
+      if (response.data.status === "success") {
+        console.log("🔍 Lịch sử giao dịch:", response.data.data);
+        return {
+          success: true,
+          data: response.data.data,
+          pagination: response.data.pagination || {
+            currentPage: page,
+            totalPages: 1,
+            totalItems: response.data.data.length,
+          },
+        };
+      } else {
+        return { success: false, message: response.data.message || "No payment history found" };
+      }
+    } catch (error) {
+      console.error("❌ Lỗi khi lấy lịch sử giao dịch:", error.response?.data || error.message);
+      return { success: false, message: "Không thể lấy lịch sử giao dịch!" };
+    }
+  },
+
+  // 🔹 Tạo yêu cầu thanh toán cho meal plan
+  createMealPlanPayment: async (userId, mealPlanId, amount) => {
+    try {
+      const response = await api.post(`/payment/vnpay/pay`, {
+        userId,
+        mealPlanId,
+        amount,
+      });
+      if (response.data.status === "success") {
+        console.log("🔍 URL thanh toán:", response.data.paymentUrl);
+        return {
+          success: true,
+          paymentUrl: response.data.paymentUrl,
+          paymentId: response.data.paymentId,
+        };
+      } else {
+        return { success: false, message: response.data.message || "Failed to create payment URL" };
+      }
+    } catch (error) {
+      console.error("❌ Lỗi khi tạo URL thanh toán:", error.response?.data || error.message);
+      return { success: false, message: "Không thể tạo URL thanh toán!" };
+    }
+  },
+
+  // 🔹 Kiểm tra trạng thái thanh toán của meal plan
+  checkPaymentStatus: async (paymentId) => {
+    try {
+      const response = await api.get(`/payment/status/${paymentId}`);
+      if (response.data.status === "success") {
+        console.log("🔍 Trạng thái thanh toán:", response.data.data);
+        return { success: true, data: response.data.data };
+      } else {
+        return { success: false, message: response.data.message || "Cannot check payment status" };
+      }
+    } catch (error) {
+      console.error(
+        "❌ Lỗi khi kiểm tra trạng thái thanh toán:",
+        error.response?.data || error.message
+      );
+      return { success: false, message: "Không thể kiểm tra trạng thái thanh toán!" };
     }
   },
 
@@ -199,20 +312,33 @@ const mealPlanService = {
   // Status MealPlan Pause/Resume
   toggleMealPlanStatus: async (mealPlanId, isPause) => {
     try {
-      console.log(`📤 ${isPause ? "Tạm dừng" : "Tiếp tục"} MealPlan ID: ${mealPlanId}`);
+      console.log(`📤 ${isPause ? "Pausing" : "Resuming"} MealPlan ID: ${mealPlanId}`);
 
       const response = await api.patch(`/mealPlan/${mealPlanId}/toggle`, { isPause });
 
-      console.log(`✅ MealPlan đã được ${isPause ? "tạm dừng" : "tiếp tục"}:`, response.data);
-      return { success: true, data: response.data.data };
+      console.log(`✅ MealPlan has been ${isPause ? "paused" : "resumed"}:`, response.data);
+
+      // Check if the response indicates success, even if reminders failed
+      if (response.data.success) {
+        if (response.data.message.includes("failed to update reminders")) {
+          console.warn("⚠️ Reminders could not be updated:", response.data.message);
+        }
+        return { success: true, data: response.data.data };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || `Could not ${isPause ? "pause" : "resume"} MealPlan!`,
+        };
+      }
     } catch (error) {
       console.error(
-        `❌ Lỗi khi ${isPause ? "tạm dừng" : "tiếp tục"} MealPlan:`,
+        `❌ Error while ${isPause ? "pausing" : "resuming"} MealPlan:`,
         error.response?.data || error.message
       );
       return {
         success: false,
-        message: `Không thể ${isPause ? "tạm dừng" : "tiếp tục"} MealPlan!`,
+        message:
+          error.response?.data?.message || `Could not ${isPause ? "pause" : "resume"} MealPlan!`,
       };
     }
   },

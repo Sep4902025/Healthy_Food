@@ -23,6 +23,7 @@ exports.createUserPreference = async (req, res) => {
       weight,
       weightGoal,
       height,
+      activityLevel,
       gender,
       phoneNumber,
       underDisease,
@@ -56,6 +57,7 @@ exports.createUserPreference = async (req, res) => {
       weight,
       weightGoal,
       height,
+      activityLevel,
       gender,
       phoneNumber,
       underDisease,
@@ -100,9 +102,7 @@ exports.getUserPreferenceById = async (req, res) => {
   try {
     const preference = await UserPreferenceModel.findById(req.params.id);
     if (!preference || preference.isDelete) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
     res.status(200).json({ status: "success", data: preference });
   } catch (error) {
@@ -113,15 +113,11 @@ exports.getUserPreferenceById = async (req, res) => {
 // Update User Preference
 exports.updateUserPreference = async (req, res) => {
   try {
-    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
+    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!updatedPreference || updatedPreference.isDelete) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
     res.status(200).json({ status: "success", data: updatedPreference });
   } catch (error) {
@@ -138,13 +134,9 @@ exports.softDeleteUserPreference = async (req, res) => {
       { new: true }
     );
     if (!preference) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
-    res
-      .status(200)
-      .json({ status: "success", message: "User Preference soft deleted" });
+    res.status(200).json({ status: "success", message: "User Preference soft deleted" });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
@@ -154,14 +146,10 @@ exports.softDeleteUserPreference = async (req, res) => {
 exports.deleteUserPreference = async (req, res) => {
   try {
     // Tìm UserPreference trước khi xóa để lấy userId
-    const deletedPreference = await UserPreferenceModel.findByIdAndDelete(
-      req.params.id
-    );
+    const deletedPreference = await UserPreferenceModel.findByIdAndDelete(req.params.id);
 
     if (!deletedPreference) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
 
     // Cập nhật userPreferenceId của User thành null
@@ -172,8 +160,7 @@ exports.deleteUserPreference = async (req, res) => {
 
     res.status(200).json({
       status: "success",
-      message:
-        "User Preference permanently deleted and userPreferenceId removed",
+      message: "User Preference permanently deleted and userPreferenceId removed",
     });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
@@ -185,9 +172,7 @@ exports.searchUserPreferencesByName = async (req, res) => {
   try {
     const { name } = req.query;
     if (!name) {
-      return res
-        .status(400)
-        .json({ status: "fail", message: "Name query parameter is required" });
+      return res.status(400).json({ status: "fail", message: "Name query parameter is required" });
     }
 
     const preferences = await UserPreferenceModel.find({
@@ -206,9 +191,7 @@ exports.filterUserPreferencesByDiet = async (req, res) => {
   try {
     const { diet } = req.query;
     if (!diet) {
-      return res
-        .status(400)
-        .json({ status: "fail", message: "Diet query parameter is required" });
+      return res.status(400).json({ status: "fail", message: "Diet query parameter is required" });
     }
 
     const preferences = await UserPreferenceModel.find({
@@ -233,13 +216,73 @@ exports.getUserPreferenceByUserId = async (req, res) => {
     });
 
     if (!preference) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
     }
 
     res.status(200).json({ status: "success", data: preference });
   } catch (error) {
+    res.status(500).json({ status: "fail", message: error.message });
+  }
+};
+
+exports.resetUserPreference = async (req, res) => {
+  try {
+    const { userPreferenceId } = req.params;
+    console.log("req.params:", req.params);
+
+    // Kiểm tra ID hợp lệ trước khi truy vấn MongoDB
+
+    const defaultValues = {
+      age: "",
+      diet: "",
+      eatHabit: [],
+      favorite: [],
+      longOfPlan: "",
+      mealNumber: "0",
+      goal: "",
+      sleepTime: "",
+      waterDrink: "",
+      hate: [],
+      weight: 0,
+      weightGoal: 0,
+      height: 0,
+      gender: "",
+      phoneNumber: "",
+      underDisease: [],
+      theme: false,
+      isDelete: false,
+    };
+
+    // Kiểm tra xem userPreference có tồn tại không
+    const existingPreference = await UserPreferenceModel.findOne({
+      _id: userPreferenceId,
+      isDelete: false,
+    });
+
+    if (!existingPreference) {
+      return res.status(404).json({ status: "fail", message: "User Preference not found" });
+    }
+
+    // Cập nhật dữ liệu
+    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(
+      userPreferenceId,
+      { $set: defaultValues },
+      { new: true }
+    );
+
+    if (!updatedPreference) {
+      return res.status(404).json({ status: "fail", message: "User Preference not found or could not be updated" });
+    }
+
+    console.log("Updated data:", updatedPreference);
+
+    res.status(200).json({
+      status: "success",
+      message: "User Preference reset successfully",
+      data: updatedPreference,
+    });
+  } catch (error) {
+    console.error("Error resetting userPreference:", error);
     res.status(500).json({ status: "fail", message: error.message });
   }
 };

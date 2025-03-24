@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
 import faqService from "../../../services/footer/faqServices";
+import {
+    PlusIcon,
+    EditIcon,
+    TrashIcon,
+    EyeOffIcon,
+    EyeIcon,
+} from "lucide-react";
 
 const FAQsManagement = () => {
     const [faqs, setFaqs] = useState([]);
@@ -8,16 +15,25 @@ const FAQsManagement = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [editData, setEditData] = useState(null);
     const [formData, setFormData] = useState({ category: "", question: "", answer: "" });
+    const [currentPage, setCurrentPage] = useState(1);
+    const [faqsPerPage, setFaqsPerPage] = useState(5);
 
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+    // Xử lý phân trang
+    const indexOfLastFaq = currentPage * faqsPerPage;
+    const indexOfFirstFaq = indexOfLastFaq - faqsPerPage;
+    const currentFaqs = faqs.slice(indexOfFirstFaq, indexOfLastFaq);
     useEffect(() => {
         fetchFAQs();
     }, []);
 
-    const fetchFAQs = async () => {
+    const fetchFAQs = async (callback) => {
         setLoading(true);
         const result = await faqService.getFAQs();
         if (result.success) {
             setFaqs(result.data);
+            if (callback) callback(result.data);
         } else {
             setError(result.message);
         }
@@ -27,7 +43,7 @@ const FAQsManagement = () => {
     const handleToggleVisibility = async (faqs) => {
         const updatedFAQ = { ...faqs, isVisible: !faqs.isVisible };
         const response = await faqService.updateFAQ(faqs._id, updatedFAQ);
-        
+
         if (response.success) {
             fetchFAQs(); // Cập nhật lại danh sách trên trang quản lý
         } else {
@@ -38,7 +54,13 @@ const FAQsManagement = () => {
     const handleHardDelete = async (id) => {
         if (window.confirm("Are you sure you want to delete this question?")) {
             await faqService.hardDeleteFAQ(id);
-            fetchFAQs();
+            fetchFAQs(() => {
+                // Nếu số FAQ sau khi xóa nhỏ hơn index trang hiện tại, chuyển về trang trước đó
+                const totalPages = Math.ceil((faqs.length - 1) / faqsPerPage);
+                if (currentPage > totalPages) {
+                    setCurrentPage(totalPages || 1); // Tránh currentPage = 0
+                }
+            });
         }
     };
 
@@ -81,9 +103,12 @@ const FAQsManagement = () => {
         fetchFAQs();
     };
 
+    if (loading) return <p className="text-center text-blue-500">Loading...</p>;
+    if (error) return <p className="text-center text-red-500">Error: {error}</p>;
+
     return (
-        <div className="container mx-auto px-6 py-12">
-            <h1 className="text-3xl font-bold text-green-700 mb-6">FAQs Management</h1>
+        <div className="container mx-auto px-4">
+            <h1 className="text-2xl font-bold">FAQs Management</h1>
 
             <button
                 className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
@@ -91,63 +116,125 @@ const FAQsManagement = () => {
             >
                 + Add New
             </button>
-
-            {loading && <p className="text-center text-blue-500">Loading...</p>}
-            {error && <p className="text-center text-red-500">Error: {error}</p>}
-
-            <div className="bg-white shadow-lg rounded-lg p-6">
-                <table className="w-full border-collapse border border-gray-300">
+            <div className="bg-white shadow-lg rounded-2xl p-6">
+                <table className="w-full border-collapse">
                     <thead>
-                        <tr className="bg-gray-200">
-                            <th className="border border-gray-300 p-2">No.</th>
-                            <th className="border border-gray-300 p-2">Category</th>
-                            <th className="border border-gray-300 p-2">Question</th>
-                            <th className="border border-gray-300 p-2">Answer</th>
-                            <th className="border border-gray-300 p-2">Action</th>
+                        <tr className="bg-gray-100 text-gray-700">
+                            <th className="p-3 text-left">No.</th>
+                            <th className="p-3 text-left">Category</th>
+                            <th className="p-3 text-left">Question</th>
+                            <th className="p-3 text-left">Answer</th>
+                            <th className="p-3 text-center">Status</th>
+                            <th className="p-3 text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {faqs.length > 0 ? (
-                            faqs.map((item, index) => (
-                                <tr key={index} className="text-center border border-gray-300">
-                                    <td className="p-2">{index + 1}</td>
-                                    <td className="p-2">{item.category}</td>
-                                    <td className="p-2 text-left">{item.question}</td>
-                                    <td className="p-2 text-left">{item.answer}</td>
-                                    <td className="p-2">
-                                        <div className="flex justify-center space-x-2">
+                        {currentFaqs.length > 0 ? (
+                            currentFaqs.map((item, index) => (
+                                <tr key={index} className="border-b border-gray-200 text-gray-900">
+                                    <td className="p-3">{index + 1}</td>
+                                    <td className="p-3">{item.category}</td>
+                                    <td className="p-3 text-left">{item.question}</td>
+                                    <td className="p-3 text-left">{item.answer}</td>
+                                    <td className="p-3 text-center">
+                                        <span
+                                            className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold ${item.isVisible
+                                                ? "bg-green-100 text-green-700"
+                                                : "bg-red-100 text-red-700"
+                                                }`}
+                                        >
+                                            {item.isVisible ? "Visible" : "Hidden"}
+                                        </span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                        <div className="flex items-center justify-center space-x-2">
+                                            {/* Nút chỉnh sửa */}
                                             <button
-                                                className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
                                                 onClick={() => handleOpenModal(item)}
                                             >
-                                                Edit
+                                                <EditIcon size={16} />
                                             </button>
+
+                                            {/* Nút Ẩn/Hiện */}
                                             <button
-                                                className={`px-2 py-1 text-white rounded transition ${item.isVisible ? "bg-gray-500" : "bg-green-500"
+                                                className={`p-2 rounded-full text-white ${item.isVisible
+                                                        ? "bg-gray-500 hover:bg-gray-600"
+                                                        : "bg-green-500 hover:bg-green-600"
                                                     }`}
                                                 onClick={() => handleToggleVisibility(item)}
                                             >
-                                                {item.isVisible ? "Hidden" : "Visible"}
+                                                {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
                                             </button>
+
+                                            {/* Nút Xóa vĩnh viễn */}
                                             <button
-                                                className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                                                className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
                                                 onClick={() => handleHardDelete(item._id)}
                                             >
-                                                Delete
+                                                <TrashIcon size={16} />
                                             </button>
                                         </div>
                                     </td>
+
                                 </tr>
                             ))
                         ) : (
                             <tr>
                                 <td colSpan="5" className="text-center text-gray-500 p-4">
-                                There are no FAQs yet.
+                                    There are no FAQs yet.
                                 </td>
                             </tr>
                         )}
                     </tbody>
                 </table>
+
+
+             {/* Phân trang */}
+<div className="p-4 flex justify-between items-center">
+    <div className="flex items-center space-x-2">
+        <span>Show</span>
+        <select
+            className="border rounded px-2 py-1"
+            onChange={(e) => {
+                setFaqsPerPage(Number(e.target.value));
+                setCurrentPage(1); // Reset về trang đầu tiên
+            }}
+        >
+            <option value="5">5 FAQs</option>
+            <option value="10">10 FAQs</option>
+            <option value="15">15 FAQs</option>
+        </select>
+    </div>
+    <div className="flex space-x-2">
+        <button
+            className="border rounded px-3 py-1 hover:bg-gray-100"
+            onClick={() => paginate(currentPage - 1)}
+            disabled={currentPage === 1}
+        >
+            &lt;
+        </button>
+        {Array.from({ length: Math.ceil(faqs.length / faqsPerPage) }, (_, i) => (
+            <button
+                key={i}
+                className={`px-3 py-1 rounded ${
+                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                }`}
+                onClick={() => paginate(i + 1)}
+            >
+                {i + 1}
+            </button>
+        ))}
+        <button
+            className="border rounded px-3 py-1 hover:bg-gray-100"
+            onClick={() => paginate(currentPage + 1)}
+            disabled={currentPage >= Math.ceil(faqs.length / faqsPerPage)}
+        >
+            &gt;
+        </button>
+    </div>
+</div>
+
             </div>
 
             {/* Modal Form */}

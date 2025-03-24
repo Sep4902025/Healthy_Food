@@ -12,12 +12,10 @@ import AdminLayout from "../components/layouts/AdminLayout";
 import NutritionistLayout from "../components/layouts/NutritionistLayout";
 import NutritionChat from "../pages/nutritionist/NutritionChat";
 import TableIngredient from "../pages/nutritionist/Ingredient Management/TableIngredient";
-import TableMealPlan from "../pages/nutritionist/TableMealPlan";
+import TableMealPlan from "../pages/nutritionist/MealPlan Management/TableMealPlan";
 import TableDishes from "../pages/nutritionist/Dishes Management/TableDishes";
 import AddDishes from "../pages/nutritionist/Dishes Management/AddDishes";
 import TableRecipes from "../pages/nutritionist/Recipes Management/TableRecipes";
-import AddRecipes from "../pages/nutritionist/Recipes Management/AddRecipes";
-import ChatWindow from "../components/Chat/ChatWindow";
 import ProtectedRoute from "../components/ProtectedRoute";
 import VerifyOtp from "../pages/auth/VerifyOtp";
 import ResetPassword from "../pages/auth/ResetPassword";
@@ -37,12 +35,9 @@ import HealthyDashboard from "../pages/admin/pages/HealthyDashboard";
 import UserManagement from "../pages/admin/pages/UserManagement";
 import IngredientsManagement from "../pages/admin/pages/IngredientManagement";
 import DishManagement from "../pages/admin/pages/DishManagement";
-import MealPlan from "../pages/admin/pages/MealPlan";
 import EditUser from "../pages/user/EditUser";
 import ViewProfile from "../pages/user/ViewProfile";
 import DishDetail from "../pages/user/DishDetail";
-
-import QuizLayout from "../components/layouts/QuizLayout";
 import Favorite from "../pages/survey/Favorite";
 import Age from "../pages/survey/Age";
 import Diet from "../pages/survey/Diet";
@@ -61,8 +56,15 @@ import UnderDisease from "../pages/survey/UnderDisease";
 import WaterDrink from "../pages/survey/WaterDrink";
 import Weight from "../pages/survey/Weight";
 import WeightGoal from "../pages/survey/WeightGoal";
-import ViewQuiz from "../pages/user/ViewQuiz";
 import ForYoyPage from "../pages/user/ForYouPage";
+import AddUser from "../pages/admin/pages/AddUserManagement";
+import AdminProfile from "../pages/user/AdminProfile";
+import EditAdmin from "../pages/user/EditAdmin";
+import ChangePassword from "../pages/user/Profile/Sections/ChangePassword";
+import TableMedicalConditions from "../pages/nutritionist/Medical Condition Management/TableMedicalConditions";
+import AddMedicalCondition from "../pages/nutritionist/Medical Condition Management/AddMedicalCondition";
+import CreateMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/CreateMealPlanPage";
+import EditMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/EditMealPlanPage";
 
 const AppRoutes = () => {
   return (
@@ -76,6 +78,7 @@ const AppRoutes = () => {
         <Route path="reset-password" element={<ResetPassword />} />
         <Route index element={<Home />} />
         <Route path="viewprofile" element={<ViewProfile />} />
+
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
         {/* Router mealPlan */}
@@ -120,16 +123,6 @@ const AppRoutes = () => {
             <PrivateRoute>
               <ForYoyPage />
             </PrivateRoute>
-          }
-        />
-
-        {/* ✅ Bảo vệ trang chat, chỉ user mới vào được */}
-        <Route
-          path="chat"
-          element={
-            <ProtectedRoute allowedRoles={["user"]}>
-              <ChatWindow />
-            </ProtectedRoute>
           }
         />
         <Route path="faqs" element={<FAQs />} />
@@ -178,6 +171,8 @@ const AppRoutes = () => {
       >
         <Route index element={<HealthyDashboard />} />
         {/* ✅ Thêm route cho Footer Management */}
+        <Route path="profile" element={<AdminProfile />} />
+        <Route path="adduser" element={<AddUser />} />
         <Route path="aboutusmanagement" element={<AboutUsManagement />} />
         <Route path="termofusemanagement" element={<TermOfUseManagement />} />
         <Route path="faqsManagement" element={<FAQsManagement />} />
@@ -186,9 +181,11 @@ const AppRoutes = () => {
         <Route path="usermanagement" element={<UserManagement />} />
         <Route path="dishmanagement" element={<DishManagement />} />
         <Route path="ingredientsmanagement" element={<IngredientsManagement />} />
-        <Route path="mealplan" element={<MealPlan />} />
+        <Route path="mealplan" element={<TableMealPlan />} />
+        <Route path="change-password" element={<ChangePassword />} />
+        <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
-        <Route path="viewprofile" element={<ViewProfile />} />
+        <Route path="viewprofile/:id" element={<ViewProfile />} />
       </Route>
 
       {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist*/}
@@ -202,7 +199,11 @@ const AppRoutes = () => {
       >
         <Route path="chat" element={<NutritionChat />} />
         <Route path="mealplan" element={<TableMealPlan />} />
-        {/* <Route path="dishes" element={<TableDishes />} /> */}
+        <Route path="mealplan/create" element={<CreateMealPlanNutritionist />} />
+        <Route
+          path="/nutritionist/mealplan/edit/:mealPlanId"
+          element={<EditMealPlanNutritionist />}
+        />
         <Route path="dishes">
           <Route index element={<TableDishes />} />
           <Route path="add" element={<AddDishes />} />
@@ -215,7 +216,11 @@ const AppRoutes = () => {
 
         <Route path="recipes">
           <Route index element={<TableRecipes />} />
-          <Route path="add" element={<AddRecipes />} />
+        </Route>
+
+        <Route path="medicalConditions">
+          <Route index element={<TableMedicalConditions />} />
+          <Route path="add" element={<AddMedicalCondition />} />
         </Route>
       </Route>
     </Routes>

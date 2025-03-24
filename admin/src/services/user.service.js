@@ -2,6 +2,12 @@ import axios from "axios";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
+// Hàm lấy token từ localStorage
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 // Tạo instance axios với config mặc định
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -36,13 +42,17 @@ axiosInstance.interceptors.response.use(
 
 const UserService = {
   // Lấy tất cả người dùng (Admin only)
-  getAllUsers: async () => {
+  getAllUsers: async (page = 1, limit = 10) => {
     try {
-      const response = await axiosInstance.get("/users");
+      const response = await axiosInstance.get(
+        `/users?page=${page}&limit=${limit}`
+      );
       return {
         success: true,
         users: response.data.data.users,
-        total: response.data.results
+        total: response.data.total,
+        totalPages: response.data.totalPages,
+        currentPage: response.data.currentPage,
       };
     } catch (error) {
       console.error("Lỗi lấy danh sách người dùng:", error.response?.data || error.message);
@@ -69,7 +79,23 @@ const UserService = {
       };
     }
   },
-
+  // Tìm kiếm người dùng theo email
+  searchUserByEmail: async (email) => {
+    try {
+      const response = await axiosInstance.get(`/users/search?email=${email}`);
+      return {
+        success: true,
+        users: response.data.data.users,
+        total: response.data.results,
+      };
+    } catch (error) {
+      console.error("Error searching users by email:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Unable to search users by email",
+      };
+    }
+  },
   // Lấy thông tin người dùng hiện tại
   getCurrentUser: async () => {
     try {
@@ -87,20 +113,26 @@ const UserService = {
     }
   },
 
-  // Cập nhật thông tin người dùng theo ID (Admin hoặc chính user)
-  updateUser: async (userId, userData) => {
+  // 🔹 Cập nhật thông tin người dùng từ FE
+  updateUser: async (id, data) => {
     try {
-      const response = await axiosInstance.patch(`/users/${userId}`, userData);
+      console.log(`📤 Cập nhật user ID: ${id}`, data);
+
+      const response = await axios.put(`${API_URL}/users/${id}`, data, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+
       return {
         success: true,
         message: "Cập nhật thông tin thành công",
         user: response.data.data.user,
       };
     } catch (error) {
-      console.error("Lỗi cập nhật thông tin:", error.response?.data || error.message);
+      console.error("❌ Lỗi khi cập nhật user:", error.response?.data || error.message);
       return {
         success: false,
-        message: error.response?.data?.message || "Cập nhật thông tin thất bại",
+        message: error.response?.data?.message || "Cập nhật thông tin thất bại!",
       };
     }
   },

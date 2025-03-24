@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import dishesService from "../../../services/nutritionist/dishesServices";
 import UploadComponent from "../../../components/UploadComponent";
 
+const FLAVOR_OPTIONS = ["Sweet", "Sour", "Salty", "Bitter", "Fatty"];
+const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
+const SEASON_OPTIONS = ["All Season", "Spring", "Summer", "Fall", "Winter"];
+
 const AddDishes = ({ onDishAdded = () => {} }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -10,27 +14,83 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
     videoUrl: "",
     cookingTime: "",
     nutritions: "",
-    flavor: "",
+    flavor: [],
     type: "",
     season: "",
   });
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.description.trim()) newErrors.description = "Description is required";
+    if (!formData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required";
+    if (!formData.cookingTime) newErrors.cookingTime = "Cooking time is required";
+    if (formData.flavor.length === 0) newErrors.flavor = "At least one flavor is required";
+    if (!formData.type) newErrors.type = "Type is required";
+    if (!formData.season) newErrors.season = "Season is required";
+
+    if (formData.videoUrl) {
+      const youtubeEmbedRegex =
+        /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
+      if (!youtubeEmbedRegex.test(formData.videoUrl)) {
+        newErrors.videoUrl =
+          "Video URL must be a valid YouTube embed link (e.g., https://www.youtube.com/embed/video_id)";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: "" });
   };
 
-  // Cập nhật URL ảnh sau khi upload thành công
+  const handleFlavorChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      flavor: prev.flavor.includes(value)
+        ? prev.flavor.filter((fl) => fl !== value)
+        : [...prev.flavor, value],
+    }));
+    setErrors({ ...errors, flavor: "" });
+  };
+
   const handleImageUpload = (imageUrl) => {
     setFormData({ ...formData, imageUrl });
+    setErrors({ ...errors, imageUrl: "" });
+  };
+
+  const handleCookingTimeChange = (e) => {
+    let value = e.target.value;
+    value = value.replace(/[^0-9]/g, "");
+    value = value === "" ? "" : parseInt(value, 10);
+
+    if (value < 0 || isNaN(value)) value = 0;
+    else if (value > 1440) value = 1440;
+
+    setFormData({ ...formData, cookingTime: value });
+    setErrors({ ...errors, cookingTime: "" });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const response = await dishesService.createDish(formData);
+    if (!validateForm()) {
+      alert("Please fill in all required fields correctly!");
+      return;
+    }
+
+    const response = await dishesService.createDish({
+      ...formData,
+      flavor: formData.flavor.join(", "),
+    });
+
     if (response.success) {
       alert("Dish added successfully!");
-
-      // Reset form
       setFormData({
         name: "",
         description: "",
@@ -38,37 +98,214 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
         videoUrl: "",
         cookingTime: "",
         nutritions: "",
-        flavor: "",
+        flavor: [],
         type: "",
         season: "",
       });
-
-      onDishAdded(); // Cập nhật danh sách món ăn
+      setErrors({});
+      onDishAdded();
     } else {
       alert(response.message);
     }
   };
 
   return (
-    <div className="mt-4 p-4 border rounded bg-gray-100">
-      <h3 className="text-lg font-semibold">Add New Dish</h3>
-      <form onSubmit={handleSubmit}>
-        <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Name of dish" className="border px-2 py-1 w-full mb-2" required />
-        <input type="text" name="description" value={formData.description} onChange={handleChange} placeholder="Description" className="border px-2 py-1 w-full mb-2" />
+    <div className="max-w-6xl mx-auto">
+      <div className="flex items-center mb-6 py-4">
+        <label className="text-xl font-bold mb-4">Add new dish</label>
+        <div className="ml-auto">
+          <button onClick={handleSubmit} className="bg-green-500 text-white px-4 py-2 rounded-md">
+            Save Dish
+          </button>
+        </div>
+      </div>
 
-        <input type="text" name="videoUrl" value={formData.videoUrl} onChange={handleChange} placeholder="Link video" className="border px-2 py-1 w-full mb-2" />
-        <input type="text" name="cookingTime" value={formData.cookingTime} onChange={handleChange} placeholder="Cooking time" className="border px-2 py-1 w-full mb-2" />
-        <input type="text" name="nutritions" value={formData.nutritions} onChange={handleChange} placeholder="Nutrition" className="border px-2 py-1 w-full mb-2" />
-        <input type="text" name="flavor" value={formData.flavor} onChange={handleChange} placeholder="Flavor" className="border px-2 py-1 w-full mb-2" />
-        <input type="text" name="type" value={formData.type} onChange={handleChange} placeholder="Type of dish" className="border px-2 py-1 w-full mb-2" />
-        <input type="text" name="season" value={formData.season} onChange={handleChange} placeholder="Suitable season" className="border px-2 py-1 w-full mb-2" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Enter dish name"
+              className={`w-full border ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+            />
+            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+          </div>
 
-        {/* Upload ảnh */}
-        <label className="block mb-1">Upload Dish Image:</label>
-        <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.imageUrl === ""} />
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cooking Time (minutes)*
+              </label>
+              <input
+                type="number"
+                name="cookingTime"
+                value={formData.cookingTime}
+                onChange={handleCookingTimeChange}
+                onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
+                placeholder="Time for cooking"
+                min="1"
+                max="1440"
+                className={`w-full border ${
+                  errors.cookingTime ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+              />
+              {errors.cookingTime && (
+                <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                className={`w-full border ${
+                  errors.type ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+              >
+                <option value="">Select Type</option>
+                {TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
+            </div>
+          </div>
 
-        <button type="submit" className="bg-green-500 text-white px-4 py-2 mt-4">Add New Dish</button>
-      </form>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
+            <input
+              type="text"
+              name="videoUrl"
+              value={formData.videoUrl}
+              onChange={handleChange}
+              placeholder="https://www.youtube.com/embed/video_id"
+              className={`w-full border ${
+                errors.videoUrl ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+            />
+            {errors.videoUrl && <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>}
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Season *</label>
+            <select
+              name="season"
+              value={formData.season}
+              onChange={handleChange}
+              className={`w-full border ${
+                errors.season ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+            >
+              <option value="">Select Season</option>
+              {SEASON_OPTIONS.map((season) => (
+                <option key={season} value={season}>
+                  {season}
+                </option>
+              ))}
+            </select>
+            {errors.season && <p className="text-red-500 text-sm mt-1">{errors.season}</p>}
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Flavor *</label>
+            <div className="flex flex-wrap gap-4">
+              {FLAVOR_OPTIONS.map((flavor) => (
+                <label key={flavor} className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    value={flavor}
+                    checked={formData.flavor.includes(flavor)}
+                    onChange={handleFlavorChange}
+                    className="mr-2 h-4 w-4 text-green-500 focus:ring-green-500"
+                  />
+                  {flavor}
+                </label>
+              ))}
+            </div>
+            {errors.flavor && <p className="text-red-500 text-sm mt-1">{errors.flavor}</p>}
+          </div>
+
+          <div className="bg-gray-100 p-6 rounded-lg">
+            <div className="flex justify-center items-center mb-2">
+              {formData.imageUrl ? (
+                <img
+                  src={formData.imageUrl}
+                  alt="Dish preview"
+                  className="w-24 h-24 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    ></path>
+                  </svg>
+                </div>
+              )}
+            </div>
+            <div className="text-center">
+              <UploadComponent
+                onUploadSuccess={handleImageUpload}
+                reset={formData.imageUrl === ""}
+              />
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Image URL *</label>
+              <input
+                type="text"
+                value={formData.imageUrl}
+                onChange={(e) => handleImageUpload(e.target.value)}
+                placeholder="Enter image URL"
+                className={`w-full border ${
+                  errors.imageUrl ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+              />
+              {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="mb-4">
+            <div className="flex border-b border-gray-200 justify-center">
+              <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
+                Description *
+              </label>
+            </div>
+          </div>
+          <div className="mb-4">
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="Enter description"
+              className={`w-full border ${
+                errors.description ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
+            ></textarea>
+            {errors.description && (
+              <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
