@@ -1,7 +1,6 @@
 import axiosInstance from "./axiosInstance";
 
 export const login = async ({ email, password }) => {
- 
   try {
     const data = {
       email: email,
@@ -10,7 +9,6 @@ export const login = async ({ email, password }) => {
     const response = await axiosInstance.post(`/users/login`, data);
     return response;
   } catch (error) {
-   
     console.log("login in service/auth error : ", error);
     return error;
   }
@@ -22,7 +20,6 @@ export const signup = async ({ email, password, passwordConfirm, username }) => 
     const response = await axiosInstance.post("/users/signup", data);
     return response;
   } catch (error) {
-  
     return error;
   }
 };
@@ -83,7 +80,7 @@ export const changePassword = async ({ email, password, passwordConfirm }) => {
 
 export const updateUser = async (user) => {
   try {
-    const response = await axiosInstance.put(`api/v1/users/${user?._id}`, user);
+    const response = await axiosInstance.put(`/users/${user?._id}`, user);
     return response;
   } catch (error) {
     console.log("updateUser error: ", error);

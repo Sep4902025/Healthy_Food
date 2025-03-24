@@ -1,8 +1,8 @@
-import axiosInstance from "./axiosInstance"; 
+import axiosInstance from "./axiosInstance";
 
 export const getUserPreference = async (userId) => {
   try {
-    const response = await axiosInstance.get(`api/v1/userPreference/${userId}`);
+    const response = await axiosInstance.get(`/userPreference/${userId}`);
     return response;
   } catch (error) {
     console.log("getUserPreference error: ", error);
@@ -12,7 +12,7 @@ export const getUserPreference = async (userId) => {
 
 export const createUserPreference = async (data) => {
   try {
-    const response = await axiosInstance.post(`api/v1/userPreference`, data);
+    const response = await axiosInstance.post(`/userPreference`, data);
     return response;
   } catch (error) {
     console.log("createUserPreference error: ", error);
@@ -22,10 +22,7 @@ export const createUserPreference = async (data) => {
 
 export const updateUserPreference = async (data) => {
   try {
-    const response = await axiosInstance.put(
-      `api/v1/userPreference/${data?._id}`,
-      data
-    );
+    const response = await axiosInstance.put(`/userPreference/${data?._id}`, data);
     return response;
   } catch (error) {
     console.log("updateUserPreference error: ", error);

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, use, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  SafeAreaView,
-  Dimensions,
   Image,
+  Dimensions,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import messageSocket from "../services/messageSocket";
@@ -25,8 +24,10 @@ import InputModal from "../components/modal/InputModal";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
 import { useTheme } from "../contexts/ThemeContext";
 import ShowToast from "../components/common/CustomToast";
+
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
+
 function Message({ navigation }) {
   const user = useSelector(userSelector);
 
@@ -39,23 +40,41 @@ function Message({ navigation }) {
   const flatListRef = useRef(null);
 
   useEffect(() => {
-
     messageSocket.init({ userId: user?._id, token: user?.accessToken });
     loadConversation();
 
-    
+    const handleReceiveMessage = (message) => {
+      console.log("New message received:", message);
+      const messageToReceived = {
+        id: message._id,
+        text: message.text,
+        sender: message.senderId === user?._id ? "me" : "other", // Check senderId to determine if it's the user's message
+        timestamp: message.updatedAt,
+      };
+
+      setMessages((previousMessages) => {
+        if (previousMessages.some((msg) => msg.id === messageToReceived.id)) {
+          return previousMessages; // Skip adding the duplicate message
+        }
+        return [...previousMessages, messageToReceived];
+      });
+    };
+
+    messageSocket.on("receive_message", handleReceiveMessage);
+
     return () => {
       messageSocket.disconnect();
-      messageSocket.off("receive_message");
+      messageSocket.off("receive_message", handleReceiveMessage);
     };
-  }, []);
+  }, [user?._id, user?.accessToken]);
 
   const loadConversation = async () => {
-    
     const response = await getUserConversations(user?._id);
     if (response.status === 200) {
       setConversation(response.data?.data[0]);
-      loadMessgageHistory(response.data?.data[0]._id);
+      if (response.data?.data[0]?._id) {
+        loadMessgageHistory(response.data?.data[0]._id);
+      }
     }
   };
 
@@ -65,6 +84,7 @@ function Message({ navigation }) {
       setMessages(
         response.data?.data?.map((item) => ({
           ...item,
+          id: item._id,
           sender: item.senderId === user?._id ? "me" : "other",
         }))
       );
@@ -90,21 +110,11 @@ function Message({ navigation }) {
   };
 
   const onSend = () => {
-    const messageToSend = {
-      text: inputText,
-      sender: "me",
-      timestamp: new Date().toISOString(),
-    };
-
-    
-    setMessages((previousMessages) => [...previousMessages, messageToSend]);
-
-    
     messageSocket.emit("send_message", {
       conversationId: conversation._id,
       senderId: user?._id,
       receiverId: "",
-      text: messageToSend.text,
+      text: inputText,
       createdAt: new Date(),
     });
     setInputText("");
@@ -114,17 +124,10 @@ function Message({ navigation }) {
     const isMyMessage = item.sender === "me";
 
     return (
-      <View
-        style={[
-          styles.messageBubble,
-          isMyMessage ? styles.myMessage : styles.otherMessage,
-        ]}
-      >
-        <Text style={[styles.messageSender, isMyMessage && styles.mySender]}>
-          {item.text}
-        </Text>
+      <View style={[styles.messageBubble, isMyMessage ? styles.myMessage : styles.otherMessage]}>
+        <Text style={[styles.messageSender, isMyMessage && styles.mySender]}>{item.text}</Text>
         <Text style={[styles.timestamp, isMyMessage && styles.mySender]}>
-          {new Date(item.updatedAt).toLocaleTimeString([], {
+          {new Date(item.updatedAt || item.timestamp).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           })}
@@ -132,19 +135,6 @@ function Message({ navigation }) {
       </View>
     );
   };
-
-  messageSocket.on("receive_message", (message) => {
-    console.log("New message received:", message);
-    const messageToReceived = {
-      id: message._id,
-      text: message.text,
-      sender: "other",
-      timestamp: message.updatedAt,
-    };
-
-    
-    setMessages((previousMessages) => [...previousMessages, messageToReceived]);
-  });
 
   return (
     <MainLayoutWrapper headerHidden={true}>
@@ -154,15 +144,8 @@ function Message({ navigation }) {
         resizeMode="cover"
       />
       {navigation.canGoBack() && (
-        <TouchableOpacity
-          style={styles.backIcon}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons
-            name="chevron-back" 
-            size={32} 
-            color={theme.backButtonColor} 
-          />
+        <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={32} color={theme.backButtonColor} />
         </TouchableOpacity>
       )}
       {screenState === "onboarding" ? (
@@ -176,17 +159,12 @@ function Message({ navigation }) {
             alignItems: "center",
           }}
         >
-          <Text style={styles.onboardingTitle}>
-            Chatting App That Connects People
-          </Text>
+          <Text style={styles.onboardingTitle}>Chatting App That Connects People</Text>
           <Text style={styles.onboardingDescription}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-            eiusmod tempor incididunt ut labore.
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+            incididunt ut labore.
           </Text>
-          <TouchableOpacity
-            style={styles.getStartedButton}
-            onPress={getStarted}
-          >
+          <TouchableOpacity style={styles.getStartedButton} onPress={getStarted}>
             <Text style={styles.getStartedButtonText}>Get Started</Text>
           </TouchableOpacity>
         </KeyboardAvoidingView>
@@ -196,15 +174,17 @@ function Message({ navigation }) {
             ref={flatListRef}
             data={messages}
             renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => {
+              if (!item.id) {
+                console.warn("Message missing id:", item);
+                return `temp-${Date.now()}-${Math.random()}`;
+              }
+              return item.id;
+            }}
             style={styles.messagesList}
             contentContainerStyle={styles.messagesListContent}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
-            onLayout={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
           />
 
           <KeyboardAvoidingView
@@ -327,7 +307,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-
     elevation: 5,
   },
   messageSender: {
@@ -347,7 +326,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-
     elevation: 5,
   },
   messageText: {

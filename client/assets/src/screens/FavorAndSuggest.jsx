@@ -31,38 +31,39 @@ const WIDTH = Dimensions.get("window").width;
 function FavorAndSuggest({ route }) {
   const [dish, setDish] = useState(null);
   const [recipe, setRecipe] = useState(null);
-  console.log("Recipeeeee", recipe);
-
   const [ingredientDetails, setIngredientDetails] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const dispatch = useDispatch();
   const favorite = useSelector(favorSelector);
   const user = useSelector(userSelector);
-  const [loading, setLoading] = useState(true);
   const { theme } = useTheme();
 
+  // Load dish from route params
   useEffect(() => {
     console.log("Route Params Dish:", route?.params?.dish);
     if (route?.params?.dish) {
       setDish(route.params.dish);
-      setLoading(true);
     } else {
       setLoading(false);
       Alert.alert("Error", "Dish data is not available.");
     }
   }, [route?.params?.dish]);
 
+  // Load recipe when dish changes
   useEffect(() => {
-    if (!dish) return;
-    if (dish._id && dish.recipeId) {
-      loadRecipe();
-    } else {
+    if (!dish?._id || !dish?.recipeId) {
       setLoading(false);
       console.warn("Dish ID or Recipe ID is missing:", dish);
+      return;
     }
+    loadRecipe();
   }, [dish]);
 
+  // Fetch ingredient details when recipe changes
   useEffect(() => {
-    if (recipe?.ingredients?.length) {
+    if (recipe?.ingredients?.length > 0) {
+      console.log("Recipe Ingredients:", recipe.ingredients);
       fetchIngredientDetails();
     }
   }, [recipe]);
@@ -74,9 +75,7 @@ function FavorAndSuggest({ route }) {
       console.log("Fetched Recipe Response:", response);
       if (response.success) {
         setRecipe(response.data);
-        console.log("Recipe Instructions:", response.data.instruction);
       } else {
-        console.error("Failed to load recipe:", response.message);
         Alert.alert("Error", response.message || "Failed to load recipe.");
       }
     } catch (error) {
@@ -90,57 +89,43 @@ function FavorAndSuggest({ route }) {
   const fetchIngredientDetails = async () => {
     try {
       setLoading(true);
-      const detailsObj = [];
-
-        // Create an array of promises for all ingredient fetches
-        const promises = recipe.ingredients.map(async (ingredient) => {
-          if (!ingredient?.ingredientId) return;
-
-        const response = await HomeService.getIngredientById(ingredient.ingredientId);
-        if (response?.status === "success" && response.data) {
-          detailsObj.push({
-            ...response.data,
+      const details = recipe.ingredients
+        .map((ingredient) => {
+          if (!ingredient?.ingredientId || typeof ingredient.ingredientId !== "object") {
+            console.warn("Invalid ingredientId:", ingredient);
+            return null;
+          }
+          return {
+            ...ingredient.ingredientId, // Use the existing ingredient details
             quantity: ingredient?.quantity,
             unit: ingredient?.unit,
-          });
-        }
-      });
-
-      await Promise.all(promises);
-      setIngredientDetails(detailsObj);
-      console.log("Ingredient Details:", detailsObj);
+          };
+        })
+        .filter(Boolean);
+      console.log("Final Ingredient Details:", details);
+      setIngredientDetails(details);
     } catch (error) {
-      console.error("Error fetching ingredient details:", error);
+      console.error("Error processing ingredient details:", error);
       Alert.alert("Error", "Failed to load ingredient details.");
     } finally {
       setLoading(false);
     }
   };
 
-  const isFavorite = (id) => {
-    return favorite.favoriteList?.includes(id);
-  };
+  const isFavorite = (id) => favorite.favoriteList?.includes(id) || false;
 
   const handleOnSavePress = async (dish) => {
-    const userId = user?.userId;
-    if (!userId) {
-      console.error("User ID is not available");
-      Alert.alert("Error", "User ID is not available. Please log in.");
+    if (!user?.userId) {
+      Alert.alert("Error", "Please log in to save favorites.");
       return;
     }
-    const isLiked = isFavorite(dish._id);
     try {
-      const newStatus = await HomeService.toggleFavoriteDish(userId, dish._id, isLiked);
+      const isLiked = isFavorite(dish._id);
+      await HomeService.toggleFavoriteDish(user.userId, dish._id, isLiked);
       dispatch(toggleFavorite({ id: dish._id }));
     } catch (error) {
       console.error("Error toggling favorite:", error);
       Alert.alert("Error", "Failed to toggle favorite.");
-    }
-  };
-
-  const handleOnPlayPress = (dish) => {
-    if (dish?.videoUrl) {
-      console.log(dish?.videoUrl);
     }
   };
 
@@ -163,69 +148,61 @@ function FavorAndSuggest({ route }) {
       { key: "instructions", title: "Instructions" },
     ]);
 
-    const IngredientsRoute = () => {
-      if (loading) {
-        return <SpinnerLoading />;
-      }
-
-      if (!dish?._id) {
-        return (
-          <View style={styles.tabContent}>
-            <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
-              Dish data is not available.
+    const IngredientsRoute = () => (
+      <View style={styles.tabContent}>
+        {loading ? (
+          <SpinnerLoading />
+        ) : (
+          <>
+            <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>
+              {ingredientDetails.length} Ingredients
             </Text>
-          </View>
-        );
-      }
-
-      console.log("Rendering Ingredients:", ingredientDetails);
-
-      return (
-        <View style={styles.tabContent}>
-          <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>
-            {ingredientDetails?.length ?? 0} Ingredients
-          </Text>
-          {ingredientDetails?.length > 0 ? (
-            ingredientDetails.map((ingredient, idx) => {
-              console.log("Rendering Ingredient:", ingredient);
-              return (
-                <View key={idx} style={styles.ingredientRow}>
-                  <View style={styles.ingredientInfo}>
-                    <Text style={{ ...styles.ingredientName, color: theme.greyTextColor }}>
-                      {ingredient?.name || "Unknown Ingredient"}
-                    </Text>
-                    {ingredient?.type && (
-                      <Text style={{ ...styles.ingredientDetail, color: theme.greyTextColor }}>
-                        Type: {ingredient.type}
+            {ingredientDetails.length > 0 ? (
+              ingredientDetails
+                .map((ingredient, idx) => {
+                  if (!ingredient || typeof ingredient !== "object") {
+                    console.warn("Invalid ingredient data:", ingredient);
+                    return null;
+                  }
+                  return (
+                    <View key={idx} style={styles.ingredientRow}>
+                      <View style={styles.ingredientInfo}>
+                        <Text style={{ ...styles.ingredientName, color: theme.greyTextColor }}>
+                          {ingredient.name || "Unknown Ingredient"}
+                        </Text>
+                        {ingredient.type && (
+                          <Text style={{ ...styles.ingredientDetail, color: theme.greyTextColor }}>
+                            Type: {ingredient.type}
+                          </Text>
+                        )}
+                        {ingredient.description && (
+                          <Text style={{ ...styles.ingredientDetail, color: theme.greyTextColor }}>
+                            {ingredient.description}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={{ ...styles.ingredientQuantity, color: theme.greyTextColor }}>
+                        {ingredient.quantity || "N/A"} {ingredient.unit || ""}
                       </Text>
-                    )}
-                    {ingredient?.description && (
-                      <Text style={{ ...styles.ingredientDetail, color: theme.greyTextColor }}>
-                        {ingredient.description}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={{ ...styles.ingredientQuantity, color: theme.greyTextColor }}>
-                    {ingredient?.quantity || "N/A"} {ingredient?.unit || ""}
-                  </Text>
-                </View>
-              );
-            })
-          ) : (
-            <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
-              No ingredients available.
-            </Text>
-          )}
-        </View>
-      );
-    };
+                    </View>
+                  );
+                })
+                .filter(Boolean)
+            ) : (
+              <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
+                No ingredients available.
+              </Text>
+            )}
+          </>
+        )}
+      </View>
+    );
 
     const InstructionsRoute = () => {
       const videoId = getYouTubeVideoId(dish?.videoUrl);
 
       return (
         <ScrollView style={styles.tabContent}>
-          {/* Hiển thị video nếu có videoUrl */}
           {videoId ? (
             <View style={styles.videoContainer}>
               <YoutubePlayer
@@ -242,13 +219,8 @@ function FavorAndSuggest({ route }) {
             >
               <Text style={styles.videoLinkText}>Watch Video Tutorial</Text>
             </TouchableOpacity>
-          ) : (
-            <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
-              No video available.
-            </Text>
-          )}
+          ) : null}
 
-          {/* Hiển thị danh sách công thức */}
           <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor, marginTop: 16 }}>
             Instructions
           </Text>
@@ -272,20 +244,6 @@ function FavorAndSuggest({ route }) {
         </ScrollView>
       );
     };
-
-    const InstructionsRoute = () => (
-      <ScrollView style={styles.tabContent}>
-        {recipe?.instruction?.map((instruction, idx) => (
-          <Text
-            key={idx}
-            style={{ ...styles.instructionText, color: theme.greyTextColor }}
-          >
-            • {instruction?.description}
-          </Text>
-        ))}
-        <PaddingScrollViewBottom />
-      </ScrollView>
-    );
 
     const renderScene = SceneMap({
       ingredient: IngredientsRoute,
@@ -322,7 +280,7 @@ function FavorAndSuggest({ route }) {
     }
 
     return (
-      <View key={dish._id} style={styles.recipeCard}>
+      <View style={styles.recipeCard}>
         <Image source={{ uri: dish?.imageUrl }} style={styles.recipeImage} />
         <TouchableOpacity style={styles.heartIcon} onPress={() => handleOnSavePress(dish)}>
           {favorite.isLoading ? (
@@ -333,12 +291,7 @@ function FavorAndSuggest({ route }) {
             <Ionicons name="heart-outline" size={24} color="#FF8A65" />
           )}
         </TouchableOpacity>
-        <View
-          style={{
-            ...styles.cardContent,
-            backgroundColor: theme.cardBackgroundColor,
-          }}
-        >
+        <View style={{ ...styles.cardContent, backgroundColor: theme.cardBackgroundColor }}>
           <View style={styles.recipeHeader}>
             <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>{dish.name}</Text>
             <View style={styles.recipeRate}>
@@ -395,6 +348,7 @@ function FavorAndSuggest({ route }) {
   );
 }
 
+// Styles remain the same
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -423,20 +377,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
   },
-  playIcon: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    borderRadius: 20,
-    padding: 8,
-  },
   cardContent: {
     padding: 16,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     transform: [{ translateY: -10 }],
-    
   },
   recipeHeader: {
     flexDirection: "row",
@@ -482,11 +427,10 @@ const styles = StyleSheet.create({
   },
   tabView: {
     marginTop: 8,
-    minHeight: 300, // Ensure the tab content is visible
+    minHeight: 300,
   },
   tabContent: {
     paddingTop: 16,
-    
     paddingHorizontal: 12,
   },
   sectionTitle: {
