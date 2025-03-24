@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
     passwordConfirm: {
       type: String,
       required: function () {
-        return !this.googleId;
+        return !this.googleId && this.isModified("password"); 
       },
       validate: {
         validator: function (el) {
@@ -85,6 +85,27 @@ const userSchema = new mongoose.Schema(
     lastActive: {
       type: Date,
       default: Date.now,
+    },
+    nutritionistApplication: {
+      type: {
+        personalInfo: {
+          fullName: { type: String },
+          phoneNumber: { type: String },
+          address: { type: String },
+        },
+        profileImage: { type: String },
+        introduction: { type: String },
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected"],
+          default: "pending",
+        },
+        submittedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+      default: null,
     },
   },
   {

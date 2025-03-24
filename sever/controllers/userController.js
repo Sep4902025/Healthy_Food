@@ -168,3 +168,97 @@ exports.createUser = catchAsync(async (req, res, next) => {
     return next(new AppError(`Error creating user: ${error.message}`, 500));
   }
 });
+
+// 📌 Nộp CV để trở thành Nutritionist
+exports.submitNutritionistApplication = catchAsync(async (req, res, next) => {
+  const { personalInfo, profileImage, introduction } = req.body;
+
+  if (!req.user || !req.user._id) {
+    return next(new AppError("Unauthorized: No user found in request", 401));
+  }
+
+  const userId = req.user._id;
+
+  // Kiểm tra xem user đã nộp đơn chưa
+  const user = await UserModel.findById(userId);
+  if (!user) return next(new AppError("User not found", 404));
+  if (user.nutritionistApplication) {
+    return next(new AppError("You have already submitted an application", 400));
+  }
+
+  // Cập nhật chỉ trường nutritionistApplication
+  const updatedUser = await UserModel.updateOne(
+    { _id: userId },
+    {
+      $set: {
+        nutritionistApplication: {
+          personalInfo,
+          profileImage,
+          introduction,
+          status: "pending",
+          submittedAt: new Date(),
+        },
+      },
+    }
+  );
+
+  if (updatedUser.modifiedCount === 0) {
+    return next(new AppError("Failed to submit application", 500));
+  }
+
+  // Lấy lại user để trả về response
+  const updatedUserDoc = await UserModel.findById(userId);
+
+  // await user.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    status: "success",
+    message: "Application submitted successfully",
+    data: { application: updatedUserDoc.nutritionistApplication },
+  });
+});
+
+// 📌 Lấy danh sách user chờ phê duyệt Nutritionist
+exports.getPendingNutritionists = catchAsync(async (req, res, next) => {
+  const users = await UserModel.find({
+    "nutritionistApplication.status": "pending",
+    isDelete: false,
+  });
+
+  res.status(200).json({
+    status: "success",
+    results: users.length,
+    data: { users },
+  });
+});
+
+// 📌 Phê duyệt hoặc từ chối Nutritionist
+exports.reviewNutritionistApplication = catchAsync(async (req, res, next) => {
+  const { userId, action } = req.body; // action: "approve" hoặc "reject"
+
+  const user = await UserModel.findById(userId);
+  if (!user || !user.nutritionistApplication) {
+    return next(new AppError("User or application not found", 404));
+  }
+
+  if (user.nutritionistApplication.status !== "pending") {
+    return next(new AppError("Application has already been reviewed", 400));
+  }
+
+  if (action === "approve") {
+    user.nutritionistApplication.status = "approved";
+    user.role = "nutritionist"; // Chuyển role thành nutritionist
+  } else if (action === "reject") {
+    user.nutritionistApplication = null; // Xóa hoàn toàn nutritionistApplication
+  } else {
+    return next(new AppError("Invalid action", 400));
+  }
+
+  await user.save();
+
+  res.status(200).json({
+    status: "success",
+    message: `Application ${action}d successfully`,
+    data: { user },
+  });
+});
