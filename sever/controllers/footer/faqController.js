@@ -2,10 +2,15 @@ const jwt = require("jsonwebtoken");
 const UserModel = require("../../models/UserModel");
 const FAQ = require("../../models/footer/FAQs");
 
-// 🔹 Lấy tất cả FAQs
+// 🔹 Lấy tất cả FAQs với phân trang
 exports.getAllFAQs = async (req, res) => {
   try {
-    let filter = { isDeleted: false, isVisible: true }; // Mặc định: Chỉ lấy FAQ chưa bị xóa
+    // Lấy tham số phân trang từ query (mặc định page=1, limit=10)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    let filter = { isDeleted: false, isVisible: true }; // Mặc định: Chỉ lấy FAQ chưa bị xóa và hiển thị
 
     // 🛠️ Kiểm tra token để phân quyền
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
@@ -22,18 +27,35 @@ exports.getAllFAQs = async (req, res) => {
       }
     }
 
-    // 🔍 Lấy dữ liệu từ database
-    const faqs = await FAQ.find(filter);
+    // Đếm tổng số bản ghi theo filter
+    const total = await FAQ.countDocuments(filter);
+
+    // Tính tổng số trang
+    const totalPages = Math.ceil(total / limit);
+
+    // 🔍 Lấy dữ liệu từ database với phân trang
+    const faqs = await FAQ.find(filter)
+      .skip(skip)
+      .limit(limit);
+
     console.log("📌 FAQs:", faqs);
 
-    res.json({ status: "success", data: faqs });
+    res.json({
+      status: "success",
+      data: {
+        items: faqs,
+        total,
+        currentPage: page,
+        totalPages,
+      },
+    });
   } catch (error) {
     console.error("❌ Lỗi khi lấy FAQs:", error);
     res.status(500).json({ status: "error", message: "Lỗi server khi tải FAQs", error: error.message });
   }
 };
 
-// 🔹 Tạo mới FAQ
+// Các hàm khác giữ nguyên
 exports.createFAQ = async (req, res) => {
   try {
     console.log("📤 Dữ liệu từ client:", req.body);
@@ -53,7 +75,6 @@ exports.createFAQ = async (req, res) => {
   }
 };
 
-// 🔹 Cập nhật FAQ
 exports.updateFAQ = async (req, res) => {
   try {
     console.log(`📤 Cập nhật FAQ ID: ${req.params.id}`, req.body);
@@ -71,7 +92,6 @@ exports.updateFAQ = async (req, res) => {
   }
 };
 
-// 🔹 Xóa vĩnh viễn FAQ
 exports.hardDeleteFAQ = async (req, res) => {
   try {
     console.log(`🗑️ Xóa vĩnh viễn FAQ ID: ${req.params.id}`);

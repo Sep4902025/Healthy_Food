@@ -2,9 +2,14 @@ const jwt = require("jsonwebtoken");
 const TermOfUse = require("../../models/footer/Term");
 const UserModel = require("../../models/UserModel");
 
-// 🔹 Lấy tất cả Terms
+// 🔹 Lấy tất cả Terms với phân trang
 exports.getAllTerms = async (req, res) => {
   try {
+    // Lấy tham số phân trang từ query (mặc định page=1, limit=10)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     let filter = { isDeleted: false, isVisible: true };
 
     // Lấy token từ request (cookie hoặc header)
@@ -12,7 +17,6 @@ exports.getAllTerms = async (req, res) => {
 
     if (token) {
       try {
-        // Giải mã token lấy user ID
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
         const user = await UserModel.findById(decoded.id);
 
@@ -24,17 +28,34 @@ exports.getAllTerms = async (req, res) => {
       }
     }
 
-    // Lấy danh sách Terms
-    const terms = await TermOfUse.find(filter).select("_id bannerUrl content isVisible");
+    // Đếm tổng số bản ghi theo filter
+    const total = await TermOfUse.countDocuments(filter);
 
-    res.status(200).json({ success: true, data: terms });
+    // Tính tổng số trang
+    const totalPages = Math.ceil(total / limit);
+
+    // Lấy danh sách Terms với phân trang
+    const terms = await TermOfUse.find(filter)
+      .select("_id bannerUrl content isVisible")
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        items: terms,
+        total,
+        currentPage: page,
+        totalPages,
+      },
+    });
   } catch (error) {
     console.error("❌ Lỗi khi lấy Terms:", error);
     res.status(500).json({ success: false, message: "Lỗi lấy dữ liệu Terms" });
   }
 };
 
-// 🔹 Tạo mới Term
+// Các hàm khác giữ nguyên
 exports.createTerm = async (req, res) => {
   try {
     console.log("📤 Dữ liệu nhận từ client:", req.body);
@@ -57,7 +78,6 @@ exports.createTerm = async (req, res) => {
   }
 };
 
-// 🔹 Cập nhật Term
 exports.updateTerm = async (req, res) => {
   const { id } = req.params;
   if (!id) return res.status(400).json({ success: false, message: "ID không hợp lệ" });
@@ -78,7 +98,6 @@ exports.updateTerm = async (req, res) => {
   }
 };
 
-// 🔹 Xóa vĩnh viễn Term
 exports.hardDeleteTerm = async (req, res) => {
   const { id } = req.params;
   try {

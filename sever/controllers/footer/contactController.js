@@ -3,8 +3,31 @@ const ContactUs = require("../../models/footer/Contact");
 // Lấy tất cả Contact Us
 exports.getAllContactUs = async (req, res) => {
     try {
-        const contactUs = await ContactUs.find({ isDeleted: false });
-        res.status(200).json({ status: "success", data: contactUs });
+        // Lấy tham số phân trang từ query (mặc định page=1, limit=10)
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Đếm tổng số bản ghi chưa bị xóa
+        const total = await ContactUs.countDocuments({ isDeleted: false });
+
+        // Tính tổng số trang
+        const totalPages = Math.ceil(total / limit);
+
+        // Lấy dữ liệu Contact Us với phân trang
+        const contactUs = await ContactUs.find({ isDeleted: false })
+            .skip(skip)
+            .limit(limit);
+
+        res.status(200).json({
+            status: "success",
+            data: {
+                items: contactUs,
+                total,
+                currentPage: page,
+                totalPages,
+            },
+        });
     } catch (error) {
         res.status(500).json({ status: "error", error: "Lỗi lấy dữ liệu Contact Us" });
     }

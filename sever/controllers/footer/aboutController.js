@@ -2,9 +2,14 @@ const jwt = require("jsonwebtoken");
 const UserModel = require("../../models/UserModel");
 const AboutUs = require("../../models/footer/About");
 
-// Lấy tất cả About Us
+// Lấy tất cả About Us với phân trang
 exports.getAllAboutUs = async (req, res) => {
     try {
+        // Lấy tham số phân trang từ query (mặc định page=1, limit=10)
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
         let filter = { isDeleted: false, isVisible: true }; // Mặc định: chỉ lấy dữ liệu chưa bị xóa & có thể hiển thị
 
         // Lấy token từ request (cookie hoặc header)
@@ -24,14 +29,30 @@ exports.getAllAboutUs = async (req, res) => {
             }
         }
 
-        // Lấy dữ liệu About Us theo điều kiện
-        const aboutUs = await AboutUs.find(filter);
-        res.status(200).json({ status: "success", data: aboutUs });
+        // Đếm tổng số bản ghi theo filter
+        const total = await AboutUs.countDocuments(filter);
+
+        // Tính tổng số trang
+        const totalPages = Math.ceil(total / limit);
+
+        // Lấy dữ liệu About Us theo điều kiện với phân trang
+        const aboutUs = await AboutUs.find(filter)
+            .skip(skip)
+            .limit(limit);
+
+        res.status(200).json({
+            status: "success",
+            data: {
+                items: aboutUs,
+                total,
+                currentPage: page,
+                totalPages,
+            },
+        });
     } catch (error) {
         res.status(500).json({ status: "fail", message: "Lỗi lấy dữ liệu About Us" });
     }
 };
-
 
 // Tạo mới About Us
 exports.createAboutUs = async (req, res) => {
@@ -57,24 +78,28 @@ exports.createAboutUs = async (req, res) => {
     }
 };
 
-
 // Cập nhật About Us
 exports.updateAboutUs = async (req, res) => {
     const { id } = req.params;
     try {
         const updatedAboutUs = await AboutUs.findByIdAndUpdate(id, req.body, { new: true });
+        if (!updatedAboutUs) {
+            return res.status(404).json({ status: "fail", message: "About Us not found" });
+        }
         res.status(200).json({ status: "success", data: updatedAboutUs });
     } catch (error) {
         res.status(500).json({ status: "fail", error: "Lỗi cập nhật About Us" });
     }
 };
 
-
 // Xóa cứng About Us
 exports.hardDeleteAboutUs = async (req, res) => {
     const { id } = req.params;
     try {
-        await AboutUs.findByIdAndDelete(id);
+        const deletedAboutUs = await AboutUs.findByIdAndDelete(id);
+        if (!deletedAboutUs) {
+            return res.status(404).json({ status: "fail", message: "About Us not found" });
+        }
         res.status(200).json({ status: "success", message: "About Us đã bị xóa vĩnh viễn" });
     } catch (error) {
         res.status(500).json({ status: "fail", error: "Lỗi xóa cứng About Us" });
