@@ -12,7 +12,6 @@ export const ScreensName = {
   setting: "setting",
   notification: "notification",
   message: "message",
-  heartBeat: "heartBeat",
+  mealPlan: "mealPlan",
   profile: "profile",
 };
-

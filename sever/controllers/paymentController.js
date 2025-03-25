@@ -166,10 +166,13 @@ exports.vnpayReturn = async (req, res) => {
     console.log("Secure Hash từ VNPay:", secureHash);
     console.log("Secure Hash tự ký lại:", signed);
 
+    // Determine the base URL based on client type
+    const clientType = req.query.clientType || "web";
+    const baseUrl =
+      clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
+
     if (secureHash !== signed) {
-      return res
-        .status(400)
-        .redirect("http://localhost:3000/mealplan?status=error&message=Invalid+signature");
+      return res.status(400).redirect(`${baseUrl}/mealplan?status=error&message=Invalid+signature`);
     }
 
     // 🔹 Xử lý logic sau khi kiểm tra chữ ký thành công
@@ -186,14 +189,26 @@ exports.vnpayReturn = async (req, res) => {
     );
 
     if (!payment) {
-      return res
-        .status(404)
-        .redirect("http://localhost:3000/mealplan?status=error&message=Payment+not+found");
+      return res.status(404).redirect(`${baseUrl}/mealplan?status=error&message=Payment+not+found`);
     }
 
     // Nếu thanh toán thành công
     if (status === "success") {
-      await MealPlan.findByIdAndUpdate(payment.mealPlanId, { isBlock: false });
+      // Update the MealPlan with the paymentId and set isBlock to false
+      const updatedMealPlan = await MealPlan.findByIdAndUpdate(
+        payment.mealPlanId,
+        { paymentId: payment._id, isBlock: false },
+        { new: true }
+      );
+
+      if (!updatedMealPlan) {
+        console.error(`❌ Không tìm thấy MealPlan với ID: ${payment.mealPlanId}`);
+        return res
+          .status(404)
+          .redirect(`${baseUrl}/mealplan?status=error&message=MealPlan+not+found`);
+      }
+
+      console.log(`✅ Đã cập nhật MealPlan ${payment.mealPlanId} với paymentId: ${payment._id}`);
 
       // 🔹 Tìm MealPlan trước đó của user (nếu có)
       const oldUserMealPlan = await UserMealPlan.findOne({ userId: payment.userId });
@@ -259,14 +274,20 @@ exports.vnpayReturn = async (req, res) => {
       }
     }
 
-    // Chuyển hướng về localhost:3000/mealplan với query parameters
-    const redirectUrl = `http://localhost:3000/mealplan?status=${status}&message=${
+    // Chuyển hướng với query parameters
+    const redirectUrl = `${baseUrl}/mealplan?status=${status}&message=${
       status === "success" ? "Thanh+toán+thành+công" : "Thanh+toán+thất+bại"
     }`;
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("❌ Lỗi xử lý VNPay:", error);
-    res.redirect("http://localhost:3000/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY");
+
+    // Determine the base URL for error redirect
+    const clientType = req.query.clientType || "web";
+    const baseUrl =
+      clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
+
+    res.redirect(`${baseUrl}/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`);
   }
 };
 // Lấy lịch sử thanh toán của user

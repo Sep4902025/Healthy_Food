@@ -33,6 +33,7 @@ function Home({ navigation }) {
   const [loading, setLoading] = useState({ loadDishes: true });
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
+
   const dispatch = useDispatch();
 
   const season = useCurrentSeason();
@@ -63,7 +64,6 @@ function Home({ navigation }) {
     setLoading((prev) => ({ ...prev, loadDishes: true }));
     try {
       const response = await HomeService.getAllDishes();
-      console.log("Dishes response:", response);
       if (response?.status === "success") {
         // Sửa từ response?.success thành response?.status
         setSeasonalDishes(response.data || []);
