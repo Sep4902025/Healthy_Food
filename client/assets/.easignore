@@ -1,0 +1,40 @@
+@ -0,0 +1,39 @@
+# Node modules and dependencies
+node_modules/
+yarn.lock
+package-lock.json
+
+# Build outputs
+android/app/build/
+ios/Pods/
+ios/build/
+web-build/
+dist/
+/android
+/ios
+
+# Environment variables
+# .env
+# .env.local
+# .env.development
+# .env.production
+# .env.test
+
+# Logs and caches
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+expo-error.log
+*.log
+
+# Expo specific
+.expo/
+.expo-shared/
+
+# Metro bundler cache
+.cache/
+.vscode/
+.idea/
+
+# macOS system files
+.DS_Store
