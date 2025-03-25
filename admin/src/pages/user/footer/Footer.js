@@ -13,14 +13,11 @@ const Footer = () => {
         <button onClick={() => navigate("/FAQs")} className="hover:underline">
           FAQs
         </button>
-        <button
-          onClick={() => navigate("/contact")}
-          className="hover:underline"
-        >
+        <button onClick={() => navigate("/contact")} className="hover:underline">
           Contact Us
         </button>
         <button onClick={() => navigate("/term")} className="hover:underline">
-          Term of use
+          Terms of Use
         </button>
       </div>
     </footer>

@@ -31,6 +31,8 @@ const INGREDIENT_TYPE_OPTIONS = [
 const TableRecipes = () => {
   const [dishes, setDishes] = useState([]);
   const [availableIngredients, setAvailableIngredients] = useState([]);
+  const [totalDishPages, setTotalDishPages] = useState(1);
+  const [totalIngredientPages, setTotalIngredientPages] = useState(1);
   const [isAddRecipeModalOpen, setIsAddRecipeModalOpen] = useState(false);
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
   const [selectedDish, setSelectedDish] = useState(null);
@@ -48,27 +50,49 @@ const TableRecipes = () => {
   });
   const [newInstructionStep, setNewInstructionStep] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
+  const [filterType, setFilterType] = useState("all"); // Giữ lại để UI hoạt động, nhưng không gửi lên API nếu backend không hỗ trợ
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [dishesResponse, ingredientsResponse] = await Promise.all([
-          dishService.getAllDishes(),
-          ingredientService.getAllIngredients(),
-        ]);
-        setDishes(dishesResponse?.success && Array.isArray(dishesResponse.data) ? dishesResponse.data : []);
-        setAvailableIngredients(ingredientsResponse?.success && Array.isArray(ingredientsResponse.data) ? ingredientsResponse.data : []);
-      } catch (error) {
+    fetchData();
+  }, [currentPage, itemsPerPage, searchTerm]); // Loại filterType khỏi dependency vì backend không hỗ trợ
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    console.log("📡 Gửi yêu cầu lấy danh sách món ăn:", { currentPage, itemsPerPage, searchTerm });
+    try {
+      const [dishesResponse, ingredientsResponse] = await Promise.all([
+        dishService.getAllDishes(currentPage, itemsPerPage, searchTerm), // Chỉ gửi page, limit, search
+        ingredientService.getAllIngredients(1, 1000), // Lấy tất cả nguyên liệu
+      ]);
+      console.log("📌 Phản hồi từ dishesService:", dishesResponse);
+      console.log("📌 Phản hồi từ ingredientService:", ingredientsResponse);
+
+      if (dishesResponse?.success) {
+        setDishes(dishesResponse.data.items || []);
+        setTotalDishPages(dishesResponse.data.totalPages || 1);
+      } else {
+        console.error("❌ Lỗi từ dishesService:", dishesResponse.message);
         setDishes([]);
+        alert("Không thể tải danh sách món ăn: " + dishesResponse.message);
+      }
+      if (ingredientsResponse?.success) {
+        setAvailableIngredients(ingredientsResponse.data.items || []);
+      } else {
+        console.error("❌ Lỗi từ ingredientService:", ingredientsResponse.message);
         setAvailableIngredients([]);
       }
-    };
-    fetchData();
-  }, []);
+    } catch (error) {
+      console.error("❌ Lỗi trong fetchData:", error.message);
+      setDishes([]);
+      setAvailableIngredients([]);
+      alert("Đã xảy ra lỗi khi tải dữ liệu: " + error.message);
+    }
+    setIsLoading(false);
+  };
 
   useEffect(() => {
     const calculateTotalNutrition = () => {
@@ -228,10 +252,7 @@ const TableRecipes = () => {
 
       if (response.success) {
         alert(`Recipe for "${selectedDish.name}" has been saved!`);
-        const dishesResponse = await dishService.getAllDishes();
-        if (dishesResponse?.success && Array.isArray(dishesResponse.data)) {
-          setDishes(dishesResponse.data);
-        }
+        fetchData();
         setIsAddRecipeModalOpen(false);
         setNewRecipeData({
           ingredients: [],
@@ -292,11 +313,10 @@ const TableRecipes = () => {
       const response = await recipesService.deleteRecipe(dish._id, dish.recipeId);
       if (response.success) {
         alert(`The recipe for "${dish.name}" has been deleted! ${response.message}`);
-        const dishesResponse = await dishService.getAllDishes();
-        if (dishesResponse?.success && Array.isArray(dishesResponse.data)) {
-          setDishes(dishesResponse.data);
+        fetchData();
+        if (dishes.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
         }
-        setIsAddRecipeModalOpen(false);
       } else {
         alert("Failed to delete recipe: " + response.message);
       }
@@ -304,16 +324,6 @@ const TableRecipes = () => {
       alert("An error occurred while deleting: " + (error.message || "Unspecified error"));
     }
   };
-
-  const filteredDishes = dishes.filter((dish) => {
-    const matchesType = filterType === "all" || dish.type === filterType;
-    const matchesSearch = searchTerm ? dish?.name?.toLowerCase().includes(searchTerm.toLowerCase()) : true;
-    return matchesType && matchesSearch;
-  });
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentDishes = filteredDishes.slice(indexOfFirstItem, indexOfLastItem);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -326,7 +336,7 @@ const TableRecipes = () => {
             <button
               key={type}
               onClick={() => {
-                setFilterType(filterType === type ? "all" : type);
+                setFilterType(type); // Giữ lại để UI phản ánh, nhưng không gửi lên API
                 setCurrentPage(1);
               }}
               className={`px-2 py-1 text-sm font-medium rounded-full whitespace-nowrap transition duration-200 ${
@@ -365,79 +375,85 @@ const TableRecipes = () => {
           />
         </div>
       </div>
-      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-          {currentDishes?.length > 0 ? (
-            currentDishes.map((dish) => (
-              <div key={dish._id} className="bg-white rounded-lg shadow-md overflow-hidden relative">
-                <img
-                  src={dish.imageUrl || "https://via.placeholder.com/300"}
-                  alt={dish.name}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-center">{dish.name}</h3>
-                  <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
-                    <span className="mr-3 flex items-center">
-                      <Clock className="w-4 h-4 mr-1" />
-                      {dish.cookingTime || "N/A"} mins
-                    </span>
-                    <span className="flex items-center">
-                      <Users className="w-4 h-4 mr-1" />
-                      {dish.totalServing || "N/A"} servings
-                    </span>
-                  </div>
-                  <div className="flex justify-center items-center text-sm text-gray-600 mt-1">
-                    <span className="mr-3 flex items-center">
-                      <Flame className="w-4 h-4 mr-1" />
-                      {dish.calories || "N/A"} kcal
-                    </span>
-                    <span className="flex items-center">
-                      <Dumbbell className="w-4 h-4 mr-1" />
-                      {dish.protein || "N/A"}g Protein
-                    </span>
-                  </div>
-                  <div className="flex justify-center items-center text-sm text-gray-600 mt-1">
-                    <span className="mr-3 flex items-center">
-                      <Wheat className="w-4 h-4 mr-1" />
-                      {dish.carbs || "N/A"}g Carbs
-                    </span>
-                    <span className="flex items-center">
-                      <Droplet className="w-4 h-4 mr-1" />
-                      {dish.fat || "N/A"}g Fat
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200 space-x-4">
-                  <button
-                    onClick={() => handleAddRecipeClick(dish)}
-                    className="text-blue-500 flex items-center px-2 py-1 hover:text-blue-700"
-                  >
-                    <Pencil className="w-4 h-4 mr-1" />
-                    Edit Recipe
-                  </button>
-                  {dish.recipeId && (
-                    <button
-                      onClick={() => handleDeleteRecipe(dish)}
-                      className="text-red-500 flex items-center px-2 py-1 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete Recipe
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500">
-              <Utensils className="w-24 h-24 text-gray-400 mb-4" />
-              <p className="text-lg font-semibold">No dishes</p>
-              <p className="text-sm">Looks like you haven't added any dishes yet.</p>
-            </div>
-          )}
+      {isLoading ? (
+        <div className="text-center py-4">
+          <p>Loading dishes...</p>
         </div>
-      </div>
-      {filteredDishes?.length > 0 && (
+      ) : (
+        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+            {dishes?.length > 0 ? (
+              dishes.map((dish) => (
+                <div key={dish._id} className="bg-white rounded-lg shadow-md overflow-hidden relative">
+                  <img
+                    src={dish.imageUrl || "https://via.placeholder.com/300"}
+                    alt={dish.name}
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold text-center">{dish.name}</h3>
+                    <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
+                      <span className="mr-3 flex items-center">
+                        <Clock className="w-4 h-4 mr-1" />
+                        {dish.cookingTime || "N/A"} mins
+                      </span>
+                      <span className="flex items-center">
+                        <Users className="w-4 h-4 mr-1" />
+                        {dish.totalServing || "N/A"} servings
+                      </span>
+                    </div>
+                    <div className="flex justify-center items-center text-sm text-gray-600 mt-1">
+                      <span className="mr-3 flex items-center">
+                        <Flame className="w-4 h-4 mr-1" />
+                        {dish.calories || "N/A"} kcal
+                      </span>
+                      <span className="flex items-center">
+                        <Dumbbell className="w-4 h-4 mr-1" />
+                        {dish.protein || "N/A"}g Protein
+                      </span>
+                    </div>
+                    <div className="flex justify-center items-center text-sm text-gray-600 mt-1">
+                      <span className="mr-3 flex items-center">
+                        <Wheat className="w-4 h-4 mr-1" />
+                        {dish.carbs || "N/A"}g Carbs
+                      </span>
+                      <span className="flex items-center">
+                        <Droplet className="w-4 h-4 mr-1" />
+                        {dish.fat || "N/A"}g Fat
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200 space-x-4">
+                    <button
+                      onClick={() => handleAddRecipeClick(dish)}
+                      className="text-blue-500 flex items-center px-2 py-1 hover:text-blue-700"
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Edit Recipe
+                    </button>
+                    {dish.recipeId && (
+                      <button
+                        onClick={() => handleDeleteRecipe(dish)}
+                        className="text-red-500 flex items-center px-2 py-1 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete Recipe
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500">
+                <Utensils className="w-24 h-24 text-gray-400 mb-4" />
+                <p className="text-lg font-semibold">No dishes</p>
+                <p className="text-sm">Looks like you haven't added any dishes yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {dishes?.length > 0 && !isLoading && (
         <div className="p-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <span>Show</span>
@@ -462,24 +478,21 @@ const TableRecipes = () => {
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            {Array.from(
-              { length: Math.ceil(filteredDishes.length / itemsPerPage) },
-              (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => paginate(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              )
-            )}
+            {Array.from({ length: totalDishPages }, (_, i) => (
+              <button
+                key={i}
+                className={`px-3 py-1 rounded ${
+                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                }`}
+                onClick={() => paginate(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
             <button
               className="border rounded px-3 py-1 hover:bg-gray-100"
               onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === Math.ceil(filteredDishes.length / itemsPerPage)}
+              disabled={currentPage === totalDishPages}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -530,7 +543,7 @@ const TableRecipes = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Cooking Time (minutes) *</label>
                     <input
                       type="number"
-                      className={`w-full border ${errors.cookingTime ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      className={`w-full border ${errors.cookingTime ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       value={newRecipeData.cookingTime}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -557,7 +570,7 @@ const TableRecipes = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Serving Size *</label>
                     <input
                       type="number"
-                      className={`w-full border ${errors.totalServing ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      className={`w-full border ${errors.totalServing ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       value={newRecipeData.totalServing}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -789,16 +802,26 @@ const IngredientSelectionModal = ({ isOpen, onClose, onSelect, availableIngredie
   const [tempSelectedIngredients, setTempSelectedIngredients] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(8);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentIngredients, setCurrentIngredients] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const filteredIngredients = availableIngredients.filter((ing) => {
-    const matchesSearch = ing.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === "all" || ing.type === filterType;
-    return matchesSearch && matchesType;
-  });
+  useEffect(() => {
+    fetchIngredients();
+  }, [currentPage, filterType, searchTerm]);
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentIngredients = filteredIngredients.slice(indexOfFirstItem, indexOfLastItem);
+  const fetchIngredients = async () => {
+    setIsLoading(true);
+    const response = await ingredientService.getAllIngredients(currentPage, itemsPerPage, filterType, searchTerm);
+    if (response.success) {
+      setCurrentIngredients(response.data.items || []);
+      setTotalPages(response.data.totalPages || 1);
+    } else {
+      setCurrentIngredients([]);
+      setTotalPages(1);
+    }
+    setIsLoading(false);
+  };
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -850,67 +873,73 @@ const IngredientSelectionModal = ({ isOpen, onClose, onSelect, availableIngredie
             ))}
           </select>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {currentIngredients.length > 0 ? (
-            currentIngredients.map((ing) => {
-              const isAlreadyAdded = selectedIngredients.some((selected) => selected._id === ing._id);
-              return (
-                <div
-                  key={ing._id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden relative"
-                >
-                  <img
-                    src={ing.imageUrl || "https://via.placeholder.com/300"}
-                    alt={ing.name}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center">{ing.name}</h3>
-                    <div className="text-sm text-gray-600 mt-2 text-center">
-                      <div className="flex justify-center items-center">
-                        <span className="mr-3 flex items-center">
-                          <Flame className="w-4 h-4 mr-1" />
-                          {ing.calories || "N/A"} Kcal
-                        </span>
-                        <span className="flex items-center">
-                          <Dumbbell className="w-4 h-4 mr-1" />
-                          {ing.protein || "N/A"}g Protein
-                        </span>
-                      </div>
-                      <div className="flex justify-center items-center mt-1">
-                        <span className="mr-3 flex items-center">
-                          <Wheat className="w-4 h-4 mr-1" />
-                          {ing.carbs || "N/A"}g Carbs
-                        </span>
-                        <span className="flex items-center">
-                          <Droplet className="w-4 h-4 mr-1" />
-                          {ing.fat || "N/A"}g Fat
-                        </span>
+        {isLoading ? (
+          <div className="text-center py-4">
+            <p>Loading ingredients...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {currentIngredients.length > 0 ? (
+              currentIngredients.map((ing) => {
+                const isAlreadyAdded = selectedIngredients.some((selected) => selected._id === ing._id);
+                return (
+                  <div
+                    key={ing._id}
+                    className="bg-white rounded-lg shadow-md overflow-hidden relative"
+                  >
+                    <img
+                      src={ing.imageUrl || "https://via.placeholder.com/300"}
+                      alt={ing.name}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold text-center">{ing.name}</h3>
+                      <div className="text-sm text-gray-600 mt-2 text-center">
+                        <div className="flex justify-center items-center">
+                          <span className="mr-3 flex items-center">
+                            <Flame className="w-4 h-4 mr-1" />
+                            {ing.calories || "N/A"} Kcal
+                          </span>
+                          <span className="flex items-center">
+                            <Dumbbell className="w-4 h-4 mr-1" />
+                            {ing.protein || "N/A"}g Protein
+                          </span>
+                        </div>
+                        <div className="flex justify-center items-center mt-1">
+                          <span className="mr-3 flex items-center">
+                            <Wheat className="w-4 h-4 mr-1" />
+                            {ing.carbs || "N/A"}g Carbs
+                          </span>
+                          <span className="flex items-center">
+                            <Droplet className="w-4 h-4 mr-1" />
+                            {ing.fat || "N/A"}g Fat
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={tempSelectedIngredients.some((item) => item._id === ing._id)}
+                        onChange={() => handleCheckboxChange(ing)}
+                        disabled={isAlreadyAdded}
+                        className={isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}
+                      />
+                      {isAlreadyAdded && (
+                        <span className="text-sm text-gray-500 ml-2">Already Added</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
-                    <input
-                      type="checkbox"
-                      checked={tempSelectedIngredients.some((item) => item._id === ing._id)}
-                      onChange={() => handleCheckboxChange(ing)}
-                      disabled={isAlreadyAdded}
-                      className={isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}
-                    />
-                    {isAlreadyAdded && (
-                      <span className="text-sm text-gray-500 ml-2">Already Added</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="col-span-full text-center text-gray-500">
-              <p>No ingredients found.</p>
-            </div>
-          )}
-        </div>
-        {filteredIngredients.length > 0 && (
+                );
+              })
+            ) : (
+              <div className="col-span-full text-center text-gray-500">
+                <p>No ingredients found.</p>
+              </div>
+            )}
+          </div>
+        )}
+        {currentIngredients.length > 0 && !isLoading && (
           <div className="p-4 flex justify-between items-center">
             <div className="flex space-x-2">
               <button
@@ -920,26 +949,21 @@ const IngredientSelectionModal = ({ isOpen, onClose, onSelect, availableIngredie
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              {Array.from(
-                { length: Math.ceil(filteredIngredients.length / itemsPerPage) },
-                (_, i) => (
-                  <button
-                    key={i}
-                    className={`px-3 py-1 rounded ${
-                      currentPage === i + 1
-                        ? "bg-green-500 text-white"
-                        : "border hover:bg-gray-100"
-                    }`}
-                    onClick={() => paginate(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                )
-              )}
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                  }`}
+                  onClick={() => paginate(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
               <button
                 className="border rounded px-3 py-1 hover:bg-gray-100"
                 onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === Math.ceil(filteredIngredients.length / itemsPerPage)}
+                disabled={currentPage === totalPages}
               >
                 <ChevronRight className="w-5 h-5" />
               </button>

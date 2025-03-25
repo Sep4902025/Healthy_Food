@@ -2,24 +2,30 @@ import axios from "axios";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-// 🛠️ Hàm lấy token từ localStorage để gửi kèm trong headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 const faqServices = {
-  // 🔹 Lấy danh sách FAQs
-  getFAQs: async () => {
+  // 🔹 Lấy danh sách FAQs với phân trang
+  getFAQs: async (page = 1, limit = 10) => {
     try {
       const response = await axios.get(`${API_URL}/footer/faqs`, {
         headers: getAuthHeaders(),
         withCredentials: true,
+        params: {
+          page,
+          limit,
+        },
       });
 
       console.log("🔍 FAQs từ API:", response.data);
 
-      return { success: true, data: response.data.data || [] };
+      return {
+        success: true,
+        data: response.data.data || { items: [], total: 0, currentPage: page, totalPages: 1 },
+      };
     } catch (error) {
       console.error("❌ Lỗi khi lấy FAQs:", error.response?.data || error.message);
 
@@ -30,7 +36,7 @@ const faqServices = {
     }
   },
 
-  // 🔹 Tạo mới FAQ
+  // Các hàm khác giữ nguyên
   createFAQ: async (data) => {
     try {
       console.log("📤 Dữ liệu gửi lên API:", data);
@@ -52,7 +58,6 @@ const faqServices = {
     }
   },
 
-  // 🔹 Cập nhật FAQ
   updateFAQ: async (id, data) => {
     try {
       console.log(`📤 Cập nhật FAQ ID: ${id}`, data);
@@ -70,7 +75,6 @@ const faqServices = {
     }
   },
 
-  // 🔹 Xóa vĩnh viễn FAQ
   hardDeleteFAQ: async (id) => {
     try {
       console.log(`🗑️ Xóa vĩnh viễn FAQ ID: ${id}`);

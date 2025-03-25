@@ -5,34 +5,30 @@ import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react
 
 const TermOfUseManagement = () => {
   const [terms, setTerms] = useState([]);
-  console.log("TERM DATA", terms);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
   const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage, setUsersPerPage] = useState(5);
+  const [termsPerPage, setTermsPerPage] = useState(5);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     fetchTerms();
-  }, []);
+  }, [currentPage, termsPerPage]);
 
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentTerms = terms.slice(indexOfFirstUser, indexOfLastUser);
-
-  const paginate = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
-  const fetchTerms = async () => {
+  const fetchTerms = async (callback) => {
     setLoading(true);
-    const result = await termService.getTerms();
+    const result = await termService.getTerms(currentPage, termsPerPage);
     if (result.success) {
-      setTerms(result.data);
+      setTerms(result.data.items || []);
+      setTotalPages(result.data.totalPages || 1);
+      if (callback) callback(result.data);
     } else {
       setError(result.message);
+      setTerms([]);
+      setTotalPages(1);
     }
     setLoading(false);
   };
@@ -41,13 +37,13 @@ const TermOfUseManagement = () => {
     const updatedTerm = {
       ...term,
       isVisible: !term.isVisible,
-      isDeleted: term.isDeleted || false, // ✅ Đảm bảo có đầy đủ dữ liệu
+      isDeleted: term.isDeleted || false,
     };
 
     const response = await termService.updateTerm(term._id, updatedTerm);
 
     if (response.success) {
-      setTerms(terms.map((t) => (t._id === term._id ? { ...t, isVisible: !t.isVisible } : t)));
+      fetchTerms();
     } else {
       console.error("Error updating display status:", response.message);
     }
@@ -57,16 +53,15 @@ const TermOfUseManagement = () => {
     if (window.confirm("Are you sure you want to delete this term?")) {
       const response = await termService.hardDeleteTerm(id);
       if (response.success) {
-        const updatedTerms = terms.filter((term) => term._id !== id);
-        setTerms(updatedTerms);
-
-        // Tính lại tổng số trang
-        const totalPages = Math.ceil(updatedTerms.length / usersPerPage);
-
-        // Nếu trang hiện tại không còn dữ liệu, quay về trang trước (nếu có)
-        if (currentPage > totalPages) {
-          setCurrentPage(totalPages > 0 ? totalPages : 1);
-        }
+        fetchTerms((result) => {
+          const totalItems = result.total;
+          const newTotalPages = Math.ceil(totalItems / termsPerPage) || 1;
+          if (result.items.length === 0 && currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+          } else if (currentPage > newTotalPages) {
+            setCurrentPage(newTotalPages);
+          }
+        });
       } else {
         console.error("Error while deleting:", response.message);
       }
@@ -101,17 +96,13 @@ const TermOfUseManagement = () => {
       response = await termService.createTerm(formData);
     }
 
-    if (!response.success) {
+    if (response.success) {
+      setModalOpen(false);
+      fetchTerms();
+    } else {
       console.error("Error:", response.message);
-      return;
+      alert(response.message);
     }
-
-    // 🛠 Cập nhật danh sách terms từ API sau khi thay đổi dữ liệu
-    await fetchTerms();
-
-    setModalOpen(false);
-    setEditData(null);
-    setFormData({ _id: "", bannerUrl: "", content: "" });
   };
 
   const handleImageUpload = (imageUrl) => {
@@ -144,10 +135,10 @@ const TermOfUseManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {currentTerms.length > 0 ? (
-              currentTerms.map((item, index) => (
-                <tr key={index} className="border-b border-gray-200 text-gray-900">
-                  <td className="p-3">{index + 1}</td>
+            {terms.length > 0 ? (
+              terms.map((item, index) => (
+                <tr key={item._id} className="border-b border-gray-200 text-gray-900">
+                  <td className="p-3">{(currentPage - 1) * termsPerPage + index + 1}</td>
                   <td className="p-3">
                     <img
                       src={item.bannerUrl}
@@ -167,15 +158,12 @@ const TermOfUseManagement = () => {
                   </td>
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center space-x-2">
-                      {/* Nút chỉnh sửa */}
                       <button
                         className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
                         onClick={() => handleOpenModal(item)}
                       >
                         <EditIcon size={16} />
                       </button>
-
-                      {/* Nút Ẩn/Hiện */}
                       <button
                         className={`p-2 rounded-full text-white ${
                           item.isVisible
@@ -186,8 +174,6 @@ const TermOfUseManagement = () => {
                       >
                         {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
                       </button>
-
-                      {/* Nút Xóa vĩnh viễn */}
                       <button
                         className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
                         onClick={() => handleHardDelete(item._id)}
@@ -200,7 +186,7 @@ const TermOfUseManagement = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="4" className="text-center text-gray-500 p-4">
+                <td colSpan="5" className="text-center text-gray-500 p-4">
                   No terms.
                 </td>
               </tr>
@@ -214,41 +200,46 @@ const TermOfUseManagement = () => {
             <span>Show</span>
             <select
               className="border rounded px-2 py-1"
-              onChange={(e) => setUsersPerPage(Number(e.target.value))}
+              value={termsPerPage}
+              onChange={(e) => {
+                setTermsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
             >
               <option value="5">5 Terms</option>
               <option value="10">10 Terms</option>
               <option value="15">15 Terms</option>
             </select>
           </div>
-          <div className="flex space-x-2">
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              &lt;
-            </button>
-            {Array.from({ length: Math.ceil(terms.length / usersPerPage) }, (_, i) => (
+          {totalPages > 1 && (
+            <div className="flex space-x-2">
               <button
-                key={i}
-                className={`px-3 py-1 rounded ${
-                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                }`}
-                onClick={() => paginate(i + 1)}
+                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
               >
-                {i + 1}
+                {"<"}
               </button>
-            ))}
-
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === Math.ceil(terms.length / usersPerPage)}
-            >
-              &gt;
-            </button>
-          </div>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                  }`}
+                  onClick={() => setCurrentPage(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                {">"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -259,7 +250,7 @@ const TermOfUseManagement = () => {
             <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add New"} Term</h2>
 
             <label className="block mb-2">Banner URL:</label>
-            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.imageUrl === ""} />
+            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.bannerUrl === ""} />
 
             <label className="block mb-2">Content:</label>
             <textarea

@@ -31,7 +31,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
 
   const validateForm = () => {
     const newErrors = {};
-
+  
     if (!formData.name.trim()) newErrors.name = "Name is required!";
     if (!formData.description.trim()) newErrors.description = "Description is required!";
     if (!formData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required!";
@@ -39,15 +39,14 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
     if (formData.type === "Others" && !formData.customType.trim()) newErrors.customType = "Custom Type is required when Type is 'Others'!";
     if (!formData.season) newErrors.season = "Season is required!";
     if (!formData.unit) newErrors.unit = "Unit is required!";
-    if (!formData.calories || formData.calories < 0) newErrors.calories = "Calories must be greater than or equal to 0!";
-    if (!formData.protein || formData.protein < 0) newErrors.protein = "Protein must be greater than or equal to 0!";
-    if (!formData.carbs || formData.carbs < 0) newErrors.carbs = "Carbs must be greater than or equal to 0!";
-    if (!formData.fat || formData.fat < 0) newErrors.fat = "Fat must be greater than or equal to 0!";
-
+    if (formData.calories === "" || formData.calories < 0) newErrors.calories = "Calories must be greater than or equal to 0!";
+    if (formData.protein === "" || formData.protein < 0) newErrors.protein = "Protein must be greater than or equal to 0!";
+    if (formData.carbs === "" || formData.carbs < 0) newErrors.carbs = "Carbs must be greater than or equal to 0!";
+    if (formData.fat === "" || formData.fat < 0) newErrors.fat = "Fat must be greater than or equal to 0!";
+  
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });

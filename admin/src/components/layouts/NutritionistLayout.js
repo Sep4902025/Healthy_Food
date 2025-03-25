@@ -10,7 +10,7 @@ import {
   HeartPulseIcon,
   MessageSquareIcon,
   ChevronDownIcon,
-  CalendarHeart,
+  CalendarHeart
 } from "lucide-react";
 
 const menuItems = [
@@ -85,16 +85,18 @@ const NutritionistLayout = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
+      {/* Header */}
       <Header />
-      <div className="flex flex-grow bg-white">
+
+      {/* Main Content and Sidebar */}
+      <div className="flex flex-1">
         {/* Sidebar */}
-        <div className="w-1/4 h-[450px]  p-4 border-r overflow-y-auto">
+        <aside className="w-64 bg-white border-r p-4 flex flex-col">
           <div className="flex items-center mb-6">
             <HomeIcon size={24} className="text-green-600 mr-2" />
             <span className="text-xl font-bold text-green-700">Nutritionist</span>
           </div>
-
-          <nav>
+          <nav className="flex-1 overflow-y-auto">
             {menuItems.map((item) => (
               <div key={item.name}>
                 <div
@@ -116,7 +118,6 @@ const NutritionistLayout = () => {
                     </span>
                   )}
                 </div>
-
                 {item.submenus && openSubmenus[item.name] && (
                   <div className="ml-6 mt-1 space-y-1">
                     {item.submenus.map((submenu) => (
@@ -137,13 +138,13 @@ const NutritionistLayout = () => {
               </div>
             ))}
           </nav>
-        </div>
-
+        </aside>
         {/* Main Content */}
-        <div className="w-3/4 bg-white shadow">
+        <main className="flex-1 p-6 bg-white shadow overflow-y-auto">
           <Outlet />
-        </div>
+        </main>
       </div>
+
       {/* Footer */}
       <Footer />
     </div>

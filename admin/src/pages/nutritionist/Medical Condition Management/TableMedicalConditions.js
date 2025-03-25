@@ -17,6 +17,7 @@ import {
 const TableMedicalConditions = () => {
   const [conditions, setConditions] = useState([]);
   const [dishes, setDishes] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isFoodModalOpen, setIsFoodModalOpen] = useState(false);
   const [editData, setEditData] = useState({
@@ -34,55 +35,63 @@ const TableMedicalConditions = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch medical conditions and dishes with nutritional data
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [conditionsResponse, dishesResponse] = await Promise.all([
-          medicalConditionService.getAllMedicalConditions(),
-          dishService.getAllDishes(),
-        ]);
-
-        const conditionsData =
-          conditionsResponse?.success && Array.isArray(conditionsResponse.data)
-            ? conditionsResponse.data
-            : [];
-        setConditions(conditionsData);
-
-        const dishesData =
-          dishesResponse?.success && Array.isArray(dishesResponse.data)
-            ? dishesResponse.data
-            : [];
-
-        // Fetch nutritional data for each dish with a recipe
-        const enrichedDishes = await Promise.all(
-          dishesData.map(async (dish) => {
-            if (dish.recipeId) {
-              try {
-                const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
-                if (recipeResponse.success && recipeResponse.data?.status === "success") {
-                  const recipe = recipeResponse.data.data;
-                  const nutritions = calculateNutritionFromRecipe(recipe);
-                  return { ...dish, nutritions };
-                }
-              } catch (error) {
-                console.error(`Error fetching recipe for dish ${dish._id}:`, error);
-              }
-            }
-            return { ...dish, nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" } };
-          })
-        );
-
-        setDishes(enrichedDishes);
-      } catch (error) {
-        setConditions([]);
-        setDishes([]);
-        console.error("Error fetching data:", error);
-      }
-    };
     fetchData();
-  }, []);
+  }, [currentPage, itemsPerPage, searchTerm]);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [conditionsResponse, dishesResponse] = await Promise.all([
+        searchTerm
+          ? medicalConditionService.searchMedicalConditionByName(searchTerm, currentPage, itemsPerPage)
+          : medicalConditionService.getAllMedicalConditions(currentPage, itemsPerPage),
+        dishService.getAllDishes(1, 1000), // Lấy tất cả dishes (có thể cần phân trang riêng nếu nhiều dữ liệu)
+      ]);
+
+      if (conditionsResponse?.success) {
+        setConditions(conditionsResponse.data.items || []);
+        setTotalPages(conditionsResponse.data.totalPages || 1);
+      } else {
+        setConditions([]);
+        console.error("❌ Failed to fetch conditions:", conditionsResponse?.message);
+      }
+
+      const dishesData =
+        dishesResponse?.success && Array.isArray(dishesResponse.data.items)
+          ? dishesResponse.data.items
+          : [];
+
+      // Fetch nutritional data for each dish with a recipe
+      const enrichedDishes = await Promise.all(
+        dishesData.map(async (dish) => {
+          if (dish.recipeId) {
+            try {
+              const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
+              if (recipeResponse.success && recipeResponse.data?.status === "success") {
+                const recipe = recipeResponse.data.data;
+                const nutritions = calculateNutritionFromRecipe(recipe);
+                return { ...dish, nutritions };
+              }
+            } catch (error) {
+              console.error(`Error fetching recipe for dish ${dish._id}:`, error);
+            }
+          }
+          return { ...dish, nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" } };
+        })
+      );
+
+      setDishes(enrichedDishes);
+    } catch (error) {
+      setConditions([]);
+      setDishes([]);
+      console.error("Error fetching data:", error);
+    }
+    setIsLoading(false);
+  };
 
   // Function to calculate nutritional data from recipe ingredients
   const calculateNutritionFromRecipe = (recipe) => {
@@ -121,17 +130,6 @@ const TableMedicalConditions = () => {
     };
   };
 
-  // Filter medical conditions
-  const filteredConditions = conditions.filter((condition) =>
-    searchTerm
-      ? condition?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-      : true
-  );
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentConditions = filteredConditions.slice(indexOfFirstItem, indexOfLastItem);
-
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Open edit modal
@@ -153,14 +151,12 @@ const TableMedicalConditions = () => {
       const response = await medicalConditionService.deleteMedicalCondition(id);
       if (response.success) {
         alert("Deleted successfully!");
-        const conditionsResponse = await medicalConditionService.getAllMedicalConditions();
-        if (conditionsResponse?.success && Array.isArray(conditionsResponse.data)) {
-          setConditions(conditionsResponse.data);
-          const totalPages = Math.ceil((conditions.length - 1) / itemsPerPage);
-          if (currentPage > totalPages) setCurrentPage(totalPages || 1);
+        fetchData(); // Refresh data after delete
+        if (conditions.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
         }
       } else {
-        alert("Failed to delete medical condition. Please try again.");
+        alert("Failed to delete medical condition: " + response.message);
       }
     }
   };
@@ -200,12 +196,9 @@ const TableMedicalConditions = () => {
     if (response.success) {
       alert(`Medical condition "${editData.name}" has been updated!`);
       setIsEditModalOpen(false);
-      const conditionsResponse = await medicalConditionService.getAllMedicalConditions();
-      if (conditionsResponse?.success && Array.isArray(conditionsResponse.data)) {
-        setConditions(conditionsResponse.data);
-      }
+      fetchData(); // Refresh data after update
     } else {
-      alert("Failed to update medical condition. Please try again.");
+      alert("Failed to update medical condition: " + response.message);
     }
   };
 
@@ -250,48 +243,52 @@ const TableMedicalConditions = () => {
         </div>
       </div>
 
-      <div className="w-full">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {currentConditions.length > 0 ? (
-            currentConditions.map((condition) => (
-              <div
-                key={condition._id}
-                className="bg-white rounded-lg shadow-md overflow-hidden relative"
-              >
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-center">{condition.name}</h3>
-                  <p className="text-sm text-gray-600 mt-2 text-center line-clamp-2">{condition.description}</p>
+      {isLoading ? (
+        <div className="text-center py-4">Loading...</div>
+      ) : (
+        <div className="w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {conditions.length > 0 ? (
+              conditions.map((condition) => (
+                <div
+                  key={condition._id}
+                  className="bg-white rounded-lg shadow-md overflow-hidden relative"
+                >
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold text-center">{condition.name}</h3>
+                    <p className="text-sm text-gray-600 mt-2 text-center line-clamp-2">{condition.description}</p>
+                  </div>
+                  <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
+                    <button
+                      onClick={() => handleEditClick(condition)}
+                      className="text-blue-500 flex items-center px-2 py-1 hover:text-blue-700"
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Edit
+                    </button>
+                    <div className="h-4 border-l border-gray-300 mx-2"></div>
+                    <button
+                      onClick={() => handleDelete(condition._id)}
+                      className="text-red-500 flex items-center px-2 py-1 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
-                  <button
-                    onClick={() => handleEditClick(condition)}
-                    className="text-blue-500 flex items-center px-2 py-1 hover:text-blue-700"
-                  >
-                    <Pencil className="w-4 h-4 mr-1" />
-                    Edit
-                  </button>
-                  <div className="h-4 border-l border-gray-300 mx-2"></div>
-                  <button
-                    onClick={() => handleDelete(condition._id)}
-                    className="text-red-500 flex items-center px-2 py-1 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
-                  </button>
-                </div>
+              ))
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500">
+                <HeartPulse className="w-24 h-24 text-gray-400 mb-4" />
+                <p className="text-lg font-semibold">No medical conditions</p>
+                <p className="text-sm">Looks like you haven't added any medical conditions yet.</p>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500">
-              <HeartPulse className="w-24 h-24 text-gray-400 mb-4" />
-              <p className="text-lg font-semibold">No medical conditions</p>
-              <p className="text-sm">Looks like you haven't added any medical conditions yet.</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {filteredConditions.length > 0 && (
+      {conditions.length > 0 && !isLoading && (
         <div className="p-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <span>Show</span>
@@ -316,26 +313,21 @@ const TableMedicalConditions = () => {
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            {Array.from(
-              { length: Math.ceil(filteredConditions.length / itemsPerPage) },
-              (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1
-                      ? "bg-green-500 text-white"
-                      : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => paginate(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              )
-            )}
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                className={`px-3 py-1 rounded ${
+                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                }`}
+                onClick={() => paginate(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
             <button
               className="border rounded px-3 py-1 hover:bg-gray-100"
               onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === Math.ceil(filteredConditions.length / itemsPerPage)}
+              disabled={currentPage === totalPages}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -375,7 +367,7 @@ const TableMedicalConditions = () => {
                     value={editData.name}
                     onChange={handleChange}
                     placeholder="Enter condition name"
-                    className={`w-full border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
@@ -389,7 +381,7 @@ const TableMedicalConditions = () => {
                     value={editData.description}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${errors.description ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
                   {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
                 </div>

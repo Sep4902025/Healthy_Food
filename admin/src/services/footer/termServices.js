@@ -2,23 +2,29 @@ import axios from "axios";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-// 🛠️ Hàm lấy token từ localStorage để gửi kèm trong headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 const termService = {
-  // 🔹 Lấy danh sách Terms
-  getTerms: async () => {
+  // 🔹 Lấy danh sách Terms với phân trang
+  getTerms: async (page = 1, limit = 10) => {
     try {
       const response = await axios.get(`${API_URL}/footer/terms`, {
         headers: getAuthHeaders(),
         withCredentials: true,
+        params: {
+          page,
+          limit,
+        },
       });
       console.log("🔍 Terms từ API:", response.data);
 
-      return { success: true, data: response.data.data || [] };
+      return {
+        success: true,
+        data: response.data.data || { items: [], total: 0, currentPage: page, totalPages: 1 },
+      };
     } catch (error) {
       console.error("❌ Lỗi khi lấy Terms:", error.response?.data || error.message);
 
@@ -29,11 +35,11 @@ const termService = {
     }
   },
 
-  // 🔹 Tạo mới Term
+  // Các hàm khác giữ nguyên
   createTerm: async (data) => {
     try {
       console.log("📤 Dữ liệu gửi lên API:", data);
-      
+
       const response = await axios.post(`${API_URL}/footer/terms`, data, {
         headers: getAuthHeaders(),
         withCredentials: true,
@@ -48,7 +54,6 @@ const termService = {
     }
   },
 
-  // 🔹 Cập nhật Term
   updateTerm: async (id, data) => {
     try {
       console.log(`📤 Cập nhật Term ID: ${id}`, data);
@@ -65,7 +70,6 @@ const termService = {
     }
   },
 
-  // 🔹 Xóa vĩnh viễn Term
   hardDeleteTerm: async (id) => {
     try {
       console.log(`🗑️ Xóa vĩnh viễn Term ID: ${id}`);

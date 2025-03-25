@@ -9,22 +9,26 @@ const getAuthHeaders = () => {
 };
 
 const aboutService = {
-  // Lấy danh sách About Us
-  getAboutUs: async () => {
+  // Lấy danh sách About Us với phân trang
+  getAboutUs: async (page = 1, limit = 10) => {
     try {
       const response = await axios.get(`${API_URL}/footer/about`, {
         headers: getAuthHeaders(),
         withCredentials: true,
+        params: {
+          page,
+          limit,
+        },
       });
 
       return {
         success: true,
-        data: response.data.data || [],
+        data: response.data.data || { items: [], total: 0, currentPage: page, totalPages: 1 },
       };
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.error || "Lỗi khi tải dữ liệu",
+        message: error.response?.data?.message || "Lỗi khi tải dữ liệu",
       };
     }
   },
@@ -58,7 +62,7 @@ const aboutService = {
     } catch (error) {
       return {
         success: false,
-        message: "Cập nhật thất bại!",
+        message: error.response?.data?.message || "Cập nhật thất bại!",
       };
     }
   },

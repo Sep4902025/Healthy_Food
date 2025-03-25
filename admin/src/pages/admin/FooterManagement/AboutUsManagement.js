@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import aboutService from "../../../services/footer/aboutServices";
 import UploadComponent from "../../../components/UploadComponent";
-import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
+import { EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
 
 const AboutUsManagement = () => {
   const [aboutData, setAboutData] = useState([]);
@@ -11,29 +11,36 @@ const AboutUsManagement = () => {
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
   const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage, setUsersPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [totalPages, setTotalPages] = useState(1);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  // Xử lý phân trang
-  const indexOfLastItem = currentPage * usersPerPage;
-  const indexOfFirstItem = indexOfLastItem - usersPerPage;
-  const currentData = aboutData.slice(indexOfFirstItem, indexOfLastItem);
-
   useEffect(() => {
     fetchAboutUs();
-  }, []);
+  }, [currentPage, itemsPerPage]);
 
   const fetchAboutUs = async (callback) => {
     setLoading(true);
-    const result = await aboutService.getAboutUs();
-    if (result.success) {
-      setAboutData(result.data);
-      if (callback) callback(result.data);
-    } else {
-      setError(result.message);
+    try {
+      const result = await aboutService.getAboutUs(currentPage, itemsPerPage);
+      console.log("API Response:", result);
+      if (result.success) {
+        setAboutData(result.data.items || []);
+        setTotalPages(result.data.totalPages || 1);
+        if (callback) callback(result);
+      } else {
+        setError(result.message);
+        setAboutData([]);
+        setTotalPages(1);
+      }
+    } catch (err) {
+      setError("Lỗi không xác định khi tải dữ liệu");
+      setAboutData([]);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleToggleVisibility = async (about) => {
@@ -41,7 +48,7 @@ const AboutUsManagement = () => {
     const response = await aboutService.updateAboutUs(about._id, updatedAbout);
 
     if (response.success) {
-      fetchAboutUs(); // Cập nhật lại danh sách trên trang quản lý
+      fetchAboutUs();
     } else {
       console.error("Error updating display status:", response.message);
     }
@@ -49,13 +56,23 @@ const AboutUsManagement = () => {
 
   const handleHardDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this item?")) {
-      await aboutService.hardDeleteAboutUs(id);
-      fetchAboutUs(() => {
-        const totalPages = Math.ceil((aboutData.length - 1) / usersPerPage);
-        if (currentPage > totalPages) {
-          setCurrentPage(totalPages || 1);
-        }
-      });
+      const response = await aboutService.hardDeleteAboutUs(id);
+      if (response.success) {
+        fetchAboutUs((result) => {
+          const totalItems = result.data.total; // Tổng số item còn lại từ server
+          const newTotalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+          // Chỉ quay về trang trước nếu trang hiện tại không còn item nào
+          if (result.data.items.length === 0 && currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+          } else if (currentPage > newTotalPages) {
+            // Trường hợp tổng số trang giảm và vượt quá trang hiện tại
+            setCurrentPage(newTotalPages);
+          }
+        });
+      } else {
+        console.error("Error deleting item:", response.message);
+      }
     }
   };
 
@@ -80,18 +97,19 @@ const AboutUsManagement = () => {
       return;
     }
 
+    let response;
     if (editData) {
-      await aboutService.updateAboutUs(editData._id, formData);
+      response = await aboutService.updateAboutUs(editData._id, formData);
     } else {
-      const result = await aboutService.createAboutUs(formData);
-      if (!result.success) {
-        alert(result.message);
-        return;
-      }
+      response = await aboutService.createAboutUs(formData);
     }
 
-    setModalOpen(false);
-    fetchAboutUs();
+    if (response.success) {
+      setModalOpen(false);
+      fetchAboutUs();
+    } else {
+      alert(response.message);
+    }
   };
 
   const handleImageUpload = (imageUrl) => {
@@ -124,10 +142,10 @@ const AboutUsManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {currentData.length > 0 ? (
-              currentData.map((item, index) => (
-                <tr key={index} className="border-b border-gray-200 text-gray-900">
-                  <td className="p-3">{index + 1}</td>
+            {aboutData.length > 0 ? (
+              aboutData.map((item, index) => (
+                <tr key={item._id} className="border-b border-gray-200 text-gray-900">
+                  <td className="p-3">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                   <td className="p-3">
                     <img
                       src={item.bannerUrl}
@@ -147,15 +165,12 @@ const AboutUsManagement = () => {
                   </td>
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center space-x-2">
-                      {/* Nút chỉnh sửa */}
                       <button
                         className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
                         onClick={() => handleOpenModal(item)}
                       >
                         <EditIcon size={16} />
                       </button>
-
-                      {/* Nút Ẩn/Hiện */}
                       <button
                         className={`p-2 rounded-full text-white ${
                           item.isVisible
@@ -166,8 +181,6 @@ const AboutUsManagement = () => {
                       >
                         {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
                       </button>
-
-                      {/* Nút Xóa vĩnh viễn */}
                       <button
                         className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
                         onClick={() => handleHardDelete(item._id)}
@@ -194,40 +207,46 @@ const AboutUsManagement = () => {
             <span>Show</span>
             <select
               className="border rounded px-2 py-1"
-              onChange={(e) => setUsersPerPage(Number(e.target.value))}
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
             >
               <option value="5">5 About Us</option>
               <option value="10">10 About Us</option>
               <option value="15">15 About Us</option>
             </select>
           </div>
-          <div className="flex space-x-2">
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              &lt;
-            </button>
-            {Array.from({ length: Math.ceil(aboutData.length / usersPerPage) }, (_, i) => (
+          {totalPages > 1 && (
+            <div className="flex space-x-2">
               <button
-                key={i}
-                className={`px-3 py-1 rounded ${
-                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                }`}
-                onClick={() => paginate(i + 1)}
+                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
+                onClick={() => paginate(currentPage - 1)}
+                disabled={currentPage === 1}
               >
-                {i + 1}
+                {"<"}
               </button>
-            ))}
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === Math.ceil(aboutData.length / usersPerPage)}
-            >
-              &gt;
-            </button>
-          </div>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                  }`}
+                  onClick={() => paginate(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
+                onClick={() => paginate(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                {">"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -238,8 +257,7 @@ const AboutUsManagement = () => {
             <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add new"} About Us</h2>
 
             <label className="block mb-2">Banner URL:</label>
-
-            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.imageUrl === ""} />
+            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.bannerUrl === ""} />
 
             <label className="block mb-2 mt-4">Content:</label>
             <textarea

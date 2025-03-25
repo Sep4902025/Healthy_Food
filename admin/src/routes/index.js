@@ -65,6 +65,7 @@ import TableMedicalConditions from "../pages/nutritionist/Medical Condition Mana
 import AddMedicalCondition from "../pages/nutritionist/Medical Condition Management/AddMedicalCondition";
 import CreateMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/CreateMealPlanPage";
 import EditMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/EditMealPlanPage";
+import Medical from "../pages/user/Medical"; 
 
 const AppRoutes = () => {
   return (
@@ -130,6 +131,9 @@ const AppRoutes = () => {
         <Route path="contact" element={<Contact />} />
         <Route path="term" element={<Term />} />
 
+        {/* Thêm route cho trang Medical */}
+        <Route path="medical" element={<Medical />} />
+
         {/* ✅ Gom các route của quiz vào đây */}
         <Route
           path="/survey"
@@ -160,7 +164,7 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-      {/* Các route cần đăng nhập AdminLayout Admin*/}
+      {/* Các route cần đăng nhập AdminLayout Admin */}
       <Route
         path="/admin"
         element={
@@ -188,7 +192,7 @@ const AppRoutes = () => {
         <Route path="viewprofile/:id" element={<ViewProfile />} />
       </Route>
 
-      {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist*/}
+      {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist */}
       <Route
         path="/nutritionist"
         element={

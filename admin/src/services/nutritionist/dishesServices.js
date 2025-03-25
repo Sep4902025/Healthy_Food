@@ -9,15 +9,28 @@ const getAuthHeaders = () => {
 };
 
 const dishesService = {
-  // 🔹 Lấy tất cả món ăn
-  getAllDishes: async () => {
+  // 🔹 Lấy tất cả món ăn với phân trang
+  getAllDishes: async (page = 1, limit = 10, search = "") => {
     try {
       const response = await axios.get(`${API_URL}/dishes`, {
         headers: getAuthHeaders(),
         withCredentials: true,
+        params: {
+          page,
+          limit,
+          search, // Thêm tham số tìm kiếm
+        },
       });
       console.log("🔍 Danh sách món ăn từ API:", response.data);
-      return { success: true, data: response.data.data || [] };
+      return {
+        success: true,
+        data: {
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
+        },
+      };
     } catch (error) {
       console.error(
         "❌ Lỗi khi lấy món ăn:",
@@ -49,12 +62,10 @@ const dishesService = {
   updateDish: async (id, data) => {
     try {
       console.log(`📤 Cập nhật món ăn ID: ${id}`, data);
-
       await axios.put(`${API_URL}/dishes/${id}`, data, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-
       return { success: true };
     } catch (error) {
       console.error(
@@ -69,12 +80,10 @@ const dishesService = {
   hardDeleteDish: async (id) => {
     try {
       console.log(`🗑️ Xóa vĩnh viễn món ăn ID: ${id}`);
-
       await axios.delete(`${API_URL}/dishes/${id}`, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-
       return { success: true };
     } catch (error) {
       console.error(
@@ -85,14 +94,17 @@ const dishesService = {
     }
   },
 
-  //Recipes
+  // 🔹 Lấy thông tin món ăn theo ID
   getDishById: async (dishId) => {
     try {
-      const response = await axios.get(`${API_URL}/dishes/${dishId}`);
-      console.log("Fetched Dish:", response.data); // Debug API response
+      const response = await axios.get(`${API_URL}/dishes/${dishId}`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+      });
+      console.log("Fetched Dish:", response.data);
       return {
         success: true,
-        data: response.data.data || {}, // Đảm bảo data luôn là object
+        data: response.data.data || {},
       };
     } catch (error) {
       console.error("Error fetching dish:", error);

@@ -21,6 +21,10 @@ const SEASON_OPTIONS = ["All Season", "Spring", "Summer", "Fall", "Winter"];
 const TableDishes = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [totalItems, setTotalItems] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editData, setEditData] = useState({
     id: "",
@@ -36,33 +40,35 @@ const TableDishes = () => {
   const [errors, setErrors] = useState({});
   const [filterType, setFilterType] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(8);
   const [ingredientCounts, setIngredientCounts] = useState({});
   const [loadingIngredients, setLoadingIngredients] = useState(false);
-
-  const filteredDishes = dishes.filter((dish) => {
-    const matchesType = filterType === "all" || dish.type === filterType;
-    const matchesSearch = searchTerm
-      ? dish.name.toLowerCase().includes(searchTerm.toLowerCase())
-      : true;
-    return matchesType && matchesSearch;
-  });
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentDishes = filteredDishes.slice(indexOfFirstItem, indexOfLastItem);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchDishes();
-  }, []);
+  }, [currentPage, itemsPerPage, filterType, searchTerm]);
+
+  const fetchDishes = async () => {
+    setIsLoading(true);
+    const response = await dishesService.getAllDishes(currentPage, itemsPerPage, searchTerm);
+    if (response.success) {
+      const filteredByType =
+        filterType === "all"
+          ? response.data.items
+          : response.data.items.filter((dish) => dish.type === filterType);
+      setDishes(filteredByType);
+      setTotalItems(response.data.total);
+      setTotalPages(response.data.totalPages);
+    }
+    setIsLoading(false);
+  };
 
   const fetchIngredientCounts = useCallback(async () => {
-    if (currentDishes.length === 0) return;
+    if (dishes.length === 0) return;
 
     setLoadingIngredients(true);
     const counts = { ...ingredientCounts };
-    const dishesToFetch = currentDishes.filter((dish) => counts[dish._id] === undefined);
+    const dishesToFetch = dishes.filter((dish) => counts[dish._id] === undefined);
 
     if (dishesToFetch.length > 0) {
       await Promise.all(
@@ -86,29 +92,32 @@ const TableDishes = () => {
       setIngredientCounts(counts);
     }
     setLoadingIngredients(false);
-  }, [currentDishes, ingredientCounts]);
+  }, [dishes, ingredientCounts]);
 
   useEffect(() => {
     fetchIngredientCounts();
   }, [fetchIngredientCounts]);
 
-  const fetchDishes = async (callback) => {
-    const response = await dishesService.getAllDishes();
-    if (response.success) {
-      setDishes(response.data);
-      if (callback) callback(response.data);
-    }
-  };
-
   const handleEditClick = (dish) => {
-    let flavorArray = Array.isArray(dish.flavor)
-      ? dish.flavor
-      : typeof dish.flavor === "string" && dish.flavor
-      ? dish.flavor.split(",").map((f) => f.trim())
-      : [];
-    
+    console.log("Dữ liệu flavor ban đầu:", dish.flavor);
+  
+    let flavorArray = [];
+    if (Array.isArray(dish.flavor)) {
+      // Nếu là mảng, kiểm tra xem phần tử đầu tiên có chứa dấu phẩy không
+      if (dish.flavor.length > 0 && typeof dish.flavor[0] === "string" && dish.flavor[0].includes(",")) {
+        flavorArray = dish.flavor[0].split(",").map((f) => f.trim());
+      } else {
+        flavorArray = dish.flavor;
+      }
+    } else if (typeof dish.flavor === "string" && dish.flavor) {
+      flavorArray = dish.flavor.split(",").map((f) => f.trim());
+    }
+  
+    // Lọc các giá trị flavor hợp lệ (nếu có danh sách flavor cố định)
+    const FLAVOR_OPTIONS = ["Bitter", "Fatty", "Salty", "Sweet", "Sour"];
     flavorArray = flavorArray.filter((flavor) => FLAVOR_OPTIONS.includes(flavor));
-
+    console.log("Mảng flavor sau khi xử lý:", flavorArray);
+  
     setEditData({
       ...dish,
       id: dish._id,
@@ -120,7 +129,6 @@ const TableDishes = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
     if (!editData.name.trim()) newErrors.name = "Name is required";
     if (!editData.description.trim()) newErrors.description = "Description is required";
     if (!editData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required";
@@ -128,14 +136,12 @@ const TableDishes = () => {
     if (editData.flavor.length === 0) newErrors.flavor = "At least one flavor is required";
     if (!editData.type) newErrors.type = "Type is required";
     if (!editData.season) newErrors.season = "Season is required";
-    
     if (editData.videoUrl) {
       const youtubeEmbedRegex = /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
       if (!youtubeEmbedRegex.test(editData.videoUrl)) {
-        newErrors.videoUrl = "Video URL must be a valid YouTube embed link (e.g., https://www.youtube.com/embed/video_id)";
+        newErrors.videoUrl = "Video URL must be a valid YouTube embed link";
       }
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -166,11 +172,10 @@ const TableDishes = () => {
       const response = await dishesService.hardDeleteDish(id);
       if (response.success) {
         alert("Deleted successfully!");
-        fetchDishes(() => {
-          const totalPages = Math.ceil((dishes.length - 1) / itemsPerPage);
-          if (currentPage > totalPages) setCurrentPage(totalPages || 1);
-        });
-        setIngredientCounts({});
+        fetchDishes();
+        if (dishes.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
       } else {
         alert("Failed to delete dish. Please try again.");
       }
@@ -196,12 +201,14 @@ const TableDishes = () => {
 
   const handleFlavorChange = (e) => {
     const value = e.target.value;
-    setEditData((prev) => ({
-      ...prev,
-      flavor: prev.flavor.includes(value)
-        ? prev.flavor.filter((fl) => fl !== value)
-        : [...prev.flavor, value],
-    }));
+    setEditData((prev) => {
+      const flavorArray = Array.isArray(prev.flavor) ? prev.flavor : [];
+      if (flavorArray.includes(value)) {
+        return { ...prev, flavor: flavorArray.filter((fl) => fl !== value) };
+      } else {
+        return { ...prev, flavor: [...flavorArray, value] };
+      }
+    });
     setErrors({ ...errors, flavor: "" });
   };
 
@@ -214,10 +221,8 @@ const TableDishes = () => {
     let value = e.target.value;
     value = value.replace(/[^0-9]/g, "");
     value = value === "" ? "" : parseInt(value, 10);
-    
     if (value < 0 || isNaN(value)) value = 0;
     else if (value > 1440) value = 1440;
-
     setEditData({ ...editData, cookingTime: value });
     setErrors({ ...errors, cookingTime: "" });
   };
@@ -290,15 +295,15 @@ const TableDishes = () => {
         </div>
       </div>
 
-      {loadingIngredients ? (
+      {isLoading || loadingIngredients ? (
         <div className="text-center py-4">
           <p>Loading data...</p>
         </div>
       ) : (
         <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-            {currentDishes.length > 0 ? (
-              currentDishes.map((dish) => (
+            {dishes.length > 0 ? (
+              dishes.map((dish) => (
                 <div
                   key={dish._id}
                   className="bg-white rounded-lg shadow-md overflow-hidden relative"
@@ -373,7 +378,7 @@ const TableDishes = () => {
         </div>
       )}
 
-      {filteredDishes.length > 0 && !loadingIngredients && (
+      {totalItems > 0 && !isLoading && !loadingIngredients && (
         <div className="p-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <span>Show</span>
@@ -398,26 +403,21 @@ const TableDishes = () => {
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            {Array.from(
-              { length: Math.ceil(filteredDishes.length / itemsPerPage) },
-              (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1
-                      ? "bg-green-500 text-white"
-                      : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => paginate(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              )
-            )}
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                className={`px-3 py-1 rounded ${
+                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                }`}
+                onClick={() => paginate(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
             <button
               className="border rounded px-3 py-1 hover:bg-gray-100"
               onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === Math.ceil(filteredDishes.length / itemsPerPage)}
+              disabled={currentPage === totalPages}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -437,10 +437,7 @@ const TableDishes = () => {
                 >
                   Save
                 </button>
-                <button
-                  className="text-gray-500 hover:text-gray-700"
-                  onClick={closeEditModal}
-                >
+                <button className="text-gray-500 hover:text-gray-700" onClick={closeEditModal}>
                   ✕
                 </button>
               </div>
@@ -456,14 +453,18 @@ const TableDishes = () => {
                     value={editData.name || ""}
                     onChange={handleChange}
                     placeholder="Enter dish name"
-                    className={`w-full border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${
+                      errors.name ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cooking Time *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cooking Time *
+                    </label>
                     <input
                       type="number"
                       name="cookingTime"
@@ -473,10 +474,14 @@ const TableDishes = () => {
                       placeholder="1"
                       min="1"
                       max="1440"
-                      className={`w-full border ${errors.cookingTime ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      className={`w-full border ${
+                        errors.cookingTime ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                     />
                     <span className="text-sm text-gray-500">Minutes</span>
-                    {errors.cookingTime && <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>}
+                    {errors.cookingTime && (
+                      <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
@@ -484,11 +489,15 @@ const TableDishes = () => {
                       name="type"
                       value={editData.type || ""}
                       onChange={handleChange}
-                      className={`w-full border ${errors.type ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      className={`w-full border ${
+                        errors.type ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                     >
                       <option value="">Select type</option>
                       {TYPE_OPTIONS.map((type) => (
-                        <option key={type} value={type}>{type}</option>
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
                       ))}
                     </select>
                     {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
@@ -503,9 +512,13 @@ const TableDishes = () => {
                     value={editData.videoUrl || ""}
                     onChange={handleChange}
                     placeholder="https://www.youtube.com/embed/video_id"
-                    className={`w-full border ${errors.videoUrl ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${
+                      errors.videoUrl ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
-                  {errors.videoUrl && <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>}
+                  {errors.videoUrl && (
+                    <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>
+                  )}
                 </div>
 
                 <div className="mb-4">
@@ -514,11 +527,15 @@ const TableDishes = () => {
                     name="season"
                     value={editData.season || ""}
                     onChange={handleChange}
-                    className={`w-full border ${errors.season ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${
+                      errors.season ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   >
                     <option value="">Select season</option>
                     {SEASON_OPTIONS.map((season) => (
-                      <option key={season} value={season}>{season}</option>
+                      <option key={season} value={season}>
+                        {season}
+                      </option>
                     ))}
                   </select>
                   {errors.season && <p className="text-red-500 text-sm mt-1">{errors.season}</p>}
@@ -532,7 +549,7 @@ const TableDishes = () => {
                         <input
                           type="checkbox"
                           value={flavor}
-                          checked={editData.flavor.includes(flavor)}
+                          checked={Array.isArray(editData.flavor) && editData.flavor.includes(flavor)}
                           onChange={handleFlavorChange}
                           className="mr-2 h-4 w-4 text-green-500 focus:ring-green-500"
                         />
@@ -558,18 +575,27 @@ const TableDishes = () => {
                     )}
                   </div>
                   <div className="text-center">
-                    <UploadComponent onUploadSuccess={handleImageUpload} reset={editData.imageUrl === ""} />
+                    <UploadComponent
+                      onUploadSuccess={handleImageUpload}
+                      reset={editData.imageUrl === ""}
+                    />
                   </div>
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Image URL *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Image URL *
+                    </label>
                     <input
                       type="text"
                       value={editData.imageUrl || ""}
                       onChange={(e) => handleImageUpload(e.target.value)}
                       placeholder="Enter image URL"
-                      className={`w-full border ${errors.imageUrl ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      className={`w-full border ${
+                        errors.imageUrl ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                     />
-                    {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
+                    {errors.imageUrl && (
+                      <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -577,7 +603,9 @@ const TableDishes = () => {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="mb-4">
                   <div className="flex border-b border-gray-200 justify-center">
-                    <label className="block text-sm font-medium text-gray-700 mb-1 text-center">Description *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
+                      Description *
+                    </label>
                   </div>
                 </div>
                 <div className="mb-4">
@@ -586,9 +614,13 @@ const TableDishes = () => {
                     value={editData.description || ""}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${errors.description ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${
+                      errors.description ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
-                  {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+                  {errors.description && (
+                    <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+                  )}
                 </div>
               </div>
             </div>

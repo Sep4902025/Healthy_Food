@@ -6,32 +6,49 @@ import FoodSlider from "./HomeSection/FoodSlider";
 import SeasonSection from "./HomeSection/SeasonSection";
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
-
 import FoodBySeasonSection from "./HomeSection/FoodBySeasonSection";
+
 const Home = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const userId = useSelector(selectAuth)?.user?._id;
   const [selectedSeason, setSelectedSeason] = useState("All seasons");
-  const filteredSeasonDishes = dishes.filter(
-    (dish) => dish.season === selectedSeason
-  );
+
+  const filteredSeasonDishes = Array.isArray(dishes)
+    ? selectedSeason === "All seasons"
+      ? dishes
+      : dishes.filter((dish) => dish.season === selectedSeason)
+    : [];
 
   useEffect(() => {
     const fetchDishes = async () => {
+      setLoading(true);
       try {
         const data = await HomeService.getAllDishes();
-        setDishes(data.data);
-        console.log("Full dishes:", dishes);
+        console.log("API Response:", data);
+        const dishesArray = data.data.items || data.data || [];
+        setDishes(dishesArray);
       } catch (error) {
         console.error("Error fetching food data:", error);
+        setDishes([]);
+      } finally {
+        setLoading(false);
       }
     };
-
     fetchDishes();
   }, []);
+
+  if (loading) {
+    return <div className="text-center p-10">Loading dishes...</div>;
+  }
+
+  if (!dishes.length) {
+    return <div className="text-center p-10">No dishes available at the moment.</div>;
+  }
+
   return (
-    <div className="home ">
+    <div className="home">
       <div className="bg-[#40B491] bg-opacity-20 m-4 pl-10 pr-10">
         <div className="flex flex-col md:flex-row items-center justify-between">
           <div className="text-center md:text-left md:w-1/2">
@@ -45,7 +62,7 @@ const Home = () => {
             </p>
             <button
               onClick={() => navigate("/another-page")}
-              className="mt-5 mb-5 bg-[#40B491] px-[45px] py-[15px] rounded-full text-white font-semibold hover:bg-[#369e7f] transition duration-200 uppercase "
+              className="mt-5 mb-5 bg-[#40B491] px-[45px] py-[15px] rounded-full text-white font-semibold hover:bg-[#369e7f] transition duration-200 uppercase"
             >
               Take survey here
             </button>
@@ -63,12 +80,11 @@ const Home = () => {
       <hr className="w-full border-t border-gray-300 my-6" />
 
       <div>
-        {/* Danh sách món ăn từ API */}
         <h3 className="p-10 text-2xl md:text-2xl lg:text-[50px] font-extrabold leading-normal text-[#ff6868]">
           Recommended Dishes
         </h3>
 
-        <div className=" text-center px-4">
+        <div className="text-center px-4">
           <h1 className="p-10 text-[60px] md:text-4xl lg:text-5xl font-extrabold text-black leading-tight max-w-[90%] md:max-w-[80%] lg:max-w-[60%] mx-auto">
             Standout Foods From Our Menu
           </h1>
@@ -76,7 +92,6 @@ const Home = () => {
         <FoodSlider userId={userId} dishes={dishes} />
         <hr className="w-full border-t border-gray-300 my-6" />
 
-        {/* Season Section */}
         <SeasonSection onSelectSeason={setSelectedSeason} />
         <hr className="w-full border-t border-gray-300 my-6" />
 

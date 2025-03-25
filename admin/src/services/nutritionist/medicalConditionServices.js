@@ -9,15 +9,27 @@ const getAuthHeaders = () => {
 };
 
 const medicalConditionService = {
-  // 🔹 Lấy tất cả điều kiện y tế
-  getAllMedicalConditions: async () => {
+  // 🔹 Lấy tất cả điều kiện y tế với phân trang
+  getAllMedicalConditions: async (page = 1, limit = 10) => {
     try {
       const response = await axios.get(`${API_URL}/medicalConditions`, {
         headers: getAuthHeaders(),
         withCredentials: true,
+        params: {
+          page,
+          limit,
+        },
       });
       console.log("📌 List of medical conditions:", response.data);
-      return { success: true, data: response.data.data || [] };
+      return {
+        success: true,
+        data: response.data.data || {
+          items: [],
+          total: 0,
+          currentPage: page,
+          totalPages: 1,
+        },
+      };
     } catch (error) {
       console.error("❌ Error fetching medical conditions:", error.response?.data || error.message);
       return { success: false, message: "Failed to load medical conditions!" };
@@ -85,15 +97,28 @@ const medicalConditionService = {
     }
   },
 
-  // 🔹 Tìm kiếm điều kiện y tế theo tên
-  searchMedicalConditionByName: async (name) => {
+  // 🔹 Tìm kiếm điều kiện y tế theo tên với phân trang
+  searchMedicalConditionByName: async (name, page = 1, limit = 10) => {
     try {
-      const response = await axios.get(`${API_URL}/medicalConditions/search?name=${name}`, {
+      const response = await axios.get(`${API_URL}/medicalConditions/search`, {
         headers: getAuthHeaders(),
         withCredentials: true,
+        params: {
+          name,
+          page,
+          limit,
+        },
       });
       console.log(`📌 Search results for medical condition name "${name}":`, response.data);
-      return { success: true, data: response.data.data || [] };
+      return {
+        success: true,
+        data: response.data.data || {
+          items: [],
+          total: 0,
+          currentPage: page,
+          totalPages: 1,
+        },
+      };
     } catch (error) {
       console.error("❌ Error searching medical conditions:", error.response?.data || error.message);
       return { success: false, message: "Failed to search medical conditions!" };
