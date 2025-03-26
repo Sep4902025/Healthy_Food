@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Modal, Image, ScrollView, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, Modal, Image, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons"; // For icons; install with `npm install @expo/vector-icons`
 
 import dishesService from "../../services/dishService";
@@ -15,20 +15,43 @@ const RecipeModal = ({ dishId, recipeId, onClose }) => {
   useEffect(() => {
     const fetchRecipe = async () => {
       try {
+        // Lấy thông tin recipe
         const recipeResponse = await dishesService.getRecipeByRecipeId(dishId, recipeId);
+        if (!recipeResponse.success || !recipeResponse.data) {
+          throw new Error("Failed to fetch recipe");
+        }
         setRecipe(recipeResponse.data);
 
+        // Lấy thông tin dish
         const dishResponse = await dishesService.getDishById(recipeResponse.data.dishId._id);
+        if (!dishResponse.success || !dishResponse.data) {
+          throw new Error("Failed to fetch dish");
+        }
         setDish(dishResponse.data);
 
-        // Set initial serving size to the dish's totalServing
+        // Set initial serving size
         setServingSize(dishResponse.data.totalServing);
 
-        const ingredientPromises = recipeResponse.data.ingredients.map((item) =>
-          ingredientsService.getIngredientById(item.ingredientId._id)
-        );
-        const ingredientResults = await Promise.all(ingredientPromises);
-        setIngredients(ingredientResults.map((res) => res.data.data));
+        // Lấy thông tin ingredients
+        const ingredientPromises = recipeResponse.data.ingredients
+          .filter((item) => item.ingredientId && item.ingredientId._id) // Kiểm tra ingredientId
+          .map((item) => ingredientsService.getIngredientById(item.ingredientId._id));
+
+        const ingredientResults = await Promise.allSettled(ingredientPromises);
+        const ingredientsData = ingredientResults
+          .map((result, index) => {
+            if (result.status === "fulfilled" && result.value?.data) {
+              // Kiểm tra cấu trúc dữ liệu trả về
+              const ingredientData = result.value.data.data || result.value.data; // Hỗ trợ cả res.data.data và res.data
+              return ingredientData;
+            } else {
+              console.warn(`Failed to fetch ingredient at index ${index}:`, result.reason);
+              return null;
+            }
+          })
+          .filter((ingredient) => ingredient !== null); // Loại bỏ các ingredient không hợp lệ
+
+        setIngredients(ingredientsData);
       } catch (error) {
         console.error("Error fetching data:", error);
       }

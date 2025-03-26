@@ -1,21 +1,23 @@
-import axios from "axios";
+import axiosInstance from "./axiosInstance"; // Import axiosInstance
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
-// Hàm lấy token từ localStorage
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+// Hàm lấy token từ AsyncStorage
+const getAuthHeaders = async () => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch (error) {
+    console.error("Error getting token from AsyncStorage:", error);
+    return {};
+  }
 };
 
 const dishesService = {
   // 🔹 Lấy tất cả món ăn
   getAllDishes: async () => {
     try {
-      const response = await axios.get(`${API_URL}/dishes`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
+      const headers = await getAuthHeaders();
+      const response = await axiosInstance.get("/dishes", { headers });
       console.log("🔍 Danh sách món ăn từ API:", response.data);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
@@ -27,10 +29,8 @@ const dishesService = {
   // 🔹 Thêm món ăn mới
   createDish: async (data) => {
     try {
-      const response = await axios.post(`${API_URL}/dishes`, data, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
+      const headers = await getAuthHeaders();
+      const response = await axiosInstance.post("/dishes", data, { headers });
       console.log("✅ Phản hồi từ server:", response.data);
       return { success: true };
     } catch (error) {
@@ -43,12 +43,8 @@ const dishesService = {
   updateDish: async (id, data) => {
     try {
       console.log(`📤 Cập nhật món ăn ID: ${id}`, data);
-
-      await axios.put(`${API_URL}/dishes/${id}`, data, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
-
+      const headers = await getAuthHeaders();
+      await axiosInstance.put(`/dishes/${id}`, data, { headers });
       return { success: true };
     } catch (error) {
       console.error("❌ Lỗi khi cập nhật món ăn:", error.response?.data || error.message);
@@ -60,12 +56,8 @@ const dishesService = {
   hardDeleteDish: async (id) => {
     try {
       console.log(`🗑️ Xóa vĩnh viễn món ăn ID: ${id}`);
-
-      await axios.delete(`${API_URL}/dishes/${id}`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
-
+      const headers = await getAuthHeaders();
+      await axiosInstance.delete(`/dishes/${id}`, { headers });
       return { success: true };
     } catch (error) {
       console.error("❌ Lỗi khi xóa vĩnh viễn món ăn:", error.response?.data || error.message);
@@ -73,21 +65,21 @@ const dishesService = {
     }
   },
 
-  //Recipes
+  // Recipes
   // Lấy công thức theo dishId và recipeId
   getRecipeByRecipeId: async (dishId, recipeId) => {
     try {
-      const response = await axios.get(`${API_URL}/dishes/${dishId}/recipes/${recipeId}`);
-
+      const headers = await getAuthHeaders();
+      const response = await axiosInstance.get(`/dishes/${dishId}/recipes/${recipeId}`, {
+        headers,
+      });
       console.log("Fetched Recipes nè :", response.data.data); // Debug API response
-
       return {
         success: true,
         data: response.data?.data || {}, // Đảm bảo luôn có object
       };
     } catch (error) {
       console.error("Error fetching recipe:", error);
-
       return {
         success: false,
         message: error.response?.data?.error || "Không thể tải công thức. Vui lòng thử lại sau!",
@@ -95,10 +87,11 @@ const dishesService = {
     }
   },
 
-  //Dishes
+  // Dishes
   getDishById: async (dishId) => {
     try {
-      const response = await axios.get(`${API_URL}/dishes/${dishId}`);
+      const headers = await getAuthHeaders();
+      const response = await axiosInstance.get(`/dishes/${dishId}`, { headers });
       console.log("Fetched Dish:", response.data); // Debug API response
       return {
         success: true,

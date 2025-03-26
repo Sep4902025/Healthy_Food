@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, SafeAreaView, Alert } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // For icons
+import { Ionicons } from "@expo/vector-icons";
 import MainLayoutWrapper from "../../components/layout/MainLayoutWrapper";
 import { userSelector } from "../../redux/selectors/selector";
 import mealPlanService from "../../services/mealPlanService";
@@ -23,8 +23,8 @@ const MealPlan = () => {
     try {
       setLoading(true);
       const response = await mealPlanService.getUserMealPlan(user._id);
-      console.log("User Meal Plan Response:", response); // Debug API response
-      if (response.success) {
+      console.log("User Meal Plan Response:", response);
+      if (response.success && response.data) {
         setUserMealPlan(response.data);
         console.log("Set userMealPlan:", response.data);
       } else {
@@ -39,8 +39,10 @@ const MealPlan = () => {
   };
 
   useEffect(() => {
-    fetchUserMealPlan();
-  }, [user._id]);
+    if (user?._id) {
+      fetchUserMealPlan();
+    }
+  }, [user?._id]);
 
   const handleCreateSuccess = () => {
     fetchUserMealPlan();
@@ -111,12 +113,12 @@ const MealPlan = () => {
 
   const handleTakeSurvey = () => {
     console.log("Take Survey pressed");
-    setShowCreateForm(true); // For now, show the create form as a placeholder
+    setShowCreateForm(true);
   };
 
   const handleNutritionTargetsCalculated = (targets) => {
     setNutritionTargets(targets);
-    console.log("Nutrition Targets Calculated:", targets); // Debug nutrition targets
+    console.log("Nutrition Targets Calculated:", targets);
   };
 
   if (loading) {
@@ -134,7 +136,6 @@ const MealPlan = () => {
     <MainLayoutWrapper>
       <SafeAreaView className="flex-1">
         <View className="flex-1 p-4">
-          {/* Header */}
           <View className="flex-row items-center mb-4">
             <TouchableOpacity onPress={() => console.log("Go back")}>
               <Ionicons name="arrow-back" size={24} color="#16a34a" />
@@ -145,11 +146,10 @@ const MealPlan = () => {
           {userMealPlan ? (
             <View className="bg-white p-4 rounded-lg shadow-md flex-1">
               <View className="flex justify-between items-center gap-2">
-                {/* Meal Plan Details */}
                 <View className="mb-4">
                   <View className="flex-row justify-between items-center mb-2">
                     <Text className="text-lg font-semibold text-gray-800">
-                      {userMealPlan.title}
+                      {userMealPlan.title || userMealPlan.name || "Untitled Meal Plan"}
                     </Text>
                     <View
                       className={`px-2 py-1 rounded-full ${
@@ -166,32 +166,39 @@ const MealPlan = () => {
                     </View>
                   </View>
 
-                  {/* Start Date and Duration */}
                   <Text className="text-sm text-gray-600">
-                    From {new Date(userMealPlan.startDate).toLocaleDateString()} •{" "}
-                    {userMealPlan.duration} Days
+                    From{" "}
+                    {userMealPlan.startDate
+                      ? new Date(userMealPlan.startDate).toLocaleDateString()
+                      : new Date(userMealPlan.createdAt).toLocaleDateString()}{" "}
+                    • {userMealPlan.duration || "N/A"} Days
                   </Text>
 
-                  {/* Type (optional) */}
                   <Text className="text-xs text-gray-500 mt-1">
                     {userMealPlan.type === "fixed" ? "Fixed Plan" : "Custom Plan"}
                   </Text>
                 </View>
 
-                {/* Meal Plan Aim Chart */}
-                <MealPlanAimChart
-                  mealPlanId={userMealPlan._id}
-                  duration={userMealPlan.duration}
-                  onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
-                />
-                {/* Action Buttons */}
+                {userMealPlan._id && (
+                  <MealPlanAimChart
+                    mealPlanId={userMealPlan._id}
+                    userId={user._id} // Truyền userId từ Redux store
+                    duration={userMealPlan.duration || 7} // Giá trị mặc định nếu duration không tồn tại
+                    onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
+                  />
+                )}
+
                 <View className="flex-row gap-2 mb-4">
                   <TouchableOpacity
                     onPress={handleToggleMealPlanStatus}
-                    disabled={processingAction}
+                    disabled={processingAction || userMealPlan.isPause === undefined}
                     className={`py-2 px-4 rounded-lg items-center ${
                       userMealPlan.isPause ? "bg-green-600" : "bg-yellow-600"
-                    } ${processingAction ? "opacity-50" : "opacity-100"}`}
+                    } ${
+                      processingAction || userMealPlan.isPause === undefined
+                        ? "opacity-50"
+                        : "opacity-100"
+                    }`}
                   >
                     <Text className="text-white text-sm">
                       {userMealPlan.isPause ? "▶️ Continue" : "⏸️ Pause"}
@@ -208,7 +215,6 @@ const MealPlan = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-              {/* Meal Days */}
               <MealDays mealPlanId={userMealPlan._id} nutritionTargets={nutritionTargets} />
             </View>
           ) : (

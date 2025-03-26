@@ -9,10 +9,10 @@ import {
   Modal,
 } from "react-native";
 import Meals from "./Meals";
-import { PieChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
 import mealPlanService from "../../services/mealPlanService";
 import dishesService from "../../services/dishService";
+import CustomPieChart from "./CustomPieChart"; // Import CustomPieChart
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -240,28 +240,32 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
     if (!nutrition) return null;
 
     const chartData = [
-      { name: "Protein", value: nutrition.protein, fill: "#ef4444" },
-      { name: "Carbs", value: nutrition.carbs, fill: "#3b82f6" },
-      { name: "Fat", value: nutrition.fat, fill: "#facc15" },
-    ].filter((item) => item.value > 0);
+      { x: "Protein", y: nutrition.protein, color: "#ef4444" },
+      { x: "Carbs", y: nutrition.carbs, color: "#3b82f6" },
+      { x: "Fat", y: nutrition.fat, color: "#facc15" },
+    ].filter((item) => item.y > 0);
 
     return (
       <View className="items-center">
-        <PieChart
-          width={80}
-          height={80}
-          data={chartData}
-          chartConfig={{ color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})` }}
-          accessor="value"
-          backgroundColor="transparent"
-          paddingLeft="0"
-          center={[40, 40]}
-          hasLegend={false}
-          absolute
-        />
-        <View className="absolute top-6 items-center">
-          <Text className="text-lg font-bold">{Math.round(nutrition.calories)}</Text>
-          <Text className="text-xs text-gray-500">kcal</Text>
+        <View className="relative">
+          <CustomPieChart
+            data={chartData}
+            width={80}
+            height={80}
+            innerRadius={20}
+            outerRadius={30}
+          />
+          <View
+            style={{
+              position: "absolute",
+              left: 40, // Tâm theo chiều ngang (width/2)
+              top: 35, // Tâm theo chiều dọc (height/2)
+              transform: [{ translateX: -15 }, { translateY: -10 }], // Điều chỉnh để căn giữa số
+            }}
+          >
+            <Text className="text-sm font-bold">{Math.round(nutrition.calories)}</Text>
+            <Text className="text-xs text-gray-500 text-center">kcal</Text>
+          </View>
         </View>
         <View className="flex-row flex-wrap justify-center mt-1">
           <Text className="text-xs mx-1 flex-row items-center">

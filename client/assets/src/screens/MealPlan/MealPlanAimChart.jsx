@@ -1,14 +1,16 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, TouchableOpacity, Modal } from "react-native";
-import { PieChart } from "react-native-chart-kit";
-import { Dimensions } from "react-native";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from "react-native";
+import { Link } from "@react-navigation/native";
 import mealPlanService from "../../services/mealPlanService";
 import quizService from "../../services/quizService";
-import { useNavigation } from "@react-navigation/native";
+import CustomPieChart from "./CustomPieChart";
 
-const screenWidth = Dimensions.get("window").width;
-
-const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }) => {
+const MealPlanAimChart = ({
+  mealPlanId,
+  userId,
+  duration = 7,
+  onNutritionTargetsCalculated = () => {},
+}) => {
   const [userPreference, setUserPreference] = useState(null);
   const [mealPlan, setMealPlan] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -17,17 +19,25 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [needsSurvey, setNeedsSurvey] = useState(false);
-  const navigation = useNavigation();
 
   useEffect(() => {
+    let isMounted = true;
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
+
         const mealPlanData = await mealPlanService.getMealPlanById(mealPlanId);
-        if (!mealPlanData.success) throw new Error(mealPlanData.message);
+        if (!isMounted) return;
+
+        if (!mealPlanData.success) {
+          throw new Error(mealPlanData.message || "Unable to fetch MealPlan data");
+        }
         setMealPlan(mealPlanData.data);
 
-        const userData = await quizService.getUserPreference(mealPlanData.data.userId);
+        const userData = await quizService.getUserPreference(userId);
+        if (!isMounted) return;
+
         if (!userData.success || !userData.data) {
           setNeedsSurvey(true);
         } else {
@@ -35,28 +45,47 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
           setNeedsSurvey(false);
         }
       } catch (error) {
-        setError(error.message);
+        console.error("Error fetching data:", error);
+        setError(error.message || "An error occurred while fetching data");
       } finally {
         setLoading(false);
       }
     };
-    if (mealPlanId) fetchData();
-  }, [mealPlanId]);
+
+    if (mealPlanId && userId) fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [mealPlanId, userId]);
 
   const calculateNutritionTargets = useCallback((preferences) => {
     if (!preferences) return null;
 
-    const convertAge = (ageRange) =>
-      ({ "18-25": 22, "26-35": 30, "36-45": 40, "46+": 50 }[ageRange] || 30);
+    const convertAge = (ageRange) => {
+      const ageMap = { "18-25": 22, "26-35": 30, "36-45": 40, "46+": 50 };
+      return ageMap[ageRange] || 30;
+    };
+
     const age = convertAge(preferences.age);
     const { height, weight, activityLevel, gender } = preferences;
 
-    if (!age || !weight || !height || !activityLevel || !gender) return null;
+    if (!age || !weight || !height || !activityLevel || !gender) {
+      console.log("Missing required fields for nutrition calculation:", {
+        age,
+        height,
+        weight,
+        activityLevel,
+        gender,
+      });
+      return null;
+    }
 
     const BMR =
       gender === "female"
         ? 10 * weight + 6.25 * height - 5 * age - 161
         : 10 * weight + 6.25 * height - 5 * age + 5;
+
     const TDEE = BMR * activityLevel;
     const dailyCalories = TDEE;
 
@@ -80,44 +109,81 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
         min: Math.round(carbs - 15),
         max: Math.round(carbs + 15),
       },
-      fat: { target: Math.round(fat), min: Math.round(fat - 10), max: Math.round(fat + 10) },
+      fat: {
+        target: Math.round(fat),
+        min: Math.round(fat - 10),
+        max: Math.round(fat + 10),
+      },
     };
   }, []);
 
   useEffect(() => {
     if (!userPreference || !mealPlan || calculationComplete) return;
+
     const targets = calculateNutritionTargets(userPreference);
     if (!targets) {
       setNeedsSurvey(true);
       return;
     }
+
     setNutritionTargets(targets);
     setCalculationComplete(true);
-    if (onNutritionTargetsCalculated) onNutritionTargetsCalculated(targets);
-  }, [userPreference, mealPlan, calculateNutritionTargets, onNutritionTargetsCalculated]);
 
-  const chartData = nutritionTargets
-    ? [
-        { name: "Protein", value: nutritionTargets.protein.target, fill: "#ef4444" },
-        { name: "Carbs", value: nutritionTargets.carbs.target, fill: "#3b82f6" },
-        { name: "Fat", value: nutritionTargets.fat.target, fill: "#facc15" },
-      ].filter((item) => item.value > 0)
-    : [];
+    if (onNutritionTargetsCalculated) {
+      onNutritionTargetsCalculated(targets);
+    }
+  }, [
+    userPreference,
+    mealPlan,
+    calculateNutritionTargets,
+    onNutritionTargetsCalculated,
+    calculationComplete,
+  ]);
 
-  if (loading) return <Text className="text-center">Loading...</Text>;
-  if (error) return <Text className="text-center text-red-500">{error}</Text>;
-  if (needsSurvey) {
+  const chartData = useMemo(() => {
+    if (!nutritionTargets) return [];
+
+    const data = [
+      { x: "Protein", y: nutritionTargets.protein.target, color: "#ef4444" },
+      { x: "Carbs", y: nutritionTargets.carbs.target, color: "#3b82f6" },
+      { x: "Fat", y: nutritionTargets.fat.target, color: "#facc15" },
+    ];
+
+    return data.filter((item) => typeof item.y === "number" && item.y > 0);
+  }, [nutritionTargets]);
+
+  const handleOpenModal = useCallback(() => setShowModal(true), []);
+  const handleCloseModal = useCallback(() => setShowModal(false), []);
+
+  if (loading) {
     return (
-      <View className="items-center">
-        <Text className="text-center mb-3">
-          Complete the survey to calculate your nutrition targets.
+      <View className="flex-1 justify-center items-center">
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 justify-center items-center">
+        <Text className="text-red-500 text-center">{error}</Text>
+      </View>
+    );
+  }
+
+  if (needsSurvey || !nutritionTargets) {
+    return (
+      <View className="flex-1 justify-center items-center">
+        <Text className="text-center mb-4">
+          {needsSurvey
+            ? "You need to complete the survey so we can calculate nutrition targets tailored for you."
+            : "Unable to calculate nutrition targets due to missing information. Please complete the survey."}
         </Text>
-        <TouchableOpacity
-          className="bg-blue-600 p-3 rounded-lg"
-          onPress={() => navigation.navigate("Survey")}
-        >
-          <Text className="text-white">Take Survey</Text>
-        </TouchableOpacity>
+        <Link to={{ screen: "Survey" }}>
+          <TouchableOpacity className="px-4 py-2 bg-blue-500 rounded">
+            <Text className="text-white">Take the Survey Now</Text>
+          </TouchableOpacity>
+        </Link>
       </View>
     );
   }
@@ -126,63 +192,96 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
   const weeksToGoal = Math.ceil(weightToLose / 0.5);
 
   return (
-    <View className="items-center relative">
-      <TouchableOpacity className="absolute top-0 right-0 p-2" onPress={() => setShowModal(true)}>
-        <Text>❓</Text>
+    <View className="flex-col items-center relative">
+      <TouchableOpacity onPress={handleOpenModal} className="absolute top-0 right-0 p-2">
+        <Text className="text-gray-500 text-lg">❓</Text>
       </TouchableOpacity>
-      <PieChart
-        width={80}
-        height={80}
-        data={chartData}
-        chartConfig={{ color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})` }}
-        accessor="value"
-        backgroundColor="transparent"
-        paddingLeft="0"
-        center={[40, 40]}
-        hasLegend={false}
-        absolute
-      />
-      <View className="absolute top-6 items-center">
-        <Text className="text-lg font-bold">{nutritionTargets?.calories.target}</Text>
-        <Text className="text-xs text-gray-500">kcal</Text>
-      </View>
-      <View className="flex-row flex-wrap justify-center mt-1">
-        <Text className="text-xs mx-1 flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-red-500 mr-1" />
-          P: {nutritionTargets?.protein.target}g
-        </Text>
-        <Text className="text-xs mx-1 flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-blue-500 mr-1" />
-          C: {nutritionTargets?.carbs.target}g
-        </Text>
-        <Text className="text-xs mx-1 flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-yellow-400 mr-1" />
-          F: {nutritionTargets?.fat.target}g
-        </Text>
+
+      <View className="w-40 h-40 relative">
+        {chartData.length > 0 ? (
+          <>
+            <CustomPieChart
+              data={chartData}
+              width={100}
+              height={100}
+              innerRadius={40}
+              outerRadius={30}
+            />
+            <View
+              style={{
+                position: "absolute",
+                left: 60, // Tâm theo chiều ngang (width/2)
+                top: 50, // Tâm theo chiều dọc (height/2)
+                transform: [{ translateX: -30 }, { translateY: -15 }], // Điều chỉnh để căn giữa số
+              }}
+            >
+              <Text className="text-lg font-bold">{nutritionTargets.calories.target}</Text>
+              <Text className="text-xs text-gray-500 text-center">kcal</Text>
+            </View>
+            <View className="flex-row mt-1 gap-2">
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-red-400 mr-1" />
+                <Text className="text-xs">Protein {nutritionTargets.protein.target}g</Text>
+              </View>
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-blue-400 mr-1" />
+                <Text className="text-xs">Carbs {nutritionTargets.carbs.target}g</Text>
+              </View>
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-yellow-400 mr-1" />
+                <Text className="text-xs">Fat {nutritionTargets.fat.target}g</Text>
+              </View>
+            </View>
+          </>
+        ) : (
+          <Text className="text-center text-gray-500">No data to display</Text>
+        )}
       </View>
 
-      <Modal visible={showModal} transparent animationType="slide">
-        <View className="flex-1 justify-center bg-black/50">
-          <View className="bg-white p-4 m-4 rounded-lg">
-            <Text className="text-lg font-bold mb-3">Goal Information</Text>
-            <Text>Current Weight: {userPreference?.weight || "N/A"} kg</Text>
-            <Text>Weight Goal: {userPreference?.weightGoal || "N/A"} kg</Text>
-            <Text>Plan Duration: {duration} days</Text>
-            {weightToLose > 0 && (
+      <Modal visible={showModal} transparent animationType="fade">
+        <View className="flex-1 justify-center items-center bg-slate-400 bg-opacity-30">
+          <View className="bg-white p-6 rounded-lg w-11/12 max-w-md">
+            <Text className="text-lg font-semibold mb-4 text-gray-800">Goal Information</Text>
+            <View className="space-y-3">
+              <View>
+                <Text>
+                  <Text className="font-bold">Current Weight:</Text>{" "}
+                  {userPreference?.weight ? `${userPreference.weight} kg` : "No data available"}
+                </Text>
+                <Text>
+                  <Text className="font-bold">Weight Goal:</Text>{" "}
+                  {userPreference?.weightGoal
+                    ? `${userPreference.weightGoal} kg`
+                    : "No data available"}
+                </Text>
+                <Text>
+                  <Text className="font-bold">Plan Duration:</Text>{" "}
+                  {duration ? `${duration} days` : "N/A"}
+                </Text>
+              </View>
+
+              {weightToLose > 0 && (
+                <Text>
+                  To achieve your goal of losing {weightToLose} kg, you need to maintain a proper
+                  diet for about <Text className="font-bold">{weeksToGoal} weeks</Text>.
+                </Text>
+              )}
               <Text>
-                To lose {weightToLose} kg, maintain diet for ~{weeksToGoal} weeks.
+                Try this plan for the first {duration || "N/A"} days. After that, contact a
+                nutritionist for long-term support!
               </Text>
-            )}
-            <Text>Nutrition Targets:</Text>
-            <Text>• Calories: {nutritionTargets?.calories.target} kcal (±10%)</Text>
-            <Text>• Protein: {nutritionTargets?.protein.target}g (±15g)</Text>
-            <Text>• Carbs: {nutritionTargets?.carbs.target}g (±15g)</Text>
-            <Text>• Fat: {nutritionTargets?.fat.target}g (±10g)</Text>
-            <TouchableOpacity
-              className="bg-blue-600 p-2 rounded-lg items-center mt-3"
-              onPress={() => setShowModal(false)}
-            >
-              <Text className="text-white">Close</Text>
+
+              <View>
+                <Text className="font-semibold">Nutrition Targets:</Text>
+                <Text>Calories: {nutritionTargets.calories.target} kcal (±10%)</Text>
+                <Text>Protein: {nutritionTargets.protein.target}g (±15g)</Text>
+                <Text>Carbs: {nutritionTargets.carbs.target}g (±15g)</Text>
+                <Text>Fat: {nutritionTargets.fat.target}g (±10g)</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity className="mt-4 bg-blue-500 py-2 rounded" onPress={handleCloseModal}>
+              <Text className="text-white text-center">Close</Text>
             </TouchableOpacity>
           </View>
         </View>

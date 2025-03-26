@@ -1,21 +1,10 @@
-import axios from "axios";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
-// Hàm lấy token từ localStorage
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+import axiosInstance from "./axiosInstance"; // Import axiosInstance
 
 const ingredientsService = {
   // 🔹 Lấy tất cả nguyên liệu
   getAllIngredients: async () => {
     try {
-      const response = await axios.get(`${API_URL}/ingredients`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
+      const response = await axiosInstance.get("/ingredients");
       console.log("📌 Danh sách nguyên liệu:", response.data);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
@@ -27,10 +16,7 @@ const ingredientsService = {
   // 🔹 Lấy nguyên liệu theo ID
   getIngredientById: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/ingredients/${id}`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
+      const response = await axiosInstance.get(`/ingredients/${id}`);
       console.log(`📌 Nguyên liệu ID ${id}:`, response.data);
       return { success: true, data: response.data };
     } catch (error) {
@@ -43,10 +29,7 @@ const ingredientsService = {
   createIngredient: async (data) => {
     try {
       console.log("📤 Gửi dữ liệu tạo nguyên liệu:", data);
-      const response = await axios.post(`${API_URL}/ingredients`, data, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
+      const response = await axiosInstance.post("/ingredients", data);
       console.log("✅ Phản hồi từ server:", response.data);
       return { success: true };
     } catch (error) {
@@ -59,10 +42,7 @@ const ingredientsService = {
   updateIngredient: async (id, data) => {
     try {
       console.log(`✏️ Cập nhật nguyên liệu ID ${id}:`, data);
-      await axios.put(`${API_URL}/ingredients/${id}`, data, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
+      await axiosInstance.put(`/ingredients/${id}`, data);
       return { success: true };
     } catch (error) {
       console.error("❌ Lỗi khi cập nhật nguyên liệu:", error.response?.data || error.message);
@@ -74,10 +54,7 @@ const ingredientsService = {
   deleteIngredient: async (id) => {
     try {
       console.log(`🗑 Xóa mềm nguyên liệu ID: ${id}`);
-      await axios.delete(`${API_URL}/ingredients/${id}`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
+      await axiosInstance.delete(`/ingredients/${id}`);
       return { success: true };
     } catch (error) {
       console.error("❌ Lỗi khi xóa mềm nguyên liệu:", error.response?.data || error.message);
@@ -89,10 +66,7 @@ const ingredientsService = {
   hardDeleteIngredient: async (id) => {
     try {
       console.log(`🗑 Xóa vĩnh viễn nguyên liệu ID: ${id}`);
-      await axios.delete(`${API_URL}/ingredients/${id}`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
+      await axiosInstance.delete(`/ingredients/${id}`);
       return { success: true };
     } catch (error) {
       console.error("❌ Lỗi khi xóa vĩnh viễn nguyên liệu:", error.response?.data || error.message);
