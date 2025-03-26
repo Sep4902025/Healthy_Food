@@ -65,7 +65,7 @@ import TableMedicalConditions from "../pages/nutritionist/Medical Condition Mana
 import AddMedicalCondition from "../pages/nutritionist/Medical Condition Management/AddMedicalCondition";
 import CreateMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/CreateMealPlanPage";
 import EditMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/EditMealPlanPage";
-import Medical from "../pages/user/Medical"; 
+import Medical from "../pages/user/Medical";
 import NutritionistApplicationForm from "../pages/user/NutritionistApplicationForm";
 
 const AppRoutes = () => {
@@ -100,6 +100,7 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        <Route path="dishes/:type" element={<DishesList />} />
         <Route
           path="dishes/:dishId"
           element={
@@ -117,7 +118,6 @@ const AppRoutes = () => {
           }
         />
         <Route path="ingredients/:type" element={<IngredientList />} />
-        <Route path="dishes/:type" element={<DishesList />} />
 
         <Route
           path="/foryou"

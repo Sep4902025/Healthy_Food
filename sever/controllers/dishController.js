@@ -67,10 +67,7 @@ exports.getAllDishes = async (req, res) => {
 
     // Lấy tổng số tài liệu và danh sách món ăn
     const totalItems = await Dish.countDocuments(filter);
-    const dishes = await Dish.find(filter)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const dishes = await Dish.find(filter).skip(skip).limit(limitNum).lean();
 
     res.status(200).json({
       status: "success",
@@ -115,10 +112,7 @@ exports.getDishByType = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     const totalItems = await Dish.countDocuments(filter);
-    const dishes = await Dish.find(filter)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const dishes = await Dish.find(filter).skip(skip).limit(limitNum).lean();
 
     if (dishes.length === 0) {
       return res.status(404).json({ status: "fail", message: "No dishes found for this type" });
@@ -249,10 +243,7 @@ exports.getAllIngredients = async (req, res) => {
 
     // Lấy tổng số tài liệu và danh sách nguyên liệu
     const totalItems = await Ingredients.countDocuments(filter);
-    const ingredients = await Ingredients.find(filter)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const ingredients = await Ingredients.find(filter).skip(skip).limit(limitNum).lean();
 
     res.status(200).json({
       status: "success",
@@ -345,10 +336,7 @@ exports.searchIngredientsByName = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     const totalItems = await Ingredients.countDocuments(filter);
-    const ingredients = await Ingredients.find(filter)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const ingredients = await Ingredients.find(filter).skip(skip).limit(limitNum).lean();
 
     if (ingredients.length === 0) {
       return res.status(404).json({ status: "fail", message: "Ingredient not found" });
@@ -382,10 +370,7 @@ exports.filterIngredientsByType = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     const totalItems = await Ingredients.countDocuments(filter);
-    const ingredients = await Ingredients.find(filter)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const ingredients = await Ingredients.find(filter).skip(skip).limit(limitNum).lean();
 
     res.status(200).json({
       status: "success",
@@ -701,7 +686,9 @@ exports.getRecipeByDishId = async (req, res) => {
     }
 
     if (recipe.dishId?.isDelete || !recipe.dishId?.isVisible) {
-      return res.status(404).json({ status: "fail", message: "Associated dish is deleted or hidden" });
+      return res
+        .status(404)
+        .json({ status: "fail", message: "Associated dish is deleted or hidden" });
     }
 
     res.status(200).json({ status: "success", data: recipe });

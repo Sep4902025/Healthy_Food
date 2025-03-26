@@ -12,25 +12,27 @@ import {
   Dumbbell,
   Wheat,
   Droplet,
+  Eye,
 } from "lucide-react";
+import FoodSelectionModal from "./FoodSelectionModal";
 
 const TableMedicalConditions = () => {
   const [conditions, setConditions] = useState([]);
   const [dishes, setDishes] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isFoodModalOpen, setIsFoodModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editData, setEditData] = useState({
     id: "",
     name: "",
     description: "",
     restrictedFoods: [],
     recommendedFoods: [],
+    nutritionalConstraints: { carbs: "", fat: "", protein: "", calories: "" },
   });
-  const [tempFoodData, setTempFoodData] = useState({
-    restrictedFoods: [],
-    recommendedFoods: [],
-  });
+  const [viewData, setViewData] = useState(null);
+  const [isFoodModalOpen, setIsFoodModalOpen] = useState(false);
+  const [foodModalType, setFoodModalType] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
@@ -47,9 +49,13 @@ const TableMedicalConditions = () => {
     try {
       const [conditionsResponse, dishesResponse] = await Promise.all([
         searchTerm
-          ? medicalConditionService.searchMedicalConditionByName(searchTerm, currentPage, itemsPerPage)
+          ? medicalConditionService.searchMedicalConditionByName(
+              searchTerm,
+              currentPage,
+              itemsPerPage
+            )
           : medicalConditionService.getAllMedicalConditions(currentPage, itemsPerPage),
-        dishService.getAllDishes(1, 1000), // Lấy tất cả dishes (có thể cần phân trang riêng nếu nhiều dữ liệu)
+        dishService.getAllDishes(1, 1000),
       ]);
 
       if (conditionsResponse?.success) {
@@ -65,7 +71,6 @@ const TableMedicalConditions = () => {
           ? dishesResponse.data.items
           : [];
 
-      // Fetch nutritional data for each dish with a recipe
       const enrichedDishes = await Promise.all(
         dishesData.map(async (dish) => {
           if (dish.recipeId) {
@@ -80,7 +85,10 @@ const TableMedicalConditions = () => {
               console.error(`Error fetching recipe for dish ${dish._id}:`, error);
             }
           }
-          return { ...dish, nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" } };
+          return {
+            ...dish,
+            nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" },
+          };
         })
       );
 
@@ -93,7 +101,6 @@ const TableMedicalConditions = () => {
     setIsLoading(false);
   };
 
-  // Function to calculate nutritional data from recipe ingredients
   const calculateNutritionFromRecipe = (recipe) => {
     let totalCalories = 0;
     let totalProtein = 0;
@@ -140,9 +147,21 @@ const TableMedicalConditions = () => {
       description: condition.description || "",
       restrictedFoods: condition.restrictedFoods || [],
       recommendedFoods: condition.recommendedFoods || [],
+      nutritionalConstraints: {
+        carbs: condition.nutritionalConstraints?.carbs || "",
+        fat: condition.nutritionalConstraints?.fat || "",
+        protein: condition.nutritionalConstraints?.protein || "",
+        calories: condition.nutritionalConstraints?.calories || "",
+      },
     });
     setErrors({});
     setIsEditModalOpen(true);
+  };
+
+  // Open view modal
+  const handleViewClick = (condition) => {
+    setViewData(condition);
+    setIsViewModalOpen(true);
   };
 
   // Handle delete
@@ -151,7 +170,7 @@ const TableMedicalConditions = () => {
       const response = await medicalConditionService.deleteMedicalCondition(id);
       if (response.success) {
         alert("Deleted successfully!");
-        fetchData(); // Refresh data after delete
+        fetchData();
         if (conditions.length === 1 && currentPage > 1) {
           setCurrentPage(currentPage - 1);
         }
@@ -161,13 +180,24 @@ const TableMedicalConditions = () => {
     }
   };
 
-  // Handle form changes
+  // Handle form changes for edit
   const handleChange = (e) => {
-    setEditData({ ...editData, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" });
+    const { name, value } = e.target;
+    if (name in editData.nutritionalConstraints) {
+      setEditData({
+        ...editData,
+        nutritionalConstraints: {
+          ...editData.nutritionalConstraints,
+          [name]: value,
+        },
+      });
+    } else {
+      setEditData({ ...editData, [name]: value });
+    }
+    setErrors({ ...errors, [name]: "" });
   };
 
-  // Validate form
+  // Validate form for edit
   const validateForm = () => {
     const newErrors = {};
     if (!editData.name.trim()) newErrors.name = "Name is required";
@@ -175,6 +205,14 @@ const TableMedicalConditions = () => {
     if (editData.restrictedFoods.some((food) => editData.recommendedFoods.includes(food))) {
       newErrors.foodConflict = "A dish cannot be both restricted and recommended!";
     }
+    ["carbs", "fat", "protein", "calories"].forEach((field) => {
+      const value = editData.nutritionalConstraints[field];
+      if (value && (isNaN(value) || Number(value) < 0)) {
+        newErrors[field] = `${
+          field.charAt(0).toUpperCase() + field.slice(1)
+        } must be a positive number`;
+      }
+    });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -191,12 +229,26 @@ const TableMedicalConditions = () => {
       description: editData.description,
       restrictedFoods: editData.restrictedFoods,
       recommendedFoods: editData.recommendedFoods,
+      nutritionalConstraints: {
+        carbs: editData.nutritionalConstraints.carbs
+          ? Number(editData.nutritionalConstraints.carbs)
+          : null,
+        fat: editData.nutritionalConstraints.fat
+          ? Number(editData.nutritionalConstraints.fat)
+          : null,
+        protein: editData.nutritionalConstraints.protein
+          ? Number(editData.nutritionalConstraints.protein)
+          : null,
+        calories: editData.nutritionalConstraints.calories
+          ? Number(editData.nutritionalConstraints.calories)
+          : null,
+      },
     };
     const response = await medicalConditionService.updateMedicalCondition(editData.id, updatedData);
     if (response.success) {
       alert(`Medical condition "${editData.name}" has been updated!`);
       setIsEditModalOpen(false);
-      fetchData(); // Refresh data after update
+      fetchData();
     } else {
       alert("Failed to update medical condition: " + response.message);
     }
@@ -204,11 +256,18 @@ const TableMedicalConditions = () => {
 
   // Open food selection modal
   const handleOpenFoodModal = (type) => {
-    setTempFoodData({
-      restrictedFoods: [...editData.restrictedFoods],
-      recommendedFoods: [...editData.recommendedFoods],
-    });
-    setIsFoodModalOpen(type);
+    setFoodModalType(type);
+    setIsFoodModalOpen(true);
+  };
+
+  // Handle food selection
+  const handleFoodSelect = (selectedDishes) => {
+    if (foodModalType === "restricted") {
+      setEditData({ ...editData, restrictedFoods: selectedDishes });
+    } else if (foodModalType === "recommended") {
+      setEditData({ ...editData, recommendedFoods: selectedDishes });
+    }
+    setIsFoodModalOpen(false);
   };
 
   // Close edit modal
@@ -220,8 +279,15 @@ const TableMedicalConditions = () => {
       description: "",
       restrictedFoods: [],
       recommendedFoods: [],
+      nutritionalConstraints: { carbs: "", fat: "", protein: "", calories: "" },
     });
     setErrors({});
+  };
+
+  // Close view modal
+  const closeViewModal = () => {
+    setIsViewModalOpen(false);
+    setViewData(null);
   };
 
   return (
@@ -256,9 +322,19 @@ const TableMedicalConditions = () => {
                 >
                   <div className="p-4">
                     <h3 className="text-lg font-semibold text-center">{condition.name}</h3>
-                    <p className="text-sm text-gray-600 mt-2 text-center line-clamp-2">{condition.description}</p>
+                    <p className="text-sm text-gray-600 mt-2 text-center line-clamp-2">
+                      {condition.description}
+                    </p>
                   </div>
                   <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
+                    <button
+                      onClick={() => handleViewClick(condition)}
+                      className="text-green-500 flex items-center px-2 py-1 hover:text-green-700"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      View
+                    </button>
+                    <div className="h-4 border-l border-gray-300 mx-2"></div>
                     <button
                       onClick={() => handleEditClick(condition)}
                       className="text-blue-500 flex items-center px-2 py-1 hover:text-blue-700"
@@ -348,10 +424,7 @@ const TableMedicalConditions = () => {
                 >
                   Save
                 </button>
-                <button
-                  className="text-gray-500 hover:text-gray-700"
-                  onClick={closeEditModal}
-                >
+                <button className="text-gray-500 hover:text-gray-700" onClick={closeEditModal}>
                   ✕
                 </button>
               </div>
@@ -367,98 +440,274 @@ const TableMedicalConditions = () => {
                     value={editData.name}
                     onChange={handleChange}
                     placeholder="Enter condition name"
-                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${
+                      errors.name ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
 
                 <div className="mb-4">
-                  <div className="flex border-b border-gray-200 justify-center">
-                    <label className="block text-sm font-medium text-gray-700 mb-1 text-center">Description *</label>
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description *
+                  </label>
                   <textarea
                     name="description"
                     value={editData.description}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${
+                      errors.description ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
-                  {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+                  {errors.description && (
+                    <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+                  )}
                 </div>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
-                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Restricted Foods</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {editData.restrictedFoods.map((foodId) => {
-                        const dish = dishes.find((d) => d._id === foodId);
-                        return dish ? (
-                          <div
-                            key={foodId}
-                            className="bg-gray-200 rounded-full px-3 py-1 text-sm flex items-center"
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Restricted Foods
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {editData.restrictedFoods.map((foodId) => {
+                      const dish = dishes.find((d) => d._id === foodId);
+                      return dish ? (
+                        <div
+                          key={foodId}
+                          className="bg-gray-200 rounded-full px-3 py-1 text-sm flex items-center"
+                        >
+                          {dish.name}
+                          <button
+                            onClick={() =>
+                              setEditData({
+                                ...editData,
+                                restrictedFoods: editData.restrictedFoods.filter(
+                                  (id) => id !== foodId
+                                ),
+                              })
+                            }
+                            className="ml-2 text-red-500 hover:text-red-700"
                           >
-                            {dish.name}
-                            <button
-                              onClick={() =>
-                                setEditData({
-                                  ...editData,
-                                  restrictedFoods: editData.restrictedFoods.filter((id) => id !== foodId),
-                                })
-                              }
-                              className="ml-2 text-red-500 hover:text-red-700"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                    <button
-                      onClick={() => handleOpenFoodModal("restricted")}
-                      className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 w-full"
-                    >
-                      Add Restricted Foods
-                    </button>
+                            ✕
+                          </button>
+                        </div>
+                      ) : null;
+                    })}
                   </div>
+                  <button
+                    onClick={() => handleOpenFoodModal("restricted")}
+                    className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 w-full"
+                  >
+                    Add Restricted Foods
+                  </button>
+                </div>
 
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Recommended Foods</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {editData.recommendedFoods.map((foodId) => {
-                        const dish = dishes.find((d) => d._id === foodId);
-                        return dish ? (
-                          <div
-                            key={foodId}
-                            className="bg-gray-200 rounded-full px-3 py-1 text-sm flex items-center"
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Recommended Foods
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {editData.recommendedFoods.map((foodId) => {
+                      const dish = dishes.find((d) => d._id === foodId);
+                      return dish ? (
+                        <div
+                          key={foodId}
+                          className="bg-gray-200 rounded-full px-3 py-1 text-sm flex items-center"
+                        >
+                          {dish.name}
+                          <button
+                            onClick={() =>
+                              setEditData({
+                                ...editData,
+                                recommendedFoods: editData.recommendedFoods.filter(
+                                  (id) => id !== foodId
+                                ),
+                              })
+                            }
+                            className="ml-2 text-red-500 hover:text-red-700"
                           >
-                            {dish.name}
-                            <button
-                              onClick={() =>
-                                setEditData({
-                                  ...editData,
-                                  recommendedFoods: editData.recommendedFoods.filter((id) => id !== foodId),
-                                })
-                              }
-                              className="ml-2 text-red-500 hover:text-red-700"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                    <button
-                      onClick={() => handleOpenFoodModal("recommended")}
-                      className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 w-full"
-                    >
-                      Add Recommended Foods
-                    </button>
+                            ✕
+                          </button>
+                        </div>
+                      ) : null;
+                    })}
                   </div>
+                  <button
+                    onClick={() => handleOpenFoodModal("recommended")}
+                    className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 w-full"
+                  >
+                    Add Recommended Foods
+                  </button>
                   {errors.foodConflict && (
                     <p className="text-red-500 text-sm mt-1">{errors.foodConflict}</p>
                   )}
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nutritional Constraints (Max Values)
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-600">Calories (kcal)</label>
+                      <input
+                        type="number"
+                        name="calories"
+                        value={editData.nutritionalConstraints.calories}
+                        onChange={handleChange}
+                        placeholder="Max calories"
+                        className={`w-full border ${
+                          errors.calories ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      />
+                      {errors.calories && (
+                        <p className="text-red-500 text-sm mt-1">{errors.calories}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Protein (g)</label>
+                      <input
+                        type="number"
+                        name="protein"
+                        value={editData.nutritionalConstraints.protein}
+                        onChange={handleChange}
+                        placeholder="Max protein"
+                        className={`w-full border ${
+                          errors.protein ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      />
+                      {errors.protein && (
+                        <p className="text-red-500 text-sm mt-1">{errors.protein}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Carbs (g)</label>
+                      <input
+                        type="number"
+                        name="carbs"
+                        value={editData.nutritionalConstraints.carbs}
+                        onChange={handleChange}
+                        placeholder="Max carbs"
+                        className={`w-full border ${
+                          errors.carbs ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      />
+                      {errors.carbs && <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>}
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Fat (g)</label>
+                      <input
+                        type="number"
+                        name="fat"
+                        value={editData.nutritionalConstraints.fat}
+                        onChange={handleChange}
+                        placeholder="Max fat"
+                        className={`w-full border ${
+                          errors.fat ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      />
+                      {errors.fat && <p className="text-red-500 text-sm mt-1">{errors.fat}</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Medical Condition Modal */}
+      {isViewModalOpen && viewData && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center mb-6 py-4 px-6">
+              <label className="text-xl font-bold text-green-700">View Medical Condition</label>
+              <button
+                className="ml-auto text-gray-500 hover:text-gray-700"
+                onClick={closeViewModal}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-6 pb-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <p className="text-gray-900">{viewData.name}</p>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <p className="text-gray-900">{viewData.description}</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Restricted Foods
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {viewData.restrictedFoods.map((foodId) => {
+                      const dish = dishes.find((d) => d._id === foodId);
+                      return dish ? (
+                        <span key={foodId} className="bg-gray-200 rounded-full px-3 py-1 text-sm">
+                          {dish.name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Recommended Foods
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {viewData.recommendedFoods.map((foodId) => {
+                      const dish = dishes.find((d) => d._id === foodId);
+                      return dish ? (
+                        <span key={foodId} className="bg-gray-200 rounded-full px-3 py-1 text-sm">
+                          {dish.name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nutritional Constraints (Max Values)
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-600">Calories (kcal)</label>
+                      <p className="text-gray-900">
+                        {viewData.nutritionalConstraints?.calories || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Protein (g)</label>
+                      <p className="text-gray-900">
+                        {viewData.nutritionalConstraints?.protein || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Carbs (g)</label>
+                      <p className="text-gray-900">
+                        {viewData.nutritionalConstraints?.carbs || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Fat (g)</label>
+                      <p className="text-gray-900">
+                        {viewData.nutritionalConstraints?.fat || "N/A"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -469,201 +718,18 @@ const TableMedicalConditions = () => {
       {/* Food Selection Modal */}
       {isFoodModalOpen && (
         <FoodSelectionModal
-          isOpen={!!isFoodModalOpen}
+          isOpen={isFoodModalOpen}
           onClose={() => setIsFoodModalOpen(false)}
-          onSelect={(selectedDishes) => {
-            if (isFoodModalOpen === "restricted") {
-              setEditData({ ...editData, restrictedFoods: selectedDishes });
-            } else {
-              setEditData({ ...editData, recommendedFoods: selectedDishes });
-            }
-            setIsFoodModalOpen(false);
-          }}
+          onSelect={handleFoodSelect}
           availableDishes={dishes}
-          selectedDishes={isFoodModalOpen === "restricted" ? editData.restrictedFoods : editData.recommendedFoods}
-          conflictingDishes={isFoodModalOpen === "restricted" ? editData.recommendedFoods : editData.restrictedFoods}
+          selectedDishes={
+            foodModalType === "restricted" ? editData.restrictedFoods : editData.recommendedFoods
+          }
+          conflictingDishes={
+            foodModalType === "restricted" ? editData.recommendedFoods : editData.restrictedFoods
+          }
         />
       )}
-    </div>
-  );
-};
-
-// Food Selection Modal with Type Filter
-const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
-
-const FoodSelectionModal = ({ isOpen, onClose, onSelect, availableDishes, selectedDishes, conflictingDishes }) => {
-  const [tempSelectedDishes, setTempSelectedDishes] = useState([...selectedDishes]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(8);
-
-  const filteredDishes = availableDishes.filter((dish) => {
-    const matchesSearch = searchTerm ? dish.name.toLowerCase().includes(searchTerm.toLowerCase()) : true;
-    const matchesType = filterType === "all" || dish.type === filterType;
-    return matchesSearch && matchesType;
-  });
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentDishes = filteredDishes.slice(indexOfFirstItem, indexOfLastItem);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  const handleCheckboxChange = (dishId) => {
-    setTempSelectedDishes((prev) =>
-      prev.includes(dishId) ? prev.filter((id) => id !== dishId) : [...prev, dishId]
-    );
-  };
-
-  const handleConfirm = () => {
-    onSelect(tempSelectedDishes);
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Select Dishes</h2>
-        <div className="flex space-x-4 mb-4">
-          <input
-            type="text"
-            placeholder="Search by dish name"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          <select
-            className="border border-gray-300 rounded-md px-3 py-2"
-            value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value);
-              setCurrentPage(1);
-            }}
-          >
-            <option value="all">All Types</option>
-            {TYPE_OPTIONS.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {currentDishes.length > 0 ? (
-            currentDishes.map((dish) => {
-              const isConflicting = conflictingDishes.includes(dish._id);
-              return (
-                <div
-                  key={dish._id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden relative"
-                >
-                  <img
-                    src={dish.imageUrl || "https://via.placeholder.com/300"}
-                    alt={dish.name}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center">{dish.name}</h3>
-                    <div className="text-sm text-gray-600 mt-2 text-center">
-                      <div className="flex justify-center items-center">
-                        <span className="mr-3 flex items-center">
-                          <Flame className="w-4 h-4 mr-1" />
-                          {dish.nutritions.calories} kcal
-                        </span>
-                        <span className="flex items-center">
-                          <Dumbbell className="w-4 h-4 mr-1" />
-                          {dish.nutritions.protein}g
-                        </span>
-                      </div>
-                      <div className="flex justify-center items-center mt-1">
-                        <span className="mr-3 flex items-center">
-                          <Wheat className="w-4 h-4 mr-1" />
-                          {dish.nutritions.carbs}g
-                        </span>
-                        <span className="flex items-center">
-                          <Droplet className="w-4 h-4 mr-1" />
-                          {dish.nutritions.fat}g
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
-                    <input
-                      type="checkbox"
-                      checked={tempSelectedDishes.includes(dish._id)}
-                      onChange={() => handleCheckboxChange(dish._id)}
-                      disabled={isConflicting}
-                      className={isConflicting ? "opacity-50 cursor-not-allowed" : ""}
-                    />
-                    {isConflicting && (
-                      <span className="text-sm text-red-500 ml-2">Conflicting</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="col-span-full text-center text-gray-500">
-              <p>No dishes found.</p>
-            </div>
-          )}
-        </div>
-        {filteredDishes.length > 0 && (
-          <div className="p-4 flex justify-between items-center">
-            <div className="flex space-x-2">
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100"
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              {Array.from(
-                { length: Math.ceil(filteredDishes.length / itemsPerPage) },
-                (_, i) => (
-                  <button
-                    key={i}
-                    className={`px-3 py-1 rounded ${
-                      currentPage === i + 1
-                        ? "bg-green-500 text-white"
-                        : "border hover:bg-gray-100"
-                    }`}
-                    onClick={() => paginate(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                )
-              )}
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100"
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === Math.ceil(filteredDishes.length / itemsPerPage)}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
-        <div className="flex justify-end mt-4 space-x-2">
-          <button
-            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
-            onClick={handleConfirm}
-          >
-            Confirm
-          </button>
-          <button
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
-            onClick={onClose}
-          >
-            Close
-          </button>
-        </div>
-      </div>
     </div>
   );
 };

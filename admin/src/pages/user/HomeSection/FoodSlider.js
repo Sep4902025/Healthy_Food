@@ -15,8 +15,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
   const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, dishes);
 
   const handleFoodClick = (dishId, recipeId) => {
-    
-    navigate(`/${dishId}/recipes/${recipeId}`)
+    navigate(`/${dishId}/recipes/${recipeId}`);
   };
 
   const handleLike = async (dishId) => {
@@ -34,13 +33,13 @@ const FoodSlider = ({ userId, dishes = [] }) => {
       if (food) {
         toast.success(
           newLikeState
-            ? `Đã thêm "${food.name}" vào danh sách yêu thích! ❤️`
-            : `Đã xóa "${food.name}" khỏi danh sách yêu thích! 💔`
+            ? `Added "${food.name}" to favorites! ❤️`
+            : `Removed "${food.name}" from favorites! 💔`
         );
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
-      toast.error("Có lỗi xảy ra khi cập nhật yêu thích!");
+      toast.error("An error occurred while updating favorites!");
     }
   };
 
@@ -61,7 +60,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
       <button
         className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md"
         onClick={() => swiperRef.current?.slidePrev()}
-        aria-label="Xem món trước"
+        aria-label="View previous dish"
       >
         <ChevronLeft size={24} />
       </button>
@@ -120,7 +119,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
                 <div className="food-item-rating">
                   <p className="food-item-rating-title">Rating</p>
                   <p className="food-item-rating-average block mb-2 text-lg font-semibold text-gray-700">
-                    {food.rating > 0 ? food.rating.toFixed(1) + "⭐" : "Chưa có đánh giá"}
+                    {food.rating > 0 ? food.rating.toFixed(1) + "⭐" : "No ratings yet"}
                   </p>
                 </div>
               </div>
@@ -132,7 +131,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
       <button
         className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md"
         onClick={() => swiperRef.current?.slideNext()}
-        aria-label="Xem món tiếp theo"
+        aria-label="View next dish"
       >
         <ChevronRight size={24} />
       </button>
@@ -140,4 +139,4 @@ const FoodSlider = ({ userId, dishes = [] }) => {
   );
 };
 
-export default FoodSlider;  
+export default FoodSlider;

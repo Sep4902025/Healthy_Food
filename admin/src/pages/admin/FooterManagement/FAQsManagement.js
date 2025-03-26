@@ -92,9 +92,9 @@ const FAQsManagement = () => {
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-bold">FAQs Management</h1>
+      <h1 className="text-2xl font-bold text-custom-green mb-2">FAQs Management</h1>
       <button
-        className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+        className="mb-4 px-4 py-2 bg-custom-green text-white rounded-lg hover:bg-opacity-85"
         onClick={() => handleOpenModal()}
       >
         + Add New

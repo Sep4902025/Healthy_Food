@@ -11,7 +11,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    setShowAll(false); // Reset showAll khi selectedSeason thay đổi
+    setShowAll(false); // Reset showAll when selectedSeason changes
   }, [selectedSeason]);
 
   const handleLike = async (dishId) => {
@@ -32,8 +32,8 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
     if (food) {
       toast.success(
         newLikeState
-          ? `Đã thêm "${food.name}" vào danh sách yêu thích! ❤️`
-          : `Đã xóa "${food.name}" khỏi danh sách yêu thích! 💔`
+          ? `Added "${food.name}" to favorites! ❤️`
+          : `Removed "${food.name}" from favorites! 💔`
       );
     }
   };
@@ -43,7 +43,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
   return (
     <div className="py-6">
       <h2 className="text-4xl font-bold font-['Syne'] text-white bg-[#40b491] py-4 px-6 rounded-lg text-left mb-6">
-        {selectedSeason} Recipe
+        {selectedSeason} Recipes
       </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-4">
@@ -66,24 +66,20 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
             </div>
 
             <div className="p-4 text-center">
-              <h3 className="text-xl font-semibold text-gray-800 font-['Inter']">
-                {dish.name}
-              </h3>
+              <h3 className="text-xl font-semibold text-gray-800 font-['Inter']">{dish.name}</h3>
               <p className="text-sm text-gray-500 font-['Inter'] mt-1 line-clamp-2">
                 {dish.description}
               </p>
 
               <div className="flex justify-center items-center mt-3">
-                <span className="text-sm font-semibold text-[#ff6868] uppercase mr-1">
-                  RATING
-                </span>
+                <span className="text-sm font-semibold text-[#ff6868] uppercase mr-1">RATING</span>
                 {ratings[dish._id] ? (
                   <div className="flex items-center">
                     <Star size={16} className="text-yellow-500 mr-1" />
                     <span className="text-gray-800 font-bold">{ratings[dish._id]}</span>
                   </div>
                 ) : (
-                  <span className="text-gray-500">Chưa có đánh giá</span>
+                  <span className="text-gray-500">No ratings yet</span>
                 )}
               </div>
             </div>

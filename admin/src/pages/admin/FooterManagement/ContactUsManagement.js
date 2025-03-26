@@ -54,7 +54,7 @@ const ContactUsManagement = () => {
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-bold">Contact Us Management</h1>
+      <h1 className="text-2xl font-bold text-custom-green">Contact Us Management</h1>
       <div className="bg-white shadow-lg rounded-2xl p-6">
         <table className="w-full border-collapse mb-2">
           <thead>
