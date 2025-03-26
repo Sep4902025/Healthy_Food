@@ -68,6 +68,7 @@ import AddUser from "../pages/admin/pages/AddUserManagement";
 import AdminProfile from "../pages/user/AdminProfile";
 import EditAdmin from "../pages/user/EditAdmin";
 import ChangePassword from "../pages/user/Profile/Sections/ChangePassword";
+import NutritionistApplicationForm from "../pages/user/NutritionistApplicationForm";
 
 const AppRoutes = () => {
   return (
@@ -81,6 +82,7 @@ const AppRoutes = () => {
         <Route path="reset-password" element={<ResetPassword />} />
         <Route index element={<Home />} />
         <Route path="viewprofile" element={<ViewProfile />} />
+        <Route path="/apply-nutritionist" element={<NutritionistApplicationForm />} />
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
         {/* Router mealPlan */}
@@ -195,6 +197,7 @@ const AppRoutes = () => {
         <Route path="ingredientsmanagement" element={<IngredientsManagement />} />
         <Route path="mealplan" element={<MealPlan />} />
         <Route path="change-password" element={<ChangePassword />} />
+        <Route path="adminprofile/:id" element={<AdminProfile />} />
         <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
         <Route path="viewprofile/:id" element={<ViewProfile />} />

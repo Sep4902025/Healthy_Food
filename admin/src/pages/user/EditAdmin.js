@@ -193,7 +193,7 @@ const EditAdmin = () => {
           </li>
         </ul>
       </div>
-
+ 
       <div className="edit-profile-content">
         <div className="edit-profile-header">
           <h1>Edit Admin Profile</h1>
