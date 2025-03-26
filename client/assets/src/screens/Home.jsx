@@ -20,7 +20,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { loadFavorites } from "../redux/actions/favoriteThunk";
 import { favorSelector, userSelector } from "../redux/selectors/selector";
 import SpinnerLoading from "../components/common/SpinnerLoading";
-import PaddingScrollViewBottom from "../components/common/PaddingScrollViewBottom";
 import HomeService from "../services/HomeService";
 
 const WIDTH = Dimensions.get("window").width;
@@ -36,7 +35,7 @@ function Home({ navigation }) {
 
   const dispatch = useDispatch();
 
-  const season = useCurrentSeason();
+  const season = useCurrentSeason() || "spring"; // Default to "spring" if null
 
   useEffect(() => {
     loadDishes();
@@ -48,7 +47,6 @@ function Home({ navigation }) {
 
   const loadFavoritesData = async () => {
     if (user?.userId) {
-      // Đảm bảo userId tồn tại
       dispatch(loadFavorites(user.userId));
     }
   };
@@ -65,8 +63,10 @@ function Home({ navigation }) {
     try {
       const response = await HomeService.getAllDishes();
       if (response?.status === "success") {
-        // Sửa từ response?.success thành response?.status
-        setSeasonalDishes(response.data || []);
+        console.log("Dishes data:", response.data); // Debug log
+        setSeasonalDishes(
+          (response.data || []).filter((dish) => dish.season && typeof dish.season === "string")
+        );
       } else {
         console.error("Failed to load dishes:", response?.message || "Unknown error");
         setSeasonalDishes([]);
@@ -143,19 +143,18 @@ function Home({ navigation }) {
             <SpinnerLoading />
           ) : seasonalDishes.length > 0 ? (
             seasonalDishes
-              .filter((item) => item.season === season || item.season === "All seasons")
+              .filter((item) => item?.season?.toLowerCase()?.includes(season?.toLowerCase() || ""))
               .map((dish) => (
                 <DishedV1
                   dish={dish}
                   key={dish._id}
-                  onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })} // Thêm onPress để điều hướng
+                  onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })}
                 />
               ))
           ) : (
             <Text style={styles.noResultsText}>No seasonal dishes found</Text>
           )}
         </View>
-        <PaddingScrollViewBottom />
       </ScrollView>
     </MainLayoutWrapper>
   );
@@ -166,7 +165,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
-
   categoriesSection: {
     marginTop: 16,
   },
@@ -180,7 +178,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
   },
-
   seasonalSection: {
     marginVertical: 16,
   },

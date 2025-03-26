@@ -48,6 +48,7 @@ const DishedV1 = ({
         ...styles.dishCard,
         backgroundColor: theme.cardBackgroundColor,
       }}
+      onPress={handleOnArrowPress}
     >
       <Image source={{ uri: dish.imageUrl }} style={styles.dishImage} />
       <View style={styles.dishInfo}>
