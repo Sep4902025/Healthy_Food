@@ -106,7 +106,9 @@ const UserManagement = () => {
       action,
     });
     if (result.success) {
-      toast.success(`Application ${action}d successfully!`);
+      toast.success(
+        `Application ${action}d successfully! Email notification sent to user.`
+      );
       setPendingNutritionists((prev) => prev.filter((u) => u._id !== userId));
       if (action === "approve") {
         setUsers((prev) =>
