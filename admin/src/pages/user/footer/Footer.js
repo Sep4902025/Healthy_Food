@@ -31,7 +31,7 @@ const Footer = () => {
         <button onClick={() => navigate("/about")} className="hover:underline">
           About Us
         </button>
-        <button onClick={() => navigate("/FAQs")} className="hover:underline">
+        <button onClick={() => navigate("/faqs")} className="hover:underline">
           FAQs
         </button>
         <button onClick={() => navigate("/contact")} className="hover:underline">

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import termService from "../../../services/footer/termServices";
 import UploadComponent from "../../../components/UploadComponent";
 import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
+import Pagination from "../../../components/Pagination";
 
 const TermOfUseManagement = () => {
   const [terms, setTerms] = useState([]);
@@ -10,61 +11,46 @@ const TermOfUseManagement = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [termsPerPage, setTermsPerPage] = useState(5);
-  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0); // Bắt đầu từ 0 vì ReactPaginate dùng index 0
+  const [termsPerPage, setTermsPerPage] = useState(6); // Mặc định là 6 theo Pagination
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     fetchTerms();
   }, [currentPage, termsPerPage]);
 
-  const fetchTerms = async (callback) => {
+  const fetchTerms = async () => {
     setLoading(true);
-    const result = await termService.getTerms(currentPage, termsPerPage);
-    if (result.success) {
-      setTerms(result.data.items || []);
-      setTotalPages(result.data.totalPages || 1);
-      if (callback) callback(result.data);
-    } else {
-      setError(result.message);
+    try {
+      const result = await termService.getTerms(currentPage + 1, termsPerPage); // +1 vì API dùng page từ 1
+      if (result.success) {
+        setTerms(result.data.data.terms || []);
+        setTotalItems(result.data.total || 0);
+      } else {
+        setError(result.message);
+        setTerms([]);
+      }
+    } catch (err) {
+      setError("Lỗi không xác định khi tải Terms");
       setTerms([]);
-      setTotalPages(1);
+      console.error("❌ Lỗi trong fetchTerms:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleToggleVisibility = async (term) => {
-    const updatedTerm = {
-      ...term,
-      isVisible: !term.isVisible,
-      isDeleted: term.isDeleted || false,
-    };
-
+    const updatedTerm = { ...term, isVisible: !term.isVisible, isDeleted: term.isDeleted || false };
     const response = await termService.updateTerm(term._id, updatedTerm);
-
-    if (response.success) {
-      fetchTerms();
-    } else {
-      console.error("Error updating display status:", response.message);
-    }
+    if (response.success) fetchTerms();
+    else console.error("Error updating display status:", response.message);
   };
 
   const handleHardDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this term?")) {
       const response = await termService.hardDeleteTerm(id);
-      if (response.success) {
-        fetchTerms((result) => {
-          const totalItems = result.total;
-          const newTotalPages = Math.ceil(totalItems / termsPerPage) || 1;
-          if (result.items.length === 0 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-          } else if (currentPage > newTotalPages) {
-            setCurrentPage(newTotalPages);
-          }
-        });
-      } else {
-        console.error("Error while deleting:", response.message);
-      }
+      if (response.success) fetchTerms();
+      else console.error("Error while deleting:", response.message);
     }
   };
 
@@ -88,16 +74,13 @@ const TermOfUseManagement = () => {
       alert("Content cannot be empty!");
       return;
     }
-
-    let response;
-    if (editData) {
-      response = await termService.updateTerm(editData._id, formData);
-    } else {
-      response = await termService.createTerm(formData);
-    }
-
+    const response = editData
+      ? await termService.updateTerm(editData._id, formData)
+      : await termService.createTerm(formData);
     if (response.success) {
       setModalOpen(false);
+      setEditData(null);
+      setFormData({ bannerUrl: "", content: "" });
       fetchTerms();
     } else {
       console.error("Error:", response.message);
@@ -105,9 +88,9 @@ const TermOfUseManagement = () => {
     }
   };
 
-  const handleImageUpload = (imageUrl) => {
-    setFormData({ ...formData, bannerUrl: imageUrl });
-  };
+  const handleImageUpload = (imageUrl) => setFormData({ ...formData, bannerUrl: imageUrl });
+
+  const handlePageClick = ({ selected }) => setCurrentPage(selected);
 
   if (loading) return <p className="text-center text-blue-500">Loading...</p>;
   if (error) return <p className="text-center text-red-500">Error: {error}</p>;
@@ -115,16 +98,14 @@ const TermOfUseManagement = () => {
   return (
     <div className="container mx-auto px-4">
       <h1 className="text-2xl font-bold">Terms of Use Management</h1>
-
       <button
         className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
         onClick={() => handleOpenModal()}
       >
         + Add new
       </button>
-
       <div className="bg-white shadow-lg rounded-2xl p-6">
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse mb-2">
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="p-3 text-left">No.</th>
@@ -138,7 +119,7 @@ const TermOfUseManagement = () => {
             {terms.length > 0 ? (
               terms.map((item, index) => (
                 <tr key={item._id} className="border-b border-gray-200 text-gray-900">
-                  <td className="p-3">{(currentPage - 1) * termsPerPage + index + 1}</td>
+                  <td className="p-3">{currentPage * termsPerPage + index + 1}</td>
                   <td className="p-3">
                     <img
                       src={item.bannerUrl}
@@ -193,73 +174,31 @@ const TermOfUseManagement = () => {
             )}
           </tbody>
         </table>
-
-        {/* Pagination */}
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={termsPerPage}
-              onChange={(e) => {
-                setTermsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="5">5 Terms</option>
-              <option value="10">10 Terms</option>
-              <option value="15">15 Terms</option>
-            </select>
-          </div>
-          {totalPages > 1 && (
-            <div className="flex space-x-2">
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                {"<"}
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-              >
-                {">"}
-              </button>
-            </div>
-          )}
-        </div>
+        <Pagination
+          limit={termsPerPage}
+          setLimit={setTermsPerPage}
+          totalItems={totalItems}
+          handlePageClick={handlePageClick}
+          text="Terms"
+        />
       </div>
 
-      {/* Modal Form */}
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
             <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add New"} Term</h2>
-
             <label className="block mb-2">Banner URL:</label>
-            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.bannerUrl === ""} />
-
-            <label className="block mb-2">Content:</label>
+            <UploadComponent
+              onUploadSuccess={handleImageUpload}
+              reset={formData.bannerUrl === ""}
+            />
+            <label className="block mb-2 mt-4">Content:</label>
             <textarea
               className="w-full border p-2 mb-4"
               rows="4"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
             ></textarea>
-
             <div className="flex justify-end space-x-2">
               <button
                 className="px-4 py-2 bg-gray-500 text-white rounded"
@@ -267,7 +206,10 @@ const TermOfUseManagement = () => {
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-green-500 text-white rounded" onClick={handleSave}>
+              <button
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                onClick={handleSave}
+              >
                 Save
               </button>
             </div>

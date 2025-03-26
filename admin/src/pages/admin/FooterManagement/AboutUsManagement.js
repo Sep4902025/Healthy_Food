@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import aboutService from "../../../services/footer/aboutServices";
 import UploadComponent from "../../../components/UploadComponent";
-import { EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
+import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
+import Pagination from "../../../components/Pagination";
 
 const AboutUsManagement = () => {
   const [aboutData, setAboutData] = useState([]);
@@ -11,33 +12,29 @@ const AboutUsManagement = () => {
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Ban đầu là 5, có thể thay đổi qua select
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     fetchAboutUs();
   }, [currentPage, itemsPerPage]);
 
-  const fetchAboutUs = async (callback) => {
+  const fetchAboutUs = async () => {
     setLoading(true);
     try {
       const result = await aboutService.getAboutUs(currentPage, itemsPerPage);
-      console.log("API Response:", result);
+      console.log("🔍 Fetched About Us Data:", result);
       if (result.success) {
-        setAboutData(result.data.items || []);
-        setTotalPages(result.data.totalPages || 1);
-        if (callback) callback(result);
+        const fetchedAboutUs = result.data.data.aboutUs || [];
+        console.log("✅ About Us để render:", fetchedAboutUs);
+        setAboutData(fetchedAboutUs);
+        setTotalItems(result.data.total || 0);
       } else {
         setError(result.message);
-        setAboutData([]);
-        setTotalPages(1);
       }
     } catch (err) {
-      setError("Lỗi không xác định khi tải dữ liệu");
-      setAboutData([]);
-      setTotalPages(1);
+      setError("Lỗi không xác định khi tải About Us");
+      console.error("❌ Lỗi trong fetchAboutUs:", err);
     } finally {
       setLoading(false);
     }
@@ -46,7 +43,6 @@ const AboutUsManagement = () => {
   const handleToggleVisibility = async (about) => {
     const updatedAbout = { ...about, isVisible: !about.isVisible };
     const response = await aboutService.updateAboutUs(about._id, updatedAbout);
-
     if (response.success) {
       fetchAboutUs();
     } else {
@@ -56,23 +52,8 @@ const AboutUsManagement = () => {
 
   const handleHardDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this item?")) {
-      const response = await aboutService.hardDeleteAboutUs(id);
-      if (response.success) {
-        fetchAboutUs((result) => {
-          const totalItems = result.data.total; // Tổng số item còn lại từ server
-          const newTotalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-
-          // Chỉ quay về trang trước nếu trang hiện tại không còn item nào
-          if (result.data.items.length === 0 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-          } else if (currentPage > newTotalPages) {
-            // Trường hợp tổng số trang giảm và vượt quá trang hiện tại
-            setCurrentPage(newTotalPages);
-          }
-        });
-      } else {
-        console.error("Error deleting item:", response.message);
-      }
+      await aboutService.hardDeleteAboutUs(id);
+      fetchAboutUs();
     }
   };
 
@@ -96,24 +77,25 @@ const AboutUsManagement = () => {
       alert("Content cannot be empty!");
       return;
     }
-
-    let response;
     if (editData) {
-      response = await aboutService.updateAboutUs(editData._id, formData);
+      await aboutService.updateAboutUs(editData._id, formData);
     } else {
-      response = await aboutService.createAboutUs(formData);
+      const result = await aboutService.createAboutUs(formData);
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
     }
-
-    if (response.success) {
-      setModalOpen(false);
-      fetchAboutUs();
-    } else {
-      alert(response.message);
-    }
+    setModalOpen(false);
+    fetchAboutUs();
   };
 
   const handleImageUpload = (imageUrl) => {
     setFormData({ ...formData, bannerUrl: imageUrl });
+  };
+
+  const handlePageClick = ({ selected }) => {
+    setCurrentPage(selected + 1); // ReactPaginate dùng index từ 0, API thường từ 1
   };
 
   if (loading) return <p className="text-center text-blue-500">Loading...</p>;
@@ -131,7 +113,7 @@ const AboutUsManagement = () => {
       </button>
 
       <div className="bg-white shadow-lg rounded-2xl p-6">
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse mb-2">
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="p-3 text-left">No.</th>
@@ -201,53 +183,13 @@ const AboutUsManagement = () => {
           </tbody>
         </table>
 
-        {/* Pagination */}
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="5">5 About Us</option>
-              <option value="10">10 About Us</option>
-              <option value="15">15 About Us</option>
-            </select>
-          </div>
-          {totalPages > 1 && (
-            <div className="flex space-x-2">
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                {"<"}
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => paginate(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                {">"}
-              </button>
-            </div>
-          )}
-        </div>
+        <Pagination
+          limit={itemsPerPage}
+          setLimit={setItemsPerPage}
+          totalItems={totalItems}
+          handlePageClick={handlePageClick}
+          text="About Us"
+        />
       </div>
 
       {/* Modal Form */}
@@ -257,7 +199,10 @@ const AboutUsManagement = () => {
             <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add new"} About Us</h2>
 
             <label className="block mb-2">Banner URL:</label>
-            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.bannerUrl === ""} />
+            <UploadComponent
+              onUploadSuccess={handleImageUpload}
+              reset={formData.bannerUrl === ""}
+            />
 
             <label className="block mb-2 mt-4">Content:</label>
             <textarea

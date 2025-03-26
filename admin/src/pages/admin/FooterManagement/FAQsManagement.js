@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import faqService from "../../../services/footer/faqServices";
 import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
+import Pagination from "../../../components/Pagination";
 
 const FAQsManagement = () => {
   const [faqs, setFaqs] = useState([]);
@@ -9,56 +10,43 @@ const FAQsManagement = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ category: "", question: "", answer: "" });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [faqsPerPage, setFaqsPerPage] = useState(5);
-  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [faqsPerPage, setFaqsPerPage] = useState(6);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     fetchFAQs();
   }, [currentPage, faqsPerPage]);
 
-  const fetchFAQs = async (callback) => {
+  const fetchFAQs = async () => {
     setLoading(true);
-    const result = await faqService.getFAQs(currentPage, faqsPerPage);
-    if (result.success) {
-      setFaqs(result.data.items || []);
-      setTotalPages(result.data.totalPages || 1);
-      if (callback) callback(result.data);
-    } else {
-      setError(result.message);
-      setFaqs([]);
-      setTotalPages(1);
+    try {
+      const result = await faqService.getFAQs(currentPage + 1, faqsPerPage);
+      if (result.success) {
+        setFaqs(result.data.data.faqs || []);
+        setTotalItems(result.data.total || 0);
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError("Lỗi không xác định khi tải FAQs");
+      console.error("❌ Lỗi trong fetchFAQs:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleToggleVisibility = async (faq) => {
     const updatedFAQ = { ...faq, isVisible: !faq.isVisible };
     const response = await faqService.updateFAQ(faq._id, updatedFAQ);
-
-    if (response.success) {
-      fetchFAQs();
-    } else {
-      console.error("Error updating display status:", response.message);
-    }
+    if (response.success) fetchFAQs();
+    else console.error("Error updating display status:", response.message);
   };
 
   const handleHardDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this question?")) {
-      const response = await faqService.hardDeleteFAQ(id);
-      if (response.success) {
-        fetchFAQs((result) => {
-          const totalItems = result.total;
-          const newTotalPages = Math.ceil(totalItems / faqsPerPage) || 1;
-          if (result.items.length === 0 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-          } else if (currentPage > newTotalPages) {
-            setCurrentPage(newTotalPages);
-          }
-        });
-      } else {
-        console.error("Error deleting FAQ:", response.message);
-      }
+      await faqService.hardDeleteFAQ(id);
+      fetchFAQs();
     }
   };
 
@@ -86,14 +74,9 @@ const FAQsManagement = () => {
       alert("Answer cannot be left blank!");
       return;
     }
-
-    let response;
-    if (editData) {
-      response = await faqService.updateFAQ(editData._id, formData);
-    } else {
-      response = await faqService.createFAQ(formData);
-    }
-
+    const response = editData
+      ? await faqService.updateFAQ(editData._id, formData)
+      : await faqService.createFAQ(formData);
     if (response.success) {
       setModalOpen(false);
       fetchFAQs();
@@ -102,13 +85,14 @@ const FAQsManagement = () => {
     }
   };
 
+  const handlePageClick = ({ selected }) => setCurrentPage(selected);
+
   if (loading) return <p className="text-center text-blue-500">Loading...</p>;
   if (error) return <p className="text-center text-red-500">Error: {error}</p>;
 
   return (
     <div className="container mx-auto px-4">
       <h1 className="text-2xl font-bold">FAQs Management</h1>
-
       <button
         className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
         onClick={() => handleOpenModal()}
@@ -116,7 +100,7 @@ const FAQsManagement = () => {
         + Add New
       </button>
       <div className="bg-white shadow-lg rounded-2xl p-6">
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse mb-2">
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="p-3 text-left">No.</th>
@@ -131,7 +115,7 @@ const FAQsManagement = () => {
             {faqs.length > 0 ? (
               faqs.map((item, index) => (
                 <tr key={item._id} className="border-b border-gray-200 text-gray-900">
-                  <td className="p-3">{(currentPage - 1) * faqsPerPage + index + 1}</td>
+                  <td className="p-3">{currentPage * faqsPerPage + index + 1}</td>
                   <td className="p-3">{item.category}</td>
                   <td className="p-3 text-left">{item.question}</td>
                   <td className="p-3 text-left">{item.answer}</td>
@@ -154,7 +138,9 @@ const FAQsManagement = () => {
                       </button>
                       <button
                         className={`p-2 rounded-full text-white ${
-                          item.isVisible ? "bg-gray-500 hover:bg-gray-600" : "bg-green-500 hover:bg-green-600"
+                          item.isVisible
+                            ? "bg-gray-500 hover:bg-gray-600"
+                            : "bg-green-500 hover:bg-green-600"
                         }`}
                         onClick={() => handleToggleVisibility(item)}
                       >
@@ -179,62 +165,19 @@ const FAQsManagement = () => {
             )}
           </tbody>
         </table>
-
-        {/* Phân trang */}
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={faqsPerPage}
-              onChange={(e) => {
-                setFaqsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="5">5 FAQs</option>
-              <option value="10">10 FAQs</option>
-              <option value="15">15 FAQs</option>
-            </select>
-          </div>
-          {totalPages > 1 && (
-            <div className="flex space-x-2">
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                {"<"}
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-              >
-                {">"}
-              </button>
-            </div>
-          )}
-        </div>
+        <Pagination
+          limit={faqsPerPage}
+          setLimit={setFaqsPerPage}
+          totalItems={totalItems}
+          handlePageClick={handlePageClick}
+          text="FAQs"
+        />
       </div>
 
-      {/* Modal Form */}
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
             <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add new"} FAQ</h2>
-
             <label className="block mb-2">Category:</label>
             <input
               type="text"
@@ -242,7 +185,6 @@ const FAQsManagement = () => {
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             />
-
             <label className="block mb-2">Question:</label>
             <textarea
               className="w-full border p-2 mb-4"
@@ -250,7 +192,6 @@ const FAQsManagement = () => {
               value={formData.question}
               onChange={(e) => setFormData({ ...formData, question: e.target.value })}
             ></textarea>
-
             <label className="block mb-2">Answer:</label>
             <textarea
               className="w-full border p-2 mb-4"
@@ -258,7 +199,6 @@ const FAQsManagement = () => {
               value={formData.answer}
               onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
             ></textarea>
-
             <div className="flex justify-end space-x-2">
               <button
                 className="px-4 py-2 bg-gray-500 text-white rounded"
@@ -267,7 +207,7 @@ const FAQsManagement = () => {
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-green-500 text-white rounded"
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
                 onClick={handleSave}
               >
                 Save

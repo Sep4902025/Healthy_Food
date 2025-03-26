@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import UserService from "../../../services/user.service";
 import { EditIcon, TrashIcon, SearchIcon } from "lucide-react";
 import { toast } from "react-toastify";
+import Pagination from "../../../components/Pagination";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -14,29 +15,20 @@ const UserManagement = () => {
   const [formData, setFormData] = useState({ role: "user", isBan: false });
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage, setUsersPerPage] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0); // Thay totalPages bằng totalItems để đồng bộ với Pagination
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("users");
   const [selectedApplication, setSelectedApplication] = useState(null);
 
-  const paginate = (pageNumber) => {
-    if (pageNumber >= 1 && pageNumber <= totalPages) {
-      setCurrentPage(pageNumber);
-    }
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const userResponse = await UserService.getAllUsers(
-        currentPage,
-        usersPerPage
-      );
+      const userResponse = await UserService.getAllUsers(currentPage, usersPerPage);
       if (userResponse.success) {
         setUsers(userResponse.users);
         setFilteredUsers(userResponse.users);
-        setTotalPages(userResponse.totalPages);
+        setTotalItems(userResponse.total); // Giả định API trả về total là tổng số mục
       } else {
         setError(userResponse.message);
       }
@@ -81,9 +73,7 @@ const UserManagement = () => {
     const result = await UserService.updateUser(editData._id, updatedUser);
     if (result.success) {
       toast.success("Cập nhật user thành công!");
-      setUsers((prev) =>
-        prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u))
-      );
+      setUsers((prev) => prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u)));
       setFilteredUsers((prev) =>
         prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u))
       );
@@ -104,35 +94,31 @@ const UserManagement = () => {
       action,
     });
     if (result.success) {
-      toast.success(`Application ${action}d successfully!`);
+      toast.success(`Application ${action}d successfully! Email notification sent to user.`);
       setPendingNutritionists((prev) => prev.filter((u) => u._id !== userId));
       if (action === "approve") {
         setUsers((prev) =>
-          prev.map((u) =>
-            u._id === userId ? { ...u, role: "nutritionist" } : u
-          )
+          prev.map((u) => (u._id === userId ? { ...u, role: "nutritionist" } : u))
         );
         setFilteredUsers((prev) =>
-          prev.map((u) =>
-            u._id === userId ? { ...u, role: "nutritionist" } : u
-          )
+          prev.map((u) => (u._id === userId ? { ...u, role: "nutritionist" } : u))
         );
       } else if (action === "reject") {
         setUsers((prev) =>
-          prev.map((u) =>
-            u._id === userId ? { ...u, nutritionistApplication: null } : u
-          )
+          prev.map((u) => (u._id === userId ? { ...u, nutritionistApplication: null } : u))
         );
         setFilteredUsers((prev) =>
-          prev.map((u) =>
-            u._id === userId ? { ...u, nutritionistApplication: null } : u
-          )
+          prev.map((u) => (u._id === userId ? { ...u, nutritionistApplication: null } : u))
         );
       }
     } else {
       toast.error(result.message);
     }
     setSelectedApplication(null);
+  };
+
+  const handlePageClick = ({ selected }) => {
+    setCurrentPage(selected + 1); // ReactPaginate dùng index từ 0, API thường từ 1
   };
 
   const indexOfLastUser = currentPage * usersPerPage;
@@ -185,9 +171,7 @@ const UserManagement = () => {
           </button>
           <button
             className={`px-4 py-2 ${
-              activeTab === "pending"
-                ? "bg-green-500 text-white"
-                : "bg-gray-200"
+              activeTab === "pending" ? "bg-green-500 text-white" : "bg-gray-200"
             } rounded`}
             onClick={() => setActiveTab("pending")}
           >
@@ -212,9 +196,7 @@ const UserManagement = () => {
                 <tbody>
                   {currentUsers.map((user) => (
                     <tr key={user._id} className="border-b hover:bg-gray-50">
-                      <td className="p-4 text-left cursor-pointer">
-                        {user.username}
-                      </td>
+                      <td className="p-4 text-left cursor-pointer">{user.username}</td>
                       <td className="p-4 text-left">
                         {user.userPreferenceId?.phoneNumber || "N/A"}
                       </td>
@@ -223,9 +205,7 @@ const UserManagement = () => {
                       <td className="p-4 text-left">
                         <span
                           className={`px-3 py-1 rounded-full text-xs ${
-                            user.isBan
-                              ? "bg-red-100 text-red-600"
-                              : "bg-green-100 text-green-600"
+                            user.isBan ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
                           }`}
                         >
                           {user.isBan ? "Inactive" : "Active"}
@@ -250,55 +230,22 @@ const UserManagement = () => {
                 </tbody>
               </table>
 
-              <div className="p-4 flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <span>Show</span>
-                  <select
-                    className="border rounded px-2 py-1"
-                    value={usersPerPage}
-                    onChange={(e) => setUsersPerPage(Number(e.target.value))}
-                  >
-                    <option value="5">5 Users</option>
-                    <option value="10">10 Users</option>
-                    <option value="15">15 Users</option>
-                  </select>
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    className="border rounded px-3 py-1 hover:bg-gray-100"
-                    onClick={() => paginate(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    {"<"}
-                  </button>
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i}
-                      className={`px-3 py-1 rounded ${
-                        currentPage === i + 1
-                          ? "bg-green-500 text-white"
-                          : "border hover:bg-gray-100"
-                      }`}
-                      onClick={() => paginate(i + 1)}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                  <button
-                    className="border rounded px-3 py-1 hover:bg-gray-100"
-                    onClick={() => paginate(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    {">"}
-                  </button>
-                </div>
+              <div className="p-4">
+                <Pagination
+                  limit={usersPerPage}
+                  setLimit={(value) => {
+                    setUsersPerPage(value);
+                    setCurrentPage(1); // Reset về trang 1 khi thay đổi limit
+                  }}
+                  totalItems={totalItems}
+                  handlePageClick={handlePageClick}
+                  text="Users"
+                />
               </div>
             </>
           ) : (
             <div className="p-4">
-              <h2 className="text-xl font-semibold mb-4">
-                Pending Nutritionist Applications
-              </h2>
+              <h2 className="text-xl font-semibold mb-4">Pending Nutritionist Applications</h2>
               {pendingNutritionists.length === 0 ? (
                 <p>No pending applications</p>
               ) : (
@@ -307,9 +254,7 @@ const UserManagement = () => {
                     <tr>
                       <th className="p-4 text-left text-gray-500">Username</th>
                       <th className="p-4 text-left text-gray-500">Email</th>
-                      <th className="p-4 text-left text-gray-500">
-                        Submitted At
-                      </th>
+                      <th className="p-4 text-left text-gray-500">Submitted At</th>
                       <th className="p-4 text-left text-gray-500">Actions</th>
                     </tr>
                   </thead>
@@ -319,9 +264,7 @@ const UserManagement = () => {
                         <td className="p-4">{user.username}</td>
                         <td className="p-4">{user.email}</td>
                         <td className="p-4">
-                          {new Date(
-                            user.nutritionistApplication.submittedAt
-                          ).toLocaleDateString()}
+                          {new Date(user.nutritionistApplication.submittedAt).toLocaleDateString()}
                         </td>
                         <td className="p-4">
                           <button
@@ -340,82 +283,59 @@ const UserManagement = () => {
               {selectedApplication && (
                 <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
                   <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
-                    <h2 className="text-2xl font-bold mb-6">
-                      Nutritionist Application
-                    </h2>
+                    <h2 className="text-2xl font-bold mb-6">Nutritionist Application</h2>
                     <div className="flex flex-col md:flex-row gap-6">
                       <div className="w-full md:w-1/3 flex flex-col">
                         <div className="mb-4">
-                          {selectedApplication.nutritionistApplication
-                            .profileImage ? (
+                          {selectedApplication.nutritionistApplication.profileImage ? (
                             <img
-                              src={
-                                selectedApplication.nutritionistApplication
-                                  .profileImage
-                              }
+                              src={selectedApplication.nutritionistApplication.profileImage}
                               alt="Profile"
                               className="w-full h-64 object-cover rounded-lg shadow-md"
-                              onError={(e) =>
-                                (e.target.src =
-                                  "https://via.placeholder.com/150")
-                              }
+                              onError={(e) => (e.target.src = "https://via.placeholder.com/150")}
                             />
                           ) : (
                             <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                              <span className="text-gray-500">
-                                No Image Provided
-                              </span>
+                              <span className="text-gray-500">No Image Provided</span>
                             </div>
                           )}
                         </div>
                         <div className="space-y-2">
                           <p>
                             <strong>Full Name:</strong>{" "}
-                            {selectedApplication.nutritionistApplication
-                              .personalInfo.fullName || "N/A"}
+                            {selectedApplication.nutritionistApplication.personalInfo.fullName ||
+                              "N/A"}
                           </p>
                           <p>
                             <strong>Phone:</strong>{" "}
-                            {selectedApplication.nutritionistApplication
-                              .personalInfo.phoneNumber || "N/A"}
+                            {selectedApplication.nutritionistApplication.personalInfo.phoneNumber ||
+                              "N/A"}
                           </p>
                           <p>
                             <strong>Address:</strong>{" "}
-                            {selectedApplication.nutritionistApplication
-                              .personalInfo.address || "N/A"}
+                            {selectedApplication.nutritionistApplication.personalInfo.address ||
+                              "N/A"}
                           </p>
                         </div>
                       </div>
                       <div className="w-full md:w-2/3">
-                        <h3 className="text-lg font-semibold mb-2">
-                          Introduction
-                        </h3>
+                        <h3 className="text-lg font-semibold mb-2">Introduction</h3>
                         <p className="text-gray-700 leading-relaxed">
-                          {selectedApplication.nutritionistApplication
-                            .introduction || "No introduction provided."}
+                          {selectedApplication.nutritionistApplication.introduction ||
+                            "No introduction provided."}
                         </p>
                       </div>
                     </div>
                     <div className="flex justify-end space-x-2 mt-6">
                       <button
                         className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                        onClick={() =>
-                          handleReviewApplication(
-                            selectedApplication._id,
-                            "approve"
-                          )
-                        }
+                        onClick={() => handleReviewApplication(selectedApplication._id, "approve")}
                       >
                         Approve
                       </button>
                       <button
                         className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                        onClick={() =>
-                          handleReviewApplication(
-                            selectedApplication._id,
-                            "reject"
-                          )
-                        }
+                        onClick={() => handleReviewApplication(selectedApplication._id, "reject")}
                       >
                         Reject
                       </button>
