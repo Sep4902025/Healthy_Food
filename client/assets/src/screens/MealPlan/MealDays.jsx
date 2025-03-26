@@ -247,7 +247,7 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
 
     return (
       <View className="items-center">
-        <View className="relative">
+        <View className="relative flex items-center justify-center">
           <CustomPieChart
             data={chartData}
             width={80}
@@ -255,31 +255,24 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
             innerRadius={20}
             outerRadius={30}
           />
-          <View
-            style={{
-              position: "absolute",
-              left: 40, // Tâm theo chiều ngang (width/2)
-              top: 35, // Tâm theo chiều dọc (height/2)
-              transform: [{ translateX: -15 }, { translateY: -10 }], // Điều chỉnh để căn giữa số
-            }}
-          >
+          <View className="absolute flex items-center justify-center">
             <Text className="text-sm font-bold">{Math.round(nutrition.calories)}</Text>
-            <Text className="text-xs text-gray-500 text-center">kcal</Text>
+            <Text className="text-xs text-gray-500">kcal</Text>
           </View>
         </View>
         <View className="flex-row flex-wrap justify-center mt-1">
-          <Text className="text-xs mx-1 flex-row items-center">
-            <View className="w-2 h-2 rounded-full bg-red-500 mr-1" />
-            P: {Math.round(nutrition.protein)}g
-          </Text>
-          <Text className="text-xs mx-1 flex-row items-center">
-            <View className="w-2 h-2 rounded-full bg-blue-500 mr-1" />
-            C: {Math.round(nutrition.carbs)}g
-          </Text>
-          <Text className="text-xs mx-1 flex-row items-center">
-            <View className="w-2 h-2 rounded-full bg-yellow-400 mr-1" />
-            F: {Math.round(nutrition.fat)}g
-          </Text>
+          <View className="flex-row items-center gap-1 mr-1">
+            <View className="w-2 h-2 rounded-full bg-red-500" />
+            <Text className="text-xs">Protein: {Math.round(nutrition.protein)}g</Text>
+          </View>
+          <View className="flex-row items-center gap-1 mr-1">
+            <View className="w-2 h-2 rounded-full bg-blue-500" />
+            <Text className="text-xs">Carbs: {Math.round(nutrition.carbs)}g</Text>
+          </View>
+          <View className="flex-row items-center gap-1">
+            <View className="w-2 h-2 rounded-full bg-yellow-400" />
+            <Text className="text-xs">Fat: {Math.round(nutrition.fat)}g</Text>
+          </View>
         </View>
       </View>
     );

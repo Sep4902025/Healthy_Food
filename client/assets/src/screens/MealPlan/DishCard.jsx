@@ -7,7 +7,7 @@ const DishCard = ({ dish, onDelete, deletingDishId }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <View className="border rounded-lg p-5 bg-white shadow-md mb-4 flex flex-col gap-4 relative">
+    <View className="border border-gray-200 rounded-lg p-5 bg-white shadow-md mb-4 flex flex-col gap-4 relative">
       {/* Header: Image, Dish Name, and Delete Button */}
       <View className="flex-row items-center gap-5 relative">
         <Image
@@ -27,8 +27,7 @@ const DishCard = ({ dish, onDelete, deletingDishId }) => {
             <Text className="animate-pulse text-sm text-red-500">Deleting...</Text>
           ) : (
             <View className="flex-row items-center gap-1">
-              <Ionicons name="trash-outline" size={18} color="#ef4444" />
-              <Text className="text-sm text-red-500">Delete</Text>
+              <Text className="text-base">🗑️</Text>
             </View>
           )}
         </TouchableOpacity>
