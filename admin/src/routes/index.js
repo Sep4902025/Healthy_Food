@@ -66,6 +66,7 @@ import AddMedicalCondition from "../pages/nutritionist/Medical Condition Managem
 import CreateMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/CreateMealPlanPage";
 import EditMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/EditMealPlanPage";
 import Medical from "../pages/user/Medical"; 
+import NutritionistApplicationForm from "../pages/user/NutritionistApplicationForm";
 
 const AppRoutes = () => {
   return (
@@ -79,7 +80,7 @@ const AppRoutes = () => {
         <Route path="reset-password" element={<ResetPassword />} />
         <Route index element={<Home />} />
         <Route path="viewprofile" element={<ViewProfile />} />
-
+        <Route path="/apply-nutritionist" element={<NutritionistApplicationForm />} />
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
         {/* Router mealPlan */}
@@ -187,6 +188,7 @@ const AppRoutes = () => {
         <Route path="ingredientsmanagement" element={<IngredientsManagement />} />
         <Route path="mealplan" element={<TableMealPlan />} />
         <Route path="change-password" element={<ChangePassword />} />
+        <Route path="adminprofile/:id" element={<AdminProfile />} />
         <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
         <Route path="viewprofile/:id" element={<ViewProfile />} />

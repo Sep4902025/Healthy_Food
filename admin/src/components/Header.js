@@ -108,6 +108,17 @@ const Header = () => {
     fetchPaymentHistory();
   }, [user]);
 
+  // Hàm xử lý khi nhấp vào "Thông tin cá nhân"
+  const handleProfileClick = () => {
+    if (user?.role === "admin") {
+      // Nếu là admin, chuyển đến trang admin profile
+      navigate(`/admin/adminprofile/${user._id}`, { state: { user } });
+    } else {
+      // Nếu không phải admin, chuyển đến trang user thông thường
+      navigate("/user");
+    }
+  };
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -148,7 +159,6 @@ const Header = () => {
         setCartMenuOpen(false);
       }
     };
-
     document.addEventListener("click", handleClickOutside);
     return () => {
       document.removeEventListener("click", handleClickOutside);
@@ -160,6 +170,7 @@ const Header = () => {
   };
 
   const toggleUserMenu = (e) => {
+    e.stopPropagation();
     e.stopPropagation();
     setUserMenuOpen(!userMenuOpen);
   };

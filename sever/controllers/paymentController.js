@@ -3,7 +3,13 @@ const crypto = require("crypto");
 const moment = require("moment");
 const VNPAY_CONFIG = require("../config/vnpay");
 const Payment = require("../models/Payment");
-const { MealPlan, UserMealPlan, MealDay, Meal, MealTracking } = require("../models/MealPlan");
+const {
+  MealPlan,
+  UserMealPlan,
+  MealDay,
+  Meal,
+  MealTracking,
+} = require("../models/MealPlan");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
 
@@ -12,25 +18,35 @@ exports.createPaymentUrl = async (req, res) => {
     const { userId, mealPlanId, amount } = req.body;
 
     if (!userId || !mealPlanId || !amount) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "Thiếu userId, mealPlanId hoặc amount" });
+      return res.status(400).json({
+        status: "error",
+        message: "Thiếu userId, mealPlanId hoặc amount",
+      });
     }
 
     if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ status: "error", message: "Amount phải là số dương" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Amount phải là số dương" });
     }
 
     // Kiểm tra MealPlan có tồn tại không
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res.status(400).json({ status: "error", message: "MealPlan không tồn tại" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "MealPlan không tồn tại" });
     }
 
     // Kiểm tra nếu MealPlan đã thanh toán thành công
-    const successPayment = await Payment.findOne({ mealPlanId, status: "success" });
+    const successPayment = await Payment.findOne({
+      mealPlanId,
+      status: "success",
+    });
     if (successPayment) {
-      return res.status(400).json({ status: "error", message: "MealPlan này đã được thanh toán" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "MealPlan này đã được thanh toán" });
     }
 
     // Tìm payment đang pending cho mealPlanId và userId này
@@ -63,7 +79,10 @@ exports.createPaymentUrl = async (req, res) => {
     }
 
     const clientIp =
-      req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.ip || "127.0.0.1";
+      req.headers["x-forwarded-for"] ||
+      req.connection.remoteAddress ||
+      req.ip ||
+      "127.0.0.1";
 
     let vnp_Params = {
       vnp_Version: "2.1.0",
@@ -120,14 +139,18 @@ exports.createPaymentUrl = async (req, res) => {
     sortedParams["vnp_SecureHash"] = secureHash;
 
     // ✅ Tạo URL thanh toán
-    const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(sortedParams).toString()}`;
+    const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(
+      sortedParams
+    ).toString()}`;
 
     console.log("🔹 URL thanh toán gửi đi:", paymentUrl);
 
     return res.json({ status: "success", paymentUrl, paymentId: payment._id });
   } catch (error) {
     console.error("❌ Lỗi tạo URL thanh toán:", error);
-    return res.status(500).json({ status: "error", message: "Lỗi tạo URL thanh toán" });
+    return res
+      .status(500)
+      .json({ status: "error", message: "Lỗi tạo URL thanh toán" });
   }
 };
 
@@ -181,7 +204,12 @@ exports.vnpayReturn = async (req, res) => {
     // Tìm payment hiện tại
     const payment = await Payment.findByIdAndUpdate(
       paymentId,
-      { transactionNo, status, paymentDate: new Date(), paymentDetails: vnp_Params },
+      {
+        transactionNo,
+        status,
+        paymentDate: new Date(),
+        paymentDetails: vnp_Params,
+      },
       { new: true }
     );
 
@@ -196,7 +224,9 @@ exports.vnpayReturn = async (req, res) => {
       await MealPlan.findByIdAndUpdate(payment.mealPlanId, { isBlock: false });
 
       // 🔹 Tìm MealPlan trước đó của user (nếu có)
-      const oldUserMealPlan = await UserMealPlan.findOne({ userId: payment.userId });
+      const oldUserMealPlan = await UserMealPlan.findOne({
+        userId: payment.userId,
+      });
 
       if (oldUserMealPlan) {
         console.log(`🗑 Xóa dữ liệu MealPlan cũ của user: ${payment.userId}`);
@@ -239,7 +269,9 @@ exports.vnpayReturn = async (req, res) => {
         startedAt: new Date(),
       });
 
-      console.log(`✅ User ${payment.userId} đã đổi sang MealPlan mới: ${payment.mealPlanId}`);
+      console.log(
+        `✅ User ${payment.userId} đã đổi sang MealPlan mới: ${payment.mealPlanId}`
+      );
 
       // Dọn dẹp Payment pending khác
       try {
