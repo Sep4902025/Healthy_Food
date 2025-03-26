@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Modal, TextInput } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // For the close icon; install with `npm install @expo/vector-icons`
+import { Ionicons } from "@expo/vector-icons"; // For the close icon
+import DateTimePicker from "@react-native-community/datetimepicker"; // Import DateTimePicker
 import mealPlanService from "../../services/mealPlanService";
 
 const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) => {
@@ -13,6 +14,8 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [showTimePicker, setShowTimePicker] = useState(false); // State to control time picker visibility
+  const [selectedTime, setSelectedTime] = useState(new Date()); // Default time
 
   const handleSubmit = async () => {
     if (!newMealData.mealName || !newMealData.mealTime) {
@@ -25,7 +28,7 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
       const response = await mealPlanService.addMealToDay(mealPlanId, mealDayId, newMealData);
 
       if (response.success) {
-        setNewMealData({ mealName: "", mealTime: "" });
+        setNewMealData({ mealName: "", mealTime: "", userId: userId });
         onMealAdded();
         onClose();
       } else {
@@ -37,6 +40,20 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handle time selection from the picker
+  const onTimeChange = (event, selected) => {
+    const currentTime = selected || selectedTime;
+    setShowTimePicker(false); // Hide picker after selection
+    setSelectedTime(currentTime);
+
+    // Format the time (e.g., "08:00 AM")
+    const formattedTime = currentTime.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    setNewMealData({ ...newMealData, mealTime: formattedTime });
   };
 
   return (
@@ -58,7 +75,7 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
 
           <View className="space-y-4">
             <View>
-              <Text className="text-sm font-medium text-gray-700 mb-1">Meal Name</Text>
+              <Text className="text-base font-medium text-gray-700 mb-1">Meal Name</Text>
               <TextInput
                 value={newMealData.mealName}
                 onChangeText={(text) => setNewMealData({ ...newMealData, mealName: text })}
@@ -66,16 +83,26 @@ const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) =
                 placeholder="E.g., Breakfast, Lunch..."
               />
             </View>
-            <View>
-              <Text className="text-sm font-medium text-gray-700 mb-1">Time</Text>
-              <TextInput
-                value={newMealData.mealTime}
-                onChangeText={(text) => setNewMealData({ ...newMealData, mealTime: text })}
+            <View className="mt-1">
+              <Text className="text-base font-medium text-gray-700 mb-1">Time</Text>
+              <TouchableOpacity
+                onPress={() => setShowTimePicker(true)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="E.g., 08:00 AM"
-              />
+              >
+                <Text className={newMealData.mealTime ? "text-black" : "text-gray-400"}>
+                  {newMealData.mealTime || "E.g., 08:00 AM"}
+                </Text>
+              </TouchableOpacity>
+              {showTimePicker && (
+                <DateTimePicker
+                  value={selectedTime}
+                  mode="time" // Set mode to time
+                  display="default" // Use "spinner" for a different style if preferred
+                  onChange={onTimeChange}
+                />
+              )}
             </View>
-            <View className="flex-row justify-end space-x-3">
+            <View className="flex-row justify-end gap-2 mt-2">
               <TouchableOpacity
                 onPress={onClose}
                 className="px-4 py-2 border border-gray-300 rounded-md"

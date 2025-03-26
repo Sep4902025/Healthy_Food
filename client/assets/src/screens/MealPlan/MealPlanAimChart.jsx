@@ -192,31 +192,26 @@ const MealPlanAimChart = ({
   const weeksToGoal = Math.ceil(weightToLose / 0.5);
 
   return (
-    <View className="flex-col items-center relative">
+    <View className="flex-col relative">
       <TouchableOpacity onPress={handleOpenModal} className="absolute top-0 right-0 p-2">
         <Text className="text-gray-500 text-lg">❓</Text>
       </TouchableOpacity>
 
-      <View className="w-40 h-40 relative">
+      <View className="w-full h-32 items-center relative">
         {chartData.length > 0 ? (
           <>
-            <CustomPieChart
-              data={chartData}
-              width={100}
-              height={100}
-              innerRadius={40}
-              outerRadius={30}
-            />
-            <View
-              style={{
-                position: "absolute",
-                left: 60, // Tâm theo chiều ngang (width/2)
-                top: 50, // Tâm theo chiều dọc (height/2)
-                transform: [{ translateX: -30 }, { translateY: -15 }], // Điều chỉnh để căn giữa số
-              }}
-            >
-              <Text className="text-lg font-bold">{nutritionTargets.calories.target}</Text>
-              <Text className="text-xs text-gray-500 text-center">kcal</Text>
+            <View className="relative flex items-center justify-center">
+              <CustomPieChart
+                data={chartData}
+                width={100}
+                height={100}
+                innerRadius={40}
+                outerRadius={30}
+              />
+              <View className="absolute flex items-center justify-center">
+                <Text className="text-lg font-bold">{nutritionTargets.calories.target}</Text>
+                <Text className="text-xs text-gray-500">kcal</Text>
+              </View>
             </View>
             <View className="flex-row mt-1 gap-2">
               <View className="flex-row items-center">
@@ -239,8 +234,8 @@ const MealPlanAimChart = ({
       </View>
 
       <Modal visible={showModal} transparent animationType="fade">
-        <View className="flex-1 justify-center items-center bg-slate-400 bg-opacity-30">
-          <View className="bg-white p-6 rounded-lg w-11/12 max-w-md">
+        <View className="flex-1 justify-center items-center">
+          <View className="bg-white p-6 rounded-lg max-w-md shadow-lg">
             <Text className="text-lg font-semibold mb-4 text-gray-800">Goal Information</Text>
             <View className="space-y-3">
               <View>
@@ -272,7 +267,7 @@ const MealPlanAimChart = ({
               </Text>
 
               <View>
-                <Text className="font-semibold">Nutrition Targets:</Text>
+                <Text className="font-bold">Nutrition Targets:</Text>
                 <Text>Calories: {nutritionTargets.calories.target} kcal (±10%)</Text>
                 <Text>Protein: {nutritionTargets.protein.target}g (±15g)</Text>
                 <Text>Carbs: {nutritionTargets.carbs.target}g (±15g)</Text>

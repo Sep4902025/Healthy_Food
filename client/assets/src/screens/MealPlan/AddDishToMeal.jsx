@@ -224,7 +224,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
             </View>
 
             {/* Filter buttons */}
-            <View className="flex-row items-center space-x-2">
+            <View className="flex-row items-center gap-2 mt-1">
               <TouchableOpacity
                 onPress={() => setActiveFilter("all")}
                 className={`px-3 py-1.5 rounded-lg ${
@@ -254,13 +254,16 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               </TouchableOpacity>
 
               {/* Type selection dropdown */}
-              <View className="border border-gray-300 rounded-lg">
+              <View
+                className="border border-gray-300 rounded-lg bg-white"
+                style={{ height: 35, width: 120, justifyContent: "center" }}
+              >
                 <Picker
                   selectedValue={selectedType}
                   onValueChange={(itemValue) => setSelectedType(itemValue)}
-                  style={{ height: 40, width: 150 }}
+                  mode="dropdown"
                 >
-                  <Picker.Item label="All Types" value="all" />
+                  <Picker.Item label="Type" value="all" />
                   {dishTypes.map((type) => (
                     <Picker.Item key={type} label={type} value={type} />
                   ))}
@@ -294,7 +297,8 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
                   onPress={() => !isAdding && !isAlreadyAdded && setSelectedDish(dish)}
                   disabled={isAdding || isAlreadyAdded}
                 >
-                  <View className="relative h-40 bg-gray-200">
+                  {/* 🔽 Giảm chiều cao ảnh từ 160px xuống 120px */}
+                  <View className="relative h-32 bg-gray-200">
                     {dish.imageUrl ? (
                       <Image
                         source={{ uri: dish.imageUrl }}
@@ -314,27 +318,25 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
                       </View>
                     )}
                   </View>
-                  <View className="p-3">
-                    <View className="flex-row justify-between items-start">
-                      <Text className="font-medium text-gray-800">{dish.name}</Text>
+
+                  {/* 🔽 Điều chỉnh padding để hiển thị thông tin tốt hơn */}
+                  <View className="p-2">
+                    <View className="flex-row justify-between items-center">
+                      <Text className="font-medium text-gray-800 text-sm">{dish.name}</Text>
                       <Text className="text-sm font-bold text-blue-600">{dish.calories} kcal</Text>
                     </View>
-                    <View className="mt-2 flex-row justify-between text-xs text-gray-600">
-                      <View>
-                        <Text className="inline-block bg-red-100 rounded-full px-2 py-1">
-                          Pro: {dish.protein || 0}g
-                        </Text>
-                      </View>
-                      <View>
-                        <Text className="inline-block bg-green-100 rounded-full px-2 py-1">
-                          Carbs: {dish.carbs || 0}g
-                        </Text>
-                      </View>
-                      <View>
-                        <Text className="inline-block bg-yellow-100 rounded-full px-2 py-1">
-                          Fat: {dish.fat || 0}g
-                        </Text>
-                      </View>
+
+                    {/* 🔽 Hiển thị các chỉ số dinh dưỡng trên cùng 1 hàng */}
+                    <View className="mt-1 flex-row flex-wrap gap-1">
+                      <Text className="bg-red-100 rounded-full px-2 py-1 text-xs">
+                        Pro: {dish.protein || 0}g
+                      </Text>
+                      <Text className="bg-green-100 rounded-full px-2 py-1 text-xs">
+                        Carbs: {dish.carbs || 0}g
+                      </Text>
+                      <Text className="bg-yellow-100 rounded-full px-2 py-1 text-xs">
+                        Fat: {dish.fat || 0}g
+                      </Text>
                     </View>
                   </View>
                 </TouchableOpacity>

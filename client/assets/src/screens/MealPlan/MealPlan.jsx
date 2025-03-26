@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, SafeAreaView, Alert } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { AntDesign, Entypo, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import MainLayoutWrapper from "../../components/layout/MainLayoutWrapper";
 import { userSelector } from "../../redux/selectors/selector";
 import mealPlanService from "../../services/mealPlanService";
@@ -124,7 +124,7 @@ const MealPlan = () => {
   if (loading) {
     return (
       <MainLayoutWrapper>
-        <SafeAreaView className="flex-1 justify-center items-center">
+        <SafeAreaView className="flex-1 justify-center items-center bg-white">
           <ActivityIndicator size="large" color="#16a34a" />
           <Text className="mt-2 text-base text-green-600">Loading...</Text>
         </SafeAreaView>
@@ -134,125 +134,122 @@ const MealPlan = () => {
 
   return (
     <MainLayoutWrapper>
-      <SafeAreaView className="flex-1">
-        <View className="flex-1 p-4">
-          <View className="flex-row items-center mb-4">
-            <TouchableOpacity onPress={() => console.log("Go back")}>
-              <Ionicons name="arrow-back" size={24} color="#16a34a" />
-            </TouchableOpacity>
-            <Text className="text-2xl font-bold text-green-600 ml-2">Meal Plan</Text>
-          </View>
-
+      <SafeAreaView className="flex-1 bg-white">
+        <View className="flex-1">
           {userMealPlan ? (
-            <View className="bg-white p-4 rounded-lg shadow-md flex-1">
-              <View className="flex justify-between items-center gap-2">
+            <View className="flex-1">
+              {/* Main Content (Header, Chart, MealDays) */}
+              <View className="flex-1 bg-white p-4 rounded-lg shadow-md">
+                {/* Header Section: Meal Plan Details */}
                 <View className="mb-4">
                   <View className="flex-row justify-between items-center mb-2">
-                    <Text className="text-lg font-semibold text-gray-800">
-                      {userMealPlan.title || userMealPlan.name || "Untitled Meal Plan"}
-                    </Text>
-                    <View
-                      className={`px-2 py-1 rounded-full ${
-                        userMealPlan.isPause ? "bg-yellow-100" : "bg-green-100"
-                      }`}
-                    >
-                      <Text
-                        className={`text-xs font-medium ${
-                          userMealPlan.isPause ? "text-yellow-600" : "text-green-600"
-                        }`}
-                      >
-                        {userMealPlan.isPause ? "Inactive" : "Active"}
+                    <View>
+                      <Text className="text-xl font-bold text-gray-800">
+                        {userMealPlan.title || userMealPlan.name || "Untitled Meal Plan"}
+                      </Text>
+                      <Text className="text-sm text-gray-600">
+                        From{" "}
+                        {userMealPlan.startDate
+                          ? new Date(userMealPlan.startDate).toISOString().split("T")[0]
+                          : new Date(userMealPlan.createdAt).toISOString().split("T")[0]}{" "}
+                        • {userMealPlan.duration || "N/A"} Days
+                      </Text>
+                      <Text className="text-xs text-gray-500 mt-1">
+                        {userMealPlan.type === "fixed" ? "Fixed Plan" : "Custom Plan"}
                       </Text>
                     </View>
+                    <View className="flex-row items-center gap-2">
+                      <View
+                        className={`px-3 py-1 rounded-full ${
+                          userMealPlan.isPause ? "bg-yellow-100" : "bg-green-100"
+                        }`}
+                      >
+                        <Text
+                          className={`text-sm font-medium ${
+                            userMealPlan.isPause ? "text-yellow-600" : "text-green-600"
+                          }`}
+                        >
+                          {userMealPlan.isPause ? "Inactive" : "Active"}
+                        </Text>
+                      </View>
+                      {/* Compact Action Buttons */}
+                      <TouchableOpacity
+                        onPress={handleToggleMealPlanStatus}
+                        disabled={processingAction || userMealPlan.isPause === undefined}
+                        className={`px-3 py-1 rounded-lg items-center justify-center ${
+                          userMealPlan.isPause ? "bg-green-600" : "bg-yellow-400"
+                        } ${
+                          processingAction || userMealPlan.isPause === undefined
+                            ? "opacity-50"
+                            : "opacity-100"
+                        }`}
+                      >
+                        <View className="flex-row items-center gap-1">
+                          {userMealPlan.isPause ? (
+                            <Entypo name="controller-play" size={14} color="white" />
+                          ) : (
+                            <AntDesign name="pause" size={14} color="white" />
+                          )}
+                          <Text className="text-white text-xs">
+                            {userMealPlan.isPause ? "Resume" : "Pause"}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={handleDeleteMealPlan}
+                        disabled={processingAction}
+                        className={`px-3 py-1 rounded-lg items-center justify-center bg-red-600 ${
+                          processingAction ? "opacity-50" : "opacity-100"
+                        }`}
+                      >
+                        <View className="flex-row items-center gap-1">
+                          <MaterialIcons name="delete" size={14} color="white" />
+                          <Text className="text-white text-xs">Delete</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-
-                  <Text className="text-sm text-gray-600">
-                    From{" "}
-                    {userMealPlan.startDate
-                      ? new Date(userMealPlan.startDate).toLocaleDateString()
-                      : new Date(userMealPlan.createdAt).toLocaleDateString()}{" "}
-                    • {userMealPlan.duration || "N/A"} Days
-                  </Text>
-
-                  <Text className="text-xs text-gray-500 mt-1">
-                    {userMealPlan.type === "fixed" ? "Fixed Plan" : "Custom Plan"}
-                  </Text>
                 </View>
 
+                {/* Chart Section */}
                 {userMealPlan._id && (
-                  <MealPlanAimChart
-                    mealPlanId={userMealPlan._id}
-                    userId={user._id} // Truyền userId từ Redux store
-                    duration={userMealPlan.duration || 7} // Giá trị mặc định nếu duration không tồn tại
-                    onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
-                  />
+                  <View className="mb-4 border-t border-gray-200 pt-4">
+                    <MealPlanAimChart
+                      mealPlanId={userMealPlan._id}
+                      userId={user._id}
+                      duration={userMealPlan.duration || 7}
+                      onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
+                    />
+                  </View>
                 )}
 
-                <View className="flex-row gap-2 mb-4">
-                  <TouchableOpacity
-                    onPress={handleToggleMealPlanStatus}
-                    disabled={processingAction || userMealPlan.isPause === undefined}
-                    className={`py-2 px-4 rounded-lg items-center ${
-                      userMealPlan.isPause ? "bg-green-600" : "bg-yellow-600"
-                    } ${
-                      processingAction || userMealPlan.isPause === undefined
-                        ? "opacity-50"
-                        : "opacity-100"
-                    }`}
-                  >
-                    <Text className="text-white text-sm">
-                      {userMealPlan.isPause ? "▶️ Continue" : "⏸️ Pause"}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleDeleteMealPlan}
-                    disabled={processingAction}
-                    className={`py-2 px-4 rounded-lg items-center bg-red-600 ${
-                      processingAction ? "opacity-50" : "opacity-100"
-                    }`}
-                  >
-                    <Text className="text-white text-sm">🗑️ Delete</Text>
-                  </TouchableOpacity>
+                {/* Meal Days Section */}
+                <View className="flex-1">
+                  <MealDays mealPlanId={userMealPlan._id} nutritionTargets={nutritionTargets} />
                 </View>
               </View>
-              <MealDays mealPlanId={userMealPlan._id} nutritionTargets={nutritionTargets} />
             </View>
           ) : (
-            <View className="flex-1 justify-center items-center bg-white p-4 rounded-lg shadow-md">
+            <View className="flex-1 justify-center items-center bg-white p-6 rounded-lg shadow-md">
               {!showCreateForm ? (
                 <View className="items-center">
-                  <Text className="text-gray-600 text-center mb-4">
-                    Complete the survey to calculate your nutrition targets.
+                  <Text className="text-lg font-medium text-gray-800 mb-4">No Meal Plan Found</Text>
+                  <Text className="text-gray-600 text-center mb-6">
+                    Complete the survey to calculate your nutrition targets and create a meal plan.
                   </Text>
-                  <View className="flex-row items-center space-x-3">
-                    <TouchableOpacity
-                      onPress={handleTakeSurvey}
-                      className="bg-blue-600 px-4 py-2 rounded"
-                    >
-                      <Text className="text-white font-semibold">Take Survey</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={handleToggleMealPlanStatus}
-                      disabled={true}
-                      className="bg-yellow-600 px-4 py-2 rounded opacity-50"
-                    >
-                      <Text className="text-white font-semibold">Pause</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={handleDeleteMealPlan}
-                      disabled={true}
-                      className="bg-red-600 px-4 py-2 rounded opacity-50"
-                    >
-                      <Text className="text-white font-semibold">Delete</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    onPress={handleTakeSurvey}
+                    className="bg-blue-600 px-6 py-3 rounded-lg"
+                  >
+                    <Text className="text-white text-base font-semibold">Take Survey</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View className="w-full">
                   <View className="flex-row justify-between items-center mb-4">
-                    <Text className="text-lg font-medium">Create New Meal Plan</Text>
+                    <Text className="text-xl font-bold text-gray-800">Create New Meal Plan</Text>
                     <TouchableOpacity onPress={() => setShowCreateForm(false)}>
-                      <Text className="text-sm text-gray-600">❌ Cancel</Text>
+                      <Ionicons name="close" size={24} color="#6b7280" />
                     </TouchableOpacity>
                   </View>
                   <CreateMealPlanForm
