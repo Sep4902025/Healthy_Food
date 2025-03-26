@@ -3,13 +3,7 @@ const crypto = require("crypto");
 const moment = require("moment");
 const VNPAY_CONFIG = require("../config/vnpay");
 const Payment = require("../models/Payment");
-const {
-  MealPlan,
-  UserMealPlan,
-  MealDay,
-  Meal,
-  MealTracking,
-} = require("../models/MealPlan");
+const { MealPlan, UserMealPlan, MealDay, Meal, MealTracking } = require("../models/MealPlan");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
 
@@ -25,17 +19,13 @@ exports.createPaymentUrl = async (req, res) => {
     }
 
     if (isNaN(amount) || amount <= 0) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "Amount phải là số dương" });
+      return res.status(400).json({ status: "error", message: "Amount phải là số dương" });
     }
 
     // Kiểm tra MealPlan có tồn tại không
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "MealPlan không tồn tại" });
+      return res.status(400).json({ status: "error", message: "MealPlan không tồn tại" });
     }
 
     // Kiểm tra nếu MealPlan đã thanh toán thành công
@@ -44,9 +34,7 @@ exports.createPaymentUrl = async (req, res) => {
       status: "success",
     });
     if (successPayment) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "MealPlan này đã được thanh toán" });
+      return res.status(400).json({ status: "error", message: "MealPlan này đã được thanh toán" });
     }
 
     // Tìm payment đang pending cho mealPlanId và userId này
@@ -79,10 +67,7 @@ exports.createPaymentUrl = async (req, res) => {
     }
 
     const clientIp =
-      req.headers["x-forwarded-for"] ||
-      req.connection.remoteAddress ||
-      req.ip ||
-      "127.0.0.1";
+      req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.ip || "127.0.0.1";
 
     let vnp_Params = {
       vnp_Version: "2.1.0",
@@ -139,18 +124,14 @@ exports.createPaymentUrl = async (req, res) => {
     sortedParams["vnp_SecureHash"] = secureHash;
 
     // ✅ Tạo URL thanh toán
-    const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(
-      sortedParams
-    ).toString()}`;
+    const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(sortedParams).toString()}`;
 
     console.log("🔹 URL thanh toán gửi đi:", paymentUrl);
 
     return res.json({ status: "success", paymentUrl, paymentId: payment._id });
   } catch (error) {
     console.error("❌ Lỗi tạo URL thanh toán:", error);
-    return res
-      .status(500)
-      .json({ status: "error", message: "Lỗi tạo URL thanh toán" });
+    return res.status(500).json({ status: "error", message: "Lỗi tạo URL thanh toán" });
   }
 };
 exports.vnpayReturn = async (req, res) => {
@@ -187,11 +168,13 @@ exports.vnpayReturn = async (req, res) => {
 
     console.log("Secure Hash from VNPay:", secureHash);
     console.log("Secure Hash re-signed:", signed);
+    // Determine the base URL based on client type
+    const clientType = req.query.clientType || "web";
+    const baseUrl =
+      clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
 
     if (secureHash !== signed) {
-      return res
-        .status(400)
-        .redirect("http://localhost:3000/mealplan?status=error&message=Invalid+signature");
+      return res.status(400).redirect(`${baseUrl}/mealplan?status=error&message=Invalid+signature`);
     }
 
     // 🔹 Process logic after successful signature verification
@@ -213,24 +196,29 @@ exports.vnpayReturn = async (req, res) => {
     );
 
     if (!payment) {
-      return res
-        .status(404)
-        .redirect("http://localhost:3000/mealplan?status=error&message=Payment+not+found");
+      return res.status(404).redirect(`${baseUrl}/mealplan?status=error&message=Payment+not+found`);
     }
 
     // If payment is successful
     if (status === "success") {
-      // Update MealPlan: set isBlock to false and update paymentId
-      await MealPlan.findByIdAndUpdate(payment.mealPlanId, {
-        isBlock: false,
-        paymentId: payment._id, // Add this line to update paymentId in MealPlan
-        isPaid: true, // Optionally update isPaid to true
-      });
+      // Update the MealPlan with the paymentId and set isBlock to false
+      const updatedMealPlan = await MealPlan.findByIdAndUpdate(
+        payment.mealPlanId,
+        { paymentId: payment._id, isBlock: false },
+        { new: true }
+      );
 
-      // 🔹 Find the user's previous MealPlan (if any)
-      const oldUserMealPlan = await UserMealPlan.findOne({
-        userId: payment.userId,
-      });
+      if (!updatedMealPlan) {
+        console.error(`❌ Không tìm thấy MealPlan với ID: ${payment.mealPlanId}`);
+        return res
+          .status(404)
+          .redirect(`${baseUrl}/mealplan?status=error&message=MealPlan+not+found`);
+      }
+
+      console.log(`✅ Đã cập nhật MealPlan ${payment.mealPlanId} với paymentId: ${payment._id}`);
+
+      // 🔹 Tìm MealPlan trước đó của user (nếu có)
+      const oldUserMealPlan = await UserMealPlan.findOne({ userId: payment.userId });
 
       if (oldUserMealPlan) {
         console.log(`🗑 Deleting old MealPlan data for user: ${payment.userId}`);
@@ -273,9 +261,7 @@ exports.vnpayReturn = async (req, res) => {
         startedAt: new Date(),
       });
 
-      console.log(
-        `✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`
-      );
+      console.log(`✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`);
 
       // Clean up other pending Payments
       try {
@@ -295,14 +281,20 @@ exports.vnpayReturn = async (req, res) => {
       }
     }
 
-    // Redirect to localhost:3000/mealplan with query parameters
-    const redirectUrl = `http://localhost:3000/mealplan?status=${status}&message=${
-      status === "success" ? "Payment+successful" : "Payment+failed"
+    // Chuyển hướng với query parameters
+    const redirectUrl = `${baseUrl}/mealplan?status=${status}&message=${
+      status === "success" ? "Thanh+toán+thành+công" : "Thanh+toán+thất+bại"
     }`;
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error("❌ Error processing VNPay:", error);
-    res.redirect("http://localhost:3000/mealplan?status=error&message=Error+processing+VNPay+response");
+    console.error("❌ Lỗi xử lý VNPay:", error);
+
+    // Determine the base URL for error redirect
+    const clientType = req.query.clientType || "web";
+    const baseUrl =
+      clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
+
+    res.redirect(`${baseUrl}/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`);
   }
 };
 // Lấy lịch sử thanh toán của user

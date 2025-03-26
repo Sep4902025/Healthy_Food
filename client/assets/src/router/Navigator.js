@@ -12,6 +12,7 @@ import { StatusBar } from "react-native";
 import { ScreensMap } from "./ScreensMap";
 import CustomTabBar from "../components/common/CustomTabBar";
 import { useTheme } from "../contexts/ThemeContext";
+import CustomDrawerLayout from "../components/layout/CustomDrawerLayout";
 
 
 const Stack = createStackNavigator();
@@ -27,7 +28,7 @@ function HomeStack() {
         headerShown: false,
         gestureEnabled: true,
         gestureDirection: "horizontal",
-        
+
       }}
     >
       {ScreensMap.map((item, index) => (
@@ -49,7 +50,7 @@ const TabNavigator = () => {
         animation: "shift",
         gestureEnabled: true,
         gestureDirection: "horizontal",
-        
+
         tabBarStyle: {
           backgroundColor: theme.tabBarBackgroundColor,
           borderTopColor: theme.border,
@@ -66,7 +67,7 @@ const TabNavigator = () => {
 const Navigator = () => {
   const { theme, themeMode } = useTheme();
 
-  
+
   const navigationTheme = {
     ...(themeMode === "dark" ? DarkTheme : DefaultTheme),
     colors: {
@@ -76,7 +77,7 @@ const Navigator = () => {
       border: theme.border,
       primary: theme.primary,
       notification: theme.accent,
-      
+
     },
   };
 
@@ -88,7 +89,9 @@ const Navigator = () => {
         translucent
       />
       <NavigationContainer theme={navigationTheme}>
-        {TabNavigator()}
+        <CustomDrawerLayout theme={theme}>
+          {TabNavigator()}
+        </CustomDrawerLayout>
       </NavigationContainer>
     </>
   );

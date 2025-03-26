@@ -1,7 +1,5 @@
-
 import Signin from "../screens/Signin";
 import Signup from "../screens/Signup";
-
 
 import { ScreensName } from "../constants/ScreensName";
 import ChangePassword from "../screens/ChangePassword";
@@ -20,46 +18,36 @@ import Message from "../screens/Message";
 import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon";
 import { Image, View } from "react-native";
 import OcticonsIcon from "../components/common/VectorIcons/OcticonsIcon";
-import HeartBeat from "../screens/HeartBeat";
 import Profile from "../screens/Profile";
+import MealPlan from "../screens/MealPlan/MealPlan";
 
 export const ScreensMap = [
- 
   {
     name: ScreensName.home,
     component: Home,
     options: {
       tabBarButton: () => null,
     },
-    
   },
   {
-    
     name: ScreensName.signup,
-    
 
     component: Signup,
-   
 
     options: {
       tabBarButton: () => null,
-      
     },
 
     hiddenBottomTab: true,
-    
   },
 
   {
-    
     name: ScreensName.signin,
     component: Signin,
     options: {
       tabBarButton: () => null,
     },
     hiddenBottomTab: true,
-
-    
   },
   {
     name: ScreensName.verifyEmail,
@@ -77,18 +65,12 @@ export const ScreensMap = [
     },
     hiddenBottomTab: true,
   },
-  
+
   {
     name: ScreensName.favorList,
     component: FavorList,
     options: {
-      tabBarIcon: ({ color, focused }) => (
-        <Ionicons
-          name="heart-outline" 
-          size={28} 
-          color={color} 
-        />
-      ),
+      tabBarIcon: ({ color, focused }) => <Ionicons name="heart-outline" size={28} color={color} />,
       requireAuthen: true,
     },
   },
@@ -97,11 +79,7 @@ export const ScreensMap = [
     component: Message,
     options: {
       tabBarIcon: ({ color, focused }) => (
-        <Ionicons
-          name="chatbubble-ellipses-outline" 
-          size={28} 
-          color={color} 
-        />
+        <Ionicons name="chatbubble-ellipses-outline" size={28} color={color} />
       ),
       iconStyles: { transform: [{ translateX: -25 }] },
       requireAuthen: true,
@@ -109,21 +87,17 @@ export const ScreensMap = [
     hiddenBottomTab: true,
   },
   {
-    name: ScreensName.heartBeat,
-    component: HeartBeat,
+    name: ScreensName.mealPlan,
+    component: MealPlan,
     options: {
       tabBarIcon: ({ color, focused }) => {
         return (
           <View>
-            <FontAwesomeIcon
-              name="heart-o" 
-              size={24} 
-              color={color} 
-            />
+            <FontAwesomeIcon name="heart-o" size={24} color={color} />
             <OcticonsIcon
-              name="pulse" 
-              size={16} 
-              color={color} 
+              name="pulse"
+              size={16}
+              color={color}
               style={{
                 position: "absolute",
                 height: 16,
@@ -143,13 +117,7 @@ export const ScreensMap = [
     name: ScreensName.profile,
     component: Profile,
     options: {
-      tabBarIcon: ({ color, focused }) => (
-        <AntDesignIcon
-          name="setting" 
-          size={28} 
-          color={color}
-        />
-      ),
+      tabBarIcon: ({ color, focused }) => <AntDesignIcon name="setting" size={28} color={color} />,
       requireAuthen: true,
     },
     hiddenBottomTab: true,

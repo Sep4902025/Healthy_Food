@@ -87,3 +87,13 @@ export const updateUser = async (user) => {
     return error;
   }
 };
+
+export const deleteUser = async (userId) => {
+  try {
+    const response = await axiosInstance.delete(`/users/${userId}`);
+    return response;
+  } catch (error) {
+    console.log("deleteUser error: ", error);
+    return error;
+  }
+};

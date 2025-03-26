@@ -66,7 +66,7 @@ export const EditHealthModal = ({
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={String(healthData.weight)}
+                    value={String(healthData.weight ?? 0)}
                     onChangeText={(text) =>
                       setHealthData({ ...healthData, weight: text })
                     }
@@ -99,7 +99,7 @@ export const EditHealthModal = ({
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={String(healthData.height)}
+                    value={String(healthData.height ?? 0)}
                     onChangeText={(text) =>
                       setHealthData({ ...healthData, height: text })
                     }
@@ -200,7 +200,7 @@ export const EditHealthModal = ({
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={String(healthData.weightGoal)}
+                    value={String(healthData.weightGoal ?? 0)}
                     onChangeText={(text) =>
                       setHealthData({ ...healthData, weightGoal: text })
                     }

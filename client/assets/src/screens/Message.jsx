@@ -33,10 +33,10 @@ function Message({ navigation }) {
 
   const [messages, setMessages] = useState([]);
   const [conversation, setConversation] = useState({});
-  const [screenState, setScreenState] = useState("onboarding");
+  const [screenState, setScreenState] = useState("chat"); // onboarding
   const [inputText, setInputText] = useState("");
   const [visible, setVisible] = useState({ inputTopic: false });
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const flatListRef = useRef(null);
 
   useEffect(() => {
@@ -139,15 +139,26 @@ function Message({ navigation }) {
   return (
     <MainLayoutWrapper headerHidden={true}>
       <Image
-        source={require("../../assets/image/ChatBG.png")}
+        source={
+          themeMode === "light"
+            ? require("../../assets/image/ChatBG.png")
+            : require("../../assets/image/ChatBG-dark.png")
+        }
         style={styles.backgroundImage}
         resizeMode="cover"
       />
-      {navigation.canGoBack() && (
-        <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={32} color={theme.backButtonColor} />
+      {/* {navigation.canGoBack() && (
+        <TouchableOpacity
+          style={styles.backIcon}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={32}
+            color={theme.backButtonColor}
+          />
         </TouchableOpacity>
-      )}
+      )} */}
       {screenState === "onboarding" ? (
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -181,7 +192,10 @@ function Message({ navigation }) {
               }
               return item.id;
             }}
-            style={styles.messagesList}
+            style={{
+              ...styles.messagesList,
+              backgroundColor: theme.editModalbackgroundColor,
+            }}
             contentContainerStyle={styles.messagesListContent}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
@@ -190,7 +204,11 @@ function Message({ navigation }) {
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-            style={styles.inputContainer}
+            style={{
+              ...styles.inputContainer,
+              backgroundColor: theme.editModalbackgroundColor,
+              borderTopWidth: themeMode === "light" ? 1 : 0,
+            }}
           >
             <TextInput
               style={styles.input}
@@ -277,14 +295,14 @@ const styles = StyleSheet.create({
   backIcon: {
     position: "absolute",
     left: "8%",
+    top: "8%",
     zIndex: 999,
   },
   messagesList: {
     flex: 1,
-    marginTop: HEIGHT * 0.15,
+    marginTop: HEIGHT * 0.06,
     borderTopRightRadius: 24,
     borderTopLeftRadius: 24,
-    backgroundColor: "#F8FBFB",
   },
   messagesListContent: {
     paddingVertical: 10,
@@ -344,8 +362,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderTopWidth: 1,
     borderTopColor: "#e5e5e5",
-    borderTopRightRadius: 24,
-    borderTopLeftRadius: 24,
     paddingBottom: 20,
   },
   input: {
