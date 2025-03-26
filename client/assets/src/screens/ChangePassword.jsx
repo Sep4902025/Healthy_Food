@@ -1,56 +1,50 @@
-
 import React, { useState } from "react";
 import {
-  Text, 
-  View, 
-  StyleSheet, 
+  Text,
+  View,
+  StyleSheet,
   Image,
-  TextInput, 
+  TextInput,
   Dimensions,
   KeyboardAvoidingView,
-  Platform, 
+  Platform,
 } from "react-native";
 
-import SafeAreaWrapper from "../components/layout/SafeAreaWrapper"; 
-import RippleButton from "../components/common/RippleButton"; 
-import proundCactusIcon from "../../assets/image/pround_cactus.png"; 
-import ShowToast from "../components/common/CustomToast"; 
-import { changePassword } from "../services/authService"; 
-import { ScreensName } from "../constants/ScreensName"; 
+import SafeAreaWrapper from "../components/layout/SafeAreaWrapper";
+import RippleButton from "../components/common/RippleButton";
+import proundCactusIcon from "../../assets/image/pround_cactus.png";
+import ShowToast from "../components/common/CustomToast";
+import { changePassword } from "../services/authService";
+import { ScreensName } from "../constants/ScreensName";
+import { useTheme } from "../contexts/ThemeContext";
 
-h
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
 
 function ChangePassword({ navigation, route }) {
-  
   const email = route.params?.email;
- 
+  const { theme } = useTheme();
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  
   const handleResetPassword = async () => {
-    
     if (!newPassword || !confirmPassword) {
       ShowToast("error", "Vui lòng điền đầy đủ thông tin");
       return;
     }
 
-    
     if (newPassword !== confirmPassword) {
       ShowToast("error", "Mật khẩu không khớp");
       return;
     }
 
-    
     console.log({
       email: email?.trim(),
       password: newPassword,
       passwordConfirm: confirmPassword,
     });
 
-   
     const response = await changePassword({
       email: email.trim(),
       password: newPassword,
@@ -58,7 +52,6 @@ function ChangePassword({ navigation, route }) {
     });
     console.log(response.status);
 
-    
     if (response.status === 200) {
       ShowToast("success", "Đổi mật khẩu thành công");
       console.log("Password reset:", newPassword);
@@ -66,26 +59,27 @@ function ChangePassword({ navigation, route }) {
     }
   };
 
- 
   return (
     <SafeAreaWrapper>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={{
+          ...styles.container,
+          backgroundColor: theme.editModalbackgroundColor,
+        }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.card}>
-          
-          <Text style={styles.title}>Change New Password</Text>
-
-         
-          <Text style={styles.subtitle}>
+          <Text style={{ ...styles.title, color: theme.textColor }}>
+            Change New Password
+          </Text>
+          <Text style={{ ...styles.subtitle, color: theme.greyTextColor }}>
             Enter a different password with{"\n"}the previous
           </Text>
 
-          
           <View style={styles.inputContainer}>
-           
-            <Text style={styles.label}>New Password</Text>
+            <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+              New Password
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="••••••••••••"
@@ -95,8 +89,9 @@ function ChangePassword({ navigation, route }) {
               secureTextEntry
             />
 
-           
-            <Text style={styles.label}>Confirm Password</Text>
+            <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+              Confirm Password
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="••••••••••••"
@@ -107,10 +102,8 @@ function ChangePassword({ navigation, route }) {
             />
           </View>
 
-          
           <View style={styles.illustrationContainer}>
             <Image source={proundCactusIcon} style={styles.cactusIcon} />
-         
             <View style={styles.decorations}>
               <View style={[styles.star, styles.starOrange]} />
               <View style={[styles.star, styles.starYellow]} />
@@ -118,7 +111,6 @@ function ChangePassword({ navigation, route }) {
             </View>
           </View>
 
-        
           <RippleButton
             buttonStyle={styles.submitButton}
             buttonText="Reset Password"
@@ -141,7 +133,6 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
   },
   title: {
     fontSize: 24,

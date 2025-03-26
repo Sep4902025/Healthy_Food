@@ -1,11 +1,8 @@
-
 import { io } from "socket.io-client";
 
-
-const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL; 
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL;
 class MessageSocket {
   socket = null;
-
 
   init = (data) => {
     if (this.socket) {
@@ -13,7 +10,6 @@ class MessageSocket {
       return;
     }
 
-   
     this.socket = io(SOCKET_URL, {
       transports: ["websocket"],
       reconnection: true,
@@ -39,7 +35,6 @@ class MessageSocket {
     });
   };
 
- 
   disconnect = () => {
     if (this.socket) {
       this.socket.disconnect();
@@ -47,12 +42,10 @@ class MessageSocket {
     }
   };
 
- 
   isConnected = () => {
     return this.socket && this.socket.connected;
   };
 
- 
   emit = (event, data) => {
     if (this.socket) {
       this.socket.emit(event, data);
@@ -61,7 +54,6 @@ class MessageSocket {
     }
   };
 
- 
   on = (event, callback) => {
     if (this.socket) {
       this.socket.on(event, callback);
@@ -70,21 +62,18 @@ class MessageSocket {
     }
   };
 
-  
   off = (event) => {
     if (this.socket) {
       this.socket.off(event);
     }
   };
 
-  
   joinRoom = (roomId) => {
     if (this.socket) {
       this.socket.emit("join_room", roomId);
     }
   };
 
-  
   leaveRoom = (roomId) => {
     if (this.socket) {
       this.socket.emit("leave_room", roomId);

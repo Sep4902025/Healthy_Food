@@ -14,7 +14,6 @@ import { getDishes } from "../services/dishes";
 import { favorSelector } from "../redux/selectors/selector";
 import { useSelector } from "react-redux";
 import SpinnerLoading from "../components/common/SpinnerLoading";
-import PaddingScrollViewBottom from "../components/common/PaddingScrollViewBottom";
 import { useTheme } from "../contexts/ThemeContext";
 const HEIGHT = Dimensions.get("window").height;
 function FavorList() {
@@ -76,7 +75,6 @@ function FavorList() {
               ))
             )}
           </View>
-          <PaddingScrollViewBottom />
         </ScrollView>
       </View>
     </MainLayoutWrapper>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, use, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  SafeAreaView,
-  Dimensions,
   Image,
+  Dimensions,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import messageSocket from "../services/messageSocket";
@@ -25,37 +24,57 @@ import InputModal from "../components/modal/InputModal";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
 import { useTheme } from "../contexts/ThemeContext";
 import ShowToast from "../components/common/CustomToast";
+
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
+
 function Message({ navigation }) {
   const user = useSelector(userSelector);
 
   const [messages, setMessages] = useState([]);
   const [conversation, setConversation] = useState({});
-  const [screenState, setScreenState] = useState("onboarding");
+  const [screenState, setScreenState] = useState("chat"); // onboarding
   const [inputText, setInputText] = useState("");
   const [visible, setVisible] = useState({ inputTopic: false });
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const flatListRef = useRef(null);
 
   useEffect(() => {
-
     messageSocket.init({ userId: user?._id, token: user?.accessToken });
     loadConversation();
 
-    
+    const handleReceiveMessage = (message) => {
+      console.log("New message received:", message);
+      const messageToReceived = {
+        id: message._id,
+        text: message.text,
+        sender: message.senderId === user?._id ? "me" : "other", // Check senderId to determine if it's the user's message
+        timestamp: message.updatedAt,
+      };
+
+      setMessages((previousMessages) => {
+        if (previousMessages.some((msg) => msg.id === messageToReceived.id)) {
+          return previousMessages; // Skip adding the duplicate message
+        }
+        return [...previousMessages, messageToReceived];
+      });
+    };
+
+    messageSocket.on("receive_message", handleReceiveMessage);
+
     return () => {
       messageSocket.disconnect();
-      messageSocket.off("receive_message");
+      messageSocket.off("receive_message", handleReceiveMessage);
     };
-  }, []);
+  }, [user?._id, user?.accessToken]);
 
   const loadConversation = async () => {
-    
     const response = await getUserConversations(user?._id);
     if (response.status === 200) {
       setConversation(response.data?.data[0]);
-      loadMessgageHistory(response.data?.data[0]._id);
+      if (response.data?.data[0]?._id) {
+        loadMessgageHistory(response.data?.data[0]._id);
+      }
     }
   };
 
@@ -65,6 +84,7 @@ function Message({ navigation }) {
       setMessages(
         response.data?.data?.map((item) => ({
           ...item,
+          id: item._id,
           sender: item.senderId === user?._id ? "me" : "other",
         }))
       );
@@ -90,21 +110,11 @@ function Message({ navigation }) {
   };
 
   const onSend = () => {
-    const messageToSend = {
-      text: inputText,
-      sender: "me",
-      timestamp: new Date().toISOString(),
-    };
-
-    
-    setMessages((previousMessages) => [...previousMessages, messageToSend]);
-
-    
     messageSocket.emit("send_message", {
       conversationId: conversation._id,
       senderId: user?._id,
       receiverId: "",
-      text: messageToSend.text,
+      text: inputText,
       createdAt: new Date(),
     });
     setInputText("");
@@ -124,7 +134,7 @@ function Message({ navigation }) {
           {item.text}
         </Text>
         <Text style={[styles.timestamp, isMyMessage && styles.mySender]}>
-          {new Date(item.updatedAt).toLocaleTimeString([], {
+          {new Date(item.updatedAt || item.timestamp).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           })}
@@ -133,38 +143,29 @@ function Message({ navigation }) {
     );
   };
 
-  messageSocket.on("receive_message", (message) => {
-    console.log("New message received:", message);
-    const messageToReceived = {
-      id: message._id,
-      text: message.text,
-      sender: "other",
-      timestamp: message.updatedAt,
-    };
-
-    
-    setMessages((previousMessages) => [...previousMessages, messageToReceived]);
-  });
-
   return (
     <MainLayoutWrapper headerHidden={true}>
       <Image
-        source={require("../../assets/image/ChatBG.png")}
+        source={
+          themeMode === "light"
+            ? require("../../assets/image/ChatBG.png")
+            : require("../../assets/image/ChatBG-dark.png")
+        }
         style={styles.backgroundImage}
         resizeMode="cover"
       />
-      {navigation.canGoBack() && (
+      {/* {navigation.canGoBack() && (
         <TouchableOpacity
           style={styles.backIcon}
           onPress={() => navigation.goBack()}
         >
           <Ionicons
-            name="chevron-back" 
-            size={32} 
-            color={theme.backButtonColor} 
+            name="chevron-back"
+            size={32}
+            color={theme.backButtonColor}
           />
         </TouchableOpacity>
-      )}
+      )} */}
       {screenState === "onboarding" ? (
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -196,8 +197,17 @@ function Message({ navigation }) {
             ref={flatListRef}
             data={messages}
             renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
-            style={styles.messagesList}
+            keyExtractor={(item) => {
+              if (!item.id) {
+                console.warn("Message missing id:", item);
+                return `temp-${Date.now()}-${Math.random()}`;
+              }
+              return item.id;
+            }}
+            style={{
+              ...styles.messagesList,
+              backgroundColor: theme.editModalbackgroundColor,
+            }}
             contentContainerStyle={styles.messagesListContent}
             onContentSizeChange={() =>
               flatListRef.current?.scrollToEnd({ animated: true })
@@ -210,7 +220,11 @@ function Message({ navigation }) {
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-            style={styles.inputContainer}
+            style={{
+              ...styles.inputContainer,
+              backgroundColor: theme.editModalbackgroundColor,
+              borderTopWidth: themeMode === "light" ? 1 : 0,
+            }}
           >
             <TextInput
               style={styles.input}
@@ -297,14 +311,14 @@ const styles = StyleSheet.create({
   backIcon: {
     position: "absolute",
     left: "8%",
+    top: "8%",
     zIndex: 999,
   },
   messagesList: {
     flex: 1,
-    marginTop: HEIGHT * 0.15,
+    marginTop: HEIGHT * 0.06,
     borderTopRightRadius: 24,
     borderTopLeftRadius: 24,
-    backgroundColor: "#F8FBFB",
   },
   messagesListContent: {
     paddingVertical: 10,
@@ -327,7 +341,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-
     elevation: 5,
   },
   messageSender: {
@@ -347,7 +360,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-
     elevation: 5,
   },
   messageText: {
@@ -366,8 +378,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderTopWidth: 1,
     borderTopColor: "#e5e5e5",
-    borderTopRightRadius: 24,
-    borderTopLeftRadius: 24,
     paddingBottom: 20,
   },
   input: {

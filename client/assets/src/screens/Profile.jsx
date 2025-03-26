@@ -9,8 +9,6 @@ import {
   ScrollView,
   Dimensions,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; 
-import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import { favorSelector, userSelector } from "../redux/selectors/selector";
 import { useDispatch, useSelector } from "react-redux";
 import SafeAreaWrapper from "../components/layout/SafeAreaWrapper";
@@ -22,12 +20,17 @@ import { EditProfileModal } from "../components/modal/EditProfileModal";
 import { EditMealPlanModal } from "../components/modal/EditMealPlanModal";
 import { ScreensName } from "../constants/ScreensName";
 import ShowToast from "../components/common/CustomToast";
-import { updateUser } from "../services/authService";
-import { updateUserAct } from "../redux/reducers/userReducer";
+import { deleteUser, updateUser } from "../services/authService";
+import { removeUser, updateUserAct } from "../redux/reducers/userReducer";
 import {
   getUserPreference,
   updateUserPreference,
 } from "../services/userPreference";
+import { useFocusEffect } from "@react-navigation/native";
+import ConfirmDeleteAccountModal from "../components/modal/ConfirmDeleteAccountModal";
+import { toggleVisible } from "../redux/reducers/drawerReducer";
+import Ionicons from "../components/common/VectorIcons/Ionicons";
+import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -39,9 +42,19 @@ function Profile({ navigation }) {
     EditHealthModal: false,
     EditProfileModal: false,
     EditMealPlanModal: false,
+    ConfirmDeleteModal: false,
   });
   const [userPreference, setUserPreference] = useState({});
   const user = useSelector(userSelector);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!user) {
+        ShowToast("error", "Please login first");
+        navigation.navigate(ScreensName.signin);
+      }
+    }, [])
+  );
 
   useEffect(() => {
     loadUserPreference();
@@ -69,7 +82,7 @@ function Profile({ navigation }) {
     } else {
       ShowToast("error", "Update edit health fail");
     }
-    
+    // updateUserPreference
 
     setModalVisible({
       ...modalVisible,
@@ -82,7 +95,7 @@ function Profile({ navigation }) {
 
     if (response.status === 200) {
       ShowToast("success", "Update user profile successfull");
-      dispatch(updateUserAct(response.data?.data?.user || {})); 
+      dispatch(updateUserAct(response.data?.data?.user || {})); // Cập nhật thông tin user())
     } else {
       ShowToast("error", "Update user profile fail");
     }
@@ -99,22 +112,45 @@ function Profile({ navigation }) {
     });
   };
 
+  const handleDeleteAccount = async () => {
+    const response = await deleteUser(user?._id);
+    if (response.status === 200) {
+      handleLogout();
+      setModalVisible({
+        ...modalVisible,
+        ConfirmDeleteModal: false,
+      });
+    } else {
+      const message =
+        response?.response?.data?.message || "Something went wrong";
+      ShowToast("error", message);
+    }
+  };
+
+  const handleLogout = async () => {
+    dispatch(removeUser());
+    navigation.navigate(ScreensName.signin);
+  };
+
   return (
     <NonBottomTabWrapper headerHidden={true}>
-      
+      {/* Phần header với ảnh nền */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          // onPress={() => navigation.goBack()}
+          onPress={() => {
+            dispatch(toggleVisible());
+          }}
           style={styles.backButton}
         >
-          <Ionicons name="chevron-back" size={24} color={theme.textColor} />
+          <Ionicons name="reorder-three" size={24} color={theme.textColor} />
         </TouchableOpacity>
         <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
           My Profile
         </Text>
       </View>
 
-     
+      {/* Profile section */}
       <View style={styles.profileSection}>
         <Image
           source={
@@ -149,7 +185,7 @@ function Profile({ navigation }) {
         </View>
       </View>
 
-      
+      {/* Menu Items */}
       <View style={styles.menuContainer}>
         <TouchableOpacity
           style={styles.menuItem}
@@ -187,15 +223,12 @@ function Profile({ navigation }) {
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => {
-            setModalVisible({
-              ...modalVisible,
-              EditMealPlanModal: true,
-            });
+            navigation.navigate(ScreensName.verifyEmail);
           }}
         >
-          <Ionicons name="calendar-outline" size={24} color={theme.textColor} />
+          <FontAwesomeIcon name="edit" size={24} color={theme.textColor} />
           <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Meal Planning
+            Change password
           </Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
@@ -211,6 +244,37 @@ function Profile({ navigation }) {
             trackColor={{ false: "#ccc", true: "#75a57f" }}
           />
         </View>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => {
+            setModalVisible({
+              ...modalVisible,
+              ConfirmDeleteModal: true,
+            });
+          }}
+        >
+          <Ionicons
+            name="trash-bin-outline"
+            size={24}
+            color={theme.textColor}
+          />
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>
+            Delete Account
+          </Text>
+          {/* <Ionicons name="chevron-forward" size={24} color="#999" /> */}
+          <Text style={{ color: theme.textColor }}>YES</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color={theme.textColor} />
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>
+            Logout
+          </Text>
+          <Text style={{ color: theme.textColor }}>YES</Text>
+          {/* <Ionicons name="chevron-forward" size={24} color="#999" /> */}
+        </TouchableOpacity>
+
         <View
           style={{ ...styles.separator, backgroundColor: theme.textColor }}
         />
@@ -242,6 +306,13 @@ function Profile({ navigation }) {
         onSave={(data) => {
           handleEditProfile(data);
         }}
+      />
+      <ConfirmDeleteAccountModal
+        visible={modalVisible.ConfirmDeleteModal}
+        onClose={() => {
+          setModalVisible({ ...modalVisible, ConfirmDeleteModal: false });
+        }}
+        onSubmit={handleDeleteAccount}
       />
     </NonBottomTabWrapper>
   );
@@ -284,7 +355,7 @@ const styles = StyleSheet.create({
     width: WIDTH * 0.25,
     height: WIDTH * 0.25,
     borderRadius: WIDTH,
-    backgroundColor: "#ddd", 
+    backgroundColor: "#ddd", // Placeholder color
   },
   profileInfoContainer: {
     alignItems: "flex-start",
@@ -315,7 +386,7 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 20,
   },
   menuText: {
@@ -326,6 +397,7 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: "#000000",
+    marginVertical: 12,
     marginHorizontal: 20,
   },
 });

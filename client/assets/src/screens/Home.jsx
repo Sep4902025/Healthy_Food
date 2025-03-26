@@ -1,4 +1,4 @@
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import SearchBar from "../components/common/SearchBar";
 import { ScreensName } from "../constants/ScreensName";
 import DishedV1 from "../components/common/DishedV1";
-import { getDishes } from "../services/dishes";
 import CategoryCard from "../components/common/CategoryCard";
 import useCurrentSeason from "../hooks/useCurrentSeason";
 import { DishType } from "../constants/DishType";
@@ -21,10 +20,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { loadFavorites } from "../redux/actions/favoriteThunk";
 import { favorSelector, userSelector } from "../redux/selectors/selector";
 import SpinnerLoading from "../components/common/SpinnerLoading";
-import PaddingScrollViewBottom from "../components/common/PaddingScrollViewBottom";
+import HomeService from "../services/HomeService";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
+
 function Home({ navigation }) {
   const [seasonalDishes, setSeasonalDishes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,8 +36,6 @@ function Home({ navigation }) {
 
   const season = useCurrentSeason();
 
-
-
   useEffect(() => {
     loadDishes();
   }, []);
@@ -47,8 +45,9 @@ function Home({ navigation }) {
   }, [dispatch, user]);
 
   const loadFavoritesData = async () => {
-    if (user) {
-      dispatch(loadFavorites());
+    if (user?.userId) {
+      // Đảm bảo userId tồn tại
+      dispatch(loadFavorites(user.userId));
     }
   };
 
@@ -60,12 +59,25 @@ function Home({ navigation }) {
   };
 
   const loadDishes = async () => {
-    setLoading({ ...loading, loadDishes: true });
-    const response = await getDishes();
-    if (response.status === 200) {
-      setSeasonalDishes(response.data?.data);
+    setLoading((prev) => ({ ...prev, loadDishes: true }));
+    try {
+      const response = await HomeService.getAllDishes();
+      if (response?.status === "success") {
+        // Sửa từ response?.success thành response?.status
+        setSeasonalDishes(response.data || []);
+      } else {
+        console.error(
+          "Failed to load dishes:",
+          response?.message || "Unknown error"
+        );
+        setSeasonalDishes([]);
+      }
+    } catch (error) {
+      console.error("Error loading dishes:", error.message || error);
+      setSeasonalDishes([]);
+    } finally {
+      setLoading((prev) => ({ ...prev, loadDishes: false }));
     }
-    setLoading({ ...loading, loadDishes: false });
   };
 
   const handleSearch = async (searchString) => {
@@ -96,7 +108,7 @@ function Home({ navigation }) {
           onSubmit={() => handleSearch(searchQuery)}
           onClear={handleClear}
         />
-       
+
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Browse by category</Text>
           <ScrollView
@@ -125,7 +137,6 @@ function Home({ navigation }) {
           </ScrollView>
         </View>
 
-       
         <View style={styles.seasonalSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Seasonal Dishes</Text>
@@ -134,19 +145,26 @@ function Home({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {seasonalDishes.length > 0 ? (
+          {loading.loadDishes ? (
+            <SpinnerLoading />
+          ) : seasonalDishes.length > 0 ? (
             seasonalDishes
-              .filter(
-                (item) =>
-                  item.season === season || item.season === "All Seasons"
+              .filter((item) =>
+                item.season.toLowerCase().includes(season.toLowerCase())
               )
-              .map((dish) => <DishedV1 dish={dish} key={dish._id} />)
+              .map((dish) => (
+                <DishedV1
+                  dish={dish}
+                  key={dish._id}
+                  onPress={() =>
+                    navigation.navigate(ScreensName.favorAndSuggest, { dish })
+                  } // Thêm onPress để điều hướng
+                />
+              ))
           ) : (
             <Text style={styles.noResultsText}>No seasonal dishes found</Text>
           )}
-          {loading.loadDishes && favor.isLoading && <SpinnerLoading />}
         </View>
-        <PaddingScrollViewBottom />
       </ScrollView>
     </MainLayoutWrapper>
   );
@@ -156,9 +174,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-   
   },
-  
+
   categoriesSection: {
     marginTop: 16,
   },
@@ -171,9 +188,8 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    
   },
-  
+
   seasonalSection: {
     marginVertical: 16,
   },

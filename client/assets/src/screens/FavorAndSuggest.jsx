@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,43 +7,59 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  useWindowDimensions,
   ActivityIndicator,
+  Linking,
+  Alert,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
-import PaddingScrollViewBottom from "../components/common/PaddingScrollViewBottom";
 import { useDispatch, useSelector } from "react-redux";
-import { favorSelector } from "../redux/selectors/selector";
+import { favorSelector, userSelector } from "../redux/selectors/selector";
 import { toggleFavorite } from "../redux/actions/favoriteThunk";
 import MaterialCommunityIcons from "../components/common/VectorIcons/MaterialCommunityIcons";
-import { getRecipesById } from "../services/dishes";
 import SpinnerLoading from "../components/common/SpinnerLoading";
 import Rating from "../components/common/Rating";
-import { getIngredient } from "../services/ingredient";
 import { useTheme } from "../contexts/ThemeContext";
-import YouTubePlayer from "../components/common/YoutubePlayer";
+import YoutubePlayer from "react-native-youtube-iframe";
+import HomeService from "../services/HomeService";
+import { getIngredient } from "../services/ingredient";
+
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
 
 function FavorAndSuggest({ route }) {
-  const [dish, setDish] = useState({});
-  const [recipe, setRecipe] = useState({});
+  const [dish, setDish] = useState(null);
+  const [recipe, setRecipe] = useState(null);
   const [ingredientDetails, setIngredientDetails] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const dispatch = useDispatch();
   const favorite = useSelector(favorSelector);
-  const [loading, setLoading] = useState(true);
+  const user = useSelector(userSelector);
   const { theme } = useTheme();
 
+  // Load dish from route params
   useEffect(() => {
-    setDish(route.params.dish);
-  }, [route.params.dish]);
+    if (route?.params?.dish) {
+      setDish(route.params.dish);
+    } else {
+      setLoading(false);
+      Alert.alert("Error", "Dish data is not available.");
+    }
+  }, [route?.params?.dish]);
 
+  // Load recipe when dish changes
   useEffect(() => {
+    if (!dish?._id || !dish?.recipeId) {
+      setLoading(false);
+      console.warn("Dish ID or Recipe ID is missing:", dish);
+      return;
+    }
     loadRecipe();
   }, [dish]);
 
+  // Fetch ingredient details when recipe changes
   useEffect(() => {
     const fetchIngredientDetails = async () => {
       if (!recipe?.ingredients?.length) {
@@ -55,7 +71,7 @@ function FavorAndSuggest({ route }) {
         setLoading(true);
         const detailsObj = [];
 
-       
+        // Create an array of promises for all ingredient fetches
         const promises = recipe.ingredients.map(async (ingredient) => {
           if (!ingredient?.ingredientId) return;
 
@@ -69,7 +85,7 @@ function FavorAndSuggest({ route }) {
           }
         });
 
-      
+        // Wait for all promises to resolve
         await Promise.all(promises);
 
         setIngredientDetails(detailsObj);
@@ -85,22 +101,63 @@ function FavorAndSuggest({ route }) {
 
   const loadRecipe = async () => {
     setLoading(true);
-    const response = await getRecipesById(dish._id, dish?.recipe_id);
-    setRecipe(response?.data?.data);
-    setLoading(false);
+
+    try {
+      const response = await HomeService.getRecipeByRecipeId(
+        dish._id,
+        dish.recipeId
+      );
+      if (response.success) {
+        setRecipe(response.data);
+      } else {
+        Alert.alert("Error", response.message || "Failed to load recipe.");
+      }
+    } catch (error) {
+      console.error("Error loading recipe:", error);
+      Alert.alert("Error", "An error occurred while loading the recipe.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const isFavorite = (id) => {
-    return favorite.favoriteList?.includes(id);
-  };
+  // const fetchIngredientDetails = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const details = recipe.ingredients.map((ingredient) => {
+  //       if (!ingredient?.ingredientId) {
+  //         console.warn("Invalid ingredientId:", ingredient);
+  //         return null;
+  //       }
+  //       return {
+  //         ...ingredient.ingredientId,
+  //         quantity: ingredient?.quantity,
+  //         unit: ingredient?.unit,
+  //       };
+  //     });
+  //     console.log("Final Ingredient Details:", details);
+  //     setIngredientDetails(details);
+  //   } catch (error) {
+  //     console.error("Error processing ingredient details:", error);
+  //     Alert.alert("Error", "Failed to load ingredient details.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  const handleOnSavePress = (dish) => {
-    dispatch(toggleFavorite({ id: dish._id }));
-  };
+  const isFavorite = (id) => favorite.favoriteList?.includes(id) || false;
 
-  const handleOnPlayPress = (dish) => {
-    if (dish?.videoUrl) {
-      console.log(dish?.videoUrl);
+  const handleOnSavePress = async (dish) => {
+    if (!user?.userId) {
+      Alert.alert("Error", "Please log in to save favorites.");
+      return;
+    }
+    try {
+      const isLiked = isFavorite(dish._id);
+      await HomeService.toggleFavoriteDish(user.userId, dish._id, isLiked);
+      dispatch(toggleFavorite({ id: dish._id }));
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      Alert.alert("Error", "Failed to toggle favorite.");
     }
   };
 
@@ -108,7 +165,13 @@ function FavorAndSuggest({ route }) {
     setRecipe((prev) => ({ ...prev, rate: ratePoint }));
   };
 
-  const layout = useWindowDimensions();
+  const getYouTubeVideoId = (url) => {
+    if (!url) return null;
+    const regex =
+      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
 
   const renderRecipeCard = () => {
     const [index, setIndex] = useState(0);
@@ -117,52 +180,155 @@ function FavorAndSuggest({ route }) {
       { key: "instructions", title: "Instructions" },
     ]);
 
-    const IngredientsRoute = () => {
-      if (loading) {
-        return <SpinnerLoading />;
-      }
+    const IngredientsRoute = () => (
+      <ScrollView
+        style={{ ...styles.tabContent }}
+        nestedScrollEnabled={true}
+        showsVerticalScrollIndicator={false}
+      >
+        {loading ? (
+          <SpinnerLoading />
+        ) : (
+          <>
+            <Text
+              style={{ ...styles.sectionTitle, color: theme.greyTextColor }}
+            >
+              {ingredientDetails.length} Ingredients
+            </Text>
+            {ingredientDetails.length > 0 ? (
+              ingredientDetails
+                .map((ingredient, idx) => {
+                  if (!ingredient || typeof ingredient !== "object") {
+                    console.warn("Invalid ingredient data:", ingredient);
+                    return null;
+                  }
+                  return (
+                    <View key={idx} style={styles.ingredientRow}>
+                      <Image
+                        source={{ uri: ingredient.imageUrl }}
+                        style={styles.ingredientImage}
+                      />
+                      <View style={styles.ingredientInfo}>
+                        <Text
+                          style={{
+                            ...styles.ingredientName,
+                            color: theme.greyTextColor,
+                          }}
+                        >
+                          {ingredient.name || "Unknown Ingredient"}
+                        </Text>
+                        {ingredient.type && (
+                          <Text
+                            style={{
+                              ...styles.ingredientDetail,
+                              color: theme.greyTextColor,
+                            }}
+                          >
+                            Type: {ingredient.type}
+                          </Text>
+                        )}
+                        {ingredient.description && (
+                          <Text
+                            style={{
+                              ...styles.ingredientDetail,
+                              color: theme.greyTextColor,
+                            }}
+                          >
+                            {ingredient.description}
+                          </Text>
+                        )}
+                      </View>
+                      <Text
+                        style={{
+                          ...styles.ingredientQuantity,
+                          color: theme.greyTextColor,
+                        }}
+                      >
+                        {ingredient.quantity || "N/A"} {ingredient.unit || ""}
+                      </Text>
+                    </View>
+                  );
+                })
+                .filter(Boolean)
+            ) : (
+              <Text
+                style={{ ...styles.noDataText, color: theme.greyTextColor }}
+              >
+                No ingredients available.
+              </Text>
+            )}
+          </>
+        )}
+      </ScrollView>
+    );
+
+    const InstructionsRoute = () => {
+      const videoId = getYouTubeVideoId(dish?.videoUrl);
 
       return (
-        <ScrollView style={styles.tabContent}>
-          <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>
-            {recipe?.ingredients?.length ?? 0} Ingredients
-          </Text>
-          {ingredientDetails?.map((ingredient, idx) => (
-            <View key={idx} style={styles.ingredientRow}>
-              <Text
-                style={{ ...styles.ingredientName, color: theme.greyTextColor }}
-              >
-                {ingredient?.name}
-              </Text>
-              <Text
-                style={{
-                  ...styles.ingredientQuantity,
-                  color: theme.greyTextColor,
-                }}
-              >
-                {ingredient?.quantity} {ingredient?.unit}
-              </Text>
+        <ScrollView
+          style={styles.tabContent}
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={false}
+        >
+          {videoId ? (
+            <View style={styles.videoContainer}>
+              <YoutubePlayer
+                height={200}
+                play={false}
+                videoId={videoId}
+                onError={(error) =>
+                  console.error("YouTube Player Error:", error)
+                }
+              />
             </View>
-          ))}
-          <PaddingScrollViewBottom />
+          ) : dish?.videoUrl ? (
+            <TouchableOpacity
+              style={styles.videoLink}
+              onPress={() => Linking.openURL(dish.videoUrl)}
+            >
+              <Text style={styles.videoLinkText}>Watch Video Tutorial</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          <Text
+            style={{
+              ...styles.sectionTitle,
+              color: theme.greyTextColor,
+              marginTop: 16,
+            }}
+          >
+            Instructions
+          </Text>
+          {recipe?.instruction?.length > 0 ? (
+            recipe.instruction.map((instruction, idx) => (
+              <View key={idx} style={styles.instructionRow}>
+                <Text
+                  style={{
+                    ...styles.instructionStep,
+                    color: theme.greyTextColor,
+                  }}
+                >
+                  Step {idx + 1}:
+                </Text>
+                <Text
+                  style={{
+                    ...styles.instructionText,
+                    color: theme.greyTextColor,
+                  }}
+                >
+                  {instruction?.description || "No description available."}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
+              No instructions available.
+            </Text>
+          )}
         </ScrollView>
       );
     };
-
-    const InstructionsRoute = () => (
-      <ScrollView style={styles.tabContent}>
-        {dish?.videoUrl && <YouTubePlayer videoId={dish?.videoUrl} />}
-        {recipe?.instruction?.map((instruction, idx) => (
-          <Text
-            key={idx}
-            style={{ ...styles.instructionText, color: theme.greyTextColor }}
-          >
-            • {instruction?.description}
-          </Text>
-        ))}
-        <PaddingScrollViewBottom />
-      </ScrollView>
-    );
 
     const renderScene = SceneMap({
       ingredient: IngredientsRoute,
@@ -188,8 +354,24 @@ function FavorAndSuggest({ route }) {
       />
     );
 
+    if (!dish?._id) {
+      return (
+        <View style={styles.container}>
+          <Text
+            style={{
+              ...styles.noDataText,
+              color: theme.greyTextColor,
+              textAlign: "center",
+            }}
+          >
+            Dish data is not available.
+          </Text>
+        </View>
+      );
+    }
+
     return (
-      <View key={dish._id} style={styles.recipeCard}>
+      <View style={styles.recipeCard}>
         <Image source={{ uri: dish?.imageUrl }} style={styles.recipeImage} />
         <TouchableOpacity
           style={styles.heartIcon}
@@ -206,16 +388,6 @@ function FavorAndSuggest({ route }) {
           ) : (
             <Ionicons name="heart-outline" size={24} color="#FF8A65" />
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.playIcon}
-          onPress={() => handleOnPlayPress(dish)}
-        >
-          <MaterialCommunityIcons
-            name="play-circle-outline"
-            size={24}
-            color="#FF8A65"
-          />
         </TouchableOpacity>
         <View
           style={{
@@ -273,14 +445,12 @@ function FavorAndSuggest({ route }) {
               navigationState={{ index, routes }}
               renderScene={renderScene}
               onIndexChange={setIndex}
-              initialLayout={{ width: layout.width - 32 }}
+              initialLayout={{ width: WIDTH - 32 }}
               renderTabBar={renderTabBar}
               style={styles.tabView}
             />
           </View>
         </View>
-
-        
       </View>
     );
   };
@@ -288,23 +458,21 @@ function FavorAndSuggest({ route }) {
   return (
     <MainLayoutWrapper>
       <View style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {renderRecipeCard(dish)}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+        >
+          {renderRecipeCard()}
         </ScrollView>
       </View>
     </MainLayoutWrapper>
   );
 }
 
+// Styles remain the same
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  pageTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 16,
-    color: "#455A64",
   },
   recipeCard: {
     backgroundColor: "#FFFFFF",
@@ -330,20 +498,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
   },
-  playIcon: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    borderRadius: 20,
-    padding: 8,
-  },
   cardContent: {
     padding: 16,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     transform: [{ translateY: -10 }],
-    
   },
   recipeHeader: {
     flexDirection: "row",
@@ -385,15 +544,14 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   tabViewContainer: {
-    height: HEIGHT * 0.5, 
     paddingHorizontal: 16,
   },
   tabView: {
     marginTop: 8,
+    minHeight: 300,
   },
   tabContent: {
     paddingTop: 16,
-  
     paddingHorizontal: 12,
   },
   sectionTitle: {
@@ -408,34 +566,69 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#ECEFF1",
+    marginBottom: 8,
+  },
+  ingredientImage: {
+    resizeMode: "contain",
+    height: "100%",
+    width: "30%",
+    marginRight: 10,
+    borderRadius: 12
+  },
+  ingredientInfo: {
+    flex: 1,
+    marginRight: 10,
   },
   ingredientName: {
+    fontSize: 16,
+    fontWeight: "500",
     color: "#455A64",
   },
+  ingredientDetail: {
+    fontSize: 12,
+    color: "#78909C",
+    marginTop: 2,
+  },
   ingredientQuantity: {
+    fontSize: 14,
     fontWeight: "bold",
     color: "#263238",
+  },
+  instructionRow: {
+    marginBottom: 12,
+  },
+  instructionStep: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#455A64",
+    marginBottom: 4,
   },
   instructionText: {
     fontSize: 14,
     color: "#455A64",
-    marginBottom: 8,
     lineHeight: 20,
   },
-  avatarContainer: {
-    position: "absolute",
-    bottom: 16,
-    left: 0,
-    right: 0,
-    alignItems: "center",
+  videoContainer: {
+    marginBottom: 16,
+    borderRadius: 8,
+    overflow: "hidden",
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E0F2F1",
-    borderWidth: 2,
-    borderColor: "#B2DFDB",
+  videoLink: {
+    backgroundColor: "#4CAF50",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  videoLinkText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  noDataText: {
+    fontSize: 14,
+    color: "#78909C",
+    textAlign: "center",
   },
 });
 

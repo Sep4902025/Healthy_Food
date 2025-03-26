@@ -2,9 +2,7 @@ import axiosInstance from "./axiosInstance";
 
 export const getDishes = async (dishid) => {
   try {
-    const response = await axiosInstance.get(
-      `api/v1/dishes${dishid ? `/${dishid}` : ""}`
-    );
+    const response = await axiosInstance.get(`/dishes${dishid ? `/${dishid}` : ""}`);
     return response;
   } catch (error) {
     console.log("getDishes in service/dishes error : ", error);
@@ -14,9 +12,7 @@ export const getDishes = async (dishid) => {
 
 export const createDishes = async (dishid) => {
   try {
-    const response = await axiosInstance.get(
-      `api/v1/dishes${dishid ? `/${dishid}` : ""}`
-    );
+    const response = await axiosInstance.get(`/dishes${dishid ? `/${dishid}` : ""}`);
     return response;
   } catch (error) {
     console.log("getDishes in service/dishes error : ", error);
@@ -27,9 +23,7 @@ export const createDishes = async (dishid) => {
 export const getRecipesById = async (dishId, recipeId) => {
   try {
     const response = await axiosInstance.get(
-      `api/v1/dishes${dishId ? `/${dishId}` : ""}/recipes${
-        recipeId ? `/${recipeId}` : ""
-      }`
+      `/dishes${dishId ? `/${dishId}` : ""}/recipes${recipeId ? `/${recipeId}` : ""}`
     );
     return response;
   } catch (error) {

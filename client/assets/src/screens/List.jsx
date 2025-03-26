@@ -11,11 +11,10 @@ import MaterialCommunityIcons from "../components/common/VectorIcons/MaterialCom
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import DishedV1 from "../components/common/DishedV1";
 import { getDishes } from "../services/dishes";
-import PaddingScrollViewBottom from "../components/common/PaddingScrollViewBottom";
 
 const List = () => {
   const [dishes, setDishes] = useState([]);
-  const [sortType, setSortType] = useState(""); 
+  const [sortType, setSortType] = useState(""); // Sorting state
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -49,11 +48,17 @@ const List = () => {
     }
 
     return filteredDishes;
-  }, [dishes, sortType]); 
+  }, [dishes, sortType]); // Added `sortType` as a dependency
+
   return (
     <MainLayoutWrapper>
       <View style={styles.container}>
-        
+        {/* <View style={styles.header}>
+          <Text style={styles.headerTitle}>Desserts</Text>
+          <View style={styles.headerRight}>
+            <Text style={styles.viewAllText}>View All</Text>
+          </View>
+        </View> */}
 
         <View style={styles.sortHeader}>
           <View />
@@ -78,7 +83,6 @@ const List = () => {
           {filterDishes.map((dish) => (
             <DishedV1 dish={dish} key={dish._id} />
           ))}
-          <PaddingScrollViewBottom />
         </ScrollView>
       </View>
     </MainLayoutWrapper>
