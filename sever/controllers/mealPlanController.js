@@ -1493,3 +1493,68 @@ exports.deleteDishFromMeal = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi server!" });
   }
 };
+
+// Lấy danh sách tất cả MealPlan đã có paymentId
+exports.getAllMealPlanPayment = async (req, res) => {
+  try {
+    const { _id: userId, role } = req.user; // Retrieved from authentication middleware
+
+    let filter = { 
+      paymentId: { $exists: true, $ne: null }, // Only get MealPlans with paymentId
+      isDelete: false // Exclude soft-deleted MealPlans
+    };
+
+    if (role === "user") {
+      filter.userId = userId; // Users only see their own MealPlans
+    } else if (role === "nutritionist") {
+      filter.createdBy = userId; // Nutritionists only see MealPlans they created
+    } else {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Invalid role" 
+      });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalMealPlans = await MealPlan.countDocuments(filter);
+    const totalPages = Math.ceil(totalMealPlans / limit);
+
+    const mealPlans = await MealPlan.find(filter)
+      .skip(skip)
+      .limit(limit)
+      .populate("userId", "email avatarUrl")
+      .populate("createdBy", "email avatarUrl")
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      results: totalMealPlans,
+      page: page,
+      totalPages: totalPages,
+      data: {
+        mealPlans: mealPlans.map((mealPlan) => ({
+          _id: mealPlan._id,
+          title: mealPlan.title,
+          userId: mealPlan.userId,
+          createdBy: mealPlan.createdBy,
+          paymentId: mealPlan.paymentId,
+          price: mealPlan.price,
+          startDate: mealPlan.startDate,
+          endDate: mealPlan.endDate,
+          duration: mealPlan.duration,
+          isPaid: mealPlan.isPaid,
+          isBlock: mealPlan.isBlock,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("🔥 Error fetching paid MealPlans:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + error.message 
+    });
+  }
+};

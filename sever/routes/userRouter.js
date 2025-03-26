@@ -20,7 +20,7 @@ const {
   reviewNutritionistApplication,
 } = require("../controllers/userController");
 const { isAuthenticated, isAdmin } = require("../middlewares/isAuthenticated");
-z
+
 const userRouter = express.Router();
 
 // Các route hiện có
