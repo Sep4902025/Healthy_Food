@@ -14,8 +14,9 @@ const FoodSlider = ({ userId, dishes = [] }) => {
   const navigate = useNavigate();
   const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, dishes);
 
-  const handleFoodClick = (dishId) => {
-    navigate(`/dishes/${dishId}`);
+  const handleFoodClick = (dishId, recipeId) => {
+    
+    navigate(`/${dishId}/recipes/${recipeId}`)
   };
 
   const handleLike = async (dishId) => {
@@ -81,7 +82,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
             <SwiperSlide key={food._id} className="flex items-stretch">
               <div
                 className="food-item w-full max-w-[500px] min-w-[250px] min-h-[550px] aspect-auto h-auto flex flex-col bg-[#c1f1c6] rounded-[35px]"
-                onClick={() => handleFoodClick(food._id)}
+                onClick={() => handleFoodClick(food._id, food.recipeId)}
               >
                 <div
                   className="food-like-container flex items-center justify-center"
