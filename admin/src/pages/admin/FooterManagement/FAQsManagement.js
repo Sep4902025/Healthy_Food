@@ -21,7 +21,7 @@ const FAQsManagement = () => {
   const fetchFAQs = async () => {
     setLoading(true);
     try {
-      const result = await faqService.getFAQs(currentPage + 1, faqsPerPage);
+      const result = await faqService.getFAQs(currentPage + 1, faqsPerPage); // +1 vì API dùng từ 1
       if (result.success) {
         setFaqs(result.data.data.faqs || []);
         setTotalItems(result.data.total || 0);
@@ -170,6 +170,7 @@ const FAQsManagement = () => {
           setLimit={setFaqsPerPage}
           totalItems={totalItems}
           handlePageClick={handlePageClick}
+          currentPage={currentPage} // Thêm currentPage
           text="FAQs"
         />
       </div>

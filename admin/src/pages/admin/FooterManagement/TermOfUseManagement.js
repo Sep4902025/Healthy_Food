@@ -11,8 +11,8 @@ const TermOfUseManagement = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
-  const [currentPage, setCurrentPage] = useState(0); // Bắt đầu từ 0 vì ReactPaginate dùng index 0
-  const [termsPerPage, setTermsPerPage] = useState(6); // Mặc định là 6 theo Pagination
+  const [currentPage, setCurrentPage] = useState(0);
+  const [termsPerPage, setTermsPerPage] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ const TermOfUseManagement = () => {
   const fetchTerms = async () => {
     setLoading(true);
     try {
-      const result = await termService.getTerms(currentPage + 1, termsPerPage); // +1 vì API dùng page từ 1
+      const result = await termService.getTerms(currentPage + 1, termsPerPage); // +1 vì API dùng từ 1
       if (result.success) {
         setTerms(result.data.data.terms || []);
         setTotalItems(result.data.total || 0);
@@ -179,6 +179,7 @@ const TermOfUseManagement = () => {
           setLimit={setTermsPerPage}
           totalItems={totalItems}
           handlePageClick={handlePageClick}
+          currentPage={currentPage} // Thêm currentPage
           text="Terms"
         />
       </div>

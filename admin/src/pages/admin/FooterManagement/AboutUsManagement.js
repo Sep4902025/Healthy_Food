@@ -11,8 +11,8 @@ const AboutUsManagement = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // Ban đầu là 5, có thể thay đổi qua select
+  const [currentPage, setCurrentPage] = useState(0); // Đổi thành 0 để đồng bộ với ReactPaginate
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ const AboutUsManagement = () => {
   const fetchAboutUs = async () => {
     setLoading(true);
     try {
-      const result = await aboutService.getAboutUs(currentPage, itemsPerPage);
+      const result = await aboutService.getAboutUs(currentPage + 1, itemsPerPage); // +1 vì API dùng từ 1
       console.log("🔍 Fetched About Us Data:", result);
       if (result.success) {
         const fetchedAboutUs = result.data.data.aboutUs || [];
@@ -95,7 +95,7 @@ const AboutUsManagement = () => {
   };
 
   const handlePageClick = ({ selected }) => {
-    setCurrentPage(selected + 1); // ReactPaginate dùng index từ 0, API thường từ 1
+    setCurrentPage(selected); // selected là index từ 0
   };
 
   if (loading) return <p className="text-center text-blue-500">Loading...</p>;
@@ -127,7 +127,7 @@ const AboutUsManagement = () => {
             {aboutData.length > 0 ? (
               aboutData.map((item, index) => (
                 <tr key={item._id} className="border-b border-gray-200 text-gray-900">
-                  <td className="p-3">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                  <td className="p-3">{currentPage * itemsPerPage + index + 1}</td>
                   <td className="p-3">
                     <img
                       src={item.bannerUrl}
@@ -188,11 +188,11 @@ const AboutUsManagement = () => {
           setLimit={setItemsPerPage}
           totalItems={totalItems}
           handlePageClick={handlePageClick}
+          currentPage={currentPage} // Thêm currentPage để đồng bộ với forcePage
           text="About Us"
         />
       </div>
 
-      {/* Modal Form */}
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">

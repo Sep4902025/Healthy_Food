@@ -2,24 +2,15 @@ import React, { useEffect, useState } from "react";
 import medicalConditionService from "../../../services/nutritionist/medicalConditionServices";
 import dishService from "../../../services/nutritionist/dishesServices";
 import recipesService from "../../../services/nutritionist/recipesServices";
-import {
-  HeartPulse,
-  Pencil,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Flame,
-  Dumbbell,
-  Wheat,
-  Droplet,
-  Eye,
-} from "lucide-react";
+import { HeartPulse, Pencil, Trash2, Flame, Dumbbell, Wheat, Droplet, Eye } from "lucide-react";
 import FoodSelectionModal from "./FoodSelectionModal";
+import Pagination from "../../../components/Pagination";
 
 const TableMedicalConditions = () => {
   const [conditions, setConditions] = useState([]);
   const [dishes, setDishes] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0); // Thêm state mới
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editData, setEditData] = useState({
@@ -39,7 +30,6 @@ const TableMedicalConditions = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch medical conditions and dishes with nutritional data
   useEffect(() => {
     fetchData();
   }, [currentPage, itemsPerPage, searchTerm]);
@@ -60,9 +50,11 @@ const TableMedicalConditions = () => {
 
       if (conditionsResponse?.success) {
         setConditions(conditionsResponse.data.items || []);
+        setTotalItems(conditionsResponse.data.total || 0); // Cập nhật totalItems
         setTotalPages(conditionsResponse.data.totalPages || 1);
       } else {
         setConditions([]);
+        setTotalItems(0);
         console.error("❌ Failed to fetch conditions:", conditionsResponse?.message);
       }
 
@@ -96,6 +88,7 @@ const TableMedicalConditions = () => {
     } catch (error) {
       setConditions([]);
       setDishes([]);
+      setTotalItems(0);
       console.error("Error fetching data:", error);
     }
     setIsLoading(false);
@@ -137,9 +130,6 @@ const TableMedicalConditions = () => {
     };
   };
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // Open edit modal
   const handleEditClick = (condition) => {
     setEditData({
       id: condition._id,
@@ -158,13 +148,11 @@ const TableMedicalConditions = () => {
     setIsEditModalOpen(true);
   };
 
-  // Open view modal
   const handleViewClick = (condition) => {
     setViewData(condition);
     setIsViewModalOpen(true);
   };
 
-  // Handle delete
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this medical condition?")) {
       const response = await medicalConditionService.deleteMedicalCondition(id);
@@ -180,7 +168,6 @@ const TableMedicalConditions = () => {
     }
   };
 
-  // Handle form changes for edit
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name in editData.nutritionalConstraints) {
@@ -197,7 +184,6 @@ const TableMedicalConditions = () => {
     setErrors({ ...errors, [name]: "" });
   };
 
-  // Validate form for edit
   const validateForm = () => {
     const newErrors = {};
     if (!editData.name.trim()) newErrors.name = "Name is required";
@@ -217,7 +203,6 @@ const TableMedicalConditions = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Save edits
   const handleSaveEdit = async () => {
     if (!validateForm()) {
       alert("Please fill in all required fields correctly!");
@@ -254,13 +239,11 @@ const TableMedicalConditions = () => {
     }
   };
 
-  // Open food selection modal
   const handleOpenFoodModal = (type) => {
     setFoodModalType(type);
     setIsFoodModalOpen(true);
   };
 
-  // Handle food selection
   const handleFoodSelect = (selectedDishes) => {
     if (foodModalType === "restricted") {
       setEditData({ ...editData, restrictedFoods: selectedDishes });
@@ -270,7 +253,6 @@ const TableMedicalConditions = () => {
     setIsFoodModalOpen(false);
   };
 
-  // Close edit modal
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setEditData({
@@ -284,10 +266,16 @@ const TableMedicalConditions = () => {
     setErrors({});
   };
 
-  // Close view modal
   const closeViewModal = () => {
     setIsViewModalOpen(false);
     setViewData(null);
+  };
+
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1; // Chuyển từ 0-based sang 1-based
+    if (selectedPage >= 1 && selectedPage <= totalPages) {
+      setCurrentPage(selectedPage);
+    }
   };
 
   return (
@@ -364,50 +352,16 @@ const TableMedicalConditions = () => {
         </div>
       )}
 
-      {conditions.length > 0 && !isLoading && (
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="4">4 conditions</option>
-              <option value="8">8 conditions</option>
-              <option value="12">12 conditions</option>
-            </select>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                className={`px-3 py-1 rounded ${
-                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                }`}
-                onClick={() => paginate(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+      {totalItems > 0 && !isLoading && (
+        <div className="p-4 bg-gray-50">
+          <Pagination
+            limit={itemsPerPage}
+            setLimit={setItemsPerPage}
+            totalItems={totalItems}
+            handlePageClick={handlePageClick}
+            currentPage={currentPage - 1} // Chuyển sang 0-based
+            text={"Medical Conditions"}
+          />
         </div>
       )}
 

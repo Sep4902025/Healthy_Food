@@ -1,4 +1,11 @@
-const { MealPlan, MealDay, Meal, MealTracking, UserMealPlan } = require("../models/MealPlan");
+const {
+  MealPlan,
+  MealDay,
+  Meal,
+  MealTracking,
+  UserMealPlan,
+  UserMealPlanHistory,
+} = require("../models/MealPlan");
 const mongoose = require("mongoose");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
@@ -485,9 +492,7 @@ exports.toggleMealPlanStatus = async (req, res) => {
 // Hàm cập nhật trạng thái tất cả reminder liên quan đến một MealPlan
 const updateRemindersForMealPlan = async (mealPlanId, isPause) => {
   try {
-    console.log(
-      `${isPause ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"} reminders cho MealPlan ${mealPlanId}`
-    );
+    console.log(`${isPause ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"} reminders cho MealPlan ${mealPlanId}`);
 
     // Tìm tất cả reminder liên quan đến MealPlan
     const reminders = await Reminder.find({ mealPlanId });
@@ -1499,9 +1504,9 @@ exports.getAllMealPlanPayment = async (req, res) => {
   try {
     const { _id: userId, role } = req.user; // Retrieved from authentication middleware
 
-    let filter = { 
+    let filter = {
       paymentId: { $exists: true, $ne: null }, // Only get MealPlans with paymentId
-      isDelete: false // Exclude soft-deleted MealPlans
+      isDelete: false, // Exclude soft-deleted MealPlans
     };
 
     if (role === "user") {
@@ -1509,9 +1514,9 @@ exports.getAllMealPlanPayment = async (req, res) => {
     } else if (role === "nutritionist") {
       filter.createdBy = userId; // Nutritionists only see MealPlans they created
     } else {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Invalid role" 
+      return res.status(403).json({
+        success: false,
+        message: "Invalid role",
       });
     }
 
@@ -1552,9 +1557,9 @@ exports.getAllMealPlanPayment = async (req, res) => {
     });
   } catch (error) {
     console.error("🔥 Error fetching paid MealPlans:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Server error: " + error.message 
+    res.status(500).json({
+      success: false,
+      message: "Server error: " + error.message,
     });
   }
 };
