@@ -19,6 +19,7 @@ const {
   getUnpaidMealPlanForUser,
   getMealPlanDetails,
   getAllMealPlanPayment,
+  getMealPlanHistory,
 } = require("../controllers/mealPlanController");
 const { isAuthenticated } = require("../middlewares/isAuthenticated");
 
@@ -61,6 +62,7 @@ mealPlanRouter.delete(
 );
 
 // 📌 Get MealDay, Meal, and Dish information
+mealPlanRouter.get("/history/:userId", isAuthenticated, getMealPlanHistory);
 mealPlanRouter.get("/:mealPlanId/mealDay", isAuthenticated, getMealDayByMealPlan);
 mealPlanRouter.get("/:mealPlanId/mealDay/:mealDayId/meal", isAuthenticated, getMealsByDayId);
 mealPlanRouter.get("/:mealPlanId/mealDay/:mealDayId/meal/:mealId", isAuthenticated, getMealById);

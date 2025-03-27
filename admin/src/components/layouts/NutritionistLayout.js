@@ -21,8 +21,11 @@ const menuItems = [
   },
   {
     icon: <CalendarHeart size={20} />,
-    name: "Meal Plan",
-    path: "/nutritionist/mealPlan",
+    name: "Meal Plans Management", // Đổi tên từ "Meal Plan" thành "Meal Plans Management"
+    submenus: [
+      { name: "View Meal Plans", path: "/nutritionist/mealPlan" }, // Submenu mới
+      { name: "Meal Plans Analytics", path: "/nutritionist/mealPlan/analytics" }, // Submenu mới
+    ],
   },
   {
     icon: <UtensilsIcon size={20} />,

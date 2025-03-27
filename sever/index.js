@@ -107,7 +107,7 @@ app.use("/api/v1/recipes", dishRouter);
 
 app.use("/api/v1/userPreference", userPreferenceRouter);
 
-app.use("/api/v1/payments", paymentRouter);
+
 
 // Xử lý route không tồn tại
 app.all("*", (req, res, next) => {

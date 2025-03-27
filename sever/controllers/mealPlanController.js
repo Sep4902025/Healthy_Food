@@ -483,10 +483,10 @@ exports.toggleMealPlanStatus = async (req, res) => {
 };
 // Utility functions Helper Lean
 // Hàm cập nhật trạng thái tất cả reminder liên quan đến một MealPlan
-const updateRemindersForMealPlan = async (mealPlanId, isPaused) => {
+const updateRemindersForMealPlan = async (mealPlanId, isPause) => {
   try {
     console.log(
-      `${isPaused ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"} reminders cho MealPlan ${mealPlanId}`
+      `${isPause ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"} reminders cho MealPlan ${mealPlanId}`
     );
 
     // Tìm tất cả reminder liên quan đến MealPlan
@@ -495,9 +495,9 @@ const updateRemindersForMealPlan = async (mealPlanId, isPaused) => {
 
     // Lặp qua từng reminder để cập nhật trạng thái
     for (const reminder of reminders) {
-      reminder.isActive = !isPaused;
+      reminder.isActive = !isPause;
 
-      if (isPaused) {
+      if (isPause) {
         // Tạm dừng tất cả job liên quan đến reminderId
         console.log(`⏸️ Tạm dừng tất cả job cho reminder ${reminder._id}`);
         await agenda.cancel({ "data.reminderId": reminder._id });
@@ -1556,5 +1556,20 @@ exports.getAllMealPlanPayment = async (req, res) => {
       success: false, 
       message: "Server error: " + error.message 
     });
+  }
+};
+
+exports.getMealPlanHistory = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const history = await UserMealPlanHistory.find({ userId }).populate("mealPlanId");
+
+    res.status(200).json({
+      success: true,
+      data: history,
+    });
+  } catch (error) {
+    console.error("🔥 Lỗi khi lấy lịch sử Meal Plan:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

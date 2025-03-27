@@ -9,12 +9,11 @@ import {
   Dumbbell,
   Wheat,
   Droplet,
-  Pencil,
-  ChevronLeft,
-  ChevronRight,
+  EditIcon,
   Utensils,
-  Trash2,
+  TrashIcon,
 } from "lucide-react";
+import Pagination from "../../../components/Pagination";
 
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
 
@@ -30,6 +29,7 @@ const INGREDIENT_TYPE_OPTIONS = [
 
 const TableRecipes = () => {
   const [dishes, setDishes] = useState([]);
+  const [filteredDishes, setFilteredDishes] = useState([]);
   const [availableIngredients, setAvailableIngredients] = useState([]);
   const [totalDishPages, setTotalDishPages] = useState(1);
   const [totalIngredientPages, setTotalIngredientPages] = useState(1);
@@ -50,29 +50,31 @@ const TableRecipes = () => {
   });
   const [newInstructionStep, setNewInstructionStep] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all"); // Giữ lại để UI hoạt động, nhưng không gửi lên API nếu backend không hỗ trợ
+  const [filterType, setFilterType] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [totalItems, setTotalItems] = useState(0);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
-  }, [currentPage, itemsPerPage, searchTerm]); // Loại filterType khỏi dependency vì backend không hỗ trợ
+  }, [currentPage, itemsPerPage, searchTerm]);
 
   const fetchData = async () => {
     setIsLoading(true);
     console.log("📡 Gửi yêu cầu lấy danh sách món ăn:", { currentPage, itemsPerPage, searchTerm });
     try {
       const [dishesResponse, ingredientsResponse] = await Promise.all([
-        dishService.getAllDishes(currentPage, itemsPerPage, searchTerm), // Chỉ gửi page, limit, search
-        ingredientService.getAllIngredients(1, 1000), // Lấy tất cả nguyên liệu
+        dishService.getAllDishes(currentPage, itemsPerPage, searchTerm),
+        ingredientService.getAllIngredients(1, 1000),
       ]);
       console.log("📌 Phản hồi từ dishesService:", dishesResponse);
       console.log("📌 Phản hồi từ ingredientService:", ingredientsResponse);
 
       if (dishesResponse?.success) {
         setDishes(dishesResponse.data.items || []);
+        setTotalItems(dishesResponse.data.total || 0);
         setTotalDishPages(dishesResponse.data.totalPages || 1);
       } else {
         console.error("❌ Lỗi từ dishesService:", dishesResponse.message);
@@ -93,6 +95,15 @@ const TableRecipes = () => {
     }
     setIsLoading(false);
   };
+
+  useEffect(() => {
+    if (filterType === "all") {
+      setFilteredDishes(dishes);
+    } else {
+      const filtered = dishes.filter((dish) => dish.type === filterType);
+      setFilteredDishes(filtered);
+    }
+  }, [dishes, filterType]);
 
   useEffect(() => {
     const calculateTotalNutrition = () => {
@@ -325,48 +336,60 @@ const TableRecipes = () => {
     }
   };
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1;
+    if (selectedPage >= 1 && selectedPage <= totalDishPages) {
+      setCurrentPage(selectedPage);
+    }
+  };
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">List of Dishes</h2>
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex space-x-2">
-          {TYPE_OPTIONS.map((type) => (
-            <button
-              key={type}
-              onClick={() => {
-                setFilterType(type); // Giữ lại để UI phản ánh, nhưng không gửi lên API
-                setCurrentPage(1);
-              }}
-              className={`px-2 py-1 text-sm font-medium rounded-full whitespace-nowrap transition duration-200 ${
-                filterType === type
-                  ? "bg-green-500 text-white shadow-md"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              {type}
-            </button>
-          ))}
+    <div className="container mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
+          List of Dishes
+        </h2>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => {
               setFilterType("all");
               setCurrentPage(1);
             }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition duration-200 ${
+            className={`px-4 py-2 rounded-md font-semibold ${
               filterType === "all"
-                ? "bg-green-500 text-white shadow-md"
+                ? "bg-[#40B491] text-white"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
+            } transition duration-200`}
           >
             All
           </button>
+          {TYPE_OPTIONS.map((type) => (
+            <button
+              key={type}
+              onClick={() => {
+                setFilterType(type);
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
+                filterType === type
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
+            >
+              {type}
+            </button>
+          ))}
         </div>
         <div className="flex items-center">
           <input
             type="text"
             placeholder="Search by dish name"
-            className="border border-gray-300 rounded-md px-3 py-2 mr-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -375,76 +398,90 @@ const TableRecipes = () => {
           />
         </div>
       </div>
+
+      {/* Dishes Grid */}
       {isLoading ? (
         <div className="text-center py-4">
           <p>Loading dishes...</p>
         </div>
       ) : (
-        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-            {dishes?.length > 0 ? (
-              dishes.map((dish) => (
-                <div key={dish._id} className="bg-white rounded-lg shadow-md overflow-hidden relative">
+        <div className="min-h-[calc(100vh-200px)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredDishes?.length > 0 ? (
+              filteredDishes.map((dish) => (
+                <div
+                  key={dish._id}
+                  className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
+                >
                   <img
                     src={dish.imageUrl || "https://via.placeholder.com/300"}
                     alt={dish.name}
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center">{dish.name}</h3>
-                    <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
-                      <span className="mr-3 flex items-center">
-                        <Clock className="w-4 h-4 mr-1" />
-                        {dish.cookingTime || "N/A"} mins
-                      </span>
-                      <span className="flex items-center">
-                        <Users className="w-4 h-4 mr-1" />
-                        {dish.totalServing || "N/A"} servings
-                      </span>
-                    </div>
-                    <div className="flex justify-center items-center text-sm text-gray-600 mt-1">
-                      <span className="mr-3 flex items-center">
-                        <Flame className="w-4 h-4 mr-1" />
-                        {dish.calories || "N/A"} kcal
-                      </span>
-                      <span className="flex items-center">
-                        <Dumbbell className="w-4 h-4 mr-1" />
-                        {dish.protein || "N/A"}g Protein
-                      </span>
-                    </div>
-                    <div className="flex justify-center items-center text-sm text-gray-600 mt-1">
-                      <span className="mr-3 flex items-center">
-                        <Wheat className="w-4 h-4 mr-1" />
-                        {dish.carbs || "N/A"}g Carbs
-                      </span>
-                      <span className="flex items-center">
-                        <Droplet className="w-4 h-4 mr-1" />
-                        {dish.fat || "N/A"}g Fat
-                      </span>
+                    <h3 className="text-lg font-semibold text-center text-gray-800">
+                      {dish.name}
+                    </h3>
+                    <div className="text-sm text-gray-600 mt-2 space-y-2">
+                      {/* First Row: Cooking Time, Servings, Calories */}
+                      <div className="flex justify-between items-center px-4">
+                        <span className="flex items-center">
+                          <Clock className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.cookingTime || "N/A"} mins
+                        </span>
+                        <span className="flex items-center">
+                          <Users className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.totalServing || "N/A"} servings
+                        </span>
+                        <span className="flex items-center">
+                          <Flame className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.calories || "N/A"} kcal
+                        </span>
+                      </div>
+                      {/* Second Row: Protein, Carbs, Fat */}
+                      <div className="flex justify-between items-center px-4">
+                        <span className="flex items-center">
+                          <Dumbbell className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.protein || "N/A"}g
+                        </span>
+                        <span className="flex items-center">
+                          <Wheat className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.carbs || "N/A"}g
+                        </span>
+                        <span className="flex items-center">
+                          <Droplet className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.fat || "N/A"}g
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200 space-x-4">
-                    <button
-                      onClick={() => handleAddRecipeClick(dish)}
-                      className="text-blue-500 flex items-center px-2 py-1 hover:text-blue-700"
-                    >
-                      <Pencil className="w-4 h-4 mr-1" />
-                      Edit Recipe
-                    </button>
-                    {dish.recipeId && (
+                  <div className="p-2 bg-gray-50 border-t border-gray-200 h-16 flex items-center justify-center">
+                    <div className="flex w-full justify-center items-center gap-2">
                       <button
-                        onClick={() => handleDeleteRecipe(dish)}
-                        className="text-red-500 flex items-center px-2 py-1 hover:text-red-700"
+                        onClick={() => handleAddRecipeClick(dish)}
+                        className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition"
                       >
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Delete Recipe
+                        <EditIcon className="w-4 h-4 mr-1" />
+                        Edit Recipe
                       </button>
-                    )}
+                      {dish.recipeId && (
+                        <>
+                          <div className="h-4 border-l border-gray-300 mx-2"></div>
+                          <button
+                            onClick={() => handleDeleteRecipe(dish)}
+                            className="flex-1 text-red-500 flex items-center justify-center px-2 py-1 hover:text-red-600 transition"
+                          >
+                            <TrashIcon className="w-4 h-4 mr-1" />
+                            Delete Recipe
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500">
+              <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
                 <Utensils className="w-24 h-24 text-gray-400 mb-4" />
                 <p className="text-lg font-semibold">No dishes</p>
                 <p className="text-sm">Looks like you haven't added any dishes yet.</p>
@@ -453,80 +490,49 @@ const TableRecipes = () => {
           </div>
         </div>
       )}
-      {dishes?.length > 0 && !isLoading && (
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="4">4 dishes</option>
-              <option value="8">8 dishes</option>
-              <option value="12">12 dishes</option>
-            </select>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            {Array.from({ length: totalDishPages }, (_, i) => (
-              <button
-                key={i}
-                className={`px-3 py-1 rounded ${
-                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                }`}
-                onClick={() => paginate(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === totalDishPages}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+
+      {/* Pagination */}
+      {totalItems > 0 && !isLoading && (
+        <div className="p-4 bg-gray-50">
+          <Pagination
+            limit={itemsPerPage}
+            setLimit={setItemsPerPage}
+            totalItems={totalItems}
+            handlePageClick={handlePageClick}
+            text={"Dishes"}
+          />
         </div>
       )}
+
+      {/* Add/Edit Recipe Modal */}
       {isAddRecipeModalOpen && selectedDish && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b pb-3 mb-4">
-              <h2 className="text-xl font-bold text-green-700">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="flex items-center mb-6">
+              <h2 className="text-2xl font-bold text-[#40B491]">
                 {selectedDish.recipeId ? "Edit Recipe" : "Add Recipe"}: {selectedDish.name}
               </h2>
-              <div className="flex items-center space-x-4">
+              <div className="ml-auto flex space-x-3">
                 <button
-                  className="bg-green-500 text-white px-6 py-2 rounded-md hover:bg-green-600 transition duration-200"
                   onClick={handleSaveRecipe}
+                  className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
                 >
-                  Save Recipe
+                  Save
                 </button>
                 <button
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
                   onClick={() => {
                     setIsAddRecipeModalOpen(false);
                     setErrors({});
                   }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
                 >
-                  ×
+                  Cancel
                 </button>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-6">
-                <div className="bg-gray-100 p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <img
                     src={selectedDish.imageUrl || "https://via.placeholder.com/200"}
                     alt={selectedDish.name}
@@ -534,16 +540,20 @@ const TableRecipes = () => {
                   />
                   <input
                     type="text"
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
                     placeholder="Enter recipe title"
                     value={selectedDish.name || ""}
                     readOnly
                   />
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cooking Time (minutes) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cooking Time (minutes) *
+                    </label>
                     <input
                       type="number"
-                      className={`w-full border ${errors.cookingTime ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      className={`w-full border ${
+                        errors.cookingTime ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.cookingTime}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -564,13 +574,19 @@ const TableRecipes = () => {
                       min="1"
                       max="1440"
                     />
-                    {errors.cookingTime && <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>}
+                    {errors.cookingTime && (
+                      <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>
+                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Serving Size *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Serving Size *
+                    </label>
                     <input
                       type="number"
-                      className={`w-full border ${errors.totalServing ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      className={`w-full border ${
+                        errors.totalServing ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.totalServing}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -591,15 +607,17 @@ const TableRecipes = () => {
                       min="1"
                       max="10"
                     />
-                    {errors.totalServing && <p className="text-red-500 text-sm mt-1">{errors.totalServing}</p>}
+                    {errors.totalServing && (
+                      <p className="text-red-500 text-sm mt-1">{errors.totalServing}</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="bg-gray-100 p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-lg font-semibold text-gray-800">Directions</h3>
                     <button
-                      className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600"
+                      className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
                       onClick={handleAddInstruction}
                     >
                       + Add Direction
@@ -616,8 +634,17 @@ const TableRecipes = () => {
                               const updatedInstructions = newRecipeData.instruction
                                 .filter((_, i) => i !== index)
                                 .map((inst, idx) => ({ ...inst, step: idx + 1 }));
-                              setNewRecipeData({ ...newRecipeData, instruction: updatedInstructions });
-                              setErrors({ ...errors, instruction: updatedInstructions.length === 0 ? "Please add at least one Instruction step!" : "" });
+                              setNewRecipeData({
+                                ...newRecipeData,
+                                instruction: updatedInstructions,
+                              });
+                              setErrors({
+                                ...errors,
+                                instruction:
+                                  updatedInstructions.length === 0
+                                    ? "Please add at least one Instruction step!"
+                                    : "",
+                              });
                             }}
                           >
                             Delete
@@ -644,10 +671,12 @@ const TableRecipes = () => {
                       <p>Looks like you haven't added any directions yet.</p>
                     </div>
                   )}
-                  {errors.instruction && <p className="text-red-500 text-sm mt-1">{errors.instruction}</p>}
+                  {errors.instruction && (
+                    <p className="text-red-500 text-sm mt-1">{errors.instruction}</p>
+                  )}
                   <input
                     type="text"
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
                     value={newInstructionStep}
                     onChange={(e) => setNewInstructionStep(e.target.value)}
                     placeholder="Enter direction"
@@ -656,11 +685,11 @@ const TableRecipes = () => {
               </div>
 
               <div className="space-y-6">
-                <div className="bg-gray-100 p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-lg font-semibold text-gray-800">Ingredients</h3>
                     <button
-                      className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600"
+                      className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
                       onClick={handleOpenIngredientModal}
                     >
                       Select Ingredients
@@ -674,7 +703,7 @@ const TableRecipes = () => {
                           <div className="flex items-center space-x-2">
                             <input
                               type="number"
-                              className="w-16 border border-gray-300 rounded-md px-2 py-1"
+                              className="w-16 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
                               value={ing.quantity || ""}
                               placeholder="Qty"
                               onChange={(e) => {
@@ -688,7 +717,10 @@ const TableRecipes = () => {
                                 }
                                 const updatedIngredients = [...newRecipeData.ingredients];
                                 updatedIngredients[index].quantity = value;
-                                setNewRecipeData({ ...newRecipeData, ingredients: updatedIngredients });
+                                setNewRecipeData({
+                                  ...newRecipeData,
+                                  ingredients: updatedIngredients,
+                                });
                                 setErrors({ ...errors, ingredients: "" });
                               }}
                               onKeyPress={(e) => {
@@ -699,16 +731,20 @@ const TableRecipes = () => {
                               min="1"
                             />
                             <select
-                              className="border border-gray-300 rounded-md px-2 py-1"
+                              className="border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
                               value={ing.unit || ""}
                               onChange={(e) => {
                                 const updatedIngredients = [...newRecipeData.ingredients];
                                 updatedIngredients[index].unit = e.target.value;
-                                const maxValue = e.target.value === "g" || e.target.value === "ml" ? 10000 : 100;
+                                const maxValue =
+                                  e.target.value === "g" || e.target.value === "ml" ? 10000 : 100;
                                 if (updatedIngredients[index].quantity > maxValue) {
                                   updatedIngredients[index].quantity = maxValue;
                                 }
-                                setNewRecipeData({ ...newRecipeData, ingredients: updatedIngredients });
+                                setNewRecipeData({
+                                  ...newRecipeData,
+                                  ingredients: updatedIngredients,
+                                });
                                 setErrors({ ...errors, ingredients: "" });
                               }}
                             >
@@ -721,9 +757,20 @@ const TableRecipes = () => {
                             <button
                               className="text-red-500 hover:text-red-700"
                               onClick={() => {
-                                const updatedIngredients = newRecipeData.ingredients.filter((_, i) => i !== index);
-                                setNewRecipeData({ ...newRecipeData, ingredients: updatedIngredients });
-                                setErrors({ ...errors, ingredients: updatedIngredients.length === 0 ? "Please add at least one Ingredient!" : "" });
+                                const updatedIngredients = newRecipeData.ingredients.filter(
+                                  (_, i) => i !== index
+                                );
+                                setNewRecipeData({
+                                  ...newRecipeData,
+                                  ingredients: updatedIngredients,
+                                });
+                                setErrors({
+                                  ...errors,
+                                  ingredients:
+                                    updatedIngredients.length === 0
+                                      ? "Please add at least one Ingredient!"
+                                      : "",
+                                });
                               }}
                             >
                               Delete
@@ -751,12 +798,15 @@ const TableRecipes = () => {
                       <p>Looks like you haven't added any ingredients yet.</p>
                     </div>
                   )}
-                  {errors.ingredients && <p className="text-red-500 text-sm mt-1">{errors.ingredients}</p>}
+                  {errors.ingredients && (
+                    <p className="text-red-500 text-sm mt-1">{errors.ingredients}</p>
+                  )}
                 </div>
 
-                <div className="bg-gray-100 p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">Nutrition</h3>
-                  {newRecipeData.ingredients.length > 0 && newRecipeData.ingredients.every(ing => ing.quantity && ing.unit) ? (
+                  {newRecipeData.ingredients.length > 0 &&
+                  newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
@@ -776,7 +826,10 @@ const TableRecipes = () => {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-500">No nutrition data available. Add ingredients with quantities and units to see nutrition details.</p>
+                    <p className="text-gray-500">
+                      No nutrition data available. Add ingredients with quantities and units to see
+                      nutrition details.
+                    </p>
                   )}
                 </div>
               </div>
@@ -784,6 +837,7 @@ const TableRecipes = () => {
           </div>
         </div>
       )}
+
       <IngredientSelectionModal
         isOpen={isIngredientModalOpen}
         onClose={() => setIsIngredientModalOpen(false)}
@@ -796,25 +850,39 @@ const TableRecipes = () => {
   );
 };
 
-const IngredientSelectionModal = ({ isOpen, onClose, onSelect, availableIngredients, typeOptions, selectedIngredients }) => {
+const IngredientSelectionModal = ({
+  isOpen,
+  onClose,
+  onSelect,
+  availableIngredients,
+  typeOptions,
+  selectedIngredients,
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [tempSelectedIngredients, setTempSelectedIngredients] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(8);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [currentIngredients, setCurrentIngredients] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchIngredients();
-  }, [currentPage, filterType, searchTerm]);
+  }, [currentPage, filterType, searchTerm, itemsPerPage]);
 
   const fetchIngredients = async () => {
     setIsLoading(true);
-    const response = await ingredientService.getAllIngredients(currentPage, itemsPerPage, filterType, searchTerm);
+    const response = await ingredientService.getAllIngredients(
+      currentPage,
+      itemsPerPage,
+      filterType === "all" ? "" : filterType,
+      searchTerm
+    );
     if (response.success) {
       setCurrentIngredients(response.data.items || []);
+      setTotalItems(response.data.total || 0);
       setTotalPages(response.data.totalPages || 1);
     } else {
       setCurrentIngredients([]);
@@ -823,12 +891,12 @@ const IngredientSelectionModal = ({ isOpen, onClose, onSelect, availableIngredie
     setIsLoading(false);
   };
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
   const handleCheckboxChange = (ingredient) => {
     const isSelected = tempSelectedIngredients.some((item) => item._id === ingredient._id);
     if (isSelected) {
-      setTempSelectedIngredients(tempSelectedIngredients.filter((item) => item._id !== ingredient._id));
+      setTempSelectedIngredients(
+        tempSelectedIngredients.filter((item) => item._id !== ingredient._id)
+      );
     } else {
       setTempSelectedIngredients([...tempSelectedIngredients, { ...ingredient, quantity: "", unit: "" }]);
     }
@@ -840,52 +908,95 @@ const IngredientSelectionModal = ({ isOpen, onClose, onSelect, availableIngredie
     setCurrentPage(1);
   };
 
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1;
+    if (selectedPage >= 1 && selectedPage <= totalPages) {
+      setCurrentPage(selectedPage);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Select Ingredients</h2>
-        <div className="flex space-x-4 mb-4">
-          <input
-            type="text"
-            placeholder="Search by ingredient name"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          <select
-            className="border border-gray-300 rounded-md px-3 py-2"
-            value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value);
-              setCurrentPage(1);
-            }}
-          >
-            <option value="all">All</option>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-3/4 max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="flex items-center mb-6">
+          <h2 className="text-2xl font-bold text-[#40B491]">Select Ingredients</h2>
+          <div className="ml-auto flex space-x-3">
+            <button
+              onClick={handleConfirm}
+              className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                setFilterType("all");
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                filterType === "all"
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
+            >
+              All
+            </button>
             {typeOptions.map((type) => (
-              <option key={type} value={type}>
+              <button
+                key={type}
+                onClick={() => {
+                  setFilterType(type);
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
+                  filterType === type
+                    ? "bg-[#40B491] text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
+              >
                 {type}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
+          <div className="flex items-center">
+            <input
+              type="text"
+              placeholder="Search by ingredient name"
+              className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
         </div>
         {isLoading ? (
           <div className="text-center py-4">
             <p>Loading ingredients...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {currentIngredients.length > 0 ? (
               currentIngredients.map((ing) => {
-                const isAlreadyAdded = selectedIngredients.some((selected) => selected._id === ing._id);
+                const isAlreadyAdded = selectedIngredients.some(
+                  (selected) => selected._id === ing._id
+                );
                 return (
                   <div
                     key={ing._id}
-                    className="bg-white rounded-lg shadow-md overflow-hidden relative"
+                    className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
                   >
                     <img
                       src={ing.imageUrl || "https://via.placeholder.com/300"}
@@ -893,31 +1004,29 @@ const IngredientSelectionModal = ({ isOpen, onClose, onSelect, availableIngredie
                       className="w-full h-48 object-cover"
                     />
                     <div className="p-4">
-                      <h3 className="text-lg font-semibold text-center">{ing.name}</h3>
-                      <div className="text-sm text-gray-600 mt-2 text-center">
-                        <div className="flex justify-center items-center">
-                          <span className="mr-3 flex items-center">
-                            <Flame className="w-4 h-4 mr-1" />
-                            {ing.calories || "N/A"} Kcal
-                          </span>
-                          <span className="flex items-center">
-                            <Dumbbell className="w-4 h-4 mr-1" />
-                            {ing.protein || "N/A"}g Protein
-                          </span>
-                        </div>
-                        <div className="flex justify-center items-center mt-1">
-                          <span className="mr-3 flex items-center">
-                            <Wheat className="w-4 h-4 mr-1" />
-                            {ing.carbs || "N/A"}g Carbs
-                          </span>
-                          <span className="flex items-center">
-                            <Droplet className="w-4 h-4 mr-1" />
-                            {ing.fat || "N/A"}g Fat
-                          </span>
-                        </div>
+                      <h3 className="text-lg font-semibold text-center text-gray-800">
+                        {ing.name}
+                      </h3>
+                      <div className="flex flex-wrap justify-center items-center text-sm text-gray-600 mt-2 gap-3">
+                        <span className="flex items-center">
+                          <Flame className="w-4 h-4 mr-1" />
+                          {ing.calories || "N/A"} kcal
+                        </span>
+                        <span className="flex items-center">
+                          <Dumbbell className="w-4 h-4 mr-1" />
+                          {ing.protein || "N/A"}g
+                        </span>
+                        <span className="flex items-center">
+                          <Wheat className="w-4 h-4 mr-1" />
+                          {ing.carbs || "N/A"}g
+                        </span>
+                        <span className="flex items-center">
+                          <Droplet className="w-4 h-4 mr-1" />
+                          {ing.fat || "N/A"}g
+                        </span>
                       </div>
                     </div>
-                    <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
+                    <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
                       <input
                         type="checkbox"
                         checked={tempSelectedIngredients.some((item) => item._id === ing._id)}
@@ -939,51 +1048,17 @@ const IngredientSelectionModal = ({ isOpen, onClose, onSelect, availableIngredie
             )}
           </div>
         )}
-        {currentIngredients.length > 0 && !isLoading && (
-          <div className="p-4 flex justify-between items-center">
-            <div className="flex space-x-2">
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100"
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => paginate(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100"
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+        {totalItems > 0 && !isLoading && (
+          <div className="p-4 bg-gray-50">
+            <Pagination
+              limit={itemsPerPage}
+              setLimit={(value) => setItemsPerPage(value)}
+              totalItems={totalItems}
+              handlePageClick={handlePageClick}
+              text={"Ingredients"}
+            />
           </div>
         )}
-        <div className="flex justify-end mt-4 space-x-2">
-          <button
-            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
-            onClick={handleConfirm}
-          >
-            Confirm
-          </button>
-          <button
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
-            onClick={onClose}
-          >
-            Close
-          </button>
-        </div>
       </div>
     </div>
   );

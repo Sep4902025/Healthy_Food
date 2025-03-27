@@ -67,6 +67,7 @@ import CreateMealPlanNutritionist from "../pages/nutritionist/MealPlan Managemen
 import EditMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/EditMealPlanPage";
 import Medical from "../pages/user/Medical";
 import NutritionistApplicationForm from "../pages/user/NutritionistApplicationForm";
+import MealPlansAnalytics from "../pages/nutritionist/MealPlan Management/MealPlansAnalytics";
 
 const AppRoutes = () => {
   return (
@@ -205,6 +206,8 @@ const AppRoutes = () => {
       >
         <Route path="chat" element={<NutritionChat />} />
         <Route path="mealplan" element={<TableMealPlan />} />
+        <Route path="mealPlan/analytics" element={<MealPlansAnalytics />} />
+
         <Route path="mealplan/create" element={<CreateMealPlanNutritionist />} />
         <Route
           path="/nutritionist/mealplan/edit/:mealPlanId"
