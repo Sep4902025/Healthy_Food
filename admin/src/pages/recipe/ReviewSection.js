@@ -58,8 +58,12 @@ const ReviewSection = ({ recipeId, dishId }) => {
           }
         });
 
-        setReviews(Array.from(reviewMap.values()));
-        console.log("Fetched Reviews:", Array.from(reviewMap.values()));
+        const sortedReviews = Array.from(reviewMap.values()).map((review) => ({
+          ...review,
+          comments: review.comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)), // Sắp xếp comment mới nhất lên đầu
+        }));
+        
+        setReviews(sortedReviews);
       } catch (error) {
         console.error("Error fetching reviews:", error);
       }
@@ -115,23 +119,24 @@ const ReviewSection = ({ recipeId, dishId }) => {
           if (review.userId === userId) {
             return {
               ...review,
-              comments: [...review.comments, newCommentData],
+              comments: [newCommentData, ...review.comments], // Đẩy bình luận mới lên đầu
             };
           }
           return review;
         });
-
+      
         if (!updatedReviews.some((review) => review.userId === userId)) {
-          updatedReviews.push({
+          updatedReviews.unshift({ // Thêm vào đầu danh sách review
             userId,
             email: user.email,
             star: null,
             comments: [newCommentData],
           });
         }
-
+      
         return updatedReviews;
       });
+      
       toast.success("Comment added successfully! 😊");
     } catch (error) {
       console.error("Error adding comment:", error);
