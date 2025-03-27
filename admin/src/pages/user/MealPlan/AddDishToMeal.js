@@ -3,6 +3,7 @@ import mealPlanService from "../../../services/mealPlanServices";
 import homeService from "../../../services/home.service";
 
 const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, userId }) => {
+  // Ensure initial state is an empty array
   const [dishes, setDishes] = useState([]);
   const [selectedDish, setSelectedDish] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -10,8 +11,11 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const [isAdding, setIsAdding] = useState(false);
   const [existingDishes, setExistingDishes] = useState([]);
   const [favoriteDishes, setFavoriteDishes] = useState([]);
-  console.log("FAVORITE_DISHES", favoriteDishes);
-
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(10);
+  
   const [activeFilter, setActiveFilter] = useState("all");
   const [dishTypes, setDishTypes] = useState([]);
   const [selectedType, setSelectedType] = useState("all");
@@ -22,53 +26,52 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
       try {
         setLoading(true);
 
-        // Fetch all data in parallel
         const [dishesResponse, mealResponse, favoritesResponse] = await Promise.all([
-          mealPlanService.getAllDishes(),
+          mealPlanService.getAllDishes(currentPage, limit, searchQuery),
           mealPlanService.getMealByMealId(mealPlanId, mealDayId, mealId),
           homeService.getFavoriteDishes(userId),
         ]);
 
-        // Process dishes
-        if (dishesResponse.success) {
-          setDishes(dishesResponse.data);
-
-          // Extract unique dish types
+        // Process dishes with safety checks
+        if (dishesResponse.success && dishesResponse.data) {
+          // Ensure items is an array, default to empty array if not
+          const dishItems = Array.isArray(dishesResponse.data.items) 
+            ? dishesResponse.data.items 
+            : [];
+          setDishes(dishItems);
+          setTotalPages(dishesResponse.data.totalPages || 1);
+          
           const types = [
-            ...new Set(dishesResponse.data.filter((dish) => dish.type).map((dish) => dish.type)),
+            ...new Set(dishItems.filter((dish) => dish?.type).map((dish) => dish.type)),
           ];
-
           setDishTypes(types);
         } else {
+          setDishes([]); // Set to empty array on failure
           setError(dishesResponse.message || "Could not fetch dishes");
         }
 
-        // Process meal data
         if (mealResponse.success && mealResponse.data && mealResponse.data.dishes) {
           setExistingDishes(mealResponse.data.dishes);
         }
-        console.log("FAVORITES_RESPONSE", favoritesResponse);
-        // Process favorites
+
         if (Array.isArray(favoritesResponse)) {
           const dishIds = favoritesResponse.map((dish) => dish.dishId);
-          console.log("Mapped Dish IDs:", dishIds);
           setFavoriteDishes(dishIds);
         }
       } catch (error) {
         console.error("❌ Error fetching data:", error);
         setError("Could not fetch dishes data");
+        setDishes([]); // Ensure dishes is an array even on error
       } finally {
         setLoading(false);
       }
     };
 
     fetchAllData();
-  }, [mealPlanId, mealDayId, mealId, userId]);
+  }, [mealPlanId, mealDayId, mealId, userId, currentPage, searchQuery]);
 
-  // Check if dish is already added to the meal
   const isDishAlreadyAdded = (dish) => {
-    if (!existingDishes || existingDishes.length === 0) return false;
-
+    if (!existingDishes || !Array.isArray(existingDishes) || existingDishes.length === 0) return false;
     return existingDishes.some(
       (existingDish) =>
         (existingDish.dishId && existingDish.dishId === dish._id) ||
@@ -77,7 +80,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     );
   };
 
-  // Check if dish is in favorites
   const isFavorite = (dishId) => {
     return favoriteDishes.includes(dishId);
   };
@@ -88,7 +90,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
       return;
     }
 
-    // Check if the dish is already added
     if (isDishAlreadyAdded(selectedDish)) {
       alert("This dish has already been added to the meal!");
       return;
@@ -128,27 +129,20 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     }
   };
 
-  // Filter dishes based on active filter, selected type, and search query
-  const filteredDishes = dishes.filter((dish) => {
-    // Filter by favorite status
+  // Ensure dishes is an array before filtering
+  const filteredDishes = Array.isArray(dishes) ? dishes.filter((dish) => {
     if (activeFilter === "favorites" && !isFavorite(dish._id)) {
       return false;
     }
-
-    // Filter by dish type
     if (selectedType !== "all" && dish.type !== selectedType) {
       return false;
     }
-
-    // Filter by search query
     if (searchQuery && !dish.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
-
     return true;
-  });
+  }) : [];
 
-  // If loading, show a spinner
   if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -162,7 +156,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     );
   }
 
-  // If there's an error, show the error message
   if (error) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -186,26 +179,24 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Select a Dish</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            ✕
-          </button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
         </div>
 
-        {/* Filter and Search Controls */}
         <div className="mb-4 flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4">
-          {/* Search bar */}
           <div className="relative flex-grow">
             <input
               type="text"
               placeholder="Search for a dish..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full"
             />
             <span className="absolute left-3 top-2.5">🔍</span>
           </div>
 
-          {/* Filter buttons */}
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setActiveFilter("all")}
@@ -228,8 +219,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               <span className="mr-1">⭐</span>
               Favorites
             </button>
-
-            {/* Type selection dropdown */}
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
@@ -245,7 +234,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
           </div>
         </div>
 
-        {/* Dishes display */}
         <div className="flex-grow overflow-y-auto">
           {filteredDishes.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -332,7 +320,28 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
           )}
         </div>
 
-        {/* Selected dish information */}
+        {totalPages > 1 && (
+          <div className="mt-4 flex justify-center items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded-lg bg-gray-200 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 rounded-lg bg-gray-200 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
+
         {selectedDish && (
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <h3 className="font-medium text-blue-800">Selected Dish</h3>
@@ -363,7 +372,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
           </div>
         )}
 
-        {/* Action buttons */}
         <div className="mt-4 flex justify-between">
           <button
             onClick={handleAddDish}

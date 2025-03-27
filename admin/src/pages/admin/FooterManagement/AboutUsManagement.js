@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import aboutService from "../../../services/footer/aboutServices";
 import UploadComponent from "../../../components/UploadComponent";
 import { EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
+import Pagination from "../../../components/Pagination"; // Import Pagination từ TableMealPlan
+import Loading from "../../../components/Loading"; // Import Loading từ TableMealPlan
 
 const AboutUsManagement = () => {
   const [aboutData, setAboutData] = useState([]);
@@ -11,10 +13,9 @@ const AboutUsManagement = () => {
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Tương đương với limit
   const [totalPages, setTotalPages] = useState(1);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const [totalItems, setTotalItems] = useState(0); // Thêm totalItems để khớp với Pagination
 
   useEffect(() => {
     fetchAboutUs();
@@ -24,20 +25,22 @@ const AboutUsManagement = () => {
     setLoading(true);
     try {
       const result = await aboutService.getAboutUs(currentPage, itemsPerPage);
-      console.log("API Response:", result);
       if (result.success) {
         setAboutData(result.data.items || []);
         setTotalPages(result.data.totalPages || 1);
+        setTotalItems(result.data.total || 0); // Cập nhật totalItems từ API
         if (callback) callback(result);
       } else {
         setError(result.message);
         setAboutData([]);
         setTotalPages(1);
+        setTotalItems(0);
       }
     } catch (err) {
       setError("Lỗi không xác định khi tải dữ liệu");
       setAboutData([]);
       setTotalPages(1);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
@@ -46,12 +49,7 @@ const AboutUsManagement = () => {
   const handleToggleVisibility = async (about) => {
     const updatedAbout = { ...about, isVisible: !about.isVisible };
     const response = await aboutService.updateAboutUs(about._id, updatedAbout);
-
-    if (response.success) {
-      fetchAboutUs();
-    } else {
-      console.error("Error updating display status:", response.message);
-    }
+    if (response.success) fetchAboutUs();
   };
 
   const handleHardDelete = async (id) => {
@@ -59,19 +57,14 @@ const AboutUsManagement = () => {
       const response = await aboutService.hardDeleteAboutUs(id);
       if (response.success) {
         fetchAboutUs((result) => {
-          const totalItems = result.data.total; // Tổng số item còn lại từ server
+          const totalItems = result.data.total;
           const newTotalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-
-          // Chỉ quay về trang trước nếu trang hiện tại không còn item nào
           if (result.data.items.length === 0 && currentPage > 1) {
             setCurrentPage(currentPage - 1);
           } else if (currentPage > newTotalPages) {
-            // Trường hợp tổng số trang giảm và vượt quá trang hiện tại
             setCurrentPage(newTotalPages);
           }
         });
-      } else {
-        console.error("Error deleting item:", response.message);
       }
     }
   };
@@ -88,22 +81,11 @@ const AboutUsManagement = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.bannerUrl.trim()) {
-      alert("Banner cannot be empty!");
-      return;
-    }
-    if (!formData.content.trim()) {
-      alert("Content cannot be empty!");
-      return;
-    }
-
-    let response;
-    if (editData) {
-      response = await aboutService.updateAboutUs(editData._id, formData);
-    } else {
-      response = await aboutService.createAboutUs(formData);
-    }
-
+    if (!formData.bannerUrl.trim()) return alert("Banner cannot be empty!");
+    if (!formData.content.trim()) return alert("Content cannot be empty!");
+    const response = editData
+      ? await aboutService.updateAboutUs(editData._id, formData)
+      : await aboutService.createAboutUs(formData);
     if (response.success) {
       setModalOpen(false);
       fetchAboutUs();
@@ -116,166 +98,168 @@ const AboutUsManagement = () => {
     setFormData({ ...formData, bannerUrl: imageUrl });
   };
 
-  if (loading) return <p className="text-center text-blue-500">Loading...</p>;
-  if (error) return <p className="text-center text-red-500">Error: {error}</p>;
+  // Xử lý sự kiện thay đổi trang từ Pagination
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1; // ReactPaginate dùng index từ 0
+    if (selectedPage >= 1 && selectedPage <= totalPages) {
+      setCurrentPage(selectedPage);
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-[#40B491] text-lg font-semibold">Loading...</p>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-red-500 text-lg font-semibold">Error: {error}</p>
+      </div>
+    );
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-bold">About Us Management</h1>
+    <div className="container mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
+          About Us Management
+        </h1>
+        <button
+          className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
+          onClick={() => handleOpenModal()}
+        >
+          + Add New
+        </button>
+      </div>
 
-      <button
-        className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-        onClick={() => handleOpenModal()}
-      >
-        + Add New
-      </button>
+      {/* Data Container */}
+      <Loading isLoading={loading}>
+        <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
+          {/* Table Header */}
+          <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
+            <div className="col-span-1">No.</div>
+            <div className="col-span-2 ">Banner</div>
+            <div className="col-span-5">Content</div>
+            <div className="col-span-2 text-center">Status</div>
+            <div className="col-span-2 text-center">Actions</div>
+          </div>
 
-      <div className="bg-white shadow-lg rounded-2xl p-6">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100 text-gray-700">
-              <th className="p-3 text-left">No.</th>
-              <th className="p-3 text-left">Banner</th>
-              <th className="p-3 text-left">Content</th>
-              <th className="p-3 text-center">Status</th>
-              <th className="p-3 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
+          {/* Table Body */}
+          <div className="divide-y divide-gray-200">
             {aboutData.length > 0 ? (
               aboutData.map((item, index) => (
-                <tr key={item._id} className="border-b border-gray-200 text-gray-900">
-                  <td className="p-3">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                  <td className="p-3">
+                <div
+                  key={item._id}
+                  className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition duration-200 items-center"
+                >
+                  <div className="col-span-1 text-gray-600 font-medium">
+                    {(currentPage - 1) * itemsPerPage + index + 1}
+                  </div>
+                  <div className="col-span-2 flex justify-center">
                     <img
                       src={item.bannerUrl}
                       alt="Banner"
-                      className="w-14 h-14 object-cover rounded-full shadow-md"
+                      className="w-12 h-12 object-cover rounded-md shadow-sm"
                     />
-                  </td>
-                  <td className="p-3">{item.content}</td>
-                  <td className="p-3 text-center">
+                  </div>
+                  <div className="col-span-5 text-gray-700 text-sm line-clamp-2">
+                    {item.content}
+                  </div>
+                  <div className="col-span-2 text-center">
                     <span
-                      className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold ${
-                        item.isVisible ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        item.isVisible
+                          ? "bg-[#40B491] text-white"
+                          : "bg-gray-200 text-gray-700"
                       }`}
                     >
                       {item.isVisible ? "Visible" : "Hidden"}
                     </span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <div className="flex items-center justify-center space-x-2">
-                      <button
-                        className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
-                        onClick={() => handleOpenModal(item)}
-                      >
-                        <EditIcon size={16} />
-                      </button>
-                      <button
-                        className={`p-2 rounded-full text-white ${
-                          item.isVisible
-                            ? "bg-gray-500 hover:bg-gray-600"
-                            : "bg-green-500 hover:bg-green-600"
-                        }`}
-                        onClick={() => handleToggleVisibility(item)}
-                      >
-                        {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-                      </button>
-                      <button
-                        className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
-                        onClick={() => handleHardDelete(item._id)}
-                      >
-                        <TrashIcon size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  </div>
+                  <div className="col-span-2 flex justify-center space-x-3">
+                    <button
+                      className="p-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                      onClick={() => handleOpenModal(item)}
+                    >
+                      <EditIcon size={16} />
+                    </button>
+                    <button
+                      className={`p-2 rounded-md text-white ${
+                        item.isVisible
+                          ? "bg-gray-500 hover:bg-gray-600"
+                          : "bg-[#40B491] hover:bg-[#359c7a]"
+                      } transition`}
+                      onClick={() => handleToggleVisibility(item)}
+                    >
+                      {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                    </button>
+                    <button
+                      className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                      onClick={() => handleHardDelete(item._id)}
+                    >
+                      <TrashIcon size={16} />
+                    </button>
+                  </div>
+                </div>
               ))
             ) : (
-              <tr>
-                <td colSpan="5" className="text-center text-gray-500 p-4">
-                  No data.
-                </td>
-              </tr>
+              <div className="p-6 text-center text-gray-500">No data available.</div>
             )}
-          </tbody>
-        </table>
-
-        {/* Pagination */}
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="5">5 About Us</option>
-              <option value="10">10 About Us</option>
-              <option value="15">15 About Us</option>
-            </select>
           </div>
-          {totalPages > 1 && (
-            <div className="flex space-x-2">
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                {"<"}
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => paginate(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                {">"}
-              </button>
-            </div>
-          )}
+
+          {/* Pagination */}
+          <div className="p-4 bg-gray-50">
+            <Pagination
+              limit={itemsPerPage} // Truyền itemsPerPage thay vì limit
+              setLimit={setItemsPerPage} // Cập nhật itemsPerPage
+              totalItems={totalItems} // Tổng số mục
+              handlePageClick={handlePageClick} // Hàm xử lý thay đổi trang
+              text={"About Us Items"} // Tên hiển thị trong Pagination
+            />
+          </div>
         </div>
-      </div>
+      </Loading>
 
-      {/* Modal Form */}
+      {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add new"} About Us</h2>
-
-            <label className="block mb-2">Banner URL:</label>
-            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.bannerUrl === ""} />
-
-            <label className="block mb-2 mt-4">Content:</label>
-            <textarea
-              className="w-full border p-2 mb-4 rounded"
-              rows="4"
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            ></textarea>
-
-            <div className="flex justify-end space-x-2">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-2xl font-bold text-[#40B491] mb-6">
+              {editData ? "Edit About Us" : "Add New About Us"}
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Banner
+                </label>
+                <UploadComponent
+                  onUploadSuccess={handleImageUpload}
+                  reset={formData.bannerUrl === ""}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Content
+                </label>
+                <textarea
+                  className="w-full border rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+                  rows="4"
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 mt-6">
               <button
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
                 onClick={() => setModalOpen(false)}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
                 onClick={handleSave}
               >
                 Save

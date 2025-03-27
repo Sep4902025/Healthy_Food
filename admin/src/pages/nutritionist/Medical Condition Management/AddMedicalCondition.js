@@ -46,14 +46,16 @@ const AddMedicalCondition = ({ onMedicalConditionAdded = () => {} }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="container mx-auto px-6 py-8">
       {/* Header */}
-      <div className="flex items-center mb-6 py-4">
-        <label className="text-xl font-bold mb-4">Add New Medical Condition</label>
+      <div className="flex items-center mb-8">
+        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
+          Add New Medical Condition
+        </h2>
         <div className="ml-auto">
           <button
             onClick={handleSubmit}
-            className="bg-green-500 text-white px-4 py-2 rounded-md"
+            className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
           >
             Save Medical Condition
           </button>
@@ -61,7 +63,7 @@ const AddMedicalCondition = ({ onMedicalConditionAdded = () => {} }) => {
       </div>
 
       {/* Single Panel */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-2xl shadow-md p-6">
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
           <input
@@ -70,7 +72,9 @@ const AddMedicalCondition = ({ onMedicalConditionAdded = () => {} }) => {
             value={formData.name}
             onChange={handleChange}
             placeholder="Name of medical condition"
-            className={`w-full border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+            className={`w-full border ${
+              errors.name ? "border-red-500" : "border-gray-300"
+            } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
           />
           {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
         </div>
@@ -82,9 +86,13 @@ const AddMedicalCondition = ({ onMedicalConditionAdded = () => {} }) => {
             value={formData.description}
             onChange={handleChange}
             placeholder="Enter description"
-            className={`w-full border ${errors.description ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
-          ></textarea>
-          {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+            className={`w-full border ${
+              errors.description ? "border-red-500" : "border-gray-300"
+            } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+          />
+          {errors.description && (
+            <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+          )}
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@
   justify-content: center;
 }
 
-.google-btn-wrapper > div {
+.google-btn-wrapper>div {
   width: 100% !important;
   max-width: 300px;
 }
@@ -45,6 +45,7 @@ code {
   justify-content: center;
   align-items: center;
 }
+
 .food-i-container {
   width: 80%;
   height: 70%;
@@ -66,7 +67,8 @@ code {
   text-align: left;
   margin-left: 46px;
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* Số dòng tối đa */
+  -webkit-line-clamp: 2;
+  /* Số dòng tối đa */
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -119,8 +121,9 @@ code {
 }
 
 .user-item.selected a {
-  
-  color: green; /* Chữ trắng */
+
+  color: green;
+  /* Chữ trắng */
 }
 
 .nav-container {
@@ -130,7 +133,8 @@ code {
   margin-top: 50px;
 
   background-color: #1e2875;
-  border-radius: 8px; /* Dùng giá trị hợp lý thay vì 'lg' */
+  border-radius: 8px;
+  /* Dùng giá trị hợp lý thay vì 'lg' */
   border: 1px solid white;
   display: flex;
   justify-content: flex-start;
@@ -155,7 +159,7 @@ code {
 }
 
 .content-container {
-  
+
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -186,7 +190,7 @@ code {
 .user-img {
   background-color: #ffa78d;
   border: none;
-  
+
 }
 
 .user-content-img-btn {
@@ -212,20 +216,20 @@ code {
   border-collapse: none;
 }
 
-.infor-table{
+.infor-table {
   border: 0.5px solid gray;
   margin: 20px;
 }
 
 table {
-  color: rgba(31, 31, 31, 0.7); 
+  color: rgba(31, 31, 31, 0.7);
   text-align: left;
   font-size: 20px;
 
-  
+
 }
 
-.infor-table tr{
+.infor-table tr {
   color: inherit;
   margin-left: 10px;
 }
@@ -234,22 +238,22 @@ table {
   width: 192px;
   height: 61px;
   background-color: #CB87CB;
-  color: #ffffff  ;
+  color: #ffffff;
   border-radius: 25px;
 }
 
-.goal-container{
+.goal-container {
   border: 0.5px solid gray;
-  
+
   margin: 20px;
 }
 
 .goal-title {
-  display: flex;            
-  justify-content: space-between; 
-  align-items: center;      
-  padding: 10px;           
-  border-bottom: 1px solid #ddd; 
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
 }
 
 .g-title {
@@ -257,24 +261,25 @@ table {
   font-weight: bold;
   text-transform: uppercase;
 }
-.g-link{
+
+.g-link {
   color: #CB87CB;
   text-transform: uppercase;
   font-size: 20px;
 }
 
-.goal-content{
+.goal-content {
   color: #49454F;
   font-size: 16px;
   margin: 20px;
 }
 
-.body-container{
+.body-container {
   border: 0.5px solid gray;
   margin: 20px;
 }
 
-.body-title{
+.body-title {
   text-align: left;
   margin: 20px 10px;
   text-transform: uppercase;
@@ -282,14 +287,14 @@ table {
   font-weight: bold;
 }
 
-.body-content{
+.body-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin: 20px;
 }
 
-.body-warning{
+.body-warning {
   width: 360px;
   height: 150px;
   background: linear-gradient(to right, #ff7e5f, #feb47b);
@@ -297,23 +302,23 @@ table {
   color: #ffffff;
 }
 
-.body-warning-title{
+.body-warning-title {
   text-align: left;
-  margin:10px ;
+  margin: 10px;
   font-size: 24px;
   font-weight: bold;
 }
 
-.body-warning-content{
+.body-warning-content {
   margin: 10px;
 }
 
-.fa-detail-container{
+.fa-detail-container {
   border: 0.5px solid gray;
   margin: 20px;
 }
 
-.fa-title{
+.fa-title {
   font-size: 24px;
   text-align: left;
   font-weight: bold;
@@ -321,7 +326,7 @@ table {
   margin: 20px 10px;
 }
 
-.fa-content{
+.fa-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -329,7 +334,7 @@ table {
   color: #49454F;
 }
 
-.kind-fa-title{
+.kind-fa-title {
   font-size: 24px;
   font-weight: bold;
   color: #000;
@@ -339,20 +344,26 @@ table {
 
 .kind-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* Chia thành 2 cột */
-  gap: 10px; /* Khoảng cách giữa các mục */
+  grid-template-columns: repeat(2, 1fr);
+  /* Chia thành 2 cột */
+  gap: 10px;
+  /* Khoảng cách giữa các mục */
   padding: 20px;
-  list-style: none; /* Bỏ dấu chấm mặc định */
-  counter-reset: kind-counter; /* Đặt bộ đếm */
+  list-style: none;
+  /* Bỏ dấu chấm mặc định */
+  counter-reset: kind-counter;
+  /* Đặt bộ đếm */
 }
 
 .kind-item {
-  background-color: #FFF; /* Màu nền */
+  background-color: #FFF;
+  /* Màu nền */
   padding: 5px 15px;
-  border-radius: 25px; /* Bo góc */
+  border-radius: 25px;
+  /* Bo góc */
   font-size: 16px;
   border: 0.5px solid gray;
-  
+
   display: flex;
   align-items: center;
   gap: 8px;
@@ -360,15 +371,18 @@ table {
 }
 
 .kind-item::before {
-  counter-increment: kind-counter; /* Tăng bộ đếm */
-  content: "•"; /* Dấu chấm tròn */
-  color: green; /* Màu xanh */
+  counter-increment: kind-counter;
+  /* Tăng bộ đếm */
+  content: "•";
+  /* Dấu chấm tròn */
+  color: green;
+  /* Màu xanh */
   font-size: 28px;
   font-weight: 900;
   margin-right: 10px;
 }
 
-.cus-review-title{
+.cus-review-title {
   font-size: 24px;
   font-weight: bold;
   color: #000;
@@ -376,12 +390,12 @@ table {
   margin: 20px 30px;
 }
 
-.cus-review-container{
+.cus-review-container {
   border: 0.5px solid gray;
   margin: 20px;
 }
 
-.food-review-name{
+.food-review-name {
   font-size: 20px;
   font-weight: bold;
   color: #000;
@@ -390,12 +404,13 @@ table {
 }
 
 .food-review-star {
-  
+
   gap: 5px;
-  font-size: 40px; /* Tăng kích thước ngôi sao */
+  font-size: 40px;
+  /* Tăng kích thước ngôi sao */
 }
 
-.food-review-content{
+.food-review-content {
   font-size: 16px;
   color: #49454F;
   opacity: 0.7;
@@ -403,9 +418,9 @@ table {
   text-align: center;
 }
 
-.cus-review-link{
+.cus-review-link {
   color: #ff6868;
-  
+
   margin: 20px;
   font-size: 24px;
   font-weight: bold;
@@ -413,10 +428,13 @@ table {
 }
 
 .food-i-container img {
-  width: 300px; /* Kích thước cố định */
+  width: 300px;
+  /* Kích thước cố định */
   height: 220px;
-  border-radius: 50%; /* Làm tròn ảnh */
-  object-fit: cover; /* Đảm bảo ảnh không méo */
+  border-radius: 50%;
+  /* Làm tròn ảnh */
+  object-fit: cover;
+  /* Đảm bảo ảnh không méo */
 }
 
 
@@ -438,4 +456,3 @@ table {
   font-weight: bold;
   border-radius: 5px;
 }
-

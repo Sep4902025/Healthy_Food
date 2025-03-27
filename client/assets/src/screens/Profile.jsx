@@ -9,7 +9,7 @@ import {
   ScrollView,
   Dimensions,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; 
+import { Ionicons } from "@expo/vector-icons";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import { favorSelector, userSelector } from "../redux/selectors/selector";
 import { useDispatch, useSelector } from "react-redux";
@@ -24,10 +24,7 @@ import { ScreensName } from "../constants/ScreensName";
 import ShowToast from "../components/common/CustomToast";
 import { updateUser } from "../services/authService";
 import { updateUserAct } from "../redux/reducers/userReducer";
-import {
-  getUserPreference,
-  updateUserPreference,
-} from "../services/userPreference";
+import { getUserPreference, updateUserPreference } from "../services/userPreference";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -42,7 +39,6 @@ function Profile({ navigation }) {
   });
   const [userPreference, setUserPreference] = useState({});
   const user = useSelector(userSelector);
-
   useEffect(() => {
     loadUserPreference();
   }, []);
@@ -69,7 +65,6 @@ function Profile({ navigation }) {
     } else {
       ShowToast("error", "Update edit health fail");
     }
-    
 
     setModalVisible({
       ...modalVisible,
@@ -82,7 +77,7 @@ function Profile({ navigation }) {
 
     if (response.status === 200) {
       ShowToast("success", "Update user profile successfull");
-      dispatch(updateUserAct(response.data?.data?.user || {})); 
+      dispatch(updateUserAct(response.data?.data?.user || {}));
     } else {
       ShowToast("error", "Update user profile fail");
     }
@@ -101,36 +96,23 @@ function Profile({ navigation }) {
 
   return (
     <NonBottomTabWrapper headerHidden={true}>
-      
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={theme.textColor} />
         </TouchableOpacity>
-        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
-          My Profile
-        </Text>
+        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>My Profile</Text>
       </View>
 
-     
       <View style={styles.profileSection}>
         <Image
           source={
-            user?.avatar_url
-              ? { uri: user.avatar_url }
-              : require("../../assets/image/Profile.png")
+            user?.avatar_url ? { uri: user.avatar_url } : require("../../assets/image/Profile.png")
           }
           style={styles.profileImage}
         />
         <View style={styles.profileInfoContainer}>
-          <Text style={{ ...styles.profileName, color: theme.textColor }}>
-            {user?.username}
-          </Text>
-          <Text style={{ ...styles.profileEmail, color: theme.textColor }}>
-            {user?.email}
-          </Text>
+          <Text style={{ ...styles.profileName, color: theme.textColor }}>{user?.username}</Text>
+          <Text style={{ ...styles.profileEmail, color: theme.textColor }}>{user?.email}</Text>
           <View style={styles.editButtonContainer}>
             <TouchableOpacity
               style={styles.editButton}
@@ -141,15 +123,12 @@ function Profile({ navigation }) {
                 });
               }}
             >
-              <Text style={{ ...styles.editButtonText, color: "white" }}>
-                Edit Profile
-              </Text>
+              <Text style={{ ...styles.editButtonText, color: "white" }}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      
       <View style={styles.menuContainer}>
         <TouchableOpacity
           style={styles.menuItem}
@@ -158,9 +137,7 @@ function Profile({ navigation }) {
           }}
         >
           <Ionicons name="heart-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Favourites
-          </Text>
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>Favourites</Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
@@ -174,15 +151,11 @@ function Profile({ navigation }) {
           }}
         >
           <Ionicons name="body-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Health Information
-          </Text>
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>Health Information</Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
-        <View
-          style={{ ...styles.separator, backgroundColor: theme.textColor }}
-        />
+        <View style={{ ...styles.separator, backgroundColor: theme.textColor }} />
 
         <TouchableOpacity
           style={styles.menuItem}
@@ -194,26 +167,20 @@ function Profile({ navigation }) {
           }}
         >
           <Ionicons name="calendar-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Meal Planning
-          </Text>
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>Meal Planning</Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
         <View style={styles.menuItem}>
           <Ionicons name="contrast-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Dark/Light
-          </Text>
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>Dark/Light</Text>
           <Switch
             value={themeMode === "dark"}
             onValueChange={changeLightMode}
             trackColor={{ false: "#ccc", true: "#75a57f" }}
           />
         </View>
-        <View
-          style={{ ...styles.separator, backgroundColor: theme.textColor }}
-        />
+        <View style={{ ...styles.separator, backgroundColor: theme.textColor }} />
       </View>
       <EditHealthModal
         visible={modalVisible.EditHealthModal}
@@ -284,7 +251,7 @@ const styles = StyleSheet.create({
     width: WIDTH * 0.25,
     height: WIDTH * 0.25,
     borderRadius: WIDTH,
-    backgroundColor: "#ddd", 
+    backgroundColor: "#ddd",
   },
   profileInfoContainer: {
     alignItems: "flex-start",

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import termService from "../../../services/footer/termServices";
 import UploadComponent from "../../../components/UploadComponent";
-import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
+import { EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
+import Pagination from "../../../components/Pagination"; // Import Pagination từ TableMealPlan
+import Loading from "../../../components/Loading"; // Import Loading từ TableMealPlan
 
 const TermOfUseManagement = () => {
   const [terms, setTerms] = useState([]);
@@ -11,8 +13,9 @@ const TermOfUseManagement = () => {
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
   const [currentPage, setCurrentPage] = useState(1);
-  const [termsPerPage, setTermsPerPage] = useState(5);
+  const [termsPerPage, setTermsPerPage] = useState(5); // Tương đương với limit
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0); // Thêm totalItems để khớp với Pagination
 
   useEffect(() => {
     fetchTerms();
@@ -20,17 +23,27 @@ const TermOfUseManagement = () => {
 
   const fetchTerms = async (callback) => {
     setLoading(true);
-    const result = await termService.getTerms(currentPage, termsPerPage);
-    if (result.success) {
-      setTerms(result.data.items || []);
-      setTotalPages(result.data.totalPages || 1);
-      if (callback) callback(result.data);
-    } else {
-      setError(result.message);
+    try {
+      const result = await termService.getTerms(currentPage, termsPerPage);
+      if (result.success) {
+        setTerms(result.data.items || []);
+        setTotalPages(result.data.totalPages || 1);
+        setTotalItems(result.data.total || 0); // Cập nhật totalItems từ API
+        if (callback) callback(result);
+      } else {
+        setError(result.message);
+        setTerms([]);
+        setTotalPages(1);
+        setTotalItems(0);
+      }
+    } catch (err) {
+      setError("Lỗi không xác định khi tải dữ liệu");
       setTerms([]);
       setTotalPages(1);
+      setTotalItems(0);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleToggleVisibility = async (term) => {
@@ -39,9 +52,7 @@ const TermOfUseManagement = () => {
       isVisible: !term.isVisible,
       isDeleted: term.isDeleted || false,
     };
-
     const response = await termService.updateTerm(term._id, updatedTerm);
-
     if (response.success) {
       fetchTerms();
     } else {
@@ -54,9 +65,9 @@ const TermOfUseManagement = () => {
       const response = await termService.hardDeleteTerm(id);
       if (response.success) {
         fetchTerms((result) => {
-          const totalItems = result.total;
+          const totalItems = result.data.total;
           const newTotalPages = Math.ceil(totalItems / termsPerPage) || 1;
-          if (result.items.length === 0 && currentPage > 1) {
+          if (result.data.items.length === 0 && currentPage > 1) {
             setCurrentPage(currentPage - 1);
           } else if (currentPage > newTotalPages) {
             setCurrentPage(newTotalPages);
@@ -88,19 +99,13 @@ const TermOfUseManagement = () => {
       alert("Content cannot be empty!");
       return;
     }
-
-    let response;
-    if (editData) {
-      response = await termService.updateTerm(editData._id, formData);
-    } else {
-      response = await termService.createTerm(formData);
-    }
-
+    const response = editData
+      ? await termService.updateTerm(editData._id, formData)
+      : await termService.createTerm(formData);
     if (response.success) {
       setModalOpen(false);
       fetchTerms();
     } else {
-      console.error("Error:", response.message);
       alert(response.message);
     }
   };
@@ -109,165 +114,170 @@ const TermOfUseManagement = () => {
     setFormData({ ...formData, bannerUrl: imageUrl });
   };
 
-  if (loading) return <p className="text-center text-blue-500">Loading...</p>;
-  if (error) return <p className="text-center text-red-500">Error: {error}</p>;
+  // Xử lý sự kiện thay đổi trang từ Pagination
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1; // ReactPaginate dùng index từ 0
+    if (selectedPage >= 1 && selectedPage <= totalPages) {
+      setCurrentPage(selectedPage);
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-[#40B491] text-lg font-semibold">Loading...</p>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-red-500 text-lg font-semibold">Error: {error}</p>
+      </div>
+    );
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-bold">Terms of Use Management</h1>
+    <div className="container mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
+          Terms of Use Management
+        </h1>
+        <button
+          className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
+          onClick={() => handleOpenModal()}
+        >
+          + Add New
+        </button>
+      </div>
 
-      <button
-        className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-        onClick={() => handleOpenModal()}
-      >
-        + Add new
-      </button>
+      {/* Data Container */}
+      <Loading isLoading={loading}>
+        <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
+          {/* Table Header */}
+          <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
+            <div className="col-span-1">No.</div>
+            <div className="col-span-2">Banner</div>
+            <div className="col-span-5">Content</div>
+            <div className="col-span-2 text-center">Status</div>
+            <div className="col-span-2 text-center">Actions</div>
+          </div>
 
-      <div className="bg-white shadow-lg rounded-2xl p-6">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100 text-gray-700">
-              <th className="p-3 text-left">No.</th>
-              <th className="p-3 text-left">Banner</th>
-              <th className="p-3 text-left">Content</th>
-              <th className="p-3 text-center">Status</th>
-              <th className="p-3 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
+          {/* Table Body */}
+          <div className="divide-y divide-gray-200">
             {terms.length > 0 ? (
               terms.map((item, index) => (
-                <tr key={item._id} className="border-b border-gray-200 text-gray-900">
-                  <td className="p-3">{(currentPage - 1) * termsPerPage + index + 1}</td>
-                  <td className="p-3">
+                <div
+                  key={item._id}
+                  className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition duration-200 items-center"
+                >
+                  <div className="col-span-1 text-gray-600 font-medium">
+                    {(currentPage - 1) * termsPerPage + index + 1}
+                  </div>
+                  <div className="col-span-2">
                     <img
                       src={item.bannerUrl}
                       alt="Banner"
-                      className="w-20 h-12 object-cover rounded"
+                      className="w-12 h-12 object-cover rounded-md shadow-sm"
                     />
-                  </td>
-                  <td className="p-3 text-left">{item.content}</td>
-                  <td className="p-3 text-center">
+                  </div>
+                  <div className="col-span-5 text-gray-700 text-sm line-clamp-2">
+                    {item.content}
+                  </div>
+                  <div className="col-span-2 text-center">
                     <span
-                      className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold ${
-                        item.isVisible ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        item.isVisible
+                          ? "bg-[#40B491] text-white"
+                          : "bg-gray-200 text-gray-700"
                       }`}
                     >
                       {item.isVisible ? "Visible" : "Hidden"}
                     </span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <div className="flex items-center justify-center space-x-2">
-                      <button
-                        className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
-                        onClick={() => handleOpenModal(item)}
-                      >
-                        <EditIcon size={16} />
-                      </button>
-                      <button
-                        className={`p-2 rounded-full text-white ${
-                          item.isVisible
-                            ? "bg-gray-500 hover:bg-gray-600"
-                            : "bg-green-500 hover:bg-green-600"
-                        }`}
-                        onClick={() => handleToggleVisibility(item)}
-                      >
-                        {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-                      </button>
-                      <button
-                        className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
-                        onClick={() => handleHardDelete(item._id)}
-                      >
-                        <TrashIcon size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  </div>
+                  <div className="col-span-2 flex justify-center space-x-3">
+                    <button
+                      className="p-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                      onClick={() => handleOpenModal(item)}
+                    >
+                      <EditIcon size={16} />
+                    </button>
+                    <button
+                      className={`p-2 rounded-md text-white ${
+                        item.isVisible
+                          ? "bg-gray-500 hover:bg-gray-600"
+                          : "bg-[#40B491] hover:bg-[#359c7a]"
+                      } transition`}
+                      onClick={() => handleToggleVisibility(item)}
+                    >
+                      {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                    </button>
+                    <button
+                      className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                      onClick={() => handleHardDelete(item._id)}
+                    >
+                      <TrashIcon size={16} />
+                    </button>
+                  </div>
+                </div>
               ))
             ) : (
-              <tr>
-                <td colSpan="5" className="text-center text-gray-500 p-4">
-                  No terms.
-                </td>
-              </tr>
+              <div className="p-6 text-center text-gray-500">No terms available.</div>
             )}
-          </tbody>
-        </table>
-
-        {/* Pagination */}
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={termsPerPage}
-              onChange={(e) => {
-                setTermsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="5">5 Terms</option>
-              <option value="10">10 Terms</option>
-              <option value="15">15 Terms</option>
-            </select>
           </div>
-          {totalPages > 1 && (
-            <div className="flex space-x-2">
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                {"<"}
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-              >
-                {">"}
-              </button>
-            </div>
-          )}
+
+          {/* Pagination */}
+          <div className="p-4 bg-gray-50">
+            <Pagination
+              limit={termsPerPage} // Truyền termsPerPage thay vì limit
+              setLimit={setTermsPerPage} // Cập nhật termsPerPage
+              totalItems={totalItems} // Tổng số mục
+              handlePageClick={handlePageClick} // Hàm xử lý thay đổi trang
+              text={"Terms"} // Tên hiển thị trong Pagination
+            />
+          </div>
         </div>
-      </div>
+      </Loading>
 
-      {/* Modal Form */}
+      {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-            <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add New"} Term</h2>
-
-            <label className="block mb-2">Banner URL:</label>
-            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.bannerUrl === ""} />
-
-            <label className="block mb-2">Content:</label>
-            <textarea
-              className="w-full border p-2 mb-4"
-              rows="4"
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            ></textarea>
-
-            <div className="flex justify-end space-x-2">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-2xl font-bold text-[#40B491] mb-6">
+              {editData ? "Edit Term" : "Add New Term"}
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Banner
+                </label>
+                <UploadComponent
+                  onUploadSuccess={handleImageUpload}
+                  reset={formData.bannerUrl === ""}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Content
+                </label>
+                <textarea
+                  className="w-full border rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+                  rows="4"
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 mt-6">
               <button
-                className="px-4 py-2 bg-gray-500 text-white rounded"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
                 onClick={() => setModalOpen(false)}
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-green-500 text-white rounded" onClick={handleSave}>
+              <button
+                className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                onClick={handleSave}
+              >
                 Save
               </button>
             </div>

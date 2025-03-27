@@ -2,22 +2,28 @@ import React, { useEffect, useState } from "react";
 import medicalConditionService from "../../../services/nutritionist/medicalConditionServices";
 import dishService from "../../../services/nutritionist/dishesServices";
 import recipesService from "../../../services/nutritionist/recipesServices";
+import { useNavigate } from "react-router-dom";
 import {
   HeartPulse,
-  Pencil,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
+  EditIcon,
+  TrashIcon,
   Flame,
   Dumbbell,
   Wheat,
   Droplet,
+  Clock,
+  Users,
 } from "lucide-react";
+import Pagination from "../../../components/Pagination"; // Assuming the same Pagination component is available
+
+const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
 
 const TableMedicalConditions = () => {
+  const navigate = useNavigate();
   const [conditions, setConditions] = useState([]);
   const [dishes, setDishes] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0); // Added for pagination
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isFoodModalOpen, setIsFoodModalOpen] = useState(false);
   const [editData, setEditData] = useState({
@@ -49,12 +55,13 @@ const TableMedicalConditions = () => {
         searchTerm
           ? medicalConditionService.searchMedicalConditionByName(searchTerm, currentPage, itemsPerPage)
           : medicalConditionService.getAllMedicalConditions(currentPage, itemsPerPage),
-        dishService.getAllDishes(1, 1000), // Lấy tất cả dishes (có thể cần phân trang riêng nếu nhiều dữ liệu)
+        dishService.getAllDishes(1, 1000),
       ]);
 
       if (conditionsResponse?.success) {
         setConditions(conditionsResponse.data.items || []);
         setTotalPages(conditionsResponse.data.totalPages || 1);
+        setTotalItems(conditionsResponse.data.total || 0); // Set total items for pagination
       } else {
         setConditions([]);
         console.error("❌ Failed to fetch conditions:", conditionsResponse?.message);
@@ -74,13 +81,23 @@ const TableMedicalConditions = () => {
               if (recipeResponse.success && recipeResponse.data?.status === "success") {
                 const recipe = recipeResponse.data.data;
                 const nutritions = calculateNutritionFromRecipe(recipe);
-                return { ...dish, nutritions };
+                return {
+                  ...dish,
+                  cookingTime: recipe.cookingTime || "N/A",
+                  totalServing: recipe.totalServing || "N/A",
+                  nutritions,
+                };
               }
             } catch (error) {
               console.error(`Error fetching recipe for dish ${dish._id}:`, error);
             }
           }
-          return { ...dish, nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" } };
+          return {
+            ...dish,
+            cookingTime: "N/A",
+            totalServing: "N/A",
+            nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" },
+          };
         })
       );
 
@@ -130,9 +147,7 @@ const TableMedicalConditions = () => {
     };
   };
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // Open edit modal
+  // Handle edit click
   const handleEditClick = (condition) => {
     setEditData({
       id: condition._id,
@@ -151,7 +166,7 @@ const TableMedicalConditions = () => {
       const response = await medicalConditionService.deleteMedicalCondition(id);
       if (response.success) {
         alert("Deleted successfully!");
-        fetchData(); // Refresh data after delete
+        fetchData();
         if (conditions.length === 1 && currentPage > 1) {
           setCurrentPage(currentPage - 1);
         }
@@ -196,7 +211,7 @@ const TableMedicalConditions = () => {
     if (response.success) {
       alert(`Medical condition "${editData.name}" has been updated!`);
       setIsEditModalOpen(false);
-      fetchData(); // Refresh data after update
+      fetchData();
     } else {
       alert("Failed to update medical condition: " + response.message);
     }
@@ -224,16 +239,36 @@ const TableMedicalConditions = () => {
     setErrors({});
   };
 
-  return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">List of Medical Conditions</h2>
+  // Pagination handler
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1;
+    if (selectedPage >= 1 && selectedPage <= totalPages) {
+      setCurrentPage(selectedPage);
+    }
+  };
 
-      <div className="flex justify-between items-center mb-4">
+  return (
+    <div className="container mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
+          List of Medical Conditions
+        </h2>
+        <button
+          onClick={() => navigate("add")}
+          className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
+        >
+          + Add Medical Condition
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="flex flex-col gap-4 mb-6">
         <div className="flex items-center">
           <input
             type="text"
             placeholder="Search by condition name"
-            className="w-80 border border-gray-300 rounded-md px-3 py-2 mr-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -243,42 +278,52 @@ const TableMedicalConditions = () => {
         </div>
       </div>
 
+      {/* Conditions Grid */}
       {isLoading ? (
-        <div className="text-center py-4">Loading...</div>
+        <div className="text-center py-4">
+          <p>Loading...</p>
+        </div>
       ) : (
-        <div className="w-full">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="min-h-[calc(100vh-200px)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {conditions.length > 0 ? (
               conditions.map((condition) => (
                 <div
                   key={condition._id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden relative"
+                  className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
                 >
+               
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center">{condition.name}</h3>
-                    <p className="text-sm text-gray-600 mt-2 text-center line-clamp-2">{condition.description}</p>
+                    <h3 className="text-lg font-semibold text-center text-gray-800">
+                      {condition.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-2 text-center line-clamp-2">
+                      {condition.description}
+                    </p>
                   </div>
-                  <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
-                    <button
-                      onClick={() => handleEditClick(condition)}
-                      className="text-blue-500 flex items-center px-2 py-1 hover:text-blue-700"
-                    >
-                      <Pencil className="w-4 h-4 mr-1" />
-                      Edit
-                    </button>
-                    <div className="h-4 border-l border-gray-300 mx-2"></div>
-                    <button
-                      onClick={() => handleDelete(condition._id)}
-                      className="text-red-500 flex items-center px-2 py-1 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </button>
+                  <div className="p-2 bg-gray-50 border-t border-gray-200 h-16 flex items-center justify-center">
+                    <div className="flex w-full justify-center items-center gap-2">
+                      <button
+                        onClick={() => handleEditClick(condition)}
+                        className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition"
+                      >
+                        <EditIcon className="w-4 h-4 mr-1" />
+                        Edit
+                      </button>
+                      <div className="h-4 border-l border-gray-300 mx-2"></div>
+                      <button
+                        onClick={() => handleDelete(condition._id)}
+                        className="flex-1 text-red-500 flex items-center justify-center px-2 py-1 hover:text-red-600 transition"
+                      >
+                        <TrashIcon className="w-4 h-4 mr-1" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500">
+              <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
                 <HeartPulse className="w-24 h-24 text-gray-400 mb-4" />
                 <p className="text-lg font-semibold">No medical conditions</p>
                 <p className="text-sm">Looks like you haven't added any medical conditions yet.</p>
@@ -288,77 +333,43 @@ const TableMedicalConditions = () => {
         </div>
       )}
 
-      {conditions.length > 0 && !isLoading && (
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="4">4 conditions</option>
-              <option value="8">8 conditions</option>
-              <option value="12">12 conditions</option>
-            </select>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                className={`px-3 py-1 rounded ${
-                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                }`}
-                onClick={() => paginate(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+      {/* Pagination */}
+      {totalItems > 0 && !isLoading && (
+        <div className="p-4 bg-gray-50">
+          <Pagination
+            limit={itemsPerPage}
+            setLimit={setItemsPerPage}
+            totalItems={totalItems}
+            handlePageClick={handlePageClick}
+            text={"Conditions"}
+          />
         </div>
       )}
 
       {/* Edit Medical Condition Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center mb-6 py-4 px-6">
-              <label className="text-xl font-bold text-green-700">Edit Medical Condition</label>
-              <div className="ml-auto flex space-x-4">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="flex items-center mb-6">
+              <h2 className="text-2xl font-bold text-[#40B491]">Edit Medical Condition</h2>
+              <div className="ml-auto flex space-x-3">
                 <button
                   onClick={handleSaveEdit}
-                  className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+                  className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
                 >
                   Save
                 </button>
                 <button
-                  className="text-gray-500 hover:text-gray-700"
                   onClick={closeEditModal}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
                 >
-                  ✕
+                  Cancel
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-6 pb-6">
-              <div className="bg-white rounded-lg shadow p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                   <input
@@ -367,99 +378,95 @@ const TableMedicalConditions = () => {
                     value={editData.name}
                     onChange={handleChange}
                     placeholder="Enter condition name"
-                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
 
                 <div className="mb-4">
-                  <div className="flex border-b border-gray-200 justify-center">
-                    <label className="block text-sm font-medium text-gray-700 mb-1 text-center">Description *</label>
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
                   <textarea
                     name="description"
                     value={editData.description}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
                   {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Restricted Foods</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {editData.restrictedFoods.map((foodId) => {
-                        const dish = dishes.find((d) => d._id === foodId);
-                        return dish ? (
-                          <div
-                            key={foodId}
-                            className="bg-gray-200 rounded-full px-3 py-1 text-sm flex items-center"
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Restricted Foods</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {editData.restrictedFoods.map((foodId) => {
+                      const dish = dishes.find((d) => d._id === foodId);
+                      return dish ? (
+                        <div
+                          key={foodId}
+                          className="bg-gray-200 rounded-full px-3 py-1 text-sm flex items-center"
+                        >
+                          {dish.name}
+                          <button
+                            onClick={() =>
+                              setEditData({
+                                ...editData,
+                                restrictedFoods: editData.restrictedFoods.filter((id) => id !== foodId),
+                              })
+                            }
+                            className="ml-2 text-red-500 hover:text-red-700"
                           >
-                            {dish.name}
-                            <button
-                              onClick={() =>
-                                setEditData({
-                                  ...editData,
-                                  restrictedFoods: editData.restrictedFoods.filter((id) => id !== foodId),
-                                })
-                              }
-                              className="ml-2 text-red-500 hover:text-red-700"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                    <button
-                      onClick={() => handleOpenFoodModal("restricted")}
-                      className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 w-full"
-                    >
-                      Add Restricted Foods
-                    </button>
+                            ✕
+                          </button>
+                        </div>
+                      ) : null;
+                    })}
                   </div>
-
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Recommended Foods</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {editData.recommendedFoods.map((foodId) => {
-                        const dish = dishes.find((d) => d._id === foodId);
-                        return dish ? (
-                          <div
-                            key={foodId}
-                            className="bg-gray-200 rounded-full px-3 py-1 text-sm flex items-center"
-                          >
-                            {dish.name}
-                            <button
-                              onClick={() =>
-                                setEditData({
-                                  ...editData,
-                                  recommendedFoods: editData.recommendedFoods.filter((id) => id !== foodId),
-                                })
-                              }
-                              className="ml-2 text-red-500 hover:text-red-700"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                    <button
-                      onClick={() => handleOpenFoodModal("recommended")}
-                      className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 w-full"
-                    >
-                      Add Recommended Foods
-                    </button>
-                  </div>
-                  {errors.foodConflict && (
-                    <p className="text-red-500 text-sm mt-1">{errors.foodConflict}</p>
-                  )}
+                  <button
+                    onClick={() => handleOpenFoodModal("restricted")}
+                    className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a] w-full"
+                  >
+                    Add Restricted Foods
+                  </button>
                 </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Recommended Foods</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {editData.recommendedFoods.map((foodId) => {
+                      const dish = dishes.find((d) => d._id === foodId);
+                      return dish ? (
+                        <div
+                          key={foodId}
+                          className="bg-gray-200 rounded-full px-3 py-1 text-sm flex items-center"
+                        >
+                          {dish.name}
+                          <button
+                            onClick={() =>
+                              setEditData({
+                                ...editData,
+                                recommendedFoods: editData.recommendedFoods.filter((id) => id !== foodId),
+                              })
+                            }
+                            className="ml-2 text-red-500 hover:text-red-700"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                  <button
+                    onClick={() => handleOpenFoodModal("recommended")}
+                    className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a] w-full"
+                  >
+                    Add Recommended Foods
+                  </button>
+                </div>
+                {errors.foodConflict && (
+                  <p className="text-red-500 text-sm mt-1">{errors.foodConflict}</p>
+                )}
               </div>
             </div>
           </div>
@@ -482,33 +489,46 @@ const TableMedicalConditions = () => {
           availableDishes={dishes}
           selectedDishes={isFoodModalOpen === "restricted" ? editData.restrictedFoods : editData.recommendedFoods}
           conflictingDishes={isFoodModalOpen === "restricted" ? editData.recommendedFoods : editData.restrictedFoods}
+          typeOptions={TYPE_OPTIONS}
         />
       )}
     </div>
   );
 };
 
-// Food Selection Modal with Type Filter
-const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
-
-const FoodSelectionModal = ({ isOpen, onClose, onSelect, availableDishes, selectedDishes, conflictingDishes }) => {
+// Updated Food Selection Modal
+const FoodSelectionModal = ({
+  isOpen,
+  onClose,
+  onSelect,
+  availableDishes,
+  selectedDishes,
+  conflictingDishes,
+  typeOptions,
+}) => {
   const [tempSelectedDishes, setTempSelectedDishes] = useState([...selectedDishes]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(8);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentDishes, setCurrentDishes] = useState([]);
 
-  const filteredDishes = availableDishes.filter((dish) => {
-    const matchesSearch = searchTerm ? dish.name.toLowerCase().includes(searchTerm.toLowerCase()) : true;
-    const matchesType = filterType === "all" || dish.type === filterType;
-    return matchesSearch && matchesType;
-  });
+  useEffect(() => {
+    const filteredDishes = availableDishes.filter((dish) => {
+      const matchesSearch = searchTerm ? dish.name.toLowerCase().includes(searchTerm.toLowerCase()) : true;
+      const matchesType = filterType === "all" || dish.type === filterType;
+      return matchesSearch && matchesType;
+    });
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentDishes = filteredDishes.slice(indexOfFirstItem, indexOfLastItem);
+    setTotalItems(filteredDishes.length);
+    setTotalPages(Math.ceil(filteredDishes.length / itemsPerPage));
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    setCurrentDishes(filteredDishes.slice(indexOfFirstItem, indexOfLastItem));
+  }, [currentPage, itemsPerPage, searchTerm, filterType, availableDishes]);
 
   const handleCheckboxChange = (dishId) => {
     setTempSelectedDishes((prev) =>
@@ -520,47 +540,88 @@ const FoodSelectionModal = ({ isOpen, onClose, onSelect, availableDishes, select
     onSelect(tempSelectedDishes);
   };
 
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1;
+    if (selectedPage >= 1 && selectedPage <= totalPages) {
+      setCurrentPage(selectedPage);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Select Dishes</h2>
-        <div className="flex space-x-4 mb-4">
-          <input
-            type="text"
-            placeholder="Search by dish name"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          <select
-            className="border border-gray-300 rounded-md px-3 py-2"
-            value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value);
-              setCurrentPage(1);
-            }}
-          >
-            <option value="all">All Types</option>
-            {TYPE_OPTIONS.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-3/4 max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="flex items-center mb-6">
+          <h2 className="text-2xl font-bold text-[#40B491]">Select Dishes</h2>
+          <div className="ml-auto flex space-x-3">
+            <button
+              onClick={handleConfirm}
+              className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+            >
+              Close
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                setFilterType("all");
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                filterType === "all"
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
+            >
+              All
+            </button>
+            {typeOptions.map((type) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setFilterType(type);
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
+                  filterType === type
+                    ? "bg-[#40B491] text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center">
+            <input
+              type="text"
+              placeholder="Search by dish name"
+              className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {currentDishes.length > 0 ? (
             currentDishes.map((dish) => {
               const isConflicting = conflictingDishes.includes(dish._id);
               return (
                 <div
                   key={dish._id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden relative"
+                  className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
                 >
                   <img
                     src={dish.imageUrl || "https://via.placeholder.com/300"}
@@ -568,31 +629,43 @@ const FoodSelectionModal = ({ isOpen, onClose, onSelect, availableDishes, select
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center">{dish.name}</h3>
-                    <div className="text-sm text-gray-600 mt-2 text-center">
-                      <div className="flex justify-center items-center">
-                        <span className="mr-3 flex items-center">
-                          <Flame className="w-4 h-4 mr-1" />
-                          {dish.nutritions.calories} kcal
+                    <h3 className="text-lg font-semibold text-center text-gray-800">
+                      {dish.name}
+                    </h3>
+                    <div className="text-sm text-gray-600 mt-2 space-y-2">
+                      {/* First Row: Cooking Time, Servings, Calories */}
+                      <div className="flex justify-between items-center px-4">
+                        <span className="flex items-center">
+                          <Clock className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.cookingTime} mins
                         </span>
                         <span className="flex items-center">
-                          <Dumbbell className="w-4 h-4 mr-1" />
-                          {dish.nutritions.protein}g
+                          <Users className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.totalServing} servings
+                        </span>
+                        <span className="flex items-center">
+                          <Flame className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.nutritions.calories} kcal
                         </span>
                       </div>
-                      <div className="flex justify-center items-center mt-1">
-                        <span className="mr-3 flex items-center">
-                          <Wheat className="w-4 h-4 mr-1" />
+                      {/* Second Row: Protein, Carbs, Fat */}
+                      <div className="flex justify-between items-center px-4">
+                        <span className="flex items-center">
+                          <Dumbbell className="w-4 h-4 mr-1 text-gray-500" />
+                          {dish.nutritions.protein}g
+                        </span>
+                        <span className="flex items-center">
+                          <Wheat className="w-4 h-4 mr-1 text-gray-500" />
                           {dish.nutritions.carbs}g
                         </span>
                         <span className="flex items-center">
-                          <Droplet className="w-4 h-4 mr-1" />
+                          <Droplet className="w-4 h-4 mr-1 text-gray-500" />
                           {dish.nutritions.fat}g
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
+                  <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
                     <input
                       type="checkbox"
                       checked={tempSelectedDishes.includes(dish._id)}
@@ -613,56 +686,17 @@ const FoodSelectionModal = ({ isOpen, onClose, onSelect, availableDishes, select
             </div>
           )}
         </div>
-        {filteredDishes.length > 0 && (
-          <div className="p-4 flex justify-between items-center">
-            <div className="flex space-x-2">
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100"
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              {Array.from(
-                { length: Math.ceil(filteredDishes.length / itemsPerPage) },
-                (_, i) => (
-                  <button
-                    key={i}
-                    className={`px-3 py-1 rounded ${
-                      currentPage === i + 1
-                        ? "bg-green-500 text-white"
-                        : "border hover:bg-gray-100"
-                    }`}
-                    onClick={() => paginate(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                )
-              )}
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100"
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === Math.ceil(filteredDishes.length / itemsPerPage)}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+        {totalItems > 0 && (
+          <div className="p-4 bg-gray-50">
+            <Pagination
+              limit={itemsPerPage}
+              setLimit={setItemsPerPage}
+              totalItems={totalItems}
+              handlePageClick={handlePageClick}
+              text={"Dishes"}
+            />
           </div>
         )}
-        <div className="flex justify-end mt-4 space-x-2">
-          <button
-            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
-            onClick={handleConfirm}
-          >
-            Confirm
-          </button>
-          <button
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
-            onClick={onClose}
-          >
-            Close
-          </button>
-        </div>
       </div>
     </div>
   );
