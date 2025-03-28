@@ -113,6 +113,17 @@ const commentService = {
     }
   },
 
+  deleteRating: async (recipeId, userId) => {
+    try {
+      const response = await axios.delete(`${API_URL}/rate/${recipeId}`, { data: { userId } });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error("Lỗi khi xóa đánh giá:", error);
+      return { success: false, message: "Không thể xóa đánh giá." };
+    }
+  },
+  
+
 
 };
 

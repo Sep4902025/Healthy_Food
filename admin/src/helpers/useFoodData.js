@@ -15,15 +15,17 @@ const useFoodData = (userId, dishes) => {
           HomeService.getFavoriteDishes(userId),
           Promise.all(
             dishes.map(async (dish) => {
-              if (!dish.recipeId) return { [dish._id]: "Chưa có đánh giá" };
+              if (!dish.recipeId) return { [dish._id]: "No ratings yet" };
               try {
                 const response = await commentService.getRatingsByRecipe(dish.recipeId);
                 const avgRating = response.data.length
-                  ? (response.data.reduce((sum, r) => sum + r.star, 0) / response.data.length).toFixed(1)
-                  : "Chưa có đánh giá";
+                  ? (
+                      response.data.reduce((sum, r) => sum + r.star, 0) / response.data.length
+                    ).toFixed(1)
+                  : "No ratings yet";
                 return { [dish._id]: avgRating };
               } catch (error) {
-                return { [dish._id]: "Chưa có đánh giá" };
+                return { [dish._id]: "No ratings yet" };
               }
             })
           ),
@@ -32,7 +34,7 @@ const useFoodData = (userId, dishes) => {
         setLikedFoods(favoriteDishes);
         setRatings(Object.assign({}, ...ratingsData));
       } catch (error) {
-        console.error("Lỗi khi tải dữ liệu:", error);
+        console.error("Error loading data:", error);
       }
     };
 

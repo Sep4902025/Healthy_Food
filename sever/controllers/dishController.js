@@ -1,8 +1,8 @@
 const UserModel = require("../models/UserModel");
-const jwt = require("jsonwebtoken"); // Thêm dòng này vào
+const jwt = require("jsonwebtoken");
 const Dish = require("../models/Dish");
 const Ingredient = require("../models/Ingredient");
-const Ingredients = require("../models/Ingredient");
+const Ingredients = require("../models/Ingredient"); // Có thể gộp với Ingredient nếu cùng model
 const Recipe = require("../models/Recipe");
 
 // Dish CRUD Operations
@@ -17,57 +17,67 @@ exports.createDish = async (req, res) => {
     res.status(400).json({ status: "fail", message: error.message });
   }
 };
+
 // Create Many Dishes
 exports.createManyDishes = async (req, res) => {
   try {
-    const dishes = req.body; // Nhận mảng các món ăn từ request body
-
-    // Kiểm tra xem dishes có phải là mảng không
+    const dishes = req.body;
     if (!Array.isArray(dishes) || dishes.length === 0) {
       return res.status(400).json({
         status: "fail",
         message: "Input should be a non-empty array of dishes",
       });
     }
-
-    // Tạo nhiều món ăn và lưu vào database
     const createdDishes = await Dish.insertMany(dishes);
-
-    // Trả về kết quả
     res.status(201).json({ status: "success", data: createdDishes });
   } catch (error) {
     res.status(400).json({ status: "fail", message: error.message });
   }
 };
 
-// Read all Dishes
+// Read all Dishes with Pagination
 exports.getAllDishes = async (req, res) => {
   try {
-    let filter = { isDelete: false, isVisible: true }; // Mặc định chỉ hiển thị món không bị xóa và có thể nhìn thấy
+    const { page = 1, limit = 10, search = "" } = req.query;
+    let filter = { isDelete: false, isVisible: true };
 
-    // Lấy token từ request (cookie hoặc header)
+    // Xử lý token và phân quyền
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
-
     if (token) {
       try {
-        // Giải mã token để lấy user ID
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
         const user = await UserModel.findById(decoded.id);
-
-        if (user) {
-          // Nếu là admin hoặc nutritionist, hiển thị tất cả món ăn
-          if (user.role === "admin" || user.role === "nutritionist") {
-            filter = {}; // Không áp dụng filter
-          }
+        if (user && (user.role === "admin" || user.role === "nutritionist")) {
+          filter = {};
         }
       } catch (error) {
         console.error("Invalid token:", error.message);
       }
     }
 
-    // Lấy danh sách món ăn theo điều kiện
-    const dishes = await Dish.find(filter);
-    res.status(200).json({ status: "success", data: dishes });
+    // Thêm điều kiện tìm kiếm theo tên nếu có
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    // Tính toán phân trang
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Lấy tổng số tài liệu và danh sách món ăn
+    const totalItems = await Dish.countDocuments(filter);
+    const dishes = await Dish.find(filter).skip(skip).limit(limitNum).lean();
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        items: dishes,
+        total: totalItems,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalItems / limitNum),
+      },
+    });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
@@ -90,16 +100,33 @@ exports.getDishById = async (req, res) => {
   }
 };
 
-// Get Dish By Type
+// Get Dish By Type with Pagination
 exports.getDishByType = async (req, res) => {
   try {
     const { type } = req.params;
-    // Lấy danh sách món ăn có type tương ứng, chưa bị xóa mềm và đang hiển thị
-    const dishes = await Dish.find({ type, isDelete: false, isVisible: true });
+    const { page = 1, limit = 10 } = req.query;
+
+    const filter = { type, isDelete: false, isVisible: true };
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const totalItems = await Dish.countDocuments(filter);
+    const dishes = await Dish.find(filter).skip(skip).limit(limitNum).lean();
+
     if (dishes.length === 0) {
       return res.status(404).json({ status: "fail", message: "No dishes found for this type" });
     }
-    res.status(200).json({ status: "success", data: dishes });
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        items: dishes,
+        total: totalItems,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalItems / limitNum),
+      },
+    });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
@@ -116,7 +143,7 @@ exports.updateDish = async (req, res) => {
   }
 };
 
-// "Delete" Dish (soft delete: update isDelete to true)
+// Delete Dish
 exports.deleteDish = async (req, res) => {
   try {
     const deletedDish = await Dish.findByIdAndDelete(req.params.dishId);
@@ -132,7 +159,7 @@ exports.deleteDish = async (req, res) => {
   }
 };
 
-// Hide Dish: update isVisible to false
+// Hide Dish
 exports.hideDish = async (req, res) => {
   try {
     const hiddenDish = await Dish.findByIdAndUpdate(
@@ -158,7 +185,7 @@ exports.hideDish = async (req, res) => {
 
 // Ingredients CRUD Operations
 
-// Create Ingredients
+// Create Ingredient
 exports.createIngredient = async (req, res) => {
   try {
     const newIngredient = new Ingredients(req.body);
@@ -169,56 +196,64 @@ exports.createIngredient = async (req, res) => {
   }
 };
 
-// Create many Ingredients
+// Create Many Ingredients
 exports.createManyIngredients = async (req, res) => {
   try {
-    const ingredients = req.body; // Nhận mảng các nguyên liệu từ request body
-
-    // Kiểm tra xem ingredients có phải là mảng không
+    const ingredients = req.body;
     if (!Array.isArray(ingredients)) {
       return res
         .status(400)
         .json({ status: "fail", message: "Input should be an array of ingredients" });
     }
-
-    // Tạo các nguyên liệu và lưu vào database
     const createdIngredients = await Ingredients.insertMany(ingredients);
-
-    // Trả về kết quả
     res.status(201).json({ status: "success", data: createdIngredients });
   } catch (error) {
     res.status(400).json({ status: "fail", message: error.message });
   }
 };
 
-// Get all Ingredients
+// Get all Ingredients with Pagination
 exports.getAllIngredients = async (req, res) => {
   try {
-    let filter = { isDelete: false, isVisible: true }; // Mặc định chỉ hiển thị nguyên liệu không bị xóa và có thể nhìn thấy
+    const { page = 1, limit = 10, type = "all", search = "" } = req.query;
+    let filter = { isDelete: false, isVisible: true };
 
-    // Lấy token từ request (cookie hoặc header)
+    // Xử lý token và phân quyền
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
-
     if (token) {
       try {
-        // Giải mã token để lấy user ID
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
         const user = await UserModel.findById(decoded.id);
-
-        if (user) {
-          // Nếu là admin hoặc nutritionist, hiển thị tất cả nguyên liệu
-          if (user.role === "admin" || user.role === "nutritionist") {
-            filter = {}; // Không áp dụng filter
-          }
+        if (user && (user.role === "admin" || user.role === "nutritionist")) {
+          filter = {};
         }
       } catch (error) {
         console.error("Invalid token:", error.message);
       }
     }
 
-    // Lấy danh sách nguyên liệu theo điều kiện
-    const ingredients = await Ingredients.find(filter);
-    res.status(200).json({ status: "success", data: ingredients });
+    // Thêm bộ lọc type và search
+    if (type !== "all") filter.type = type;
+    if (search) filter.name = { $regex: search, $options: "i" };
+
+    // Tính toán phân trang
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Lấy tổng số tài liệu và danh sách nguyên liệu
+    const totalItems = await Ingredients.countDocuments(filter);
+    const ingredients = await Ingredients.find(filter).skip(skip).limit(limitNum).lean();
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        items: ingredients,
+        total: totalItems,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalItems / limitNum),
+      },
+    });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
@@ -230,7 +265,6 @@ exports.getIngredientById = async (req, res) => {
     const ingredient = await Ingredients.findById(req.params.ingredientId);
     if (!ingredient)
       return res.status(404).json({ status: "fail", message: "Ingredient not found" });
-
     res.status(200).json({ status: "success", data: ingredient });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
@@ -243,13 +277,10 @@ exports.updateIngredient = async (req, res) => {
     const updatedIngredient = await Ingredients.findByIdAndUpdate(
       req.params.ingredientId,
       req.body,
-      {
-        new: true,
-      }
+      { new: true }
     );
     if (!updatedIngredient)
       return res.status(404).json({ status: "fail", message: "Ingredient not found" });
-
     res.status(200).json({ status: "success", data: updatedIngredient });
   } catch (error) {
     res.status(400).json({ status: "fail", message: error.message });
@@ -260,18 +291,16 @@ exports.updateIngredient = async (req, res) => {
 exports.deleteIngredient = async (req, res) => {
   try {
     const deletedIngredient = await Ingredients.findByIdAndDelete(req.params.ingredientId);
-
     if (!deletedIngredient) {
       return res.status(404).json({ status: "fail", message: "Ingredient not found" });
     }
-
     res.status(200).json({ status: "success", message: "Ingredient permanently deleted" });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
 
-// Hide Ingredient: update isVisible to false
+// Hide Ingredient
 exports.hideIngredient = async (req, res) => {
   try {
     console.log("Hiding ingredient ID:", req.params.ingredientId);
@@ -292,43 +321,66 @@ exports.hideIngredient = async (req, res) => {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
-// Search Ingredients by name
+
+// Search Ingredients by Name with Pagination
 exports.searchIngredientsByName = async (req, res) => {
   try {
-    const { name } = req.query;
+    const { name, page = 1, limit = 10 } = req.query;
     if (!name) {
       return res.status(400).json({ status: "fail", message: "Name query parameter is required" });
     }
 
-    const ingredients = await Ingredients.find({
-      name: { $regex: name, $options: "i" },
-      isDelete: false,
-    });
+    const filter = { name: { $regex: name, $options: "i" }, isDelete: false };
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const totalItems = await Ingredients.countDocuments(filter);
+    const ingredients = await Ingredients.find(filter).skip(skip).limit(limitNum).lean();
 
     if (ingredients.length === 0) {
       return res.status(404).json({ status: "fail", message: "Ingredient not found" });
     }
 
-    res.status(200).json({ status: "success", data: ingredients });
+    res.status(200).json({
+      status: "success",
+      data: {
+        items: ingredients,
+        total: totalItems,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalItems / limitNum),
+      },
+    });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
 
-// Filter Ingredients by type
+// Filter Ingredients by Type with Pagination
 exports.filterIngredientsByType = async (req, res) => {
   try {
-    const { type } = req.query;
+    const { type, page = 1, limit = 10 } = req.query;
     if (!type) {
       return res.status(400).json({ status: "fail", message: "Type query parameter is required" });
     }
 
-    const ingredients = await Ingredients.find({
-      type: type,
-      isDelete: false,
-    });
+    const filter = { type, isDelete: false };
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
 
-    res.status(200).json({ status: "success", data: ingredients });
+    const totalItems = await Ingredients.countDocuments(filter);
+    const ingredients = await Ingredients.find(filter).skip(skip).limit(limitNum).lean();
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        items: ingredients,
+        total: totalItems,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalItems / limitNum),
+      },
+    });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
@@ -336,36 +388,47 @@ exports.filterIngredientsByType = async (req, res) => {
 
 // Recipe CRUD Operations
 
+// Get all Recipes with Pagination
 exports.getAllRecipes = async (req, res) => {
   try {
-    let filter = { isDelete: false }; // Mặc định chỉ hiển thị công thức chưa bị xóa
+    const { page = 1, limit = 10 } = req.query;
+    let filter = { isDelete: false };
 
-    // Lấy token từ request (cookie hoặc header)
+    // Xử lý token và phân quyền
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
-
     if (token) {
       try {
-        // Giải mã token để lấy user ID
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
         const user = await UserModel.findById(decoded.id);
-
-        if (user) {
-          // Nếu là admin hoặc nutritionist, hiển thị tất cả công thức
-          if (user.role === "admin" || user.role === "nutritionist") {
-            filter = {}; // Không áp dụng filter
-          }
+        if (user && (user.role === "admin" || user.role === "nutritionist")) {
+          filter = {};
         }
       } catch (error) {
         console.error("Invalid token:", error.message);
       }
     }
 
-    // Lấy danh sách công thức theo điều kiện
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const totalItems = await Recipe.countDocuments(filter);
     const recipes = await Recipe.find(filter)
       .populate("dishId")
-      .populate("ingredients.ingredientId");
+      .populate("ingredients.ingredientId")
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
 
-    res.status(200).json({ status: "success", data: recipes });
+    res.status(200).json({
+      status: "success",
+      data: {
+        items: recipes,
+        total: totalItems,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalItems / limitNum),
+      },
+    });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
   }
@@ -374,22 +437,17 @@ exports.getAllRecipes = async (req, res) => {
 // Create Recipe
 exports.createRecipe = async (req, res) => {
   try {
-    // 1️⃣ Lấy token từ request (cookie hoặc header)
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
-
     if (!token) {
       return res.status(401).json({ status: "fail", message: "Unauthorized" });
     }
 
-    // 2️⃣ Giải mã token để lấy user ID
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
     const user = await UserModel.findById(decoded.id);
-
     if (!user) {
       return res.status(401).json({ status: "fail", message: "User not found" });
     }
 
-    // 3️⃣ Kiểm tra quyền: chỉ "admin" hoặc "nutritionist" mới được tạo recipe
     if (user.role !== "admin" && user.role !== "nutritionist") {
       return res.status(403).json({
         status: "fail",
@@ -397,14 +455,12 @@ exports.createRecipe = async (req, res) => {
       });
     }
 
-    // 4️⃣ Kiểm tra xem Dish có tồn tại không
     const { dishId } = req.params;
     const dish = await Dish.findById(dishId);
     if (!dish) {
       return res.status(404).json({ status: "fail", message: "Dish not found" });
     }
 
-    // 5️⃣ Tính toán giá trị dinh dưỡng từ nguyên liệu
     let totalCalories = 0,
       totalProtein = 0,
       totalCarbs = 0,
@@ -430,13 +486,11 @@ exports.createRecipe = async (req, res) => {
       totalFat += (ingredientInfo.fat || 0) * conversionFactor;
     }
 
-    // Làm tròn giá trị
     totalCalories = Math.round(totalCalories * 100) / 100;
     totalProtein = Math.round(totalProtein * 100) / 100;
     totalCarbs = Math.round(totalCarbs * 100) / 100;
     totalFat = Math.round(totalFat * 100) / 100;
 
-    // 6️⃣ Tạo Recipe
     const recipeData = {
       ...req.body,
       dishId,
@@ -448,7 +502,6 @@ exports.createRecipe = async (req, res) => {
 
     const newRecipe = await Recipe.create(recipeData);
 
-    // 7️⃣ Cập nhật thông tin vào Dish
     dish.recipeId = newRecipe._id;
     dish.calories = totalCalories;
     dish.protein = totalProtein;
@@ -474,8 +527,7 @@ exports.createRecipe = async (req, res) => {
   }
 };
 
-// Read Recipe
-
+// Read Recipe by ID
 exports.getRecipeById = async (req, res) => {
   try {
     const { dishId, recipeId } = req.params;
@@ -483,7 +535,7 @@ exports.getRecipeById = async (req, res) => {
       .populate("dishId")
       .populate({
         path: "ingredients.ingredientId",
-        match: { isDelete: false, isVisible: true }, // Chỉ populate Ingredient không bị xóa mềm hoặc ẩn
+        match: { isDelete: false, isVisible: true },
       });
     if (!recipe) {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
@@ -506,23 +558,21 @@ exports.getRecipeById = async (req, res) => {
         message: "Associated dish is deleted or hidden",
       });
     }
-    // Loại bỏ các ingredient mà ingredientId không được populate (vì không thỏa mãn điều kiện match)
     recipe.ingredients = recipe.ingredients.filter((ing) => ing.ingredientId);
     res.status(200).json({ status: "success", data: recipe });
   } catch (error) {
     res.status(400).json({ status: "fail", message: error.message });
   }
 };
+
 // Update Recipe
 exports.updateRecipeById = async (req, res) => {
   try {
-    // Tìm Recipe hiện tại
     const recipe = await Recipe.findById(req.params.recipeId);
     if (!recipe) {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }
 
-    // Nếu cập nhật ingredients, tính lại giá trị dinh dưỡng
     if (req.body.ingredients) {
       let totalCalories = 0;
       let totalProtein = 0;
@@ -554,14 +604,12 @@ exports.updateRecipeById = async (req, res) => {
       totalCarbs = Math.round(totalCarbs * 100) / 100;
       totalFat = Math.round(totalFat * 100) / 100;
 
-      // Gán lại các giá trị dinh dưỡng mới vào body
       req.body.totalCalories = totalCalories;
       req.body.totalProtein = totalProtein;
       req.body.totalCarbs = totalCarbs;
       req.body.totalFat = totalFat;
     }
 
-    // Cập nhật Recipe
     const updatedRecipe = await Recipe.findByIdAndUpdate(req.params.recipeId, req.body, {
       new: true,
       runValidators: true,
@@ -570,7 +618,6 @@ exports.updateRecipeById = async (req, res) => {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }
 
-    // Cập nhật thông tin dinh dưỡng và totalServing trong Dish
     const dish = await Dish.findById(updatedRecipe.dishId);
     if (dish) {
       dish.calories = updatedRecipe.totalCalories;
@@ -580,7 +627,6 @@ exports.updateRecipeById = async (req, res) => {
       if (req.body.totalServing) {
         dish.totalServing = req.body.totalServing;
       }
-      // Nếu có cập nhật cookingTime từ client, cập nhật tại Dish nếu cần
       if (req.body.cookingTime) {
         dish.cookingTime = req.body.cookingTime;
       }
@@ -597,23 +643,19 @@ exports.updateRecipeById = async (req, res) => {
 // Delete Recipe
 exports.deleteRecipeById = async (req, res) => {
   try {
-    // Xóa công thức dựa trên recipeId
     const recipe = await Recipe.findByIdAndDelete(req.params.recipeId);
     if (!recipe) {
       return res.status(404).json({ status: "fail", message: "Công thức không tồn tại" });
     }
 
-    // Kiểm tra món ăn liên quan (dishId từ công thức vừa xóa)
     const dish = await Dish.findById(recipe.dishId);
     if (!dish) {
-      // Nếu không tìm thấy món ăn, vẫn trả về thành công với thông báo
       return res.status(200).json({
         status: "success",
         message: "Công thức đã được xóa, nhưng không tìm thấy món ăn liên quan",
       });
     }
 
-    // Nếu món ăn tồn tại, cập nhật thông tin món ăn
     dish.recipeId = null;
     dish.cookingTime = 0;
     dish.calories = 0;
@@ -630,11 +672,10 @@ exports.deleteRecipeById = async (req, res) => {
   }
 };
 
+// Get Recipe by Dish ID
 exports.getRecipeByDishId = async (req, res) => {
   try {
     const { recipeId } = req.params;
-
-    // 🔹 Tìm Recipe, populate Dish và Ingredients
     const recipe = await Recipe.findById(recipeId)
       .populate("dishId")
       .populate("ingredients.ingredientId")
@@ -644,9 +685,10 @@ exports.getRecipeByDishId = async (req, res) => {
       return res.status(404).json({ status: "fail", message: "Recipe not found" });
     }
 
-    // 🔹 Kiểm tra nếu Dish bị xóa hoặc ẩn
     if (recipe.dishId?.isDelete || !recipe.dishId?.isVisible) {
-      return res.status(404).json({ status: "fail", message: "Associated dish is deleted or hidden" });
+      return res
+        .status(404)
+        .json({ status: "fail", message: "Associated dish is deleted or hidden" });
     }
 
     res.status(200).json({ status: "success", data: recipe });
@@ -654,4 +696,3 @@ exports.getRecipeByDishId = async (req, res) => {
     res.status(400).json({ status: "fail", message: error.message });
   }
 };
-

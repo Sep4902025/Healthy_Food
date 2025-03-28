@@ -287,16 +287,29 @@ const mealPlanService = {
     }
   },
 
-  getAllDishes: async () => {
+  // 🔹 Lấy tất cả món ăn với phân trang
+  getAllDishes: async (page, limit, search = "") => {
     try {
-      console.log(`📤 Gửi request GET /dishes`);
-      const response = await axiosInstance.get(`/dishes`);
-
-      console.log("📥 Danh sách món ăn từ axiosInstance:", response.data);
-      return { success: true, data: response.data.data || [] };
+      const response = await axiosInstance.get("/dishes", {
+        params: {
+          page,
+          limit,
+          search, // Thêm tham số tìm kiếm
+        },
+      });
+      console.log("🔍 Danh sách món ăn từ API:", response.data);
+      return {
+        success: true,
+        data: {
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
+        },
+      };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy danh sách món ăn:", error.response?.data || error.message);
-      return { success: false, message: "Không thể lấy danh sách món ăn!" };
+      console.error("❌ Lỗi khi lấy món ăn:", error.response?.data || error.message);
+      return { success: false, message: "Lỗi khi tải danh sách món ăn" };
     }
   },
 

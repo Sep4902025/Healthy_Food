@@ -18,23 +18,30 @@ const {
   removeMealFromDay,
   getUnpaidMealPlanForUser,
   getMealPlanDetails,
+  getAllMealPlanPayment,
+  getMealPlanHistory,
 } = require("../controllers/mealPlanController");
 const { isAuthenticated } = require("../middlewares/isAuthenticated");
 
-// 📌 Lấy danh sách MealPlan
+// 📌 Get list of MealPlans
 mealPlanRouter.get("/", isAuthenticated, getMealPlan);
 mealPlanRouter.get("/user/:userId", isAuthenticated, getUserMealPlan);
 mealPlanRouter.get("/user/:userId/unpaid", isAuthenticated, getUnpaidMealPlanForUser);
 mealPlanRouter.get("/details/:mealPlanId", isAuthenticated, getMealPlanDetails);
+
+// 📌 Route for getting all paid MealPlans (moved up)
+mealPlanRouter.get("/payments", isAuthenticated, getAllMealPlanPayment);
+
+// 📌 Specific MealPlan by ID (moved after /payments)
 mealPlanRouter.get("/:mealPlanId", isAuthenticated, getMealPlanById);
 
-// 📌 Tạo, cập nhật, bật/tắt, xóa MealPlan
+// 📌 Create, update, toggle, delete MealPlan
 mealPlanRouter.post("/", isAuthenticated, createMealPlan);
 mealPlanRouter.put("/:mealPlanId", isAuthenticated, updateMealPlan);
 mealPlanRouter.patch("/:mealPlanId/toggle", isAuthenticated, toggleMealPlanStatus);
 mealPlanRouter.delete("/:mealPlanId", isAuthenticated, deleteMealPlan);
 
-// 📌 Quản lý Meal trong MealDay
+// 📌 Manage Meals in MealDay
 mealPlanRouter.post("/:mealPlanId/mealDay/:mealDayId/meal", isAuthenticated, addMealToDay);
 mealPlanRouter.delete(
   "/:mealPlanId/mealDay/:mealDayId/meal/:mealId",
@@ -42,7 +49,7 @@ mealPlanRouter.delete(
   removeMealFromDay
 );
 
-// 📌 Quản lý Dish trong Meal
+// 📌 Manage Dishes in Meal
 mealPlanRouter.post(
   "/:mealPlanId/mealDay/:mealDayId/meal/:mealId/dishes",
   isAuthenticated,
@@ -54,7 +61,8 @@ mealPlanRouter.delete(
   deleteDishFromMeal
 );
 
-// 📌 Lấy thông tin MealDay, Meal, và Dish
+// 📌 Get MealDay, Meal, and Dish information
+mealPlanRouter.get("/history/:userId", isAuthenticated, getMealPlanHistory);
 mealPlanRouter.get("/:mealPlanId/mealDay", isAuthenticated, getMealDayByMealPlan);
 mealPlanRouter.get("/:mealPlanId/mealDay/:mealDayId/meal", isAuthenticated, getMealsByDayId);
 mealPlanRouter.get("/:mealPlanId/mealDay/:mealDayId/meal/:mealId", isAuthenticated, getMealById);

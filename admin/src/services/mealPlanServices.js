@@ -1,5 +1,14 @@
+import axios from "axios";
 import api from "./api";
+
 const API_URL = process.env.REACT_APP_API_URL;
+
+
+// Hàm lấy token từ localStorage
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const mealPlanService = {
   // Lấy danh sách meal plans với phân trang
@@ -71,6 +80,16 @@ const mealPlanService = {
     }
   },
 
+  getMealPlanHistory: async (userId) => {
+    try {
+      const response = await api.get(`/mealPlan/history/${userId}`);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error("❌ Lỗi khi lấy lịch sử Meal Plan:", error.response?.data || error.message);
+      return { success: false, message: "Không thể lấy lịch sử Meal Plan!" };
+    }
+  },
+
   // 🔹 Lấy lịch sử giao dịch của user
   getPaymentHistory: async (userId, page = 1, limit = 10) => {
     try {
@@ -120,23 +139,24 @@ const mealPlanService = {
   },
 
   // 🔹 Kiểm tra trạng thái thanh toán của meal plan
-  checkPaymentStatus: async (paymentId) => {
-    try {
-      const response = await api.get(`/payment/status/${paymentId}`);
-      if (response.data.status === "success") {
-        console.log("🔍 Trạng thái thanh toán:", response.data.data);
-        return { success: true, data: response.data.data };
-      } else {
-        return { success: false, message: response.data.message || "Cannot check payment status" };
-      }
-    } catch (error) {
-      console.error(
-        "❌ Lỗi khi kiểm tra trạng thái thanh toán:",
-        error.response?.data || error.message
-      );
-      return { success: false, message: "Không thể kiểm tra trạng thái thanh toán!" };
+
+checkPaymentStatus: async (paymentId) => {
+  try {
+    const response = await api.get(`/payment/status/${paymentId}`);
+    if (response.data.status === "success") {
+      console.log("🔍 Trạng thái thanh toán:", response.data.data);
+      return { success: true, data: response.data.data };
+    } else {
+      return { success: false, message: response.data.message || "Cannot check payment status" };
     }
-  },
+  } catch (error) {
+    console.error(
+      "❌ Lỗi khi kiểm tra trạng thái thanh toán:",
+      error.response?.data || error.message
+    );
+    return { success: false, message: "Không thể kiểm tra trạng thái thanh toán!" };
+  }
+},
 
   // Lấy MealPlan hiện tại của user
   getUserMealPlan: async (userId) => {
@@ -284,18 +304,34 @@ const mealPlanService = {
     }
   },
 
-  getAllDishes: async () => {
+  getAllDishes: async (page = 1, limit = 10, search = "") => {
     try {
-      console.log(`📤 Gửi request GET /dishes`);
-      const response = await api.get(`/dishes`);
-
-      console.log("📥 Danh sách món ăn từ API:", response.data);
-      return { success: true, data: response.data.data || [] };
+      const response = await axios.get(`${API_URL}/dishes`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+        params: {
+          page,
+          limit,
+          search, // Thêm tham số tìm kiếm
+        },
+      });
+      console.log("🔍 Danh sách món ăn từ API:", response.data);
+      return {
+        success: true,
+        data: {
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
+        },
+      };
+   
     } catch (error) {
-      console.error("❌ Lỗi khi lấy danh sách món ăn:", error.response?.data || error.message);
-      return { success: false, message: "Không thể lấy danh sách món ăn!" };
+      console.error("❌ Lỗi khi lấy món ăn:", error.response?.data || error.message);
+      return { success: false, message: "Lỗi khi tải danh sách món ăn" };
     }
   },
+
 
   deleteDishFromMeal: async (mealPlanId, mealDayId, mealId, dishId) => {
     try {
@@ -342,6 +378,24 @@ const mealPlanService = {
       };
     }
   },
+
+  getPaymentHistoryForNutritionist: async () => {
+    try {
+      const response = await api.get(`/payment/history/nutritionist`);
+      if (response.data.status === "success") {
+        console.log("🔍 Payment history for nutritionist:", response.data.data);
+        return { success: true, data: response.data.data };
+      } else {
+        return { success: false, message: response.data.message || "No payment history found" };
+      }
+    } catch (error) {
+      console.error("❌ Error fetching payment history:", error.response?.data || error.message);
+      return { success: false, message: "Cannot fetch payment history!" };
+    }
+  },
+
+  
+
   // 🔹 Xóa MealPlan
   deleteMealPlan: async (id) => {
     try {
@@ -356,5 +410,6 @@ const mealPlanService = {
     }
   },
 };
+
 
 export default mealPlanService;

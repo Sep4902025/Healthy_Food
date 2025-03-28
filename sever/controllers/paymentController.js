@@ -12,9 +12,10 @@ exports.createPaymentUrl = async (req, res) => {
     const { userId, mealPlanId, amount } = req.body;
 
     if (!userId || !mealPlanId || !amount) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "Thiếu userId, mealPlanId hoặc amount" });
+      return res.status(400).json({
+        status: "error",
+        message: "Thiếu userId, mealPlanId hoặc amount",
+      });
     }
 
     if (isNaN(amount) || amount <= 0) {
@@ -28,7 +29,10 @@ exports.createPaymentUrl = async (req, res) => {
     }
 
     // Kiểm tra nếu MealPlan đã thanh toán thành công
-    const successPayment = await Payment.findOne({ mealPlanId, status: "success" });
+    const successPayment = await Payment.findOne({
+      mealPlanId,
+      status: "success",
+    });
     if (successPayment) {
       return res.status(400).json({ status: "error", message: "MealPlan này đã được thanh toán" });
     }
@@ -131,6 +135,7 @@ exports.createPaymentUrl = async (req, res) => {
   }
 };
 
+
 exports.vnpayReturn = async (req, res) => {
   try {
     const vnp_Params = { ...req.query };
@@ -138,34 +143,20 @@ exports.vnpayReturn = async (req, res) => {
     delete vnp_Params["vnp_SecureHash"];
     delete vnp_Params["vnp_SecureHashType"];
 
-    // ✅ Ép kiểu tất cả giá trị thành string và trim()
     const sortedParams = Object.fromEntries(
       Object.entries(vnp_Params)
         .map(([key, value]) => [key, String(value || "").trim()])
         .sort()
     );
 
-    console.log("🔹 Tham số sau khi sắp xếp:", sortedParams);
-
-    // ✅ Tạo chuỗi signData đúng chuẩn
     const signData = new URLSearchParams(sortedParams).toString();
-
-    console.log("🔹 Chuỗi signData trước khi ký:", signData);
-
-    // ✅ Kiểm tra giá trị HashSecret
-    if (!VNPAY_CONFIG.vnp_HashSecret) {
-      throw new Error("vnp_HashSecret không tồn tại hoặc rỗng!");
-    }
-
-    // ✅ Tạo HMAC SHA512
     const signed = crypto
       .createHmac("sha512", VNPAY_CONFIG.vnp_HashSecret)
       .update(Buffer.from(signData, "utf-8"))
       .digest("hex");
 
-    console.log("Secure Hash từ VNPay:", secureHash);
-    console.log("Secure Hash tự ký lại:", signed);
-
+    console.log("Secure Hash from VNPay:", secureHash);
+    console.log("Secure Hash re-signed:", signed);
     // Determine the base URL based on client type
     const clientType = req.query.clientType || "web";
     const baseUrl =
@@ -175,16 +166,19 @@ exports.vnpayReturn = async (req, res) => {
       return res.status(400).redirect(`${baseUrl}/mealplan?status=error&message=Invalid+signature`);
     }
 
-    // 🔹 Xử lý logic sau khi kiểm tra chữ ký thành công
     const transactionNo = vnp_Params["vnp_TransactionNo"];
     const paymentId = vnp_Params["vnp_TxnRef"];
     const responseCode = vnp_Params["vnp_ResponseCode"];
     const status = responseCode === "00" ? "success" : "failed";
 
-    // Tìm payment hiện tại
     const payment = await Payment.findByIdAndUpdate(
       paymentId,
-      { transactionNo, status, paymentDate: new Date(), paymentDetails: vnp_Params },
+      {
+        transactionNo,
+        status,
+        paymentDate: new Date(),
+        paymentDetails: vnp_Params,
+      },
       { new: true }
     );
 
@@ -192,7 +186,6 @@ exports.vnpayReturn = async (req, res) => {
       return res.status(404).redirect(`${baseUrl}/mealplan?status=error&message=Payment+not+found`);
     }
 
-    // Nếu thanh toán thành công
     if (status === "success") {
       // Update the MealPlan with the paymentId and set isBlock to false
       const updatedMealPlan = await MealPlan.findByIdAndUpdate(
@@ -214,63 +207,42 @@ exports.vnpayReturn = async (req, res) => {
       const oldUserMealPlan = await UserMealPlan.findOne({ userId: payment.userId });
 
       if (oldUserMealPlan) {
-        console.log(`🗑 Xóa dữ liệu MealPlan cũ của user: ${payment.userId}`);
+        console.log(`🗑 Deleting old MealPlan data for user: ${payment.userId}`);
 
         const oldMealPlanId = oldUserMealPlan.mealPlanId;
 
-        // 🔹 Lấy danh sách MealDay trước khi xóa
+        // 🔹 Get list of MealDays before deletion
         const mealDays = await MealDay.find({ mealPlanId: oldMealPlanId });
         const mealDayIds = mealDays.map((mealDay) => mealDay._id);
 
-        // 🔹 Lấy danh sách Reminder trước khi xóa
+        // 🔹 Get list of Reminders before deletion
         const reminders = await Reminder.find({ mealPlanId: oldMealPlanId });
         const reminderIds = reminders.map((reminder) => reminder._id);
 
-        // 🔥 Xóa Job theo reminderId (Agenda)
-        if (reminderIds.length > 0) {
-          await agenda.cancel({ "data.reminderId": { $in: reminderIds } });
-        }
-
-        // 🔥 Xóa Meals trước (vì Meals phụ thuộc vào MealDay)
-        if (mealDayIds.length > 0) {
-          await Meal.deleteMany({ mealDayId: { $in: mealDayIds } });
-        }
-
-        // 🔥 Xóa MealPlanTracking, Reminder, MealDay
-        await MealTracking.deleteMany({ mealPlanId: oldMealPlanId });
-        await Reminder.deleteMany({ mealPlanId: oldMealPlanId });
-        await MealDay.deleteMany({ mealPlanId: oldMealPlanId });
-
-        // 🔥 Xóa MealPlan cũ khỏi user
-        await UserMealPlan.deleteOne({ userId: payment.userId });
-        // Xóa luôn Meal Plan cũ
-        await MealPlan.deleteOne({ _id: oldMealPlanId });
+        // Cập nhật UserMealPlan với Meal Plan mới
+        userMealPlan.mealPlanId = payment.mealPlanId;
+        userMealPlan.startDate = new Date();
+        await userMealPlan.save();
+      } else {
+        // Nếu chưa có UserMealPlan, tạo mới
+        await UserMealPlan.create({
+          userId: payment.userId,
+          mealPlanId: payment.mealPlanId,
+          startDate: new Date(),
+        });
       }
 
-      // 🔹 Gán MealPlan mới cho user
-      await UserMealPlan.create({
-        userId: payment.userId,
+      console.log(`✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`);
+      console.log(`✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`);
+
+      // Dọn dẹp các payment pending khác
+      const cleanupResult = await Payment.deleteMany({
+        _id: { $ne: payment._id },
         mealPlanId: payment.mealPlanId,
-        startedAt: new Date(),
+        status: "pending",
       });
-
-      console.log(`✅ User ${payment.userId} đã đổi sang MealPlan mới: ${payment.mealPlanId}`);
-
-      // Dọn dẹp Payment pending khác
-      try {
-        const cleanupResult = await Payment.deleteMany({
-          _id: { $ne: payment._id },
-          mealPlanId: payment.mealPlanId,
-          status: "pending",
-        });
-
-        if (cleanupResult.deletedCount > 0) {
-          console.log(
-            `🧹 Đã xóa ${cleanupResult.deletedCount} payment pending thừa cho mealPlan ${payment.mealPlanId}`
-          );
-        }
-      } catch (cleanupError) {
-        console.error("❌ Lỗi khi dọn dẹp payment pending:", cleanupError);
+      if (cleanupResult.deletedCount > 0) {
+        console.log(`🧹 Deleted ${cleanupResult.deletedCount} redundant pending payments`);
       }
     }
 
@@ -281,12 +253,9 @@ exports.vnpayReturn = async (req, res) => {
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("❌ Lỗi xử lý VNPay:", error);
-
-    // Determine the base URL for error redirect
     const clientType = req.query.clientType || "web";
     const baseUrl =
       clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
-
     res.redirect(`${baseUrl}/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`);
   }
 };
@@ -373,5 +342,80 @@ exports.checkPaymentStatus = async (req, res) => {
   } catch (error) {
     console.error("Error checking payment status:", error);
     return res.status(500).json({ status: "error", message: "Error checking payment status" });
+  }
+};
+
+// Retrieve detailed information of a Payment by paymentId
+// Retrieve detailed information of a Payment by paymentId
+exports.getPaymentById = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const { _id: userId } = req.user; // Retrieved from authentication middleware
+
+    // Find Payment by paymentId
+    const payment = await Payment.findById(paymentId).lean();
+    if (!payment) {
+      return res.status(404).json({
+        status: "error",
+        message: "Payment information not found",
+      });
+    }
+
+    // Find the related MealPlan to check the creator
+    const mealPlan = await MealPlan.findById(payment.mealPlanId).lean();
+    if (!mealPlan) {
+      return res.status(404).json({
+        status: "error",
+        message: "Related MealPlan not found",
+      });
+    }
+
+    // Check if the requesting user is the creator of the MealPlan
+    if (mealPlan.createdBy.toString() !== userId.toString()) {
+      return res.status(403).json({
+        status: "error",
+        message: "You do not have permission to view this payment information. Only the creator of the MealPlan can access this.",
+      });
+    }
+
+    // Retrieve related MealPlan information for response
+    const mealPlanDetails = await MealPlan.findById(payment.mealPlanId)
+      .select("title price startDate endDate")
+      .lean();
+
+    // Format the response data
+    const paymentDetails = {
+      _id: payment._id,
+      userId: payment.userId,
+      mealPlanId: payment.mealPlanId,
+      mealPlanName: mealPlanDetails ? mealPlanDetails.title : "N/A",
+      amount: payment.amount,
+      status: payment.status,
+      paymentMethod: payment.paymentMethod,
+      transactionNo: payment.transactionNo || "N/A",
+      paymentDate: payment.paymentDate || null,
+      createdAt: payment.createdAt,
+      updatedAt: payment.updatedAt,
+      paymentDetails: payment.paymentDetails || {}, // Detailed information from VNPay (if available)
+      mealPlanInfo: mealPlanDetails
+        ? {
+            title: mealPlanDetails.title,
+            price: mealPlanDetails.price,
+            startDate: mealPlanDetails.startDate,
+            endDate: mealPlanDetails.endDate,
+          }
+        : null,
+    };
+
+    return res.json({
+      status: "success",
+      data: paymentDetails,
+    });
+  } catch (error) {
+    console.error("🔥 Error retrieving Payment information by ID:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Server error while retrieving payment information",
+    });
   }
 };

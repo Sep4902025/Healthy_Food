@@ -13,19 +13,31 @@ const getAuthHeaders = async () => {
 };
 
 const dishesService = {
-  // 🔹 Lấy tất cả món ăn
-  getAllDishes: async () => {
+  // 🔹 Lấy tất cả món ăn với phân trang
+  getAllDishes: async (page, limit, search = "") => {
     try {
-      const headers = await getAuthHeaders();
-      const response = await axiosInstance.get("/dishes", { headers });
+      const response = await axiosInstance.get("/dishes", {
+        params: {
+          page,
+          limit,
+          search, // Thêm tham số tìm kiếm
+        },
+      });
       console.log("🔍 Danh sách món ăn từ API:", response.data);
-      return { success: true, data: response.data.data || [] };
+      return {
+        success: true,
+        data: {
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
+        },
+      };
     } catch (error) {
       console.error("❌ Lỗi khi lấy món ăn:", error.response?.data || error.message);
       return { success: false, message: "Lỗi khi tải danh sách món ăn" };
     }
   },
-
   // 🔹 Thêm món ăn mới
   createDish: async (data) => {
     try {

@@ -1,4 +1,11 @@
-const { MealPlan, MealDay, Meal, MealTracking, UserMealPlan } = require("../models/MealPlan");
+const {
+  MealPlan,
+  MealDay,
+  Meal,
+  MealTracking,
+  UserMealPlan,
+  UserMealPlanHistory,
+} = require("../models/MealPlan");
 const mongoose = require("mongoose");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
@@ -483,11 +490,9 @@ exports.toggleMealPlanStatus = async (req, res) => {
 };
 // Utility functions Helper Lean
 // Hàm cập nhật trạng thái tất cả reminder liên quan đến một MealPlan
-const updateRemindersForMealPlan = async (mealPlanId, isPaused) => {
+const updateRemindersForMealPlan = async (mealPlanId, isPause) => {
   try {
-    console.log(
-      `${isPaused ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"} reminders cho MealPlan ${mealPlanId}`
-    );
+    console.log(`${isPause ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"} reminders cho MealPlan ${mealPlanId}`);
 
     // Tìm tất cả reminder liên quan đến MealPlan
     const reminders = await Reminder.find({ mealPlanId });
@@ -495,9 +500,9 @@ const updateRemindersForMealPlan = async (mealPlanId, isPaused) => {
 
     // Lặp qua từng reminder để cập nhật trạng thái
     for (const reminder of reminders) {
-      reminder.isActive = !isPaused;
+      reminder.isActive = !isPause;
 
-      if (isPaused) {
+      if (isPause) {
         // Tạm dừng tất cả job liên quan đến reminderId
         console.log(`⏸️ Tạm dừng tất cả job cho reminder ${reminder._id}`);
         await agenda.cancel({ "data.reminderId": reminder._id });
@@ -1491,5 +1496,85 @@ exports.deleteDishFromMeal = async (req, res) => {
   } catch (error) {
     console.error("🔥 Lỗi khi xóa món ăn:", error);
     res.status(500).json({ success: false, message: "Lỗi server!" });
+  }
+};
+
+// Lấy danh sách tất cả MealPlan đã có paymentId
+exports.getAllMealPlanPayment = async (req, res) => {
+  try {
+    const { _id: userId, role } = req.user; // Retrieved from authentication middleware
+
+    let filter = {
+      paymentId: { $exists: true, $ne: null }, // Only get MealPlans with paymentId
+      isDelete: false, // Exclude soft-deleted MealPlans
+    };
+
+    if (role === "user") {
+      filter.userId = userId; // Users only see their own MealPlans
+    } else if (role === "nutritionist") {
+      filter.createdBy = userId; // Nutritionists only see MealPlans they created
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "Invalid role",
+      });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalMealPlans = await MealPlan.countDocuments(filter);
+    const totalPages = Math.ceil(totalMealPlans / limit);
+
+    const mealPlans = await MealPlan.find(filter)
+      .skip(skip)
+      .limit(limit)
+      .populate("userId", "email avatarUrl")
+      .populate("createdBy", "email avatarUrl")
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      results: totalMealPlans,
+      page: page,
+      totalPages: totalPages,
+      data: {
+        mealPlans: mealPlans.map((mealPlan) => ({
+          _id: mealPlan._id,
+          title: mealPlan.title,
+          userId: mealPlan.userId,
+          createdBy: mealPlan.createdBy,
+          paymentId: mealPlan.paymentId,
+          price: mealPlan.price,
+          startDate: mealPlan.startDate,
+          endDate: mealPlan.endDate,
+          duration: mealPlan.duration,
+          isPaid: mealPlan.isPaid,
+          isBlock: mealPlan.isBlock,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("🔥 Error fetching paid MealPlans:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error: " + error.message,
+    });
+  }
+};
+
+exports.getMealPlanHistory = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const history = await UserMealPlanHistory.find({ userId }).populate("mealPlanId");
+
+    res.status(200).json({
+      success: true,
+      data: history,
+    });
+  } catch (error) {
+    console.error("🔥 Lỗi khi lấy lịch sử Meal Plan:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

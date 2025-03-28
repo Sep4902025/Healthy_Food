@@ -6,9 +6,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        white: "#ffffff",
         "custom-red": "#ef4444",
         "custom-blue": "#3b82f6",
         "custom-yellow": "#facc15",
+        "custom-green": "#40B491", // Màu hệ thống,
       },
     },
   },

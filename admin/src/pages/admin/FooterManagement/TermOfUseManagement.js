@@ -2,74 +2,55 @@ import React, { useEffect, useState } from "react";
 import termService from "../../../services/footer/termServices";
 import UploadComponent from "../../../components/UploadComponent";
 import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
+import Pagination from "../../../components/Pagination";
 
 const TermOfUseManagement = () => {
   const [terms, setTerms] = useState([]);
-  console.log("TERM DATA", terms);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage, setUsersPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [termsPerPage, setTermsPerPage] = useState(6);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     fetchTerms();
-  }, []);
-
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentTerms = terms.slice(indexOfFirstUser, indexOfLastUser);
-
-  const paginate = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
+  }, [currentPage, termsPerPage]);
 
   const fetchTerms = async () => {
     setLoading(true);
-    const result = await termService.getTerms();
-    if (result.success) {
-      setTerms(result.data);
-    } else {
-      setError(result.message);
+    try {
+      const result = await termService.getTerms(currentPage + 1, termsPerPage); // +1 vì API dùng từ 1
+      if (result.success) {
+        setTerms(result.data.data.terms || []);
+        setTotalItems(result.data.total || 0);
+      } else {
+        setError(result.message);
+        setTerms([]);
+      }
+    } catch (err) {
+      setError("Lỗi không xác định khi tải Terms");
+      setTerms([]);
+      console.error("❌ Lỗi trong fetchTerms:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleToggleVisibility = async (term) => {
-    const updatedTerm = {
-      ...term,
-      isVisible: !term.isVisible,
-      isDeleted: term.isDeleted || false, // ✅ Đảm bảo có đầy đủ dữ liệu
-    };
-
+    const updatedTerm = { ...term, isVisible: !term.isVisible, isDeleted: term.isDeleted || false };
     const response = await termService.updateTerm(term._id, updatedTerm);
-
-    if (response.success) {
-      setTerms(terms.map((t) => (t._id === term._id ? { ...t, isVisible: !t.isVisible } : t)));
-    } else {
-      console.error("Error updating display status:", response.message);
-    }
+    if (response.success) fetchTerms();
+    else console.error("Error updating display status:", response.message);
   };
 
   const handleHardDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this term?")) {
       const response = await termService.hardDeleteTerm(id);
-      if (response.success) {
-        const updatedTerms = terms.filter((term) => term._id !== id);
-        setTerms(updatedTerms);
-
-        // Tính lại tổng số trang
-        const totalPages = Math.ceil(updatedTerms.length / usersPerPage);
-
-        // Nếu trang hiện tại không còn dữ liệu, quay về trang trước (nếu có)
-        if (currentPage > totalPages) {
-          setCurrentPage(totalPages > 0 ? totalPages : 1);
-        }
-      } else {
-        console.error("Error while deleting:", response.message);
-      }
+      if (response.success) fetchTerms();
+      else console.error("Error while deleting:", response.message);
     }
   };
 
@@ -93,30 +74,23 @@ const TermOfUseManagement = () => {
       alert("Content cannot be empty!");
       return;
     }
-
-    let response;
-    if (editData) {
-      response = await termService.updateTerm(editData._id, formData);
+    const response = editData
+      ? await termService.updateTerm(editData._id, formData)
+      : await termService.createTerm(formData);
+    if (response.success) {
+      setModalOpen(false);
+      setEditData(null);
+      setFormData({ bannerUrl: "", content: "" });
+      fetchTerms();
     } else {
-      response = await termService.createTerm(formData);
-    }
-
-    if (!response.success) {
       console.error("Error:", response.message);
-      return;
+      alert(response.message);
     }
-
-    // 🛠 Cập nhật danh sách terms từ API sau khi thay đổi dữ liệu
-    await fetchTerms();
-
-    setModalOpen(false);
-    setEditData(null);
-    setFormData({ _id: "", bannerUrl: "", content: "" });
   };
 
-  const handleImageUpload = (imageUrl) => {
-    setFormData({ ...formData, bannerUrl: imageUrl });
-  };
+  const handleImageUpload = (imageUrl) => setFormData({ ...formData, bannerUrl: imageUrl });
+
+  const handlePageClick = ({ selected }) => setCurrentPage(selected);
 
   if (loading) return <p className="text-center text-blue-500">Loading...</p>;
   if (error) return <p className="text-center text-red-500">Error: {error}</p>;
@@ -124,16 +98,14 @@ const TermOfUseManagement = () => {
   return (
     <div className="container mx-auto px-4">
       <h1 className="text-2xl font-bold">Terms of Use Management</h1>
-
       <button
         className="mb-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
         onClick={() => handleOpenModal()}
       >
         + Add new
       </button>
-
       <div className="bg-white shadow-lg rounded-2xl p-6">
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse mb-2">
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="p-3 text-left">No.</th>
@@ -144,10 +116,10 @@ const TermOfUseManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {currentTerms.length > 0 ? (
-              currentTerms.map((item, index) => (
-                <tr key={index} className="border-b border-gray-200 text-gray-900">
-                  <td className="p-3">{index + 1}</td>
+            {terms.length > 0 ? (
+              terms.map((item, index) => (
+                <tr key={item._id} className="border-b border-gray-200 text-gray-900">
+                  <td className="p-3">{currentPage * termsPerPage + index + 1}</td>
                   <td className="p-3">
                     <img
                       src={item.bannerUrl}
@@ -167,15 +139,12 @@ const TermOfUseManagement = () => {
                   </td>
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center space-x-2">
-                      {/* Nút chỉnh sửa */}
                       <button
                         className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
                         onClick={() => handleOpenModal(item)}
                       >
                         <EditIcon size={16} />
                       </button>
-
-                      {/* Nút Ẩn/Hiện */}
                       <button
                         className={`p-2 rounded-full text-white ${
                           item.isVisible
@@ -186,8 +155,6 @@ const TermOfUseManagement = () => {
                       >
                         {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
                       </button>
-
-                      {/* Nút Xóa vĩnh viễn */}
                       <button
                         className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
                         onClick={() => handleHardDelete(item._id)}
@@ -200,75 +167,39 @@ const TermOfUseManagement = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="4" className="text-center text-gray-500 p-4">
+                <td colSpan="5" className="text-center text-gray-500 p-4">
                   No terms.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-
-        {/* Pagination */}
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              onChange={(e) => setUsersPerPage(Number(e.target.value))}
-            >
-              <option value="5">5 Terms</option>
-              <option value="10">10 Terms</option>
-              <option value="15">15 Terms</option>
-            </select>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              &lt;
-            </button>
-            {Array.from({ length: Math.ceil(terms.length / usersPerPage) }, (_, i) => (
-              <button
-                key={i}
-                className={`px-3 py-1 rounded ${
-                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                }`}
-                onClick={() => paginate(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === Math.ceil(terms.length / usersPerPage)}
-            >
-              &gt;
-            </button>
-          </div>
-        </div>
+        <Pagination
+          limit={termsPerPage}
+          setLimit={setTermsPerPage}
+          totalItems={totalItems}
+          handlePageClick={handlePageClick}
+          currentPage={currentPage} // Thêm currentPage
+          text="Terms"
+        />
       </div>
 
-      {/* Modal Form */}
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
             <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add New"} Term</h2>
-
             <label className="block mb-2">Banner URL:</label>
-            <UploadComponent onUploadSuccess={handleImageUpload} reset={formData.imageUrl === ""} />
-
-            <label className="block mb-2">Content:</label>
+            <UploadComponent
+              onUploadSuccess={handleImageUpload}
+              reset={formData.bannerUrl === ""}
+            />
+            <label className="block mb-2 mt-4">Content:</label>
             <textarea
               className="w-full border p-2 mb-4"
               rows="4"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
             ></textarea>
-
             <div className="flex justify-end space-x-2">
               <button
                 className="px-4 py-2 bg-gray-500 text-white rounded"
@@ -276,7 +207,10 @@ const TermOfUseManagement = () => {
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-green-500 text-white rounded" onClick={handleSave}>
+              <button
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                onClick={handleSave}
+              >
                 Save
               </button>
             </div>
