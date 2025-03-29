@@ -108,9 +108,6 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
   const [selectedDayNutrition, setSelectedDayNutrition] = useState(null);
   const firstLoad = useRef(true);
 
-  console.log("MealPlanId:", mealPlanId); // Debug mealPlanId
-  console.log("MealDays State:", mealDays); // Debug mealDays state
-
   const fetchMealDays = async () => {
     if (!mealPlanId) {
       console.log("No mealPlanId provided, skipping fetch.");
@@ -129,7 +126,6 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
         // Ensure data.data is an array
         const mealDaysData = Array.isArray(data.data) ? data.data : [];
         setMealDays(mealDaysData);
-        console.log("Set mealDays:", mealDaysData);
         fetchAllMealDaysNutrition(mealDaysData);
       } else {
         console.log("API Error:", data.message);

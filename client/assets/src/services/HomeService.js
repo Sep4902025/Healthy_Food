@@ -85,7 +85,6 @@ const HomeService = {
   getDishById: async (dishId) => {
     try {
       const response = await axiosInstance.get(`/dishes/${dishId}`);
-      console.log("RESSSS", response);
       return response.data;
     } catch (error) {
       console.error(`Error fetching dish with ID ${dishId}:`, error);

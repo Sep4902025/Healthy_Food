@@ -25,7 +25,6 @@ const mealPlanService = {
   getMealPlanById: async (id) => {
     try {
       const response = await axiosInstance.get(`/mealPlan/${id}`);
-      console.log("🔍 Chi tiết MealPlan:", response.data);
       return { success: true, data: response.data.data };
     } catch (error) {
       console.error("❌ Lỗi khi lấy MealPlan:", error.response?.data || error.message);
@@ -154,7 +153,6 @@ const mealPlanService = {
   getMealDaysByMealPlan: async (mealPlanId) => {
     try {
       const response = await axiosInstance.get(`/mealPlan/${mealPlanId}/mealDay`);
-      console.log("🔍 Danh sách MealDays:", response.data);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
       console.error("❌ Lỗi khi lấy MealDays:", error.response?.data || error.message);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,17 +8,15 @@ import {
   FlatList,
   ActivityIndicator,
   Modal,
-  StyleSheet,
   ScrollView,
 } from "react-native";
 import mealPlanService from "../../services/mealPlanService";
 import HomeService from "../../services/HomeService";
-import Pagination from "../../components/common/Pagination";
 
 const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, userId }) => {
   const [dishes, setDishes] = useState([]);
   const [selectedDish, setSelectedDish] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState({ initial: true, more: false });
   const [error, setError] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [existingDishes, setExistingDishes] = useState([]);
@@ -26,9 +24,9 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedType, setSelectedType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(0);
-  const [limit] = useState(10);
-  const [totalItems, setTotalItems] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const limit = 10;
 
   // Định nghĩa sẵn các tag
   const orderedTags = [
@@ -40,45 +38,61 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   ];
 
   useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        setLoading(true);
-        const [dishesResponse, mealResponse, favoritesResponse] = await Promise.all([
-          mealPlanService.getAllDishes(
-            currentPage + 1,
-            limit,
-            searchQuery,
-            selectedType !== "all" ? selectedType : undefined
-          ),
-          mealPlanService.getMealByMealId(mealPlanId, mealDayId, mealId),
-          HomeService.getFavoriteDishes(userId),
-        ]);
+    loadInitialDishes();
+  }, [searchQuery, selectedType]);
 
-        if (dishesResponse.success) {
-          setDishes(dishesResponse.data.items || []);
-          setTotalItems(dishesResponse.data.total || 0);
-        } else {
-          setError(dishesResponse.message || "Could not fetch dishes");
-        }
+  const loadInitialDishes = async () => {
+    setLoading((prev) => ({ ...prev, initial: true }));
+    setPage(1);
+    setHasMore(true);
+    await loadDishes(1, true);
+    setLoading((prev) => ({ ...prev, initial: false }));
+  };
 
-        if (mealResponse.success && mealResponse.data && mealResponse.data.dishes) {
-          setExistingDishes(mealResponse.data.dishes);
-        }
+  const loadMoreDishes = async () => {
+    if (!hasMore || loading.more) return;
+    setLoading((prev) => ({ ...prev, more: true }));
+    await loadDishes(page + 1);
+    setLoading((prev) => ({ ...prev, more: false }));
+  };
 
-        if (Array.isArray(favoritesResponse)) {
-          const dishIds = favoritesResponse.map((dish) => dish.dishId);
-          setFavoriteDishes(dishIds);
-        }
-      } catch (error) {
-        console.error("❌ Error fetching data:", error);
-        setError("Could not fetch dishes data");
-      } finally {
-        setLoading(false);
+  const loadDishes = async (pageNum, isRefresh = false) => {
+    try {
+      const [dishesResponse, mealResponse, favoritesResponse] = await Promise.all([
+        mealPlanService.getAllDishes(
+          pageNum,
+          limit,
+          searchQuery,
+          selectedType !== "all" ? selectedType : undefined
+        ),
+        mealPlanService.getMealByMealId(mealPlanId, mealDayId, mealId),
+        HomeService.getFavoriteDishes(userId),
+      ]);
+
+      if (dishesResponse.success) {
+        const newDishes = dishesResponse.data.items || [];
+        setDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+        setPage(pageNum);
+        setHasMore(pageNum < dishesResponse.data.totalPages);
+      } else {
+        setError(dishesResponse.message || "Could not fetch dishes");
+        setHasMore(false);
       }
-    };
 
-    fetchAllData();
-  }, [mealPlanId, mealDayId, mealId, userId, currentPage, limit, searchQuery, selectedType]);
+      if (mealResponse.success && mealResponse.data && mealResponse.data.dishes) {
+        setExistingDishes(mealResponse.data.dishes);
+      }
+
+      if (Array.isArray(favoritesResponse)) {
+        const dishIds = favoritesResponse.map((dish) => dish.dishId);
+        setFavoriteDishes(dishIds);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching data:", error);
+      setError("Could not fetch dishes data");
+      setHasMore(false);
+    }
+  };
 
   const isDishAlreadyAdded = (dish) => {
     if (!existingDishes || existingDishes.length === 0) return false;
@@ -150,7 +164,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
 
     return (
       <TouchableOpacity
-        style={styles.cardShadow}
         className={`border rounded-lg overflow-hidden relative w-[48%] mb-4 ${
           isSelected ? "border-green-500 border-2" : "border-gray-200"
         } ${isAlreadyAdded ? "opacity-50" : ""}`}
@@ -246,11 +259,17 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     }
   };
 
+  const handleLoadMore = () => {
+    if (!loading.more && hasMore) {
+      loadMoreDishes();
+    }
+  };
+
   if (error) {
     return (
       <Modal visible={true} transparent={true}>
         <View className="flex-1 items-center justify-center bg-black bg-opacity-50">
-          <View className="bg-white rounded-lg p-6 w-11/12 max-w-md" style={styles.cardShadow}>
+          <View className="bg-white rounded-lg p-6 w-11/12 max-w-md">
             <Text className="text-red-500 text-center mb-4">{error}</Text>
             <TouchableOpacity
               className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg self-center"
@@ -267,10 +286,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   return (
     <Modal visible={true} transparent={true} animationType="slide">
       <View className="flex-1 items-center justify-center bg-black bg-opacity-50">
-        <View
-          className="bg-white rounded-lg p-4 w-11/12 max-h-[90vh] flex-1"
-          style={styles.cardShadow}
-        >
+        <View className="bg-white rounded-lg p-4 w-11/12 max-h-[90vh] flex-1">
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-lg font-semibold">Select a Dish</Text>
             <TouchableOpacity onPress={onClose}>
@@ -285,7 +301,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
                 value={searchQuery}
                 onChangeText={(text) => {
                   setSearchQuery(text);
-                  setCurrentPage(0);
                 }}
                 className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full text-sm"
               />
@@ -307,7 +322,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
                       setSelectedType(type);
                       setActiveFilter("all");
                     }
-                    setCurrentPage(0);
                   }}
                   className={getTagStyle(
                     type,
@@ -331,8 +345,10 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
             keyExtractor={(item) => item._id}
             numColumns={2}
             columnWrapperStyle={{ justifyContent: "space-between" }}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
             ListEmptyComponent={
-              loading ? (
+              loading.initial ? (
                 <View className="flex-col items-center justify-center h-64">
                   <ActivityIndicator size="large" color="#0000ff" />
                   <Text className="text-gray-500 mt-4">Loading dishes...</Text>
@@ -348,7 +364,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               )
             }
             ListFooterComponent={
-              loading && filteredDishes.length > 0 ? (
+              loading.more && filteredDishes.length > 0 ? (
                 <View className="py-4 flex-row justify-center">
                   <ActivityIndicator size="small" color="#0000ff" />
                   <Text className="ml-2">Loading more...</Text>
@@ -357,15 +373,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
             }
             className="flex-1"
           />
-
-          {totalItems > 0 && (
-            <Pagination
-              totalItems={totalItems}
-              handlePageClick={(data) => setCurrentPage(data.selected)}
-              currentPage={currentPage}
-              text="dishes"
-            />
-          )}
 
           <View className="mt-4 flex-row justify-end gap-2">
             <TouchableOpacity
@@ -394,7 +401,5 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({});
 
 export default AddDishToMeal;
