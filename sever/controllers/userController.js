@@ -3,17 +3,40 @@ const UserModel = require("../models/UserModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const mongoose = require("mongoose");
-const UserPreferenceModel = require("../models/UserPrefenrenceModel");
 
 // 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await UserModel.find({ isDelete: false }).populate(
-    "userPreferenceId"
-  );
+  // Lấy các query parameters từ request
+  const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
+  const limit = parseInt(req.query.limit) || 10; // Mặc định 10 users mỗi trang
+  const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
+
+  const currentAdminId = req.user?._id;
+
+  // Điều kiện lọc: không bao gồm người dùng đã xóa và không phải admin đang đăng nhập
+  const query = {
+    isDelete: false,
+    _id: { $ne: currentAdminId }, // Loại trừ admin đang đăng nhập
+  };
+
+  // Đếm tổng số người dùng thỏa mãn điều kiện
+  const totalUsers = await UserModel.countDocuments(query);
+
+  // Lấy danh sách người dùng với phân trang
+  const users = await UserModel.find(query)
+    .skip(skip)
+    .limit(limit)
+    .populate("userPreferenceId");
+
+  // Tính tổng số trang
+  const totalPages = Math.ceil(totalUsers / limit);
 
   res.status(200).json({
     status: "success",
     results: users.length,
+    total: totalUsers,
+    totalPages: totalPages,
+    currentPage: page,
     data: { users },
   });
 });
@@ -34,7 +57,34 @@ exports.getUserById = catchAsync(async (req, res, next) => {
     data: { user },
   });
 });
+exports.searchUserByEmail = catchAsync(async (req, res, next) => {
+  const { email } = req.query;
 
+  if (!email) {
+    return next(new AppError("Please provide an email to search", 400));
+  }
+
+  const users = await UserModel.find({
+    email: { $regex: email, $options: "i" }, // Tìm kiếm gần đúng, không phân biệt hoa/thường
+    isDelete: false,
+  })
+    .select("_id username email avatarUrl role") // Thêm _id vào kết quả
+    .limit(10); // Giới hạn 10 kết quả
+
+  if (!users.length) {
+    return res.status(200).json({
+      status: "success",
+      results: 0,
+      data: { users: [] },
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    results: users.length,
+    data: { users },
+  });
+});
 // Update User By ID
 exports.updateUserById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
@@ -54,26 +104,19 @@ exports.updateUserById = catchAsync(async (req, res, next) => {
   });
 });
 
+// 📌 Xóa người dùng (Soft Delete) - chỉ xóa nếu user chưa bị xóa trước đó
 exports.deleteUser = catchAsync(async (req, res, next) => {
-  const { id } = req.params; // Lấy userId từ URL
+  const user = await UserModel.findByIdAndUpdate(
+    req.params.id,
 
-  // Tìm user theo ID
-  const user = await UserModel.findOne({ _id: id });
+    { isDelete: true },
 
-  if (!user || user.isDelete) {
+    { new: true }
+  );
+
+  if (!user) {
     return next(new AppError("User not found or has been deleted", 404));
   }
-
-  // Nếu user có userPreferenceId, xóa mềm luôn dữ liệu preference
-  if (user.userPreferenceId) {
-    await UserPreferenceModel.findByIdAndUpdate(user.userPreferenceId, {
-      isDelete: true,
-    });
-  }
-
-  // Xóa mềm user bằng cách đặt isDelete = true
-  user.isDelete = true;
-  await user.save();
 
   res.status(200).json({
     status: "success",

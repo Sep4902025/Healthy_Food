@@ -9,7 +9,10 @@ const {
   resetPassword,
   googleLogin,
 } = require("../controllers/authController");
-const { updateUserById, deleteUser } = require("../controllers/userController");
+const {
+  updateUserById,
+  searchUserByEmail,
+} = require("../controllers/userController");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const { getAllUsers, getUserById } = require("../controllers/userController");
 const {
@@ -18,8 +21,11 @@ const {
 const userRouter = express.Router();
 
 userRouter.get("/", getAllUsers);
+userRouter.get("/search", searchUserByEmail);
 userRouter.get("/:id", getUserById);
+
 userRouter.put("/:id", updateUserById);
+
 userRouter.post("/signup", signup);
 userRouter.post("/verify", verifyAccount);
 userRouter.post("/resend-otp", resendOTP);

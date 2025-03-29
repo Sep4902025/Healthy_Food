@@ -9,6 +9,7 @@ const {
   filterUserPreferencesByDiet,
   getUserPreferenceByUserId,
   createUserPreference,
+  resetUserPreference
 } = require("../controllers/userPreferenceController");
 const userPreferenceRouter = express.Router();
 
@@ -38,5 +39,8 @@ userPreferenceRouter.get("/search", searchUserPreferencesByName);
 
 // Filter User Preferences by diet
 userPreferenceRouter.get("/filter", filterUserPreferencesByDiet);
+
+userPreferenceRouter.put("/reset/:userPreferenceId", resetUserPreference);
+
 
 module.exports = userPreferenceRouter;

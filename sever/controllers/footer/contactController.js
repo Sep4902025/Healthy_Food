@@ -9,8 +9,6 @@ exports.getAllContactUs = async (req, res) => {
         res.status(500).json({ status: "error", error: "Lỗi lấy dữ liệu Contact Us" });
     }
 };
-
-// Tạo mới Contact Us
 exports.createContactUs = async (req, res) => {
     try {
         console.log("📩 Received data:", req.body);
@@ -26,25 +24,43 @@ exports.createContactUs = async (req, res) => {
     }
 };
 
-// Cập nhật Contact Us
-exports.updateContactUs = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const updatedContactUs = await ContactUs.findByIdAndUpdate(id, req.body, { new: true });
-        res.status(200).json({ status: "success", data: updatedContactUs });
-    } catch (error) {
-        res.status(500).json({ status: "error", error: "Lỗi cập nhật Contact Us" });
-    }
-};
-
-
 // Xóa cứng Contact Us
 exports.hardDeleteContactUs = async (req, res) => {
     const { id } = req.params;
     try {
+        const contact = await ContactUs.findById(id);
+        if (!contact) {
+            return res.status(404).json({ success: false, message: "Contact không tồn tại!" });
+        }
         await ContactUs.findByIdAndDelete(id);
-        res.status(200).json({ status: "success", message: "Contact Us đã bị xóa vĩnh viễn" });
+        res.status(200).json({ success: true, message: "Contact Us đã bị xóa vĩnh viễn" });
     } catch (error) {
-        res.status(500).json({ status: "error", error: "Lỗi xóa cứng Contact Us" });
+        console.error("Lỗi xóa liên hệ:", error);
+        res.status(500).json({ success: false, message: "Lỗi xóa cứng Contact Us" });
     }
 };
+
+// Cập nhật trạng thái isResolved của Contact Us
+exports.updateContactUs = async (req, res) => {
+    try {
+        console.log(`📤 Cập nhật Contact ID: ${req.params.id}`, req.body);
+
+        const updatedContact = await ContactUs.findByIdAndUpdate(
+            req.params.id, 
+            req.body, 
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedContact) {
+            return res.status(404).json({ success: false, message: "Contact không tồn tại." });
+        }
+
+        console.log("✅ Contact đã được cập nhật:", updatedContact);
+        res.json({ success: true, message: "Cập nhật thành công!", data: updatedContact });
+    } catch (error) {
+        console.error("❌ Lỗi khi cập nhật Contact:", error);
+        res.status(500).json({ success: false, message: "Lỗi server khi cập nhật Contact", error: error.message });
+    }
+};
+
+

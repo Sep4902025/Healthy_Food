@@ -62,6 +62,7 @@ const quizService = {
         success: true,
         message: response.data.message || "Gửi bài kiểm tra thành công",
         user: response.data.data.user,
+        userPreference: response.data.data.userPreference, // Thêm userPreference để sử dụng nếu cần
       };
     } catch (error) {
       console.error("🚨 Lỗi trong submitQuizData:", error.message);
@@ -228,7 +229,6 @@ const quizService = {
     }
   },
 
-  // Thêm hàm deleteUserByUserId
   deleteUserByUserId: async (userId) => {
     if (!userId) {
       return {

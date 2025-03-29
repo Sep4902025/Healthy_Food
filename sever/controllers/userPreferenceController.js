@@ -24,6 +24,7 @@ exports.createUserPreference = async (req, res) => {
       weight,
       weightGoal,
       height,
+      activityLevel,
       gender,
       phoneNumber,
       underDisease,
@@ -86,6 +87,7 @@ exports.createUserPreference = async (req, res) => {
       weight,
       weightGoal,
       height,
+      activityLevel,
       gender,
       phoneNumber,
       underDisease,
@@ -188,14 +190,17 @@ exports.getUserPreferenceById = async (req, res) => {
 // Update User Preference
 exports.updateUserPreference = async (req, res) => {
   try {
-    const { userPreferenceId } = req.params;
-    const updatedData = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(userPreferenceId)) {
-      return res.status(400).json({
-        success: false,
-        message: "userPreferenceId không hợp lệ!",
-      });
+    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+      }
+    );
+    if (!updatedPreference || updatedPreference.isDelete) {
+      return res
+        .status(404)
+        .json({ status: "fail", message: "User Preference not found" });
     }
 
     const preference = await UserPreferenceModel.findOne({
@@ -488,5 +493,72 @@ exports.deleteUserByUserId = async (req, res) => {
       success: false,
       message: "Lỗi server: " + error.message,
     });
+  }
+};
+
+exports.resetUserPreference = async (req, res) => {
+  try {
+    const { userPreferenceId } = req.params;
+    console.log("req.params:", req.params);
+
+    // Kiểm tra ID hợp lệ trước khi truy vấn MongoDB
+
+    const defaultValues = {
+      age: "",
+      diet: "",
+      eatHabit: [],
+      favorite: [],
+      longOfPlan: "",
+      mealNumber: "0",
+      goal: "",
+      sleepTime: "",
+      waterDrink: "",
+      hate: [],
+      weight: 0,
+      weightGoal: 0,
+      height: 0,
+      gender: "",
+      phoneNumber: "",
+      underDisease: [],
+      theme: false,
+      isDelete: false,
+    };
+
+    // Kiểm tra xem userPreference có tồn tại không
+    const existingPreference = await UserPreferenceModel.findOne({
+      _id: userPreferenceId,
+      isDelete: false,
+    });
+
+    if (!existingPreference) {
+      return res
+        .status(404)
+        .json({ status: "fail", message: "User Preference not found" });
+    }
+
+    // Cập nhật dữ liệu
+    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(
+      userPreferenceId,
+      { $set: defaultValues },
+      { new: true }
+    );
+
+    if (!updatedPreference) {
+      return res.status(404).json({
+        status: "fail",
+        message: "User Preference not found or could not be updated",
+      });
+    }
+
+    console.log("Updated data:", updatedPreference);
+
+    res.status(200).json({
+      status: "success",
+      message: "User Preference reset successfully",
+      data: updatedPreference,
+    });
+  } catch (error) {
+    console.error("Error resetting userPreference:", error);
+    res.status(500).json({ status: "fail", message: error.message });
   }
 };

@@ -40,7 +40,7 @@ const SleepTime = () => {
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
     // Điều hướng trang tiếp theo
-    navigate("/survey/activity");
+    navigate("/survey/activitylevel");
   };
 
   return (

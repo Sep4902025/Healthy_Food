@@ -48,10 +48,14 @@ const MainLayout = () => {
                 <a href="/about" className="text-gray-700 hover:text-gray-900">
                   About
                 </a>
+<<<<<<< HEAD
                 <a
                   href="/contact"
                   className="text-gray-700 hover:text-gray-900"
                 >
+=======
+                <a href="/contact" className="text-gray-700 hover:text-gray-900">
+>>>>>>> main
                   Contact
                 </a>
               </nav>
@@ -100,7 +104,7 @@ const MainLayout = () => {
           </p>
         </div>
       </footer>
-      {user?.role === "customer" && <UserChatButton />}
+      {user?.role === "user" && <UserChatButton />}
     </div>
   );
 };

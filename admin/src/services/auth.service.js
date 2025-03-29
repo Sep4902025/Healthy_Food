@@ -158,6 +158,30 @@ const AuthService = {
     }
   },
 
+  changePassword: async ({ oldPassword, newPassword, confirmPassword }) => {
+    try {
+      console.log("Request gửi lên:", {
+        oldPassword,
+        newPassword,
+        confirmPassword,
+      });
+
+      const response = await axiosInstance.post(
+        "/users/change-password",
+        { oldPassword, newPassword, confirmPassword },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      console.log("Response từ server:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi đổi mật khẩu:", error.response?.data || error.message);
+      throw error.response?.data || error;
+    }
+  },
+
   forgetPassword: async (email) => {
     try {
       const response = await axiosInstance.post("/users/forget-password", {

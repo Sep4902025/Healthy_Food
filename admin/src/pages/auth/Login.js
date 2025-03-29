@@ -11,6 +11,7 @@ import {
   selectIsAuthenticated,
   selectAuthLoading,
 } from "../../store/selectors/authSelectors";
+import { loginFailure, logout } from "../../store/slices/authSlice";
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -28,6 +29,15 @@ const Login = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    dispatch(loginFailure(null)); // Reset lỗi và trạng thái loading
+  }, [dispatch]);
+
+  useEffect(() => {
+    localStorage.removeItem("authToken"); // Xóa token cũ
+    dispatch(logout()); // Reset Redux state
+  }, [dispatch]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -40,9 +50,12 @@ const Login = () => {
     e.preventDefault();
     try {
       const response = await dispatch(loginWithEmail(formData));
-      console.log("Login response:", response);
+      if (!response) {
+        navigate("/signin");
+        return;
+      }
 
-      if (response && response.success) {
+      if (response.success) {
         const userRole = response.user.role;
         console.log("User role:", userRole);
 
@@ -51,7 +64,7 @@ const Login = () => {
         } else if (userRole === "nutritionist") {
           navigate("/nutritionist");
         } else {
-          navigate("/"); // Điều hướng user bình thường về trang chủ
+          navigate("/");
         }
       }
     } catch (error) {
@@ -64,10 +77,13 @@ const Login = () => {
       const success = await dispatch(
         loginWithGoogle(credentialResponse.credential)
       );
-      if (success) {
-        toast.success("Đăng nhập Google thành công!");
-        navigate("/");
+      if (!success) {
+        navigate("/signin");
+        return;
       }
+
+      toast.success("Đăng nhập Google thành công!");
+      navigate("/");
     } catch (error) {
       toast.error("Đăng nhập Google thất bại");
     }

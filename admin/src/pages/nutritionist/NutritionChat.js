@@ -3,19 +3,19 @@ import { useSelector } from "react-redux";
 import ChatService from "../../services/chat.service";
 import ChatWindow from "../../components/Chat/ChatWindow";
 
-// Component hiển thị item trong danh sách chat
+// Component to display a single conversation item in the list
 const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
   const user = useSelector((state) => state.auth.user);
 
   return (
     <div
-      className="p-4 border-b hover:bg-gray-50 cursor-pointer"
+      className="p-3 border-b hover:bg-gray-50 cursor-pointer"
       onClick={() => onClick(conversation)}
     >
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-medium">{conversation.userId.email}</h3>
-          <p className="text-sm text-gray-500">{conversation.topic}</p>
+          <h3 className="font-medium text-sm">{conversation.userId.email}</h3>
+          <p className="text-xs text-gray-500">{conversation.topic}</p>
           <p className="text-xs text-gray-400">
             {new Date(conversation.createdAt).toLocaleString()}
           </p>
@@ -26,24 +26,24 @@ const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
               {!conversation.checkedBy.includes(user._id) && (
                 <button
                   onClick={() => onCheck(conversation._id)}
-                  className="px-3 py-1 text-sm text-gray-600 border rounded-full hover:bg-gray-100"
+                  className="px-2 py-1 text-xs text-gray-600 border rounded-full hover:bg-gray-100"
                 >
-                  Đã xem
+                  Mark as Seen
                 </button>
               )}
               <button
                 onClick={() => onAccept(conversation._id)}
-                className="px-3 py-1 text-sm text-white bg-blue-500 rounded-full hover:bg-blue-600"
+                className="px-2 py-1 text-xs text-white bg-blue-500 rounded-full hover:bg-blue-600"
               >
-                Tư vấn
+                Consult
               </button>
             </>
           )}
           {conversation.status === "checked" && (
-            <span className="px-3 py-1 text-sm text-gray-500">Đã xem</span>
+            <span className="px-2 py-1 text-xs text-gray-500">Seen</span>
           )}
           {conversation.status === "active" && (
-            <span className="px-3 py-1 text-sm text-green-500">Đang tư vấn</span>
+            <span className="px-2 py-1 text-xs text-green-500">Consulting</span>
           )}
         </div>
       </div>
@@ -55,6 +55,7 @@ const NutritionChat = () => {
   const [activeTab, setActiveTab] = useState("pending");
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
+  const [error, setError] = useState(null);
   const user = useSelector((state) => state.auth.user);
   const [loading, setLoading] = useState(false);
 
@@ -71,15 +72,12 @@ const NutritionChat = () => {
 
   useEffect(() => {
     loadConversations();
-    // Tải lại danh sách cuộc trò chuyện sau 30 giây
     const interval = setInterval(() => {
       loadConversations();
     }, 30000);
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [activeTab]);
+    return () => clearInterval(interval);
+  }, [activeTab, user?._id]);
 
   const loadConversations = async () => {
     try {
@@ -101,11 +99,12 @@ const NutritionChat = () => {
           return;
       }
 
-      if (response?.data?.data) {
-        setConversations(response.data.data);
-      }
+      // Luôn gán data, kể cả khi là mảng rỗng
+      setConversations(response?.data?.data || []);
     } catch (error) {
-      console.error("Lỗi tải conversations:", error);
+      console.error("Error loading conversations:", error);
+      setError("Failed to load conversations. Please try again.");
+      setTimeout(() => setError(null), 5000);
     } finally {
       setLoading(false);
     }
@@ -116,8 +115,14 @@ const NutritionChat = () => {
       await ChatService.acceptConversation(conversationId, user._id);
       await loadConversations();
       setActiveTab("active");
+      const updatedConversation = conversations.find((conv) => conv._id === conversationId);
+      if (updatedConversation) {
+        setSelectedConversation({ ...updatedConversation, status: "active" });
+      }
     } catch (error) {
-      console.error("Lỗi chấp nhận chat:", error);
+      console.error("Error accepting chat:", error);
+      setError("Failed to accept conversation. Please try again.");
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -126,7 +131,9 @@ const NutritionChat = () => {
       await ChatService.markAsChecked(conversationId, user._id);
       await loadConversations();
     } catch (error) {
-      console.error("Lỗi đánh dấu đã xem:", error);
+      console.error("Error marking as seen:", error);
+      setError("Failed to mark as seen. Please try again.");
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -134,36 +141,49 @@ const NutritionChat = () => {
     setSelectedConversation(conversation);
   };
 
+  const handleUpdateConversation = (updatedConversation) => {
+    setSelectedConversation(updatedConversation);
+    setConversations((prev) =>
+      prev.map((conv) => (conv._id === updatedConversation._id ? updatedConversation : conv))
+    );
+  };
+
   return (
-    <div className="flex h-screen">
-      {/* Sidebar danh sách chat */}
-      <div className="w-80 border-r">
+    <div className="flex h-full">
+      {/* Sidebar for conversation list */}
+      <div className="w-64 border-r">
         <div className="flex border-b">
           <button
-            className={`flex-1 p-4 ${activeTab === "pending" ? "border-b-2 border-blue-500" : ""}`}
+            className={`flex-1 p-2 text-sm ${
+              activeTab === "pending" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-600"
+            }`}
             onClick={() => setActiveTab("pending")}
           >
-            Chờ tư vấn
+            Pending
           </button>
           <button
-            className={`flex-1 p-4 ${activeTab === "checked" ? "border-b-2 border-blue-500" : ""}`}
+            className={`flex-1 p-2 text-sm ${
+              activeTab === "checked" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-600"
+            }`}
             onClick={() => setActiveTab("checked")}
           >
-            Đã xem
+            Seen
           </button>
           <button
-            className={`flex-1 p-4 ${activeTab === "messages" ? "border-b-2 border-blue-500" : ""}`}
+            className={`flex-1 p-2 text-sm ${
+              activeTab === "active" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-600"
+            }`}
             onClick={() => setActiveTab("active")}
           >
-            Tin nhắn
+            Messages
           </button>
         </div>
 
-        <div className="overflow-y-auto">
+        <div className="overflow-y-auto h-[calc(100%-3rem)]">
           {loading ? (
-            <div className="p-4 text-center text-gray-500">Đang tải...</div>
+            <div className="p-3 text-center text-gray-500 text-sm">Loading...</div>
           ) : conversations.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">Không có cuộc trò chuyện</div>
+            <div className="p-3 text-center text-gray-500 text-sm">No conversations</div>
           ) : (
             conversations.map((conv) => (
               <ConversationItem
@@ -179,14 +199,20 @@ const NutritionChat = () => {
       </div>
 
       {/* Chat window */}
-      <div className="flex-1">
-        {selectedConversation ? (
-          <ChatWindow conversation={selectedConversation} />
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-500">
-            Chọn một cuộc trò chuyện để bắt đầu
-          </div>
-        )}
+      <div className="flex-1 flex flex-col bg-white overflow-x-hidden">
+        {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          {selectedConversation ? (
+            <ChatWindow
+              conversation={selectedConversation}
+              setCurrentConversation={handleUpdateConversation}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+              Select a conversation to start
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

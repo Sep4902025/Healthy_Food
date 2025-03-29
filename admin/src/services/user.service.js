@@ -41,14 +41,73 @@ axiosInstance.interceptors.response.use(
 );
 
 const UserService = {
-  // Lấy tất cả người dùng (Admin only)
-  getAllUsers: async () => {
+  // Lấy danh sách món ăn đề xuất cho người dùng dựa trên userId
+  getForyou: async (userId) => {
     try {
-      const response = await axiosInstance.get("/users");
+      if (!userId) {
+        return {
+          success: false,
+          message: "userId là bắt buộc!",
+        };
+      }
+
+      const response = await axiosInstance.get(`/foryou/${userId}`);
+      const { success, message, data } = response.data;
+
+      if (success) {
+        return {
+          success: true,
+          message: message || "Danh sách món ăn được lấy thành công",
+          dishes: data, // Danh sách món ăn từ backend
+        };
+      } else {
+        return {
+          success: false,
+          message: message || "Không thể lấy danh sách món ăn",
+        };
+      }
+    } catch (error) {
+      console.error(
+        "Lỗi lấy danh sách món ăn đề xuất:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || "Lỗi khi lấy danh sách món ăn",
+      };
+    }
+  },
+
+  getDishById: async (dishId) => {
+    try {
+      const response = await axios.get(`${API_URL}/dishes/${dishId}`);
+      console.log("Fetched Dish:", response.data); // Debug API response
+      return {
+        success: true,
+        data: response.data.data || {}, // Đảm bảo data luôn là object
+      };
+    } catch (error) {
+      console.error("Error fetching dish:", error);
+      return {
+        success: false,
+        message: error.response?.data?.error || "Lỗi khi tải món ăn",
+      };
+    }
+  },
+
+  // Lấy tất cả người dùng (Admin only)
+  getAllUsers: async (page = 1, limit = 10) => {
+    try {
+      const response = await axiosInstance.get(
+        `/users?page=${page}&limit=${limit}`
+      );
       return {
         success: true,
         users: response.data.data.users,
-        total: response.data.results,
+        total: response.data.total,
+        totalPages: response.data.totalPages,
+        currentPage: response.data.currentPage,
       };
     } catch (error) {
       console.error(
@@ -83,7 +142,27 @@ const UserService = {
       };
     }
   },
-
+  // Tìm kiếm người dùng theo email
+  searchUserByEmail: async (email) => {
+    try {
+      const response = await axiosInstance.get(`/users/search?email=${email}`);
+      return {
+        success: true,
+        users: response.data.data.users,
+        total: response.data.results,
+      };
+    } catch (error) {
+      console.error(
+        "Error searching users by email:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || "Unable to search users by email",
+      };
+    }
+  },
   // Lấy thông tin người dùng hiện tại
   getCurrentUser: async () => {
     try {

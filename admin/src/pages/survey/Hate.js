@@ -6,7 +6,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
 import { loginSuccess } from "../../store/slices/authSlice";
 
-// Tạo danh sách với ID cho từng món
 const hateGroups = [
   {
     name: "Vegetables",
@@ -94,7 +93,6 @@ const hateGroups = [
   },
 ];
 
-// Helper function để tìm item từ ID
 const getItemById = (id) => {
   for (const group of hateGroups) {
     const item = group.items.find((item) => item.id === id);
@@ -151,20 +149,67 @@ const Hate = () => {
       return;
     }
 
-    // Lấy underDisease (ID) từ currentData
-    const underDiseaseIds = currentData.underDisease || [];
+    // Kiểm tra các trường bắt buộc trong currentData
+    const requiredFields = [
+      "age",
+      "diet",
+      "eatHabit",
+      "longOfPlan",
+      "mealNumber",
+      "goal",
+      "sleepTime",
+      "waterDrink",
+      "weight",
+      "weightGoal",
+      "height",
+      "activityLevel",
+      "gender",
+      "underDisease",
+    ];
 
-    // Tạo finalData với ID thay vì nhãn
+    const missingFields = requiredFields.filter(
+      (field) => !currentData[field] && currentData[field] !== 0
+    );
+
+    if (missingFields.length > 0) {
+      alert(
+        `Vui lòng hoàn thành các bước trước đó. Thiếu các trường: ${missingFields.join(
+          ", "
+        )}`
+      );
+      console.error("❌ Thiếu các trường trong quizData:", missingFields);
+      return;
+    }
+
+    // Tạo finalData với các giá trị mặc định nếu cần
     const finalData = {
-      ...currentData,
-      hate: selectedItemIds, // Lưu ID thay vì nhãn
-      underDisease: underDiseaseIds, // Lưu ID thay vì nhãn
       userId: user._id,
       email: user.email,
       name: user.username,
+      age: currentData.age || null,
+      diet: currentData.diet || null,
+      eatHabit: currentData.eatHabit || [],
+      favorite: currentData.favorite || [],
+      longOfPlan: currentData.longOfPlan || null,
+      mealNumber: currentData.mealNumber || "0",
+      goal: currentData.goal || null,
+      sleepTime: currentData.sleepTime || null,
+      waterDrink: currentData.waterDrink || null,
+      hate: selectedItemIds,
+      weight: currentData.weight || 0,
+      weightGoal: currentData.weightGoal || 0,
+      height: currentData.height || 0,
+      activityLevel: currentData.activityLevel
+        ? currentData.activityLevel.value
+        : 1.2, // Lấy value (số), mặc định là 1.2
+      gender: currentData.gender || null,
+      phoneNumber: currentData.phoneNumber || null,
+      underDisease: currentData.underDisease || [],
+      theme: currentData.theme || false,
+      isDelete: false,
     };
 
-    // Kiểm tra finalData trước khi lưu
+    // Kiểm tra finalData trước khi gửi
     if (!finalData.userId || !finalData.email || !finalData.name) {
       alert("Dữ liệu không đầy đủ để gửi lên server!");
       console.error("❌ finalData không đầy đủ:", finalData);
