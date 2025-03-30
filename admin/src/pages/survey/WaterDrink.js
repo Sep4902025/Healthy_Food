@@ -59,7 +59,7 @@ const WaterDrink = () => {
       {/* Header với back button và progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
-          onClick={() => navigate("/survey/activity")}
+          onClick={() => navigate("/survey/activitylevel")}
           className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
         >
           <i className="fa-solid fa-arrow-left text-xl"></i>

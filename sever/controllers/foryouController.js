@@ -51,6 +51,7 @@ const foryouController = {
       const underDiseases = userPreference.underDisease || [];
       const hateIngredients = userPreference.hate || [];
 
+      // Trường hợp không có điều kiện y tế hoặc nguyên liệu ghét
       if (underDiseases.length === 0 && hateIngredients.length === 0) {
         const foryouItems = await Dish.find({
           isVisible: true,
@@ -67,6 +68,7 @@ const foryouController = {
         });
       }
 
+      // Lấy danh sách điều kiện y tế và các món bị hạn chế/khuyến nghị
       const medicalConditions = await MedicalCondition.find({
         _id: { $in: underDiseases },
         isDelete: false,
@@ -111,21 +113,26 @@ const foryouController = {
         {}
       );
 
+      // Xử lý nguyên liệu bị ghét và công thức bị hạn chế
       let restrictedRecipeIds = [];
       if (hateIngredients.length > 0) {
         const recipesWithHatedIngredients = await Recipe.find({
           "ingredients.ingredientId": { $in: hateIngredients },
         });
-        restrictedRecipeIds = recipesWithHatedIngredients.map(
-          (recipe) => recipe._id
+        restrictedRecipeIds = recipesWithHatedIngredients.map((recipe) =>
+          recipe._id.toString()
         );
       }
 
+      // Truy vấn món ăn với điều kiện
       const query = {
         isVisible: true,
         isDelete: false,
         _id: { $nin: restrictedFoods },
-        recipeId: { $nin: restrictedRecipeIds },
+        $or: [
+          { recipeId: { $nin: restrictedRecipeIds } }, // Công thức không bị hạn chế
+          { recipeId: { $exists: false } }, // Hoặc không có recipeId
+        ],
       };
 
       if (nutritionalConstraints.carbs)
@@ -141,6 +148,7 @@ const foryouController = {
         .populate("recipeId")
         .populate("medicalConditionId");
 
+      // Sắp xếp ưu tiên món ăn được khuyến nghị
       const sortedItems = foryouItems.sort((a, b) => {
         const aIsRecommended = recommendedFoods.includes(a._id.toString());
         const bIsRecommended = recommendedFoods.includes(b._id.toString());

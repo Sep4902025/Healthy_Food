@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 const Email = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [error, setError] = useState(""); // State để hiển thị lỗi
 
   // Load email từ sessionStorage khi vào trang
   useEffect(() => {
@@ -14,7 +15,28 @@ const Email = () => {
     }
   }, []);
 
+  // Hàm kiểm tra email
+  const validateEmail = (emailValue) => {
+    if (!emailValue.trim()) {
+      return "Please enter your email.";
+    }
+
+    // Kiểm tra định dạng email cơ bản và đuôi @gmail.com
+    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    if (!gmailRegex.test(emailValue)) {
+      return "Please enter a valid Gmail address (e.g., example@gmail.com).";
+    }
+
+    return "";
+  };
+
   const handleNext = () => {
+    const validationError = validateEmail(email);
+    if (validationError) {
+      setError(validationError); // Chỉ hiển thị lỗi khi nhấn Next
+      return;
+    }
+
     // Lấy dữ liệu hiện tại từ sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
@@ -57,11 +79,17 @@ const Email = () => {
         <input
           type="text"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value)} // Chỉ cập nhật giá trị, không kiểm tra lỗi
           onKeyDown={handleKeyDown}
           placeholder="Enter your email"
-          className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
+          className={`w-full p-4 rounded-lg shadow border ${
+            error ? "border-red-500" : "border-gray-300"
+          } focus:ring-2 focus:ring-green-400 outline-none`}
         />
+
+        {/* Hiển thị thông báo lỗi */}
+        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
         <button
           onClick={handleNext}
           className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"

@@ -106,24 +106,32 @@ const Hate = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [selectedItemIds, setSelectedItemIds] = useState([]);
+  const [favoriteItemIds, setFavoriteItemIds] = useState([]); // Lưu danh sách favorite từ sessionStorage
 
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.hate) {
       setSelectedItemIds(savedData.hate);
     }
+    if (savedData.favorite) {
+      setFavoriteItemIds(savedData.favorite); // Lấy danh sách favorite để kiểm tra
+    }
   }, []);
 
   const toggleItemSelection = (id) => {
+    // Không cho chọn nếu id đã có trong favoriteItemIds
+    if (favoriteItemIds.includes(id)) {
+      return; // Bỏ qua nếu đã thích
+    }
     setSelectedItemIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
   const selectAll = () => {
-    const allItemIds = hateGroups.flatMap((group) =>
-      group.items.map((item) => item.id)
-    );
+    const allItemIds = hateGroups
+      .flatMap((group) => group.items.map((item) => item.id))
+      .filter((id) => !favoriteItemIds.includes(id)); // Loại bỏ các id đã thích
     setSelectedItemIds(allItemIds);
   };
 
@@ -141,15 +149,18 @@ const Hate = () => {
 
   const handleNext = async () => {
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    const updatedData = {
+      ...currentData,
+      hate: selectedItemIds,
+    };
+    sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
-    // Kiểm tra user từ Redux
     if (!user || !user._id || !user.email || !user.username) {
       alert("Thông tin người dùng không đầy đủ. Vui lòng đăng nhập lại!");
       console.error("❌ Thiếu thông tin người dùng trong Redux:", user);
       return;
     }
 
-    // Kiểm tra các trường bắt buộc trong currentData
     const requiredFields = [
       "age",
       "diet",
@@ -181,7 +192,6 @@ const Hate = () => {
       return;
     }
 
-    // Tạo finalData với các giá trị mặc định nếu cần
     const finalData = {
       userId: user._id,
       email: user.email,
@@ -201,7 +211,7 @@ const Hate = () => {
       height: currentData.height || 0,
       activityLevel: currentData.activityLevel
         ? currentData.activityLevel.value
-        : 1.2, // Lấy value (số), mặc định là 1.2
+        : 1.2,
       gender: currentData.gender || null,
       phoneNumber: currentData.phoneNumber || null,
       underDisease: currentData.underDisease || [],
@@ -209,7 +219,6 @@ const Hate = () => {
       isDelete: false,
     };
 
-    // Kiểm tra finalData trước khi gửi
     if (!finalData.userId || !finalData.email || !finalData.name) {
       alert("Dữ liệu không đầy đủ để gửi lên server!");
       console.error("❌ finalData không đầy đủ:", finalData);
@@ -271,7 +280,6 @@ const Hate = () => {
     }
   };
 
-  // Hàm xử lý khi nhấn phím
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.keyCode === 13) {
       handleNext();
@@ -303,7 +311,10 @@ const Hate = () => {
           id="selectAll"
           onChange={handleSelectAllToggle}
           checked={
-            selectedItemIds.length === hateGroups.flatMap((c) => c.items).length
+            selectedItemIds.length ===
+            hateGroups
+              .flatMap((c) => c.items)
+              .filter((item) => !favoriteItemIds.includes(item.id)).length
           }
         />
         <label htmlFor="selectAll">Select All</label>
@@ -322,9 +333,12 @@ const Hate = () => {
                 className={`p-2 rounded-lg ${
                   selectedItemIds.includes(item.id)
                     ? "bg-green-400 text-white"
+                    : favoriteItemIds.includes(item.id)
+                    ? "bg-blue-200 text-gray-600 cursor-not-allowed"
                     : "bg-gray-100 hover:bg-green-200"
                 } transition`}
                 onClick={() => toggleItemSelection(item.id)}
+                disabled={favoriteItemIds.includes(item.id)} // Vô hiệu hóa nếu đã thích
               >
                 {item.name}
               </button>

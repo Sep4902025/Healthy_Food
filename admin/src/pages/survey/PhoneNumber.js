@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 const PhoneNumber = () => {
   const navigate = useNavigate();
   const [selectedPhoneNumber, setSelectedPhoneNumber] = useState("");
+  const [error, setError] = useState(""); // State để hiển thị lỗi
 
   // Load dữ liệu từ sessionStorage khi mở trang
   useEffect(() => {
@@ -14,20 +15,28 @@ const PhoneNumber = () => {
     }
   }, []);
 
-  // Hàm kiểm tra số điện thoại 10 số
+  // Hàm kiểm tra số điện thoại
   const validatePhoneNumber = (phone) => {
-    const phoneRegex = /^[0-9]{10}$/;
-    return phoneRegex.test(phone);
+    if (!phone.trim()) {
+      return "Please enter your phone number.";
+    }
+
+    const numbersOnly = /^[0-9]+$/; // Chỉ cho phép số
+    if (!numbersOnly.test(phone)) {
+      return "Phone number must contain only digits.";
+    }
+
+    if (phone.length !== 10) {
+      return "Phone number must be exactly 10 digits.";
+    }
+
+    return "";
   };
 
   const handleNext = () => {
-    if (!selectedPhoneNumber.trim()) {
-      alert("Please enter your phone number.");
-      return;
-    }
-
-    if (!validatePhoneNumber(selectedPhoneNumber)) {
-      alert("Invalid phone number. Please enter a valid 10-digit number.");
+    const validationError = validatePhoneNumber(selectedPhoneNumber);
+    if (validationError) {
+      setError(validationError); // Chỉ hiển thị lỗi khi nhấn Next
       return;
     }
 
@@ -76,13 +85,18 @@ const PhoneNumber = () => {
       {/* Input field */}
       <div className="mt-4">
         <input
-          type="text"
+          type="text" // Giữ type="text" như file gốc, hoặc có thể dùng type="number" nếu muốn
           value={selectedPhoneNumber}
-          onChange={(e) => setSelectedPhoneNumber(e.target.value)}
+          onChange={(e) => setSelectedPhoneNumber(e.target.value)} // Chỉ cập nhật giá trị, không kiểm tra lỗi
           onKeyDown={handleKeyDown}
           placeholder="Enter your phone number"
-          className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
+          className={`w-full p-4 rounded-lg shadow border ${
+            error ? "border-red-500" : "border-gray-300"
+          } focus:ring-2 focus:ring-green-400 outline-none`}
         />
+
+        {/* Hiển thị thông báo lỗi */}
+        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
         {/* Next button */}
         <button
