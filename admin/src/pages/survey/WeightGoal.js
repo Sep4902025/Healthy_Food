@@ -36,6 +36,13 @@ const WeightGoal = () => {
     navigate("/survey/gender");
   };
 
+  // Hàm xử lý khi nhấn phím
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) {
+      handleNext();
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto p-4">
       {/* Header: nút back + progress bar */}
@@ -59,6 +66,7 @@ const WeightGoal = () => {
           type="number"
           value={selectedWeightGoal}
           onChange={(e) => setSelectedWeightGoal(Number(e.target.value))}
+          onKeyDown={handleKeyDown}
           placeholder="Enter your goal weight (kg)"
           className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
         />

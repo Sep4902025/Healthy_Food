@@ -36,6 +36,13 @@ const Height = () => {
     navigate("/survey/weightgoal");
   };
 
+  // Hàm xử lý khi nhấn phím
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) {
+      handleNext();
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="w-full flex items-center justify-center mt-2">
@@ -56,6 +63,7 @@ const Height = () => {
           type="number"
           value={selectedHeight}
           onChange={(e) => setSelectedHeight(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Enter your height"
           className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
           min="1"

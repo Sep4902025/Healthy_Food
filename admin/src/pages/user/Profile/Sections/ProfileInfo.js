@@ -9,9 +9,45 @@ import {
   FaWeight,
   FaRuler,
   FaCalculator,
+  FaKey,
 } from "react-icons/fa";
 import quizService from "../../../../services/quizService";
 import { selectUser } from "../../../../store/selectors/authSelectors";
+import axios from "axios";
+
+const API_URL = process.env.REACT_APP_API_URL;
+
+const axiosInstance = axios.create({
+  baseURL: API_URL,
+  timeout: 5000,
+});
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error);
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+    }
+    return Promise.reject(error);
+  }
+);
+
+const AuthService = {
+  resetPassword: async (email, password, passwordConfirm) => {
+    try {
+      const response = await axiosInstance.post("/users/reset-password", {
+        email,
+        password,
+        passwordConfirm,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi reset mật khẩu:", error);
+      throw error;
+    }
+  },
+};
 
 const UserProfile = () => {
   const user = useSelector(selectUser);
@@ -19,7 +55,14 @@ const UserProfile = () => {
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const [resetInProgress, setResetInProgress] = useState(false);
-  const [deleteInProgress, setDeleteInProgress] = useState(false); // Thêm state cho trạng thái xóa tài khoản
+  const [deleteInProgress, setDeleteInProgress] = useState(false);
+  const [passwordResetInProgress, setPasswordResetInProgress] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    email: "",
+    password: "",
+    passwordConfirm: "",
+  });
 
   const fetchUserData = async () => {
     if (!user || !user._id) {
@@ -27,14 +70,12 @@ const UserProfile = () => {
       setLoading(false);
       return;
     }
-
     if (!user.userPreferenceId) {
       console.warn("🚨 userPreferenceId không tồn tại trong user:", user);
       setUserData(null);
       setLoading(false);
       return;
     }
-
     try {
       const { success, data, message } =
         await quizService.getUserPreferenceByUserPreferenceId(
@@ -42,7 +83,6 @@ const UserProfile = () => {
         );
       if (success) {
         setUserData(data);
-        console.log("✅ Đã lấy dữ liệu userPreference:", data);
       } else {
         console.error("🚨 Lỗi khi lấy dữ liệu userPreference:", message);
         setUserData(null);
@@ -62,7 +102,6 @@ const UserProfile = () => {
   useEffect(() => {
     if (!user) {
       navigate("/signin");
-      return;
     }
   }, [user, navigate]);
 
@@ -75,13 +114,10 @@ const UserProfile = () => {
       alert("Không tìm thấy userPreferenceId để xóa!");
       return;
     }
-
     const confirmReset = window.confirm(
       "Bạn có chắc chắn muốn xóa tất cả thông tin cá nhân? Hành động này không thể hoàn tác."
     );
-
     if (!confirmReset) return;
-
     try {
       setResetInProgress(true);
       const { success, message } = await quizService.deleteUserPreference(
@@ -102,19 +138,50 @@ const UserProfile = () => {
     }
   };
 
-  // Thêm hàm xóa tài khoản
+  const handleResetPassword = async () => {
+    if (
+      !passwordData.email ||
+      !passwordData.password ||
+      !passwordData.passwordConfirm
+    ) {
+      alert("Vui lòng điền đầy đủ thông tin!");
+      return;
+    }
+    if (passwordData.password !== passwordData.passwordConfirm) {
+      alert("Mật khẩu xác nhận không khớp!");
+      return;
+    }
+    try {
+      setPasswordResetInProgress(true);
+      const result = await AuthService.resetPassword(
+        passwordData.email,
+        passwordData.password,
+        passwordData.passwordConfirm
+      );
+      if (result.success) {
+        alert("Đổi mật khẩu thành công!");
+        setShowPasswordReset(false);
+        setPasswordData({ email: "", password: "", passwordConfirm: "" });
+      } else {
+        alert(`Lỗi: ${result.message || "Không thể đổi mật khẩu"}`);
+      }
+    } catch (error) {
+      alert("Đã xảy ra lỗi khi đổi mật khẩu!");
+      console.error("🚨 Password reset error:", error);
+    } finally {
+      setPasswordResetInProgress(false);
+    }
+  };
+
   const handleDeleteUser = async () => {
     if (!user || !user._id) {
       alert("Không tìm thấy thông tin người dùng để xóa!");
       return;
     }
-
     const confirmDelete = window.confirm(
       "Bạn có chắc chắn muốn xóa tài khoản này? Hành động này không thể hoàn tác và bạn sẽ bị đăng xuất!"
     );
-
     if (!confirmDelete) return;
-
     try {
       setDeleteInProgress(true);
       const { success, message } = await quizService.deleteUserByUserId(
@@ -122,9 +189,7 @@ const UserProfile = () => {
       );
       if (success) {
         alert("Tài khoản đã được xóa thành công!");
-        // Xóa token và đăng xuất
         localStorage.removeItem("token");
-        // Chuyển hướng về trang đăng nhập
         navigate("/signin");
       } else {
         alert(`Lỗi khi xóa tài khoản: ${message}`);
@@ -141,11 +206,8 @@ const UserProfile = () => {
     if (userData) {
       const weight = parseFloat(userData.weight);
       const heightCm = parseFloat(userData.height);
-
-      if (!weight || !heightCm || weight <= 0 || heightCm <= 0) {
+      if (!weight || !heightCm || weight <= 0 || heightCm <= 0)
         return "No data";
-      }
-
       const heightM = heightCm / 100;
       return (weight / (heightM * heightM)).toFixed(2);
     }
@@ -154,14 +216,12 @@ const UserProfile = () => {
 
   const getBMIStatus = () => {
     const bmi = parseFloat(calculateBMI());
-
-    if (isNaN(bmi)) {
+    if (isNaN(bmi))
       return {
         text: "Không có dữ liệu",
         color: "text-gray-600",
         bg: "bg-gray-100",
       };
-    }
     if (bmi < 18)
       return { text: "Thiếu cân", color: "text-blue-600", bg: "bg-blue-100" };
     if (bmi < 30)
@@ -176,7 +236,6 @@ const UserProfile = () => {
         color: "text-yellow-600",
         bg: "bg-yellow-100",
       };
-
     return { text: "Béo phì", color: "text-red-600", bg: "bg-red-100" };
   };
 
@@ -188,7 +247,7 @@ const UserProfile = () => {
     textClass = "text-gray-700",
   }) => (
     <div
-      className={`${colorClass} p-4 rounded-lg border border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md`}
+      className={`${colorClass} p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300`}
     >
       <div className="flex items-center mb-2">
         {icon && <span className="mr-2 text-gray-600">{icon}</span>}
@@ -199,19 +258,19 @@ const UserProfile = () => {
   );
 
   const SectionTitle = ({ title, icon }) => (
-    <div className="flex items-center space-x-2 mb-4 border-b border-gray-200 pb-2">
+    <div className="flex items-center space-x-2 mb-6 border-b border-gray-200 pb-2">
       {icon}
-      <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+      <h3 className="text-2xl font-bold text-gray-800">{title}</h3>
     </div>
   );
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="p-8 rounded-lg bg-white shadow-lg">
-          <div className="flex items-center space-x-4">
-            <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-xl text-gray-700">Đang tải dữ liệu...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="p-6 bg-white rounded-lg shadow-lg animate-pulse">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-lg font-medium text-gray-700">Đang tải...</p>
           </div>
         </div>
       </div>
@@ -219,284 +278,326 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 min-h-screen py-8">
-      <div className="container mx-auto px-4">
-        {/* Profile Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 inline-block px-6 py-2 bg-white rounded-full shadow-md">
-            HỒ SƠ CÁ NHÂN
-          </h1>
-        </div>
-
-        {/* Main Profile Card */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-5xl mx-auto mb-8 border border-gray-100">
-          {/* Profile Header with Avatar */}
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-8 text-white">
-            <div className="flex flex-col md:flex-row items-center md:items-start">
-              {/* Avatar Section */}
-              <div className="flex flex-col items-center mb-6 md:mb-0 md:mr-8">
-                {user.avatar_url ? (
-                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg mb-4">
-                    <img
-                      src={user.avatar_url}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center text-indigo-600 text-4xl font-bold border-4 border-white shadow-lg mb-4">
-                    <span>
-                      {user.username
-                        ? user.username.charAt(0).toUpperCase()
-                        : "?"}
-                    </span>
-                  </div>
-                )}
-                <button className="px-4 py-2 bg-white text-indigo-600 rounded-full text-sm font-bold transition-colors duration-300 flex items-center gap-2 shadow-md hover:bg-indigo-50">
-                  <FaUpload className="h-4 w-4" />
-                  Tải ảnh lên
-                </button>
-              </div>
-
-              {/* User Info Section */}
-              <div className="flex-grow text-center md:text-left">
-                <h2 className="text-3xl font-bold mb-2">
-                  {userData?.name || user.username || "Người dùng"}
-                </h2>
-                <p className="text-indigo-100 mb-4">
-                  {userData?.email || user.email || "No email"}
-                </p>
-                <div className="flex flex-col md:flex-row gap-4">
-                  <button
-                    className="px-6 py-2 bg-white text-indigo-600 rounded-full shadow-md transition-all duration-300 font-bold hover:bg-opacity-90 transform hover:scale-105"
-                    onClick={handleEditClick}
-                  >
-                    <FaEdit className="inline mr-2" />
-                    Chỉnh sửa hồ sơ
-                  </button>
-                  {/* Thêm nút xóa tài khoản */}
-                  <button
-                    className="px-6 py-2 bg-red-600 text-white rounded-full shadow-md transition-all duration-300 font-bold hover:bg-red-700 transform hover:scale-105 disabled:bg-gray-400 disabled:transform-none"
-                    onClick={handleDeleteUser}
-                    disabled={deleteInProgress}
-                  >
-                    {deleteInProgress ? "Đang xóa..." : "Xóa tài khoản"}
-                  </button>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+        {/* Sidebar */}
+        <aside className="lg:w-1/4 w-full">
+          <div className="bg-white p-6 rounded-xl shadow-lg sticky top-6">
+            <div className="space-y-4">
+              <button
+                onClick={handleEditClick}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 shadow-md"
+              >
+                <FaEdit /> Chỉnh sửa hồ sơ
+              </button>
+              <button
+                onClick={() => setShowPasswordReset(!showPasswordReset)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-300 shadow-md"
+              >
+                <FaKey /> Đổi mật khẩu
+              </button>
+              <button
+                onClick={handleReset}
+                disabled={resetInProgress}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-300 shadow-md disabled:bg-red-300"
+              >
+                {resetInProgress ? "Đang xóa..." : "Xóa dữ liệu cá nhân"}
+              </button>
+              <button
+                onClick={handleDeleteUser}
+                disabled={deleteInProgress}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-all duration-300 shadow-md disabled:bg-red-400"
+              >
+                {deleteInProgress ? "Đang xóa..." : "Xóa tài khoản"}
+              </button>
             </div>
           </div>
+        </aside>
 
-          {/* Body Measurements Card */}
-          <div className="p-6">
-            <SectionTitle
-              title="Chỉ số cơ thể"
-              icon={<FaCalculator className="text-indigo-600 text-xl" />}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-blue-50 rounded-xl p-6 border border-blue-100 shadow-sm flex flex-col items-center md:items-start">
-                <div className="flex items-center mb-3">
-                  <FaWeight className="text-blue-500 mr-2 text-xl" />
-                  <span className="text-gray-600 font-medium">Cân nặng</span>
+        {/* Main Content */}
+        <main className="lg:w-3/4 w-full">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-600 to-blue-500 p-6 text-white">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="relative">
+                  {user.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt="Avatar"
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-3xl font-bold text-indigo-600 border-4 border-white shadow-lg">
+                      {user.username ? user.username[0].toUpperCase() : "?"}
+                    </div>
+                  )}
+                  <button className="absolute bottom-0 right-0 bg-white text-indigo-600 p-2 rounded-full shadow-md hover:bg-indigo-100 transition-all duration-300">
+                    <FaUpload />
+                  </button>
                 </div>
-                <div className="text-3xl font-bold text-blue-600 flex items-baseline">
-                  {userData?.weight || "?"}
-                  <span className="text-sm font-normal text-gray-500 ml-1">
-                    kg
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-green-50 rounded-xl p-6 border border-green-100 shadow-sm flex flex-col items-center md:items-start">
-                <div className="flex items-center mb-3">
-                  <FaRuler className="text-green-500 mr-2 text-xl" />
-                  <span className="text-gray-600 font-medium">Chiều cao</span>
-                </div>
-                <div className="text-3xl font-bold text-green-600 flex items-baseline">
-                  {userData?.height || "?"}
-                  <span className="text-sm font-normal text-gray-500 ml-1">
-                    cm
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className={`${
-                  getBMIStatus().bg
-                } rounded-xl p-6 border border-${getBMIStatus().color.replace(
-                  "text-",
-                  ""
-                )} shadow-sm flex flex-col items-center md:items-start`}
-              >
-                <div className="flex items-center mb-3">
-                  <FaCalculator className="text-gray-600 mr-2 text-xl" />
-                  <span className="text-gray-600 font-medium">BMI</span>
-                </div>
-                <div className="flex flex-col">
-                  <div className={`text-3xl font-bold ${getBMIStatus().color}`}>
-                    {calculateBMI() || "?"}
-                  </div>
-                  <div className={`text-sm ${getBMIStatus().color}`}>
-                    {getBMIStatus().text}
-                  </div>
+                <div className="text-center sm:text-left">
+                  <h1 className="text-2xl sm:text-3xl font-bold">
+                    {userData?.name || user.username || "Người dùng"}
+                  </h1>
+                  <p className="text-indigo-100 mt-1">
+                    {userData?.email || user.email || "Chưa có email"}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Personal Details Section */}
-            {userData ? (
-              <div className="mt-8">
-                <SectionTitle
-                  title="Thông tin cá nhân"
-                  icon={<FaUser className="text-indigo-600 text-xl" />}
-                />
-
-                {/* Basic Information */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-l-4 border-indigo-500 pl-3">
-                    Thông tin cơ bản
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <InfoItem
-                      label="Tuổi"
-                      value={userData.age || "Chưa có dữ liệu"}
-                      colorClass="bg-blue-50"
-                      textClass="text-blue-700"
-                    />
-                    <InfoItem
-                      label="Giới tính"
-                      value={userData.gender || "Chưa có dữ liệu"}
-                      colorClass="bg-purple-50"
-                      textClass="text-purple-700"
-                    />
-                    <InfoItem
-                      label="Số điện thoại"
-                      value={userData.phoneNumber || "Chưa có dữ liệu"}
-                      colorClass="bg-indigo-50"
-                      textClass="text-indigo-700"
-                    />
+            {/* Body */}
+            <div className="p-6">
+              {/* Body Measurements */}
+              <SectionTitle
+                title="Chỉ số cơ thể"
+                icon={<FaCalculator className="text-indigo-600" />}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="bg-blue-50 p-4 rounded-lg shadow-sm flex items-center gap-3">
+                  <FaWeight className="text-blue-500 text-2xl" />
+                  <div>
+                    <p className="text-gray-600">Cân nặng</p>
+                    <p className="text-xl font-semibold text-blue-700">
+                      {userData?.weight || "?"}{" "}
+                      <span className="text-sm">kg</span>
+                    </p>
                   </div>
                 </div>
-
-                {/* Diet Goals */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-l-4 border-green-500 pl-3">
-                    Mục tiêu dinh dưỡng
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InfoItem
-                      label="Mục tiêu"
-                      value={userData.goal || "Chưa có dữ liệu"}
-                      colorClass="bg-green-50"
-                      textClass="text-green-700"
-                    />
-                    <InfoItem
-                      label="Thời hạn kế hoạch"
-                      value={userData.longOfPlan || "Chưa có dữ liệu"}
-                      colorClass="bg-teal-50"
-                      textClass="text-teal-700"
-                    />
+                <div className="bg-green-50 p-4 rounded-lg shadow-sm flex items-center gap-3">
+                  <FaRuler className="text-green-500 text-2xl" />
+                  <div>
+                    <p className="text-gray-600">Chiều cao</p>
+                    <p className="text-xl font-semibold text-green-700">
+                      {userData?.height || "?"}{" "}
+                      <span className="text-sm">cm</span>
+                    </p>
                   </div>
                 </div>
-
-                {/* Diet Preferences */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-l-4 border-amber-500 pl-3">
-                    Sở thích ăn uống
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InfoItem
-                      label="Chế độ ăn"
-                      value={userData.diet || "Chưa có dữ liệu"}
-                      colorClass="bg-amber-50"
-                      textClass="text-amber-700"
-                    />
-                    <InfoItem
-                      label="Thói quen ăn uống"
-                      value={userData.eatHabit?.join(", ") || "Chưa có dữ liệu"}
-                      colorClass="bg-orange-50"
-                      textClass="text-orange-700"
-                    />
-                    <InfoItem
-                      label="Thực phẩm ưa thích"
-                      value={userData.favorite?.join(", ") || "Chưa có dữ liệu"}
-                      colorClass="bg-yellow-50"
-                      textClass="text-yellow-700"
-                    />
-                    <InfoItem
-                      label="Dị ứng thực phẩm"
-                      value={userData.hate?.join(", ") || "Chưa có dữ liệu"}
-                      colorClass="bg-red-50"
-                      textClass="text-red-700"
-                    />
-                    <InfoItem
-                      label="Số bữa ăn mỗi ngày"
-                      value={userData.mealNumber || "Chưa có dữ liệu"}
-                      colorClass="bg-amber-50"
-                      textClass="text-amber-700"
-                    />
+                <div
+                  className={`${
+                    getBMIStatus().bg
+                  } p-4 rounded-lg shadow-sm flex items-center gap-3`}
+                >
+                  <FaCalculator className="text-gray-600 text-2xl" />
+                  <div>
+                    <p className="text-gray-600">BMI</p>
+                    <p
+                      className={`text-xl font-semibold ${
+                        getBMIStatus().color
+                      }`}
+                    >
+                      {calculateBMI()} - {getBMIStatus().text}
+                    </p>
                   </div>
-                </div>
-
-                {/* Health Metrics */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-l-4 border-purple-500 pl-3">
-                    Chỉ số sức khỏe
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <InfoItem
-                      label="Thời gian ngủ"
-                      value={userData.sleepTime || "Chưa có dữ liệu"}
-                      colorClass="bg-purple-50"
-                      textClass="text-purple-700"
-                    />
-                    <InfoItem
-                      label="Lượng nước uống (L)"
-                      value={userData.waterDrink || "Chưa có dữ liệu"}
-                      colorClass="bg-blue-50"
-                      textClass="text-blue-700"
-                    />
-                    <InfoItem
-                      label="Bệnh nền"
-                      value={userData.underDisease || "Không có"}
-                      colorClass="bg-pink-50"
-                      textClass="text-pink-700"
-                    />
-                  </div>
-                </div>
-
-                {/* Reset Button */}
-                <div className="mt-8 flex justify-center">
-                  <button
-                    className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-300 shadow-md font-medium transform hover:scale-105 disabled:transform-none"
-                    onClick={handleReset}
-                    disabled={resetInProgress}
-                  >
-                    {resetInProgress ? "Đang xóa..." : "Xóa dữ liệu cá nhân"}
-                  </button>
                 </div>
               </div>
-            ) : (
-              <div className="text-center p-8 bg-gray-50 rounded-lg shadow-inner border border-gray-200 mt-8">
-                <div className="flex flex-col items-center">
-                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                    <FaUser className="text-gray-400 text-2xl" />
+
+              {/* Personal Info */}
+              {userData ? (
+                <>
+                  <SectionTitle
+                    title="Thông tin cá nhân"
+                    icon={<FaUser className="text-indigo-600" />}
+                  />
+                  <div className="space-y-8">
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                        Thông tin cơ bản
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <InfoItem
+                          label="Tuổi"
+                          value={userData.age}
+                          colorClass="bg-blue-50"
+                          textClass="text-blue-700"
+                        />
+                        <InfoItem
+                          label="Giới tính"
+                          value={userData.gender}
+                          colorClass="bg-purple-50"
+                          textClass="text-purple-700"
+                        />
+                        <InfoItem
+                          label="Số điện thoại"
+                          value={userData.phoneNumber}
+                          colorClass="bg-indigo-50"
+                          textClass="text-indigo-700"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                        Mục tiêu dinh dưỡng
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <InfoItem
+                          label="Mục tiêu"
+                          value={userData.goal}
+                          colorClass="bg-green-50"
+                          textClass="text-green-700"
+                        />
+                        <InfoItem
+                          label="Thời hạn kế hoạch"
+                          value={userData.longOfPlan}
+                          colorClass="bg-teal-50"
+                          textClass="text-teal-700"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                        Sở thích ăn uống
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <InfoItem
+                          label="Chế độ ăn"
+                          value={userData.diet}
+                          colorClass="bg-amber-50"
+                          textClass="text-amber-700"
+                        />
+                        <InfoItem
+                          label="Thói quen ăn uống"
+                          value={userData.eatHabit?.join(", ")}
+                          colorClass="bg-orange-50"
+                          textClass="text-orange-700"
+                        />
+                        <InfoItem
+                          label="Thực phẩm ưa thích"
+                          value={userData.favorite?.join(", ")}
+                          colorClass="bg-yellow-50"
+                          textClass="text-yellow-700"
+                        />
+                        <InfoItem
+                          label="Dị ứng thực phẩm"
+                          value={userData.hate?.join(", ")}
+                          colorClass="bg-red-50"
+                          textClass="text-red-700"
+                        />
+                        <InfoItem
+                          label="Số bữa ăn/ngày"
+                          value={userData.mealNumber}
+                          colorClass="bg-amber-50"
+                          textClass="text-amber-700"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                        Chỉ số sức khỏe
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <InfoItem
+                          label="Thời gian ngủ"
+                          value={userData.sleepTime}
+                          colorClass="bg-purple-50"
+                          textClass="text-purple-700"
+                        />
+                        <InfoItem
+                          label="Lượng nước (L)"
+                          value={userData.waterDrink}
+                          colorClass="bg-blue-50"
+                          textClass="text-blue-700"
+                        />
+                        <InfoItem
+                          label="Bệnh nền"
+                          value={userData.underDisease || "Không có"}
+                          colorClass="bg-pink-50"
+                          textClass="text-pink-700"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-gray-600 text-lg mb-4">
-                    Chưa có dữ liệu cá nhân
-                  </p>
+                </>
+              ) : (
+                <div className="text-center p-8 bg-gray-50 rounded-lg">
+                  <FaUser className="text-4xl text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">Chưa có dữ liệu cá nhân</p>
                   <button
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-300 shadow-md font-medium"
                     onClick={handleEditClick}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300"
                   >
                     Nhập thông tin ngay
                   </button>
                 </div>
+              )}
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Password Reset Modal */}
+      {showPasswordReset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Đổi mật khẩu
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={passwordData.email}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, email: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Nhập email"
+                />
               </div>
-            )}
+              <div>
+                <label className="block text-gray-700 mb-1">Mật khẩu mới</label>
+                <input
+                  type="password"
+                  value={passwordData.password}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      password: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Nhập mật khẩu mới"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 mb-1">
+                  Xác nhận mật khẩu
+                </label>
+                <input
+                  type="password"
+                  value={passwordData.passwordConfirm}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      passwordConfirm: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Xác nhận mật khẩu"
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowPasswordReset(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleResetPassword}
+                  disabled={passwordResetInProgress}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-indigo-300"
+                >
+                  {passwordResetInProgress ? "Đang xử lý..." : "Xác nhận"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

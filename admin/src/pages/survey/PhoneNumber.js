@@ -47,6 +47,13 @@ const PhoneNumber = () => {
     navigate("/survey/email");
   };
 
+  // Hàm xử lý khi nhấn phím
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) {
+      handleNext();
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto p-4">
       {/* Header with back button & progress bar */}
@@ -72,6 +79,7 @@ const PhoneNumber = () => {
           type="text"
           value={selectedPhoneNumber}
           onChange={(e) => setSelectedPhoneNumber(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Enter your phone number"
           className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
         />
