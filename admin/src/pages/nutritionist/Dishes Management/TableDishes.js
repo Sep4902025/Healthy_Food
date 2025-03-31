@@ -24,7 +24,7 @@ const TableDishes = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0); // Đổi từ 1 thành 0
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [totalItems, setTotalItems] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -53,7 +53,7 @@ const TableDishes = () => {
   const fetchDishes = async () => {
     setIsLoading(true);
     try {
-      const response = await dishesService.getAllDishes(currentPage, itemsPerPage, searchTerm);
+      const response = await dishesService.getAllDishes(currentPage + 1, itemsPerPage, searchTerm); // +1 vì API dùng từ 1
       if (response.success) {
         const filteredByType =
           filterType === "all"
@@ -114,7 +114,11 @@ const TableDishes = () => {
   const handleEditClick = (dish) => {
     let flavorArray = [];
     if (Array.isArray(dish.flavor)) {
-      if (dish.flavor.length > 0 && typeof dish.flavor[0] === "string" && dish.flavor[0].includes(",")) {
+      if (
+        dish.flavor.length > 0 &&
+        typeof dish.flavor[0] === "string" &&
+        dish.flavor[0].includes(",")
+      ) {
         flavorArray = dish.flavor[0].split(",").map((f) => f.trim());
       } else {
         flavorArray = dish.flavor;
@@ -143,7 +147,8 @@ const TableDishes = () => {
     if (!editData.type) newErrors.type = "Type is required";
     if (!editData.season) newErrors.season = "Season is required";
     if (editData.videoUrl) {
-      const youtubeEmbedRegex = /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
+      const youtubeEmbedRegex =
+        /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
       if (!youtubeEmbedRegex.test(editData.videoUrl)) {
         newErrors.videoUrl = "Video URL must be a valid YouTube embed link";
       }
@@ -179,7 +184,8 @@ const TableDishes = () => {
       if (response.success) {
         alert("Deleted successfully!");
         fetchDishes();
-        if (dishes.length === 1 && currentPage > 1) {
+        if (dishes.length === 1 && currentPage > 0) {
+          // Điều chỉnh vì currentPage từ 0
           setCurrentPage(currentPage - 1);
         }
       } else {
@@ -192,9 +198,7 @@ const TableDishes = () => {
     const updatedDish = { ...dish, isVisible: !dish.isVisible };
     try {
       await dishesService.updateDish(dish._id, { isVisible: !dish.isVisible });
-      setDishes((prevDishes) =>
-        prevDishes.map((d) => (d._id === dish._id ? updatedDish : d))
-      );
+      setDishes((prevDishes) => prevDishes.map((d) => (d._id === dish._id ? updatedDish : d)));
     } catch (error) {
       alert("Failed to update visibility. Please try again.");
     }
@@ -233,11 +237,8 @@ const TableDishes = () => {
     setErrors({ ...errors, cookingTime: "" });
   };
 
-  const handlePageClick = (data) => {
-    const selectedPage = data.selected + 1;
-    if (selectedPage >= 1 && selectedPage <= totalPages) {
-      setCurrentPage(selectedPage);
-    }
+  const handlePageClick = ({ selected }) => {
+    setCurrentPage(selected); // selected là index từ 0
   };
 
   const closeEditModal = () => {
@@ -260,9 +261,7 @@ const TableDishes = () => {
     <div className="container mx-auto px-6 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
-          List of Dishes
-        </h2>
+        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">List of Dishes</h2>
         <button
           onClick={() => navigate("/nutritionist/dishes/add")}
           className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
@@ -277,7 +276,7 @@ const TableDishes = () => {
           <button
             onClick={() => {
               setFilterType("all");
-              setCurrentPage(1);
+              setCurrentPage(0); // Reset về 0
             }}
             className={`px-4 py-2 rounded-md font-semibold ${
               filterType === "all"
@@ -292,7 +291,7 @@ const TableDishes = () => {
               key={type}
               onClick={() => {
                 setFilterType(filterType === type ? "all" : type);
-                setCurrentPage(1);
+                setCurrentPage(0); // Reset về 0
               }}
               className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
                 filterType === type
@@ -312,7 +311,7 @@ const TableDishes = () => {
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              setCurrentPage(1);
+              setCurrentPage(0); // Reset về 0
             }}
           />
         </div>
@@ -334,9 +333,7 @@ const TableDishes = () => {
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center text-gray-800">
-                      {dish.name}
-                    </h3>
+                    <h3 className="text-lg font-semibold text-center text-gray-800">{dish.name}</h3>
                     <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
                       <span className="mr-3 flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
@@ -410,7 +407,8 @@ const TableDishes = () => {
             setLimit={setItemsPerPage}
             totalItems={totalItems}
             handlePageClick={handlePageClick}
-            text={"Dishes"}
+            currentPage={currentPage} // Thêm currentPage
+            text="Dishes"
           />
         </div>
       )}
@@ -440,9 +438,7 @@ const TableDishes = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                   <input
                     type="text"
                     name="name"
@@ -482,9 +478,7 @@ const TableDishes = () => {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Type *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
                     <select
                       name="type"
                       value={editData.type || ""}
@@ -505,9 +499,7 @@ const TableDishes = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Video URL
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
                   <input
                     type="text"
                     name="videoUrl"
@@ -524,9 +516,7 @@ const TableDishes = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Season *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Season *</label>
                   <select
                     name="season"
                     value={editData.season || ""}
@@ -546,16 +536,16 @@ const TableDishes = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Flavor *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Flavor *</label>
                   <div className="flex flex-wrap gap-4">
                     {FLAVOR_OPTIONS.map((flavor) => (
                       <label key={flavor} className="inline-flex items-center">
                         <input
                           type="checkbox"
                           value={flavor}
-                          checked={Array.isArray(editData.flavor) && editData.flavor.includes(flavor)}
+                          checked={
+                            Array.isArray(editData.flavor) && editData.flavor.includes(flavor)
+                          }
                           onChange={handleFlavorChange}
                           className="mr-2 h-4 w-4 text-[#40B491] focus:ring-[#40B491] rounded"
                         />

@@ -22,7 +22,7 @@ const AboutUsManagement = () => {
   const fetchAboutUs = async () => {
     setLoading(true);
     try {
-      const result = await aboutService.getAboutUs(currentPage, itemsPerPage);
+      const result = await aboutService.getAboutUs(currentPage + 1, itemsPerPage); // +1 vì API dùng từ 1
       console.log("🔍 Fetched About Us Data:", result);
       if (result.success) {
         const fetchedAboutUs = result.data.data.aboutUs || [];
@@ -215,7 +215,6 @@ const AboutUsManagement = () => {
         </div>
       </div>
 
-      {/* Modal Form */}
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">

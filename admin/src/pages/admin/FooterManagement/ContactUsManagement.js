@@ -18,7 +18,7 @@ const ContactUsManagement = () => {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      const result = await contactServices.getContacts(currentPage + 1, itemsPerPage);
+      const result = await contactServices.getContacts(currentPage + 1, itemsPerPage); // +1 vì API dùng từ 1
       if (result.success) {
         setContacts(result.data.data.contactUs || []);
         setTotalItems(result.data.total || 0);

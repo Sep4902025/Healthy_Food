@@ -1,4 +1,11 @@
-const { MealPlan, MealDay, Meal, MealTracking, UserMealPlan } = require("../models/MealPlan");
+const {
+  MealPlan,
+  MealDay,
+  Meal,
+  MealTracking,
+  UserMealPlan,
+  UserMealPlanHistory,
+} = require("../models/MealPlan");
 const mongoose = require("mongoose");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
@@ -491,9 +498,7 @@ exports.toggleMealPlanStatus = async (req, res) => {
 // Hàm cập nhật trạng thái tất cả reminder liên quan đến một MealPlan
 const updateRemindersForMealPlan = async (mealPlanId, isPause) => {
   try {
-    console.log(
-      `${isPause ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"} reminders cho MealPlan ${mealPlanId}`
-    );
+    console.log(`${isPause ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"} reminders cho MealPlan ${mealPlanId}`);
 
     // Tìm tất cả reminder liên quan đến MealPlan
     const reminders = await Reminder.find({ mealPlanId });
@@ -1507,7 +1512,7 @@ exports.getAllMealPlanPayment = async (req, res) => {
 
     let filter = {
       paymentId: { $exists: true, $ne: null }, // Only get MealPlans with paymentId
-      isDelete: false // Exclude soft-deleted MealPlans
+      isDelete: false, // Exclude soft-deleted MealPlans
     };
 
     if (role === "user") {

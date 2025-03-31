@@ -2,9 +2,18 @@ import React from "react";
 import ReactPaginate from "react-paginate";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
 
-const Pagination = ({ limit, setLimit, totalItems, handlePageClick, text }) => {
+const Pagination = ({ limit, setLimit, totalItems, handlePageClick, currentPage, text }) => {
   // Fallback to 0 if totalItems is undefined
   const safeTotalItems = typeof totalItems === "number" ? totalItems : 0;
+
+  // Tính số trang dựa trên totalItems và limit
+  const pageCount = Math.ceil(safeTotalItems / limit);
+
+  // Xử lý khi thay đổi trang
+  const onPageChange = (selectedItem) => {
+    const newPage = selectedItem.selected;
+    handlePageClick({ selected: newPage });
+  };
 
   return (
     <div className="flex items-center justify-between">
@@ -21,8 +30,8 @@ const Pagination = ({ limit, setLimit, totalItems, handlePageClick, text }) => {
             <option value="7">7</option>
             <option value="8">8</option>
             <option value="9">9</option>
+            <option value="10">10</option> {/* Thêm tùy chọn 10 để đồng bộ */}
           </select>
-          {/* Thêm mũi tên trắng tùy chỉnh */}
           <span className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
             <svg
               className="w-3 h-3 text-white"
@@ -58,14 +67,15 @@ const Pagination = ({ limit, setLimit, totalItems, handlePageClick, text }) => {
         breakLabel="..."
         breakClassName="w-[25px] h-[25px] rounded-full flex items-center justify-center text-xs font-semibold"
         breakLinkClassName="w-full h-full flex items-center justify-center bg-custom-green-100 rounded-full text-custom-green"
-        pageCount={Math.ceil(safeTotalItems / limit)}
+        pageCount={pageCount}
         marginPagesDisplayed={2}
         pageRangeDisplayed={5}
         containerClassName="flex items-center gap-[5px]"
-        activeClassName="text-white"
-        activeLinkClassName="bg-custom-green text-white"
-        onPageChange={handlePageClick}
+        activeClassName="bg-custom-green text-white"
+        activeLinkClassName="bg-custom-green text-white border-custom-green"
+        onPageChange={onPageChange}
         disabledClassName="opacity-40 cursor-not-allowed"
+        forcePage={currentPage} // Đồng bộ với currentPage từ parent
       />
     </div>
   );

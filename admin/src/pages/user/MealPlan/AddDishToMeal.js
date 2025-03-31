@@ -15,7 +15,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const [dishTypes, setDishTypes] = useState([]);
   const [selectedType, setSelectedType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0); // Đổi từ 1 thành 0
   const [limit, setLimit] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -24,7 +24,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
       try {
         setLoading(true);
         const [dishesResponse, mealResponse, favoritesResponse] = await Promise.all([
-          mealPlanService.getAllDishes(currentPage, limit, searchQuery),
+          mealPlanService.getAllDishes(currentPage + 1, limit, searchQuery), // +1 vì API dùng từ 1
           mealPlanService.getMealByMealId(mealPlanId, mealDayId, mealId),
           homeService.getFavoriteDishes(userId),
         ]);
@@ -130,8 +130,8 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     return true;
   });
 
-  const handlePageClick = (data) => {
-    setCurrentPage(data.selected + 1);
+  const handlePageClick = ({ selected }) => {
+    setCurrentPage(selected); // Sử dụng selected (từ 0)
   };
 
   if (loading) {
@@ -182,7 +182,10 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               type="text"
               placeholder="Search for a dish..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(0); // Reset về 0 khi tìm kiếm
+              }}
               className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full"
             />
             <span className="absolute left-3 top-2.5">🔍</span>
@@ -190,7 +193,10 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
 
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setActiveFilter("all")}
+              onClick={() => {
+                setActiveFilter("all");
+                setCurrentPage(0); // Reset về 0
+              }}
               className={`px-3 py-1.5 rounded-lg text-sm ${
                 activeFilter === "all"
                   ? "bg-blue-600 text-white"
@@ -200,7 +206,10 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               All
             </button>
             <button
-              onClick={() => setActiveFilter("favorites")}
+              onClick={() => {
+                setActiveFilter("favorites");
+                setCurrentPage(0); // Reset về 0
+              }}
               className={`px-3 py-1.5 rounded-lg text-sm flex items-center ${
                 activeFilter === "favorites"
                   ? "bg-blue-600 text-white"
@@ -213,7 +222,10 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
 
             <select
               value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
+              onChange={(e) => {
+                setSelectedType(e.target.value);
+                setCurrentPage(0); // Reset về 0
+              }}
               className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white"
             >
               <option value="all">All Types</option>
@@ -321,6 +333,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               setLimit={setLimit}
               totalItems={totalItems}
               handlePageClick={handlePageClick}
+              currentPage={currentPage} // Thêm currentPage
               text="dishes"
             />
           </div>

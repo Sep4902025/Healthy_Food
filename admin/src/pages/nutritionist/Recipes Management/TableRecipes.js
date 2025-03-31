@@ -151,12 +151,13 @@ const TableRecipes = () => {
         const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
         if (recipeResponse.success && recipeResponse.data?.status === "success") {
           const recipe = recipeResponse.data.data;
-          const existingIngredients = recipe.ingredients?.map((ing) => ({
-            _id: ing.ingredientId._id,
-            name: ing.ingredientId.name || "Unknown",
-            quantity: ing.quantity,
-            unit: ing.unit,
-          })) || [];
+          const existingIngredients =
+            recipe.ingredients?.map((ing) => ({
+              _id: ing.ingredientId._id,
+              name: ing.ingredientId.name || "Unknown",
+              quantity: ing.quantity,
+              unit: ing.unit,
+            })) || [];
           setNewRecipeData({
             ingredients: existingIngredients,
             instruction: recipe.instruction || [],
@@ -303,7 +304,11 @@ const TableRecipes = () => {
     });
 
     if (duplicates.length > 0) {
-      alert(`The following ingredients are already in the recipe: ${duplicates.join(", ")}. Please edit the existing entries instead.`);
+      alert(
+        `The following ingredients are already in the recipe: ${duplicates.join(
+          ", "
+        )}. Please edit the existing entries instead.`
+      );
     } else {
       setErrors({ ...errors, ingredients: "" });
     }
@@ -317,7 +322,9 @@ const TableRecipes = () => {
       return;
     }
 
-    const confirmDelete = window.confirm(`Are you sure you want to delete the recipe for "${dish.name}"?`);
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the recipe for "${dish.name}"?`
+    );
     if (!confirmDelete) return;
 
     try {
@@ -337,7 +344,7 @@ const TableRecipes = () => {
   };
 
   const handlePageClick = (data) => {
-    const selectedPage = data.selected + 1;
+    const selectedPage = data.selected + 1; // Chuyển từ 0-based sang 1-based
     if (selectedPage >= 1 && selectedPage <= totalDishPages) {
       setCurrentPage(selectedPage);
     }
@@ -347,9 +354,7 @@ const TableRecipes = () => {
     <div className="container mx-auto px-6 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
-          List of Dishes
-        </h2>
+        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">List of Dishes</h2>
       </div>
 
       {/* Filters and Search */}
@@ -419,9 +424,7 @@ const TableRecipes = () => {
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center text-gray-800">
-                      {dish.name}
-                    </h3>
+                    <h3 className="text-lg font-semibold text-center text-gray-800">{dish.name}</h3>
                     <div className="text-sm text-gray-600 mt-2 space-y-2">
                       {/* First Row: Cooking Time, Servings, Calories */}
                       <div className="flex justify-between items-center px-4">
@@ -499,6 +502,7 @@ const TableRecipes = () => {
             setLimit={setItemsPerPage}
             totalItems={totalItems}
             handlePageClick={handlePageClick}
+            currentPage={currentPage - 1} // Chuyển sang 0-based cho ReactPaginate
             text={"Dishes"}
           />
         </div>
@@ -898,7 +902,10 @@ const IngredientSelectionModal = ({
         tempSelectedIngredients.filter((item) => item._id !== ingredient._id)
       );
     } else {
-      setTempSelectedIngredients([...tempSelectedIngredients, { ...ingredient, quantity: "", unit: "" }]);
+      setTempSelectedIngredients([
+        ...tempSelectedIngredients,
+        { ...ingredient, quantity: "", unit: "" },
+      ]);
     }
   };
 
@@ -909,7 +916,7 @@ const IngredientSelectionModal = ({
   };
 
   const handlePageClick = (data) => {
-    const selectedPage = data.selected + 1;
+    const selectedPage = data.selected + 1; // Chuyển từ 0-based sang 1-based
     if (selectedPage >= 1 && selectedPage <= totalPages) {
       setCurrentPage(selectedPage);
     }
@@ -1052,9 +1059,10 @@ const IngredientSelectionModal = ({
           <div className="p-4 bg-gray-50">
             <Pagination
               limit={itemsPerPage}
-              setLimit={(value) => setItemsPerPage(value)}
+              setLimit={setItemsPerPage}
               totalItems={totalItems}
               handlePageClick={handlePageClick}
+              currentPage={currentPage - 1} // Chuyển sang 0-based
               text={"Ingredients"}
             />
           </div>
