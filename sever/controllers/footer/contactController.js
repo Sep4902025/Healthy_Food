@@ -7,15 +7,24 @@ exports.getAllContactUs = catchAsync(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
   const limit = parseInt(req.query.limit) || 10; // Mặc định 10 mục mỗi trang
   const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
+  const sort = req.query.sort || "createdAt"; // Mặc định sắp xếp theo createdAt
+  const order = req.query.order || "desc"; // Mặc định thứ tự giảm dần
 
   // Điều kiện lọc: không bao gồm liên hệ đã xóa
   const query = { isDeleted: false };
 
+  // Xử lý sắp xếp
+  const sortOrder = order === "desc" ? -1 : 1;
+  const sortOptions = { [sort]: sortOrder };
+
   // Đếm tổng số liên hệ thỏa mãn điều kiện
   const totalContacts = await ContactUs.countDocuments(query);
 
-  // Lấy danh sách liên hệ với phân trang
-  const contactUs = await ContactUs.find(query).skip(skip).limit(limit);
+  // Lấy danh sách liên hệ với phân trang và sắp xếp
+  const contactUs = await ContactUs.find(query)
+    .sort(sortOptions) // Áp dụng sắp xếp
+    .skip(skip)
+    .limit(limit);
 
   // Tính tổng số trang
   const totalPages = Math.ceil(totalContacts / limit);

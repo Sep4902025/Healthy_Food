@@ -9,6 +9,8 @@ exports.getAllAboutUs = catchAsync(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
   const limit = parseInt(req.query.limit) || 10; // Mặc định 10 mục mỗi trang
   const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
+  const sort = req.query.sort || "createdAt"; // Mặc định sắp xếp theo createdAt
+  const order = req.query.order || "desc"; // Mặc định thứ tự giảm dần
 
   // Lấy token từ request (cookie hoặc header)
   const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
@@ -29,11 +31,18 @@ exports.getAllAboutUs = catchAsync(async (req, res, next) => {
     }
   }
 
+  // Xử lý sắp xếp
+  const sortOrder = order === "desc" ? -1 : 1;
+  const sortOptions = { [sort]: sortOrder };
+
   // Đếm tổng số mục About Us thỏa mãn điều kiện
   const totalAboutUs = await AboutUs.countDocuments(filter);
 
-  // Lấy danh sách About Us với phân trang
-  const aboutUs = await AboutUs.find(filter).skip(skip).limit(limit);
+  // Lấy danh sách About Us với phân trang và sắp xếp
+  const aboutUs = await AboutUs.find(filter)
+    .sort(sortOptions) // Áp dụng sắp xếp
+    .skip(skip)
+    .limit(limit);
 
   // Tính tổng số trang
   const totalPages = Math.ceil(totalAboutUs / limit);

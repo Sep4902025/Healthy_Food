@@ -113,11 +113,16 @@ exports.getMealPlan = async (req, res) => {
     const totalPages = Math.ceil(totalMealPlans / limit);
 
     // Lấy danh sách meal plans với phân trang và populate thông tin userId
+    const { sort = "createdAt", order = "desc" } = req.query; // Nhận params sort & order
+    const sortOrder = order === "desc" ? -1 : 1;
+    const sortOptions = { [sort]: sortOrder };
+
     const mealPlans = await MealPlan.find(filter)
-      .skip(skip)
-      .limit(limit)
-      .populate("userId", "email avatarUrl") // Populate email và avatarUrl từ User
-      .lean();
+    .sort(sortOptions)  // 🔥 Sắp xếp theo thời gian tạo
+    .skip(skip)
+    .limit(limit)
+    .populate("userId", "email avatarUrl")
+    .lean();
 
     // Định dạng phản hồi
     res.status(200).json({
@@ -133,6 +138,8 @@ exports.getMealPlan = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
 // ✅ Lấy chi tiết MealPlan theo mealPlanId
 exports.getMealPlanById = async (req, res) => {
   try {
@@ -471,9 +478,8 @@ exports.toggleMealPlanStatus = async (req, res) => {
     if (reminderError) {
       return res.status(200).json({
         success: true,
-        message: `MealPlan has been ${
-          isPause ? "paused" : "resumed"
-        } successfully, but failed to update reminders: ${reminderError}`,
+        message: `MealPlan has been ${isPause ? "paused" : "resumed"
+          } successfully, but failed to update reminders: ${reminderError}`,
         data: mealPlan,
       });
     }
@@ -1516,7 +1522,7 @@ exports.getAllMealPlanPayment = async (req, res) => {
     } else {
       return res.status(403).json({
         success: false,
-        message: "Invalid role",
+        message: "Invalid role"
       });
     }
 
@@ -1559,7 +1565,7 @@ exports.getAllMealPlanPayment = async (req, res) => {
     console.error("🔥 Error fetching paid MealPlans:", error);
     res.status(500).json({
       success: false,
-      message: "Server error: " + error.message,
+      message: "Server error: " + error.message
     });
   }
 };

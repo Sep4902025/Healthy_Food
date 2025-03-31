@@ -15,7 +15,7 @@ const UserManagement = () => {
   const [formData, setFormData] = useState({ role: "user", isBan: false });
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage, setUsersPerPage] = useState(10);
-  const [totalItems, setTotalItems] = useState(0); // Thay totalPages bằng totalItems để đồng bộ với Pagination
+  const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("users");
@@ -28,7 +28,7 @@ const UserManagement = () => {
       if (userResponse.success) {
         setUsers(userResponse.users);
         setFilteredUsers(userResponse.users);
-        setTotalItems(userResponse.total); // Giả định API trả về total là tổng số mục
+        setTotalItems(userResponse.total);
       } else {
         setError(userResponse.message);
       }
@@ -89,10 +89,7 @@ const UserManagement = () => {
   };
 
   const handleReviewApplication = async (userId, action) => {
-    const result = await UserService.reviewNutritionistApplication({
-      userId,
-      action,
-    });
+    const result = await UserService.reviewNutritionistApplication({ userId, action });
     if (result.success) {
       toast.success(`Application ${action}d successfully! Email notification sent to user.`);
       setPendingNutritionists((prev) => prev.filter((u) => u._id !== userId));
@@ -103,13 +100,6 @@ const UserManagement = () => {
         setFilteredUsers((prev) =>
           prev.map((u) => (u._id === userId ? { ...u, role: "nutritionist" } : u))
         );
-      } else if (action === "reject") {
-        setUsers((prev) =>
-          prev.map((u) => (u._id === userId ? { ...u, nutritionistApplication: null } : u))
-        );
-        setFilteredUsers((prev) =>
-          prev.map((u) => (u._id === userId ? { ...u, nutritionistApplication: null } : u))
-        );
       }
     } else {
       toast.error(result.message);
@@ -118,287 +108,323 @@ const UserManagement = () => {
   };
 
   const handlePageClick = ({ selected }) => {
-    setCurrentPage(selected + 1); // ReactPaginate dùng index từ 0, API thường từ 1
+    setCurrentPage(selected + 1);
   };
 
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-
-  if (loading) return <p>Loading users...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-[#40B491] text-lg font-semibold">Loading...</p>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-red-500 text-lg font-semibold">Error: {error}</p>
+      </div>
+    );
 
   return (
-    <div className="flex h-screen">
-      <div className="flex-grow p-6 bg-gray-100 overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">User Management</h1>
+    <div className="container mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
+          User Management
+        </h1>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6 flex gap-4">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Search by username, email, or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+          />
+          <SearchIcon
+            size={20}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+          />
         </div>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+        >
+          <option value="all">All Roles</option>
+          <option value="user">User</option>
+          <option value="nutritionist">Nutritionist</option>
+        </select>
+      </div>
 
-        <div className="mb-6 flex gap-4">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="Search by username, email, or phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-            <SearchIcon
-              size={20}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-          </div>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="all">All Roles</option>
-            <option value="user">User</option>
-            <option value="nutritionist">Nutritionist</option>
-          </select>
-        </div>
+      {/* Tabs */}
+      <div className="mb-6 flex gap-4">
+        <button
+          className={`px-6 py-2 rounded-full font-semibold transition duration-300 ${
+            activeTab === "users"
+              ? "bg-[#40B491] text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+          onClick={() => setActiveTab("users")}
+        >
+          All Users
+        </button>
+        <button
+          className={`px-6 py-2 rounded-full font-semibold transition duration-300 ${
+            activeTab === "pending"
+              ? "bg-[#40B491] text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+          onClick={() => setActiveTab("pending")}
+        >
+          Pending Nutritionists
+        </button>
+      </div>
 
-        <div className="mb-6">
-          <button
-            className={`px-4 py-2 mr-2 ${
-              activeTab === "users" ? "bg-green-500 text-white" : "bg-gray-200"
-            } rounded`}
-            onClick={() => setActiveTab("users")}
-          >
-            All Users
-          </button>
-          <button
-            className={`px-4 py-2 ${
-              activeTab === "pending" ? "bg-green-500 text-white" : "bg-gray-200"
-            } rounded`}
-            onClick={() => setActiveTab("pending")}
-          >
-            Pending Nutritionists
-          </button>
-        </div>
+      {/* Table */}
+      <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
+        {activeTab === "users" ? (
+          <>
+            {/* Table Header */}
+            <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
+              <div className="col-span-1">No.</div>
+              <div className="col-span-2">Username</div>
+              <div className="col-span-2">Phone</div>
+              <div className="col-span-3">Email</div>
+              <div className="col-span-1">Role</div>
+              <div className="col-span-1 text-center">Status</div>
+              <div className="col-span-2 text-center">Actions</div>
+            </div>
 
-        <div className="bg-white rounded-lg shadow-md">
-          {activeTab === "users" ? (
-            <>
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="p-4 text-left text-gray-500">User Name</th>
-                    <th className="p-4 text-left text-gray-500">Phone</th>
-                    <th className="p-4 text-left text-gray-500">Email</th>
-                    <th className="p-4 text-left text-gray-500">Role</th>
-                    <th className="p-4 text-left text-gray-500">Status</th>
-                    <th className="p-4 text-left text-gray-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentUsers.map((user) => (
-                    <tr key={user._id} className="border-b hover:bg-gray-50">
-                      <td className="p-4 text-left cursor-pointer">{user.username}</td>
-                      <td className="p-4 text-left">
-                        {user.userPreferenceId?.phoneNumber || "N/A"}
-                      </td>
-                      <td className="p-4 text-left">{user.email}</td>
-                      <td className="p-4 text-left">{user.role}</td>
-                      <td className="p-4 text-left">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs ${
-                            user.isBan ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
-                          }`}
-                        >
-                          {user.isBan ? "Inactive" : "Active"}
-                        </span>
-                      </td>
-                      <td className="p-4 flex space-x-2">
-                        <button
-                          onClick={() => handleOpenEditModal(user)}
-                          className="text-green-500 hover:bg-green-100 p-2 rounded-full"
-                        >
-                          <EditIcon size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(user._id)}
-                          className="text-red-500 hover:bg-red-100 p-2 rounded-full"
-                        >
-                          <TrashIcon size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="p-4">
-                <Pagination
-                  limit={usersPerPage}
-                  setLimit={(value) => {
-                    setUsersPerPage(value);
-                    setCurrentPage(1); // Reset về trang 1 khi thay đổi limit
-                  }}
-                  totalItems={totalItems}
-                  handlePageClick={handlePageClick}
-                  text="Users"
-                />
-              </div>
-            </>
-          ) : (
-            <div className="p-4">
-              <h2 className="text-xl font-semibold mb-4">Pending Nutritionist Applications</h2>
-              {pendingNutritionists.length === 0 ? (
-                <p>No pending applications</p>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="p-4 text-left text-gray-500">Username</th>
-                      <th className="p-4 text-left text-gray-500">Email</th>
-                      <th className="p-4 text-left text-gray-500">Submitted At</th>
-                      <th className="p-4 text-left text-gray-500">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingNutritionists.map((user) => (
-                      <tr key={user._id} className="border-b hover:bg-gray-50">
-                        <td className="p-4">{user.username}</td>
-                        <td className="p-4">{user.email}</td>
-                        <td className="p-4">
-                          {new Date(user.nutritionistApplication.submittedAt).toLocaleDateString()}
-                        </td>
-                        <td className="p-4">
-                          <button
-                            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                            onClick={() => setSelectedApplication(user)}
-                          >
-                            View CV
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-
-              {selectedApplication && (
-                <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
-                    <h2 className="text-2xl font-bold mb-6">Nutritionist Application</h2>
-                    <div className="flex flex-col md:flex-row gap-6">
-                      <div className="w-full md:w-1/3 flex flex-col">
-                        <div className="mb-4">
-                          {selectedApplication.nutritionistApplication.profileImage ? (
-                            <img
-                              src={selectedApplication.nutritionistApplication.profileImage}
-                              alt="Profile"
-                              className="w-full h-64 object-cover rounded-lg shadow-md"
-                              onError={(e) => (e.target.src = "https://via.placeholder.com/150")}
-                            />
-                          ) : (
-                            <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                              <span className="text-gray-500">No Image Provided</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <p>
-                            <strong>Full Name:</strong>{" "}
-                            {selectedApplication.nutritionistApplication.personalInfo.fullName ||
-                              "N/A"}
-                          </p>
-                          <p>
-                            <strong>Phone:</strong>{" "}
-                            {selectedApplication.nutritionistApplication.personalInfo.phoneNumber ||
-                              "N/A"}
-                          </p>
-                          <p>
-                            <strong>Address:</strong>{" "}
-                            {selectedApplication.nutritionistApplication.personalInfo.address ||
-                              "N/A"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="w-full md:w-2/3">
-                        <h3 className="text-lg font-semibold mb-2">Introduction</h3>
-                        <p className="text-gray-700 leading-relaxed">
-                          {selectedApplication.nutritionistApplication.introduction ||
-                            "No introduction provided."}
-                        </p>
-                      </div>
+            {/* Table Body */}
+            <div className="divide-y divide-gray-200">
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user, index) => (
+                  <div
+                    key={user._id}
+                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300"
+                  >
+                    <div className="col-span-1 text-gray-600 font-medium">
+                      {(currentPage - 1) * usersPerPage + index + 1}
                     </div>
-                    <div className="flex justify-end space-x-2 mt-6">
-                      <button
-                        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                        onClick={() => handleReviewApplication(selectedApplication._id, "approve")}
+                    <div className="col-span-2 text-gray-700 text-sm">{user.username}</div>
+                    <div className="col-span-2 text-gray-700 text-sm">
+                      {user.userPreferenceId?.phoneNumber || "N/A"}
+                    </div>
+                    <div className="col-span-3 text-gray-700 text-sm">{user.email}</div>
+                    <div className="col-span-1 text-gray-700 text-sm">{user.role}</div>
+                    <div className="col-span-1 text-center">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          user.isBan
+                            ? "bg-red-100 text-red-800"
+                            : "bg-[#40B491] text-white"
+                        }`}
                       >
-                        Approve
+                        {user.isBan ? "Inactive" : "Active"}
+                      </span>
+                    </div>
+                    <div className="col-span-2 flex justify-center space-x-3">
+                      <button
+                        className="p-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                        onClick={() => handleOpenEditModal(user)}
+                        title="Edit"
+                      >
+                        <EditIcon size={16} />
                       </button>
                       <button
-                        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                        onClick={() => handleReviewApplication(selectedApplication._id, "reject")}
+                        className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                        onClick={() => handleDeleteUser(user._id)}
+                        title="Delete"
                       >
-                        Reject
-                      </button>
-                      <button
-                        className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                        onClick={() => setSelectedApplication(null)}
-                      >
-                        Close
+                        <TrashIcon size={16} />
                       </button>
                     </div>
                   </div>
-                </div>
+                ))
+              ) : (
+                <div className="p-6 text-center text-gray-500">No users found.</div>
               )}
             </div>
-          )}
 
-          {modalOpen && (
-            <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                <h2 className="text-2xl font-bold mb-4">Edit User</h2>
-                <label className="block mb-2">Role:</label>
-                <select
-                  className="w-full border p-2 mb-4 rounded"
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                  <option value="nutritionist">Nutritionist</option>
-                </select>
-                <label className="block mb-2">Status:</label>
-                <select
-                  className="w-full border p-2 mb-4 rounded"
-                  value={formData.isBan ? "inactive" : "active"}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      isBan: e.target.value === "inactive",
-                    })
-                  }
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-                <div className="flex justify-end space-x-2">
-                  <button
-                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                    onClick={() => setModalOpen(false)}
+            {/* Pagination */}
+            <div className="p-4 bg-gray-50">
+              <Pagination
+                limit={usersPerPage}
+                setLimit={(value) => {
+                  setUsersPerPage(value);
+                  setCurrentPage(1);
+                }}
+                totalItems={totalItems}
+                handlePageClick={handlePageClick}
+                text="Users"
+              />
+            </div>
+          </>
+        ) : (
+          <div className="p-4">
+            <h2 className="text-xl font-semibold mb-4 text-[#40B491]">
+              Pending Nutritionist Applications
+            </h2>
+            {/* Table Header */}
+            <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
+              <div className="col-span-1">No.</div>
+              <div className="col-span-3">Username</div>
+              <div className="col-span-3">Email</div>
+              <div className="col-span-3">Submitted At</div>
+              <div className="col-span-2 text-center">Actions</div>
+            </div>
+
+            {/* Table Body */}
+            <div className="divide-y divide-gray-200">
+              {pendingNutritionists.length > 0 ? (
+                pendingNutritionists.map((user, index) => (
+                  <div
+                    key={user._id}
+                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                    onClick={handleSaveChanges}
-                  >
-                    Save
-                  </button>
+                    <div className="col-span-1 text-gray-600 font-medium">{index + 1}</div>
+                    <div className="col-span-3 text-gray-700 text-sm">{user.username}</div>
+                    <div className="col-span-3 text-gray-700 text-sm">{user.email}</div>
+                    <div className="col-span-3 text-gray-700 text-sm">
+                      {new Date(user.nutritionistApplication.submittedAt).toLocaleDateString()}
+                    </div>
+                    <div className="col-span-2 flex justify-center">
+                      <button
+                        className="px-4 py-1 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                        onClick={() => setSelectedApplication(user)}
+                      >
+                        View CV
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-6 text-center text-gray-500">No pending applications.</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modal for Editing */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-4 text-[#40B491]">Edit User</h2>
+            <label className="block mb-2 text-gray-700">Role:</label>
+            <select
+              className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+              <option value="nutritionist">Nutritionist</option>
+            </select>
+            <label className="block mb-2 text-gray-700">Status:</label>
+            <select
+              className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+              value={formData.isBan ? "inactive" : "active"}
+              onChange={(e) =>
+                setFormData({ ...formData, isBan: e.target.value === "inactive" })
+              }
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <div className="flex justify-end space-x-2">
+              <button
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+                onClick={() => setModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition"
+                onClick={handleSaveChanges}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for Application Review */}
+      {selectedApplication && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
+            <h2 className="text-2xl font-bold mb-6 text-[#40B491]">
+              Nutritionist Application
+            </h2>
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-1/3 flex flex-col">
+                <div className="mb-4">
+                  {selectedApplication.nutritionistApplication.profileImage ? (
+                    <img
+                      src={selectedApplication.nutritionistApplication.profileImage}
+                      alt="Profile"
+                      className="w-full h-64 object-cover rounded-lg shadow-md"
+                      onError={(e) => (e.target.src = "https://via.placeholder.com/150")}
+                    />
+                  ) : (
+                    <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <span className="text-gray-500">No Image Provided</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2 text-gray-700">
+                  <p>
+                    <strong>Full Name:</strong>{" "}
+                    {selectedApplication.nutritionistApplication.personalInfo.fullName ||
+                      "N/A"}
+                  </p>
+                  <p>
+                    <strong>Phone:</strong>{" "}
+                    {selectedApplication.nutritionistApplication.personalInfo.phoneNumber ||
+                      "N/A"}
+                  </p>
+                  <p>
+                    <strong>Address:</strong>{" "}
+                    {selectedApplication.nutritionistApplication.personalInfo.address ||
+                      "N/A"}
+                  </p>
                 </div>
               </div>
+              <div className="w-full md:w-2/3">
+                <h3 className="text-lg font-semibold mb-2 text-[#40B491]">Introduction</h3>
+                <p className="text-gray-700 leading-relaxed">
+                  {selectedApplication.nutritionistApplication.introduction ||
+                    "No introduction provided."}
+                </p>
+              </div>
             </div>
-          )}
+            <div className="flex justify-end space-x-2 mt-6">
+              <button
+                className="px-4 py-2 bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition"
+                onClick={() => handleReviewApplication(selectedApplication._id, "approve")}
+              >
+                Approve
+              </button>
+              <button
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                onClick={() => handleReviewApplication(selectedApplication._id, "reject")}
+              >
+                Reject
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+                onClick={() => setSelectedApplication(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

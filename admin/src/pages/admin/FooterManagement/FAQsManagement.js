@@ -87,128 +87,167 @@ const FAQsManagement = () => {
 
   const handlePageClick = ({ selected }) => setCurrentPage(selected);
 
-  if (loading) return <p className="text-center text-blue-500">Loading...</p>;
-  if (error) return <p className="text-center text-red-500">Error: {error}</p>;
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-[#40B491] text-lg font-semibold">Loading...</p>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-red-500 text-lg font-semibold">Error: {error}</p>
+      </div>
+    );
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-bold text-custom-green mb-2">FAQs Management</h1>
-      <button
-        className="mb-4 px-4 py-2 bg-custom-green text-white rounded-lg hover:bg-opacity-85"
-        onClick={() => handleOpenModal()}
-      >
-        + Add New
-      </button>
-      <div className="bg-white shadow-lg rounded-2xl p-6">
-        <table className="w-full border-collapse mb-2">
-          <thead>
-            <tr className="bg-gray-100 text-gray-700">
-              <th className="p-3 text-left">No.</th>
-              <th className="p-3 text-left">Category</th>
-              <th className="p-3 text-left">Question</th>
-              <th className="p-3 text-left">Answer</th>
-              <th className="p-3 text-center">Status</th>
-              <th className="p-3 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {faqs.length > 0 ? (
-              faqs.map((item, index) => (
-                <tr key={item._id} className="border-b border-gray-200 text-gray-900">
-                  <td className="p-3">{currentPage * faqsPerPage + index + 1}</td>
-                  <td className="p-3">{item.category}</td>
-                  <td className="p-3 text-left">{item.question}</td>
-                  <td className="p-3 text-left">{item.answer}</td>
-                  <td className="p-3 text-center">
-                    <span
-                      className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold ${
-                        item.isVisible ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {item.isVisible ? "Visible" : "Hidden"}
-                    </span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <div className="flex items-center justify-center space-x-2">
-                      <button
-                        className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
-                        onClick={() => handleOpenModal(item)}
-                      >
-                        <EditIcon size={16} />
-                      </button>
-                      <button
-                        className={`p-2 rounded-full text-white ${
-                          item.isVisible
-                            ? "bg-gray-500 hover:bg-gray-600"
-                            : "bg-green-500 hover:bg-green-600"
-                        }`}
-                        onClick={() => handleToggleVisibility(item)}
-                      >
-                        {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-                      </button>
-                      <button
-                        className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
-                        onClick={() => handleHardDelete(item._id)}
-                      >
-                        <TrashIcon size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="6" className="text-center text-gray-500 p-4">
-                  There are no FAQs yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        <Pagination
-          limit={faqsPerPage}
-          setLimit={setFaqsPerPage}
-          totalItems={totalItems}
-          handlePageClick={handlePageClick}
-          currentPage={currentPage} // Thêm currentPage
-          text="FAQs"
-        />
+    <div className="container mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
+          FAQs Management
+        </h1>
+        <button
+          className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300 flex items-center"
+          onClick={() => handleOpenModal()}
+        >
+          <PlusIcon size={16} className="mr-2" /> Add New
+        </button>
       </div>
 
+      {/* Table */}
+      <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
+        {/* Table Header */}
+        <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
+          <div className="col-span-1">No.</div>
+          <div className="col-span-2">Category</div>
+          <div className="col-span-3">Question</div>
+          <div className="col-span-3">Answer</div>
+          <div className="col-span-1 text-center">Status</div>
+          <div className="col-span-2 text-center">Actions</div>
+        </div>
+
+        {/* Table Body */}
+        <div className="divide-y divide-gray-200">
+          {faqs.length > 0 ? (
+            faqs.map((item, index) => (
+              <div
+                key={item._id}
+                className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300 items-center"
+              >
+                <div className="col-span-1 text-gray-600 font-medium">
+                  {currentPage * faqsPerPage + index + 1}
+                </div>
+                <div className="col-span-2 text-gray-700 text-sm">
+                  {item.category}
+                </div>
+                <div className="col-span-3 text-gray-700 text-sm line-clamp-2">
+                  {item.question}
+                </div>
+                <div className="col-span-3 text-gray-700 text-sm line-clamp-2">
+                  {item.answer}
+                </div>
+                <div className="col-span-1 text-center">
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      item.isVisible
+                        ? "bg-[#40B491] text-white"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {item.isVisible ? "Visible" : "Hidden"}
+                  </span>
+                </div>
+                <div className="col-span-2 flex justify-center space-x-3">
+                  <button
+                    className="w-8 h-8 flex items-center justify-center bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition"
+                    onClick={() => handleOpenModal(item)}
+                    title="Edit"
+                  >
+                    <EditIcon size={16} />
+                  </button>
+                  <button
+                    className={`w-8 h-8 flex items-center justify-center rounded text-white ${
+                      item.isVisible
+                        ? "bg-gray-500 hover:bg-gray-600"
+                        : "bg-[#40B491] hover:bg-[#359c7a]"
+                    } transition`}
+                    onClick={() => handleToggleVisibility(item)}
+                    title={item.isVisible ? "Hide" : "Show"}
+                  >
+                    {item.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                  </button>
+                  <button
+                    className="w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded hover:bg-red-600 transition"
+                    onClick={() => handleHardDelete(item._id)}
+                    title="Delete"
+                  >
+                    <TrashIcon size={16} />
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-6 text-center text-gray-500">There are no FAQs yet.</div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        <div className="p-4 bg-gray-50">
+          <Pagination
+            limit={faqsPerPage}
+            setLimit={(value) => {
+              setFaqsPerPage(value);
+              setCurrentPage(0); // Reset về trang đầu khi thay đổi số lượng item mỗi trang
+            }}
+            totalItems={totalItems}
+            handlePageClick={handlePageClick}
+            text="FAQs"
+          />
+        </div>
+      </div>
+
+      {/* Modal Form */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-            <h2 className="text-2xl font-bold mb-4">{editData ? "Edit" : "Add new"} FAQ</h2>
-            <label className="block mb-2">Category:</label>
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-4 text-[#40B491]">
+              {editData ? "Edit" : "Add New"} FAQ
+            </h2>
+
+            <label className="block mb-2 text-gray-700">Category:</label>
             <input
               type="text"
-              className="w-full border p-2 mb-4"
+              className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             />
-            <label className="block mb-2">Question:</label>
+
+            <label className="block mb-2 text-gray-700">Question:</label>
             <textarea
-              className="w-full border p-2 mb-4"
+              className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               rows="2"
               value={formData.question}
               onChange={(e) => setFormData({ ...formData, question: e.target.value })}
             ></textarea>
-            <label className="block mb-2">Answer:</label>
+
+            <label className="block mb-2 text-gray-700">Answer:</label>
             <textarea
-              className="w-full border p-2 mb-4"
+              className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               rows="4"
               value={formData.answer}
               onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
             ></textarea>
+
             <div className="flex justify-end space-x-2">
               <button
-                className="px-4 py-2 bg-gray-500 text-white rounded"
+                className="w-11 h-14 flex items-center justify-center bg-gray-500 text-white rounded hover:bg-gray-600 transition"
                 onClick={() => setModalOpen(false)}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                className="w-11 h-14 flex items-center justify-center bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition"
                 onClick={handleSave}
               >
                 Save

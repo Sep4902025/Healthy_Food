@@ -10,7 +10,7 @@ const getAuthHeaders = () => {
 
 const medicalConditionService = {
   // 🔹 Lấy tất cả điều kiện y tế
-  getAllMedicalConditions: async (page = 1, limit = 10) => {
+  getAllMedicalConditions: async (page = 1, limit = 10, search = "") => {
     try {
       const response = await axios.get(`${API_URL}/medicalConditions`, {
         headers: getAuthHeaders(),
@@ -18,16 +18,19 @@ const medicalConditionService = {
         params: {
           page,
           limit,
+          search, // Thêm tìm kiếm
+          sort: "createdAt", // Sắp xếp theo ngày tạo
+          order: "desc",     // Giảm dần (mới nhất lên trước)
         },
       });
       console.log("📌 List of medical conditions:", response.data);
       return {
         success: true,
         data: {
-          items: response.data.data || [],
-          total: response.data.results || 0,
-          currentPage: page,
-          totalPages: Math.ceil(response.data.results / limit) || 1,
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
         },
       };
     } catch (error) {
@@ -38,6 +41,7 @@ const medicalConditionService = {
       };
     }
   },
+  
 
   // 🔹 Lấy điều kiện y tế theo ID
   getMedicalConditionById: async (id) => {
