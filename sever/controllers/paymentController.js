@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const moment = require("moment");
 const VNPAY_CONFIG = require("../config/vnpay");
 const Payment = require("../models/Payment");
-const { MealPlan, UserMealPlan, MealDay, Meal, MealTracking } = require("../models/MealPlan");
+const { MealPlan, UserMealPlan, MealDay } = require("../models/MealPlan");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
 
@@ -135,7 +135,6 @@ exports.createPaymentUrl = async (req, res) => {
   }
 };
 
-
 exports.vnpayReturn = async (req, res) => {
   try {
     const vnp_Params = { ...req.query };
@@ -219,10 +218,10 @@ exports.vnpayReturn = async (req, res) => {
         const reminders = await Reminder.find({ mealPlanId: oldMealPlanId });
         const reminderIds = reminders.map((reminder) => reminder._id);
 
-        // Cập nhật UserMealPlan với Meal Plan mới
-        userMealPlan.mealPlanId = payment.mealPlanId;
-        userMealPlan.startDate = new Date();
-        await userMealPlan.save();
+        // Cập nhật UserMealPlan hiện có với Meal Plan mới
+        oldUserMealPlan.mealPlanId = payment.mealPlanId;
+        oldUserMealPlan.startDate = new Date();
+        await oldUserMealPlan.save(); // Lưu instance đã cập nhật
       } else {
         // Nếu chưa có UserMealPlan, tạo mới
         await UserMealPlan.create({
@@ -232,7 +231,6 @@ exports.vnpayReturn = async (req, res) => {
         });
       }
 
-      console.log(`✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`);
       console.log(`✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`);
 
       // Dọn dẹp các payment pending khác
@@ -374,7 +372,8 @@ exports.getPaymentById = async (req, res) => {
     if (mealPlan.createdBy.toString() !== userId.toString()) {
       return res.status(403).json({
         status: "error",
-        message: "You do not have permission to view this payment information. Only the creator of the MealPlan can access this.",
+        message:
+          "You do not have permission to view this payment information. Only the creator of the MealPlan can access this.",
       });
     }
 
