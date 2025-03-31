@@ -3,10 +3,12 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { DarkModeContext } from "../context/DarkModeContext";
 import UserService from "../../services/user.service";
 import { useSelector } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
+
 
 const ForYouPage = () => {
   const sliderRef = useRef(null);
@@ -14,12 +16,23 @@ const ForYouPage = () => {
   const user = useSelector(selectUser); // Lấy thông tin user từ Redux store
   const userId = user?._id; // Giả định user có trường id, điều chỉnh nếu khác
   console.log("USERID", userId);
+  const navigate = useNavigate();
 
   // State để lưu danh sách món ăn đề xuất
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Hàm xử lý sự kiện khi nhấn vào món ăn
+  const handleRecipeClick = (dishId, recipeId) => {
+    // navigate(`/${dishId}/recipes/${recipeId}`) // Chuyển hướng đến trang chi tiết món ăn
+    console.log("Dish ID:", dishId);
+  }
+
+  
+
+  
+  
   // Danh sách category tĩnh (giữ nguyên)
   const categories = [
     {
@@ -160,6 +173,7 @@ const ForYouPage = () => {
               src={recipe.image}
               alt={recipe.name}
               className="rounded-full w-[200px] h-[200px] object-cover mx-auto"
+              onClick={() => handleRecipeClick(recipe)} // Thêm sự kiện click vào hình ảnh
             />
             <h3 className="mt-3 text-lg font-semibold font-['Inter'] text-gray-800 dark:text-white">
               {recipe.name}

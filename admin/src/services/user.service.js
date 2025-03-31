@@ -53,7 +53,7 @@ const UserService = {
 
       const response = await axiosInstance.get(`/foryou/${userId}`);
       const { success, message, data } = response.data;
-
+      
       if (success) {
         return {
           success: true,
