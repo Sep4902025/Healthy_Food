@@ -3,12 +3,16 @@ const paymentRouter = express.Router();
 const {
   createPaymentUrl,
   vnpayReturn,
+  getAllPayments,
   getPaymentHistory,
   getPaymentById,
   getPaymentHistoryForNutritionist,
   checkPaymentStatus,
 } = require("../controllers/paymentController");
 const { isAuthenticated} = require("../middlewares/isAuthenticated");
+
+paymentRouter.get("/", getAllPayments);
+paymentRouter.get("/:id", getPaymentById);
 
 paymentRouter.post("/vnpay/pay", createPaymentUrl);
 paymentRouter.get("/vnpay/return", vnpayReturn);

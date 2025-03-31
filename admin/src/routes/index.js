@@ -193,6 +193,9 @@ const AppRoutes = () => {
         <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
         <Route path="viewprofile/:id" element={<ViewProfile />} />
+
+        <Route path="mealplan" element={<TableMealPlan />} />
+        <Route path="mealPlan/analytics" element={<MealPlansAnalytics />} />
       </Route>
 
       {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist */}

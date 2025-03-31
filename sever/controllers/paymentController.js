@@ -7,6 +7,69 @@ const { MealPlan, UserMealPlan, MealDay, Meal, MealTracking } = require("../mode
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
 
+// API lấy danh sách tất cả các payment
+exports.getAllPayments = async (req, res) => {
+  try {
+    const moment = require("moment");
+    
+    const payments = await Payment.find();
+
+    const revenueByMonth = {};
+
+    // Tính tổng doanh thu
+    const totalRevenue = payments.reduce((acc, payment) => {
+      return payment.status === "success" ? acc + payment.amount : acc;
+    }, 0);
+
+    // Thống kê trạng thái thanh toán
+    const paymentStats = payments.reduce(
+      (acc, payment) => {
+        if (payment.status === "success") {
+          acc.paid += 1;
+        } else {
+          acc.unpaid += 1;
+        }
+        return acc;
+      },
+      { paid: 0, unpaid: 0 }
+    );
+
+    payments.forEach((payment) => {
+      if (payment.status === "success") {
+        const year = moment(payment.paymentDate).format("YYYY");
+        const month = moment(payment.paymentDate).format("MM");
+
+        if (!revenueByMonth[year]) {
+          revenueByMonth[year] = {};
+        }
+
+        if (!revenueByMonth[year][month]) {
+          revenueByMonth[year][month] = 0;
+        }
+
+        revenueByMonth[year][month] += payment.amount;
+      }
+    });
+
+    // Doanh thu theo năm
+    const revenueByYear = payments.reduce((acc, payment) => {
+      const year = new Date(payment.paymentDate).getFullYear();
+      acc[year] = (acc[year] || 0) + payment.amount;
+      return acc;
+    }, {});
+
+    res.status(200).json({
+      totalRevenue,
+      paymentStats,
+      revenueByYear,
+      revenueByMonth
+    });
+  } catch (error) {
+    console.error("Lỗi lấy dữ liệu Payment:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+};
+
 // Tạo URL thanh toán VNPay
 exports.createPaymentUrl = async (req, res) => {
   try {

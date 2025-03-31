@@ -115,7 +115,7 @@ const HealthyDashboard = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8080/api/v1/payments/")
+      .get("http://localhost:8080/api/v1/payment/")
       .then((response) => {
         setTotalRevenue(response.data.totalRevenue);
         setPaymentStats(response.data.paymentStats);
