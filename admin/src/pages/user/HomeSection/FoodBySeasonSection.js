@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Heart } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 import useFoodData from "../../../helpers/useFoodData";
 import HomeService from "../../../services/home.service";
 import { toast } from "react-toastify";
@@ -11,22 +11,15 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    setShowAll(false);
+    setShowAll(false); // Reset showAll when selectedSeason changes
   }, [selectedSeason]);
 
   const handleLike = async (dishId) => {
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
-    const isCurrentlyLiked =
-      foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
+    const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
 
-    // Gửi request lên server
-    const newLikeState = await HomeService.toggleFavoriteDish(
-      userId,
-      dishId,
-      isCurrentlyLiked
-    );
+    const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId, isCurrentlyLiked);
 
-    // Cập nhật lại state
     setLikedFoods((prev) => {
       if (newLikeState) {
         return [...prev, { dishId, isLike: true }];
@@ -39,88 +32,83 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
     if (food) {
       toast.success(
         newLikeState
-          ? `Đã thêm "${food.name}" vào danh sách yêu thích! ❤️`
-          : `Đã xóa "${food.name}" khỏi danh sách yêu thích! 💔`
+          ? `Added "${food.name}" to favorites! ❤️`
+          : `Removed "${food.name}" from favorites! 💔`
       );
     }
   };
 
-  // Chỉ hiển thị 6 món đầu tiên nếu chưa nhấn "View All"
   const displayedDishes = showAll ? dishes : dishes.slice(0, 6);
+
   return (
-    <div>
-      <h2 className="text-[56px] font-bold font-['Syne'] text-white bg-[#40b491] py-6 px-6 rounded-lg text-left mt-10">
-        {selectedSeason} Recipe
+    <div className="py-6">
+      <h2 className="text-4xl font-bold font-['Syne'] text-white bg-[#40b491] py-4 px-6 rounded-lg text-left mb-6">
+        {selectedSeason} Recipes
       </h2>
 
-      <div className="w-full py-2 px-[50px] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-4">
         {displayedDishes.map((dish) => (
           <div
             key={dish._id}
-            className="relative bg-white text-gray-900 dark:bg-gray-700 dark:text-gray-100 p-6 rounded-3xl shadow-2xl shadow-gray-500/50 transition transform hover:scale-105 text-left max-w-[400px] w-full mx-auto"
+            className="relative bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition"
             onClick={() => navigate(`/${dish._id}/recipes/${dish.recipeId}`)}
           >
-            {/* Category Tag */}
-            <span className="absolute top-2 right-2 bg-[#40b491] uppercase text-white text-xs font-semibold px-2 py-1 rounded-full">
+            <span className="absolute top-2 right-2 bg-[#40b491] text-white text-xs font-semibold uppercase px-2 py-1 rounded">
               {dish.season}
             </span>
 
-            {/* Image */}
-            <img
-              src={dish.imageUrl}
-              alt={dish.name}
-              className="rounded-full w-[200px] h-[200px] object-cover mx-auto"
-            />
-
-            {/* Recipe Name */}
-            <h3 className="mt-3 text-lg font-semibold font-['Inter'] text-gray-800 dark:text-white">
-              {dish.name}
-            </h3>
-
-            {/* Description */}
-            <p className="mt-1 text-sm font-['Inter'] text-gray-500 dark:text-gray-300 line-clamp-2">
-              {dish.description}
-            </p>
-
-            {/* Rating */}
-            <div className="flex items-center space-x-2 mt-2">
-              <p className="text-sm font-semibold font-['Inter'] text-[#ff6868] dark:text-white">
-                Rating:
-              </p>
-              <p className="text-yellow-500 font-bold">
-                {ratings[dish._id] + "⭐" || "Chưa có đánh giá"}
-              </p>
+            <div className="flex justify-center pt-2">
+              <img
+                src={dish.imageUrl}
+                alt={dish.name}
+                className="w-48 h-48 rounded-full object-cover"
+              />
             </div>
 
-            {/* Heart Icon */}
-            <div className="food-like-container flex items-center justify-center">
-              <div
-                className="w-[87px] h-[75px] bg-[#40B491] rounded-tr-[37.5px] rounded-bl-[42.5px] flex items-center justify-center relative"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleLike(dish._id);
-                }}
-              >
-                <Heart
-                  size={32}
-                  className={
-                    likedFoods.find((item) => item.dishId === dish._id)?.isLike
-                      ? "fill-white"
-                      : "stroke-white"
-                  }
-                />
+            <div className="p-4 text-center">
+              <h3 className="text-xl font-semibold text-gray-800 font-['Inter']">{dish.name}</h3>
+              <p className="text-sm text-gray-500 font-['Inter'] mt-1 line-clamp-2">
+                {dish.description}
+              </p>
+
+              <div className="flex justify-center items-center mt-3">
+                <span className="text-sm font-semibold text-[#ff6868] uppercase mr-1">RATING</span>
+                {ratings[dish._id] ? (
+                  <div className="flex items-center">
+                    <Star size={16} className="text-yellow-500 mr-1" />
+                    <span className="text-gray-800 font-bold">{ratings[dish._id]}</span>
+                  </div>
+                ) : (
+                  <span className="text-gray-500">No ratings yet</span>
+                )}
               </div>
+            </div>
+
+            <div
+              className="absolute bottom-0 right-0 bg-[#40b491] rounded-tl-[40px] p-4"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLike(dish._id);
+              }}
+            >
+              <Heart
+                size={24}
+                className={
+                  likedFoods.find((item) => item.dishId === dish._id)?.isLike
+                    ? "fill-white text-white"
+                    : "stroke-white text-transparent"
+                }
+              />
             </div>
           </div>
         ))}
       </div>
 
-      {/* Nút View All */}
       {dishes.length > 6 && (
         <div className="text-center mt-8">
           <button
             onClick={() => setShowAll((prev) => !prev)}
-            className="px-8 py-3 bg-white text-[#40b491] dark:bg-gray-700 dark:text-white font-semibold rounded-full shadow-lg hover:bg-[#40b491] hover:text-[#555555] transition outline"
+            className="px-6 py-2 bg-white text-[#40b491] font-semibold uppercase text-sm rounded-full border border-[#40b491] hover:bg-[#40b491] hover:text-white transition"
           >
             {showAll ? "VIEW LESS" : "VIEW ALL RECIPES"}
           </button>

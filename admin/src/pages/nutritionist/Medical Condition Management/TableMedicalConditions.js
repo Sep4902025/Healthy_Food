@@ -6,8 +6,6 @@ import {
   HeartPulse,
   Pencil,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Flame,
   Dumbbell,
   Wheat,
@@ -15,11 +13,13 @@ import {
   Eye,
 } from "lucide-react";
 import FoodSelectionModal from "./FoodSelectionModal";
+import Pagination from "../../../components/Pagination";
 
 const TableMedicalConditions = () => {
   const [conditions, setConditions] = useState([]);
   const [dishes, setDishes] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0); // Thêm state mới
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editData, setEditData] = useState({
@@ -39,7 +39,6 @@ const TableMedicalConditions = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch medical conditions and dishes with nutritional data
   useEffect(() => {
     fetchData();
   }, [currentPage, itemsPerPage, searchTerm]);
@@ -54,16 +53,24 @@ const TableMedicalConditions = () => {
               currentPage,
               itemsPerPage
             )
-          : medicalConditionService.getAllMedicalConditions(currentPage, itemsPerPage),
+          : medicalConditionService.getAllMedicalConditions(
+              currentPage,
+              itemsPerPage
+            ),
         dishService.getAllDishes(1, 1000),
       ]);
 
       if (conditionsResponse?.success) {
         setConditions(conditionsResponse.data.items || []);
+        setTotalItems(conditionsResponse.data.total || 0); // Cập nhật totalItems
         setTotalPages(conditionsResponse.data.totalPages || 1);
       } else {
         setConditions([]);
-        console.error("❌ Failed to fetch conditions:", conditionsResponse?.message);
+        setTotalItems(0);
+        console.error(
+          "❌ Failed to fetch conditions:",
+          conditionsResponse?.message
+        );
       }
 
       const dishesData =
@@ -75,19 +82,33 @@ const TableMedicalConditions = () => {
         dishesData.map(async (dish) => {
           if (dish.recipeId) {
             try {
-              const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
-              if (recipeResponse.success && recipeResponse.data?.status === "success") {
+              const recipeResponse = await recipesService.getRecipeById(
+                dish._id,
+                dish.recipeId
+              );
+              if (
+                recipeResponse.success &&
+                recipeResponse.data?.status === "success"
+              ) {
                 const recipe = recipeResponse.data.data;
                 const nutritions = calculateNutritionFromRecipe(recipe);
                 return { ...dish, nutritions };
               }
             } catch (error) {
-              console.error(`Error fetching recipe for dish ${dish._id}:`, error);
+              console.error(
+                `Error fetching recipe for dish ${dish._id}:`,
+                error
+              );
             }
           }
           return {
             ...dish,
-            nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" },
+            nutritions: {
+              calories: "N/A",
+              protein: "N/A",
+              carbs: "N/A",
+              fat: "N/A",
+            },
           };
         })
       );
@@ -96,6 +117,7 @@ const TableMedicalConditions = () => {
     } catch (error) {
       setConditions([]);
       setDishes([]);
+      setTotalItems(0);
       console.error("Error fetching data:", error);
     }
     setIsLoading(false);
@@ -137,9 +159,6 @@ const TableMedicalConditions = () => {
     };
   };
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // Open edit modal
   const handleEditClick = (condition) => {
     setEditData({
       id: condition._id,
@@ -158,15 +177,15 @@ const TableMedicalConditions = () => {
     setIsEditModalOpen(true);
   };
 
-  // Open view modal
   const handleViewClick = (condition) => {
     setViewData(condition);
     setIsViewModalOpen(true);
   };
 
-  // Handle delete
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this medical condition?")) {
+    if (
+      window.confirm("Are you sure you want to delete this medical condition?")
+    ) {
       const response = await medicalConditionService.deleteMedicalCondition(id);
       if (response.success) {
         alert("Deleted successfully!");
@@ -180,7 +199,6 @@ const TableMedicalConditions = () => {
     }
   };
 
-  // Handle form changes for edit
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name in editData.nutritionalConstraints) {
@@ -197,13 +215,18 @@ const TableMedicalConditions = () => {
     setErrors({ ...errors, [name]: "" });
   };
 
-  // Validate form for edit
   const validateForm = () => {
     const newErrors = {};
     if (!editData.name.trim()) newErrors.name = "Name is required";
-    if (!editData.description.trim()) newErrors.description = "Description is required";
-    if (editData.restrictedFoods.some((food) => editData.recommendedFoods.includes(food))) {
-      newErrors.foodConflict = "A dish cannot be both restricted and recommended!";
+    if (!editData.description.trim())
+      newErrors.description = "Description is required";
+    if (
+      editData.restrictedFoods.some((food) =>
+        editData.recommendedFoods.includes(food)
+      )
+    ) {
+      newErrors.foodConflict =
+        "A dish cannot be both restricted and recommended!";
     }
     ["carbs", "fat", "protein", "calories"].forEach((field) => {
       const value = editData.nutritionalConstraints[field];
@@ -217,7 +240,6 @@ const TableMedicalConditions = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Save edits
   const handleSaveEdit = async () => {
     if (!validateForm()) {
       alert("Please fill in all required fields correctly!");
@@ -244,7 +266,10 @@ const TableMedicalConditions = () => {
           : null,
       },
     };
-    const response = await medicalConditionService.updateMedicalCondition(editData.id, updatedData);
+    const response = await medicalConditionService.updateMedicalCondition(
+      editData.id,
+      updatedData
+    );
     if (response.success) {
       alert(`Medical condition "${editData.name}" has been updated!`);
       setIsEditModalOpen(false);
@@ -254,13 +279,11 @@ const TableMedicalConditions = () => {
     }
   };
 
-  // Open food selection modal
   const handleOpenFoodModal = (type) => {
     setFoodModalType(type);
     setIsFoodModalOpen(true);
   };
 
-  // Handle food selection
   const handleFoodSelect = (selectedDishes) => {
     if (foodModalType === "restricted") {
       setEditData({ ...editData, restrictedFoods: selectedDishes });
@@ -270,7 +293,6 @@ const TableMedicalConditions = () => {
     setIsFoodModalOpen(false);
   };
 
-  // Close edit modal
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setEditData({
@@ -284,10 +306,16 @@ const TableMedicalConditions = () => {
     setErrors({});
   };
 
-  // Close view modal
   const closeViewModal = () => {
     setIsViewModalOpen(false);
     setViewData(null);
+  };
+
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1; // Chuyển từ 0-based sang 1-based
+    if (selectedPage >= 1 && selectedPage <= totalPages) {
+      setCurrentPage(selectedPage);
+    }
   };
 
   return (
@@ -321,7 +349,9 @@ const TableMedicalConditions = () => {
                   className="bg-white rounded-lg shadow-md overflow-hidden relative"
                 >
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center">{condition.name}</h3>
+                    <h3 className="text-lg font-semibold text-center">
+                      {condition.name}
+                    </h3>
                     <p className="text-sm text-gray-600 mt-2 text-center line-clamp-2">
                       {condition.description}
                     </p>
@@ -357,57 +387,25 @@ const TableMedicalConditions = () => {
               <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500">
                 <HeartPulse className="w-24 h-24 text-gray-400 mb-4" />
                 <p className="text-lg font-semibold">No medical conditions</p>
-                <p className="text-sm">Looks like you haven't added any medical conditions yet.</p>
+                <p className="text-sm">
+                  Looks like you haven't added any medical conditions yet.
+                </p>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {conditions.length > 0 && !isLoading && (
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="4">4 conditions</option>
-              <option value="8">8 conditions</option>
-              <option value="12">12 conditions</option>
-            </select>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                className={`px-3 py-1 rounded ${
-                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                }`}
-                onClick={() => paginate(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+      {totalItems > 0 && !isLoading && (
+        <div className="p-4 bg-gray-50">
+          <Pagination
+            limit={itemsPerPage}
+            setLimit={setItemsPerPage}
+            totalItems={totalItems}
+            handlePageClick={handlePageClick}
+            currentPage={currentPage - 1} // Chuyển sang 0-based
+            text={"Medical Conditions"}
+          />
         </div>
       )}
 
@@ -416,7 +414,9 @@ const TableMedicalConditions = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
           <div className="bg-white rounded-lg shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center mb-6 py-4 px-6">
-              <label className="text-xl font-bold text-green-700">Edit Medical Condition</label>
+              <label className="text-xl font-bold text-green-700">
+                Edit Medical Condition
+              </label>
               <div className="ml-auto flex space-x-4">
                 <button
                   onClick={handleSaveEdit}
@@ -424,7 +424,10 @@ const TableMedicalConditions = () => {
                 >
                   Save
                 </button>
-                <button className="text-gray-500 hover:text-gray-700" onClick={closeEditModal}>
+                <button
+                  className="text-gray-500 hover:text-gray-700"
+                  onClick={closeEditModal}
+                >
                   ✕
                 </button>
               </div>
@@ -433,7 +436,9 @@ const TableMedicalConditions = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-6 pb-6">
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name *
+                  </label>
                   <input
                     type="text"
                     name="name"
@@ -444,7 +449,9 @@ const TableMedicalConditions = () => {
                       errors.name ? "border-red-500" : "border-gray-300"
                     } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
-                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                  {errors.name && (
+                    <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                  )}
                 </div>
 
                 <div className="mb-4">
@@ -461,7 +468,9 @@ const TableMedicalConditions = () => {
                     } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
                   {errors.description && (
-                    <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.description}
+                    </p>
                   )}
                 </div>
               </div>
@@ -484,9 +493,10 @@ const TableMedicalConditions = () => {
                             onClick={() =>
                               setEditData({
                                 ...editData,
-                                restrictedFoods: editData.restrictedFoods.filter(
-                                  (id) => id !== foodId
-                                ),
+                                restrictedFoods:
+                                  editData.restrictedFoods.filter(
+                                    (id) => id !== foodId
+                                  ),
                               })
                             }
                             className="ml-2 text-red-500 hover:text-red-700"
@@ -522,9 +532,10 @@ const TableMedicalConditions = () => {
                             onClick={() =>
                               setEditData({
                                 ...editData,
-                                recommendedFoods: editData.recommendedFoods.filter(
-                                  (id) => id !== foodId
-                                ),
+                                recommendedFoods:
+                                  editData.recommendedFoods.filter(
+                                    (id) => id !== foodId
+                                  ),
                               })
                             }
                             className="ml-2 text-red-500 hover:text-red-700"
@@ -542,7 +553,9 @@ const TableMedicalConditions = () => {
                     Add Recommended Foods
                   </button>
                   {errors.foodConflict && (
-                    <p className="text-red-500 text-sm mt-1">{errors.foodConflict}</p>
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.foodConflict}
+                    </p>
                   )}
                 </div>
 
@@ -552,7 +565,9 @@ const TableMedicalConditions = () => {
                   </label>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-gray-600">Calories (kcal)</label>
+                      <label className="text-sm text-gray-600">
+                        Calories (kcal)
+                      </label>
                       <input
                         type="number"
                         name="calories"
@@ -564,11 +579,15 @@ const TableMedicalConditions = () => {
                         } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.calories && (
-                        <p className="text-red-500 text-sm mt-1">{errors.calories}</p>
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.calories}
+                        </p>
                       )}
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600">Protein (g)</label>
+                      <label className="text-sm text-gray-600">
+                        Protein (g)
+                      </label>
                       <input
                         type="number"
                         name="protein"
@@ -580,7 +599,9 @@ const TableMedicalConditions = () => {
                         } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.protein && (
-                        <p className="text-red-500 text-sm mt-1">{errors.protein}</p>
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.protein}
+                        </p>
                       )}
                     </div>
                     <div>
@@ -595,7 +616,11 @@ const TableMedicalConditions = () => {
                           errors.carbs ? "border-red-500" : "border-gray-300"
                         } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
-                      {errors.carbs && <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>}
+                      {errors.carbs && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.carbs}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm text-gray-600">Fat (g)</label>
@@ -609,7 +634,11 @@ const TableMedicalConditions = () => {
                           errors.fat ? "border-red-500" : "border-gray-300"
                         } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
-                      {errors.fat && <p className="text-red-500 text-sm mt-1">{errors.fat}</p>}
+                      {errors.fat && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.fat}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -624,7 +653,9 @@ const TableMedicalConditions = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
           <div className="bg-white rounded-lg shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center mb-6 py-4 px-6">
-              <label className="text-xl font-bold text-green-700">View Medical Condition</label>
+              <label className="text-xl font-bold text-green-700">
+                View Medical Condition
+              </label>
               <button
                 className="ml-auto text-gray-500 hover:text-gray-700"
                 onClick={closeViewModal}
@@ -636,7 +667,9 @@ const TableMedicalConditions = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-6 pb-6">
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name
+                  </label>
                   <p className="text-gray-900">{viewData.name}</p>
                 </div>
                 <div className="mb-4">
@@ -656,7 +689,10 @@ const TableMedicalConditions = () => {
                     {viewData.restrictedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
                       return dish ? (
-                        <span key={foodId} className="bg-gray-200 rounded-full px-3 py-1 text-sm">
+                        <span
+                          key={foodId}
+                          className="bg-gray-200 rounded-full px-3 py-1 text-sm"
+                        >
                           {dish.name}
                         </span>
                       ) : null;
@@ -671,7 +707,10 @@ const TableMedicalConditions = () => {
                     {viewData.recommendedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
                       return dish ? (
-                        <span key={foodId} className="bg-gray-200 rounded-full px-3 py-1 text-sm">
+                        <span
+                          key={foodId}
+                          className="bg-gray-200 rounded-full px-3 py-1 text-sm"
+                        >
                           {dish.name}
                         </span>
                       ) : null;
@@ -684,13 +723,17 @@ const TableMedicalConditions = () => {
                   </label>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-gray-600">Calories (kcal)</label>
+                      <label className="text-sm text-gray-600">
+                        Calories (kcal)
+                      </label>
                       <p className="text-gray-900">
                         {viewData.nutritionalConstraints?.calories || "N/A"}
                       </p>
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600">Protein (g)</label>
+                      <label className="text-sm text-gray-600">
+                        Protein (g)
+                      </label>
                       <p className="text-gray-900">
                         {viewData.nutritionalConstraints?.protein || "N/A"}
                       </p>
@@ -723,10 +766,14 @@ const TableMedicalConditions = () => {
           onSelect={handleFoodSelect}
           availableDishes={dishes}
           selectedDishes={
-            foodModalType === "restricted" ? editData.restrictedFoods : editData.recommendedFoods
+            foodModalType === "restricted"
+              ? editData.restrictedFoods
+              : editData.recommendedFoods
           }
           conflictingDishes={
-            foodModalType === "restricted" ? editData.recommendedFoods : editData.restrictedFoods
+            foodModalType === "restricted"
+              ? editData.recommendedFoods
+              : editData.restrictedFoods
           }
         />
       )}

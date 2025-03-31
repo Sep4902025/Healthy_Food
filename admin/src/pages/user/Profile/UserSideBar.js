@@ -1,13 +1,7 @@
 import "../EditUser.css";
 const UserSidebar = ({ activeTab, setActiveTab }) => {
   return (
-    <div className="user-container-1 ">
-      <div className="w-[223.50px] h-[73.64px] relative">
-        <div className="w-[162px] h-[70px] left-[61.50px] top-[3.64px] absolute text-black text-[32px] font-normal font-['Outfit'] tracking-tight">
-          My Profile
-        </div>
-      </div>
-
+    <div className="user-container-1 px-14">
       <ul className="user-list">
         <li
           className={`user-item ${activeTab === "profile" ? "selected" : ""}`}

@@ -23,7 +23,7 @@ const HomeService = {
   // Gọi API để lấy danh sách nguyên liệu nhóm theo loại
   getIngredientsGroupedByType: async () => {
     try {
-      const response = await axiosInstance.get("/Home/ingredients/type");
+      const response = await axiosInstance.get("/home/ingredients/type");
       return response.data;
     } catch (error) {
       console.error("Error fetching ingredients:", error);
@@ -33,7 +33,7 @@ const HomeService = {
 
   getIngredientsByType: async (type) => {
     try {
-      const response = await axiosInstance.get(`/Home/ingredients/type/${type}`);
+      const response = await axiosInstance.get(`/home/ingredients/type/${type}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching ingredients for type ${type}:`, error);
@@ -43,7 +43,7 @@ const HomeService = {
 
   getDishesGroupedByType: async () => {
     try {
-      const response = await axiosInstance.get("/Home/dishes/type");
+      const response = await axiosInstance.get("/home/dishes/type");
       return response.data;
     } catch (error) {
       console.error("Error fetching dishes:", error);
@@ -53,7 +53,9 @@ const HomeService = {
 
   getDishesByType: async (type) => {
     try {
-      const response = await axiosInstance.get(`/Home/dishes/type/${type}`);
+      const response = await axiosInstance.get(`/home/dishes/type/${type}`);
+      console.log("DAAAAAATAAAAAAAa", response);
+
       return response.data;
     } catch (error) {
       console.error(`Error fetching dishes for type ${type}:`, error);

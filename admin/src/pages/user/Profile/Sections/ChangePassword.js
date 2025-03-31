@@ -3,9 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import AuthService from "../../../../services/auth.service";
 import "./ChangePassword.css";
+import { FaUser, FaKey } from "react-icons/fa";
 
 const ChangePassword = () => {
   const navigate = useNavigate();
+
+  const [user, setUser] = useState({
+    username: "",
+    email: "",
+    profileImageUrl: "",
+    profileImage: null,
+  });
+
   const [passwords, setPasswords] = useState({
     oldPassword: "",
     newPassword: "",
@@ -43,42 +52,64 @@ const ChangePassword = () => {
   };
 
   return (
-    <div className="change-password-container">
-      <h2>Change Password</h2>
-      <form onSubmit={handleSubmit} className="change-password-form">
-        <label>Old Password</label>
-        <input
-          type={showPassword ? "text" : "password"}
-          name="oldPassword"
-          value={passwords.oldPassword}
-          onChange={handleChange}
-          required
-        />
+    <div className="edit-profile-container">
+      <div className="profile-sidebar">
+        <div className="profile-avatar-container">
+          <span className="profile-initial">
+            {user.username ? user.username.charAt(0).toUpperCase() : "A"}
+          </span>
+          <h2>Admin Profile</h2>
+        </div>
 
-        <label>New Password</label>
-        <input
-          type={showPassword ? "text" : "password"}
-          name="newPassword"
-          value={passwords.newPassword}
-          onChange={handleChange}
-          required
-        />
+        <ul className="sidebar-menu">
+          <li onClick={() =>  navigate(`/admin/adminprofile/${user._id}`, { state: { user } })}>
+            <FaUser className="menu-icon" />
+            <span>Profile</span>
+          </li>
+          <li className="active" onClick={() => navigate("/admin/change-password")}>
+            <FaKey className="menu-icon" />
+            <span>Change Password</span>
+          </li>
+        </ul>
+      </div>
 
-        <label>Confirm New Password</label>
-        <input
-          type={showPassword ? "text" : "password"}
-          name="confirmPassword"
-          value={passwords.confirmPassword}
-          onChange={handleChange}
-          required
-        />
+      <div className="change-password-container">
+        <h2>Change Password</h2>
+        <form onSubmit={handleSubmit} className="change-password-form">
+          <label>Old Password</label>
+          <input
+            type={showPassword ? "text" : "password"}
+            name="oldPassword"
+            value={passwords.oldPassword}
+            onChange={handleChange}
+            required
+          />
 
-        <button type="button" onClick={togglePasswordVisibility}>
-          {showPassword ? "Hide Password" : "Show Password"}
-        </button>
+          <label>New Password</label>
+          <input
+            type={showPassword ? "text" : "password"}
+            name="newPassword"
+            value={passwords.newPassword}
+            onChange={handleChange}
+            required
+          />
 
-        <button type="submit">Change Password</button>
-      </form>
+          <label>Confirm New Password</label>
+          <input
+            type={showPassword ? "text" : "password"}
+            name="confirmPassword"
+            value={passwords.confirmPassword}
+            onChange={handleChange}
+            required
+          />
+
+          <button type="button" onClick={togglePasswordVisibility}>
+            {showPassword ? "Hide Password" : "Show Password"}
+          </button>
+
+          <button type="submit">Change Password</button>
+        </form>
+      </div>
     </div>
   );
 };

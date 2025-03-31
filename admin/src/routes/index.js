@@ -67,6 +67,9 @@ import TableMedicalConditions from "../pages/nutritionist/Medical Condition Mana
 import AddMedicalCondition from "../pages/nutritionist/Medical Condition Management/AddMedicalCondition";
 import CreateMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/CreateMealPlanPage";
 import EditMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/EditMealPlanPage";
+import Medical from "../pages/user/Medical";
+import NutritionistApplicationForm from "../pages/user/NutritionistApplicationForm";
+import MealPlansAnalytics from "../pages/nutritionist/MealPlan Management/MealPlansAnalytics";
 
 const AppRoutes = () => {
   return (
@@ -97,7 +100,10 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
-
+        <Route
+          path="/apply-nutritionist"
+          element={<NutritionistApplicationForm />}
+        />
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
 
@@ -118,6 +124,7 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        <Route path="dishes/:type" element={<DishesList />} />
         <Route
           path="dishes/:dishId"
           element={
@@ -135,7 +142,6 @@ const AppRoutes = () => {
           }
         />
         <Route path="ingredients/:type" element={<IngredientList />} />
-        <Route path="dishes/:type" element={<DishesList />} />
 
         <Route
           path="/foryou"
@@ -149,6 +155,9 @@ const AppRoutes = () => {
         <Route path="about" element={<About />} />
         <Route path="contact" element={<Contact />} />
         <Route path="term" element={<Term />} />
+
+        {/* Thêm route cho trang Medical */}
+        <Route path="medical" element={<Medical />} />
 
         {/* Gom các route của khảo sát vào đây */}
         <Route
@@ -207,12 +216,13 @@ const AppRoutes = () => {
         />
         <Route path="mealplan" element={<TableMealPlan />} />
         <Route path="change-password" element={<ChangePassword />} />
+        <Route path="adminprofile/:id" element={<AdminProfile />} />
         <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
         <Route path="viewprofile/:id" element={<ViewProfile />} />
       </Route>
 
-      {/* Bảo vệ toàn bộ route NutritionistLayout Nutritionist */}
+      {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist */}
       <Route
         path="/nutritionist"
         element={
@@ -223,6 +233,8 @@ const AppRoutes = () => {
       >
         <Route path="chat" element={<NutritionChat />} />
         <Route path="mealplan" element={<TableMealPlan />} />
+        <Route path="mealPlan/analytics" element={<MealPlansAnalytics />} />
+
         <Route
           path="mealplan/create"
           element={<CreateMealPlanNutritionist />}

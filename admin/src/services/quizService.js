@@ -169,8 +169,8 @@ const quizService = {
       };
     }
   },
-
   updateUserPreference: async (userPreferenceId, updatedData) => {
+    console.log("UPI", userPreferenceId);
     if (!userPreferenceId) {
       return {
         success: false,
@@ -185,36 +185,43 @@ const quizService = {
       };
     }
 
+    // Lọc bỏ các trường undefined để tránh gửi dữ liệu không hợp lệ
+    const filteredData = Object.fromEntries(
+      Object.entries(updatedData).filter(([_, value]) => value !== undefined)
+    );
+
+    if (Object.keys(filteredData).length === 0) {
+      return {
+        success: false,
+        message: "Không có dữ liệu hợp lệ để cập nhật",
+      };
+    }
+
     try {
       console.log(
         "🚀 Đang cập nhật sở thích người dùng với userPreferenceId:",
         userPreferenceId
       );
-      console.log("🚀 Dữ liệu cập nhật:", updatedData);
+      console.log("🚀 Dữ liệu cập nhật (sau khi lọc):", filteredData);
+
       const response = await axios.put(
         `${API_URL}/userpreference/${userPreferenceId}`,
-        updatedData,
+        filteredData,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );
+
       console.log("🚀 Phản hồi từ /userpreference update:", response.data);
 
-      if (response.data.success) {
-        return {
-          success: true,
-          message:
-            response.data.message || "Cập nhật sở thích người dùng thành công",
-        };
-      } else {
-        return {
-          success: false,
-          message:
-            response.data.message || "Không thể cập nhật sở thích người dùng",
-        };
-      }
+      // Đồng bộ định dạng phản hồi với cách UserProfileUpdate xử lý
+      return {
+        success: response.data.success || true, // Nếu API trả về success, dùng nó; nếu không, mặc định true
+        message:
+          response.data.message || "Cập nhật sở thích người dùng thành công",
+      };
     } catch (error) {
       console.error(
         "🚨 Lỗi trong updateUserPreference:",
@@ -265,6 +272,63 @@ const quizService = {
       return {
         success: false,
         message: error.response?.data?.message || "Không thể xóa người dùng",
+      };
+    }
+  },
+  updateUserById: async (userId, updatedData) => {
+    if (!userId) {
+      return {
+        success: false,
+        message: "userId là bắt buộc để cập nhật thông tin người dùng",
+      };
+    }
+
+    if (!updatedData || Object.keys(updatedData).length === 0) {
+      return {
+        success: false,
+        message: "Dữ liệu cập nhật không được để trống",
+      };
+    }
+
+    try {
+      console.log("🚀 Đang cập nhật thông tin người dùng với userId:", userId);
+      console.log("🚀 Dữ liệu cập nhật:", updatedData);
+
+      const response = await axios.put(
+        `${API_URL}/users/${userId}`,
+        updatedData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      console.log("🚀 Phản hồi từ /users update:", response.data);
+
+      if (response.data.success) {
+        return {
+          success: true,
+          message:
+            response.data.message || "Cập nhật thông tin người dùng thành công",
+          data: response.data.data, // Trả về dữ liệu người dùng đã cập nhật nếu có
+        };
+      } else {
+        return {
+          success: false,
+          message:
+            response.data.message || "Không thể cập nhật thông tin người dùng",
+        };
+      }
+    } catch (error) {
+      console.error(
+        "🚨 Lỗi trong updateUserById:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message:
+          error.response?.data?.message ||
+          "Không thể cập nhật thông tin người dùng",
       };
     }
   },

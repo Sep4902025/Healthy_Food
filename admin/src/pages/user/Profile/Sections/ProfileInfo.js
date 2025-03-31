@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect, useState, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   FaStar,
@@ -14,40 +14,11 @@ import {
 import quizService from "../../../../services/quizService";
 import { selectUser } from "../../../../store/selectors/authSelectors";
 import axios from "axios";
+import UserProfileUpdate from "../../UpdateUser";
 
-const API_URL = process.env.REACT_APP_API_URL;
-
-const axiosInstance = axios.create({
-  baseURL: API_URL,
-  timeout: 5000,
-});
-
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error("API Error:", error);
-    if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-    }
-    return Promise.reject(error);
-  }
-);
-
-const AuthService = {
-  resetPassword: async (email, password, passwordConfirm) => {
-    try {
-      const response = await axiosInstance.post("/users/reset-password", {
-        email,
-        password,
-        passwordConfirm,
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Lỗi reset mật khẩu:", error);
-      throw error;
-    }
-  },
-};
+import AuthService from "../../../../services/auth.service";
+import uploadFile from "../../../../helpers/uploadFile";
+import { updateUser } from "../../../../store/actions/authActions";
 
 const UserProfile = () => {
   const user = useSelector(selectUser);
@@ -58,20 +29,24 @@ const UserProfile = () => {
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const [passwordResetInProgress, setPasswordResetInProgress] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [passwordData, setPasswordData] = useState({
     email: "",
     password: "",
     passwordConfirm: "",
   });
+  const [uploadProgress, setUploadProgress] = useState(0); // Upload progress
+  const [uploading, setUploading] = useState(false); // Upload status
+  const fileInputRef = useRef(null); // Ref for hidden file input
 
   const fetchUserData = async () => {
     if (!user || !user._id) {
-      console.error("🚨 User hoặc user._id không tồn tại:", user);
+      console.error("🚨 User or user._id does not exist:", user);
       setLoading(false);
       return;
     }
     if (!user.userPreferenceId) {
-      console.warn("🚨 userPreferenceId không tồn tại trong user:", user);
+      console.warn("🚨 userPreferenceId does not exist in user:", user);
       setUserData(null);
       setLoading(false);
       return;
@@ -84,11 +59,11 @@ const UserProfile = () => {
       if (success) {
         setUserData(data);
       } else {
-        console.error("🚨 Lỗi khi lấy dữ liệu userPreference:", message);
+        console.error("🚨 Error fetching userPreference data:", message);
         setUserData(null);
       }
     } catch (error) {
-      console.error("🚨 Lỗi trong fetchUserData:", error);
+      console.error("🚨 Error in fetchUserData:", error);
       setUserData(null);
     } finally {
       setLoading(false);
@@ -106,16 +81,16 @@ const UserProfile = () => {
   }, [user, navigate]);
 
   const handleEditClick = () => {
-    navigate(`/edit-profile/${user._id}`, { state: { user } });
+    setShowEditModal(true);
   };
 
   const handleReset = async () => {
     if (!user || !user.userPreferenceId) {
-      alert("Không tìm thấy userPreferenceId để xóa!");
+      alert("No userPreferenceId found to delete!");
       return;
     }
     const confirmReset = window.confirm(
-      "Bạn có chắc chắn muốn xóa tất cả thông tin cá nhân? Hành động này không thể hoàn tác."
+      "Are you sure you want to delete all personal information? This action cannot be undone."
     );
     if (!confirmReset) return;
     try {
@@ -124,14 +99,14 @@ const UserProfile = () => {
         user.userPreferenceId
       );
       if (success) {
-        alert("Đã xóa thông tin thành công");
+        alert("Information deleted successfully");
         setUserData(null);
         fetchUserData();
       } else {
-        alert(`Lỗi khi xóa: ${message}`);
+        alert(`Error deleting: ${message}`);
       }
     } catch (error) {
-      alert("Đã xảy ra lỗi khi xóa dữ liệu");
+      alert("An error occurred while deleting data");
       console.error("🚨 Reset error:", error);
     } finally {
       setResetInProgress(false);
@@ -144,11 +119,11 @@ const UserProfile = () => {
       !passwordData.password ||
       !passwordData.passwordConfirm
     ) {
-      alert("Vui lòng điền đầy đủ thông tin!");
+      alert("Please fill in all information!");
       return;
     }
     if (passwordData.password !== passwordData.passwordConfirm) {
-      alert("Mật khẩu xác nhận không khớp!");
+      alert("Confirmation password does not match!");
       return;
     }
     try {
@@ -159,14 +134,14 @@ const UserProfile = () => {
         passwordData.passwordConfirm
       );
       if (result.success) {
-        alert("Đổi mật khẩu thành công!");
+        alert("Password changed successfully!");
         setShowPasswordReset(false);
         setPasswordData({ email: "", password: "", passwordConfirm: "" });
       } else {
-        alert(`Lỗi: ${result.message || "Không thể đổi mật khẩu"}`);
+        alert(`Error: ${result.message || "Unable to change password"}`);
       }
     } catch (error) {
-      alert("Đã xảy ra lỗi khi đổi mật khẩu!");
+      alert("An error occurred while changing the password!");
       console.error("🚨 Password reset error:", error);
     } finally {
       setPasswordResetInProgress(false);
@@ -175,11 +150,11 @@ const UserProfile = () => {
 
   const handleDeleteUser = async () => {
     if (!user || !user._id) {
-      alert("Không tìm thấy thông tin người dùng để xóa!");
+      alert("No user information found to delete!");
       return;
     }
     const confirmDelete = window.confirm(
-      "Bạn có chắc chắn muốn xóa tài khoản này? Hành động này không thể hoàn tác và bạn sẽ bị đăng xuất!"
+      "Are you sure you want to delete this account? This action cannot be undone, and you will be logged out!"
     );
     if (!confirmDelete) return;
     try {
@@ -188,18 +163,65 @@ const UserProfile = () => {
         user._id
       );
       if (success) {
-        alert("Tài khoản đã được xóa thành công!");
+        alert("Account deleted successfully!");
         localStorage.removeItem("token");
         navigate("/signin");
       } else {
-        alert(`Lỗi khi xóa tài khoản: ${message}`);
+        alert(`Error deleting account: ${message}`);
       }
     } catch (error) {
-      alert("Đã xảy ra lỗi khi xóa tài khoản!");
+      alert("An error occurred while deleting the account!");
       console.error("🚨 Delete user error:", error);
     } finally {
       setDeleteInProgress(false);
     }
+  };
+
+  const handleUpdateProfile = (updatedData) => {
+    setUserData((prev) => ({ ...prev, ...updatedData }));
+  };
+  const dispatch = useDispatch();
+  // Handle avatar upload using quizService.updateUserById
+  const handleUploadAvatar = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const result = await uploadFile(
+        file,
+        (percent) => setUploadProgress(percent),
+        (cancel) => console.log("Upload canceled")
+      );
+      const avatarUrl = result.secure_url;
+
+      const updateResult = await quizService.updateUserById(user._id, {
+        avatarUrl,
+      });
+      if (updateResult.success) {
+        setUserData((prev) => ({ ...prev, avatarUrl }));
+        // Update user in Redux
+        dispatch(updateUser({ ...user, avatarUrl }));
+        alert("Avatar updated successfully!");
+      } else {
+        throw new Error(updateResult.message || "Unable to update avatar");
+      }
+    } catch (error) {
+      console.error("🚨 Error uploading avatar:", error);
+      alert("An error occurred while uploading the avatar: " + error.message);
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      handleUploadAvatar(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click(); // Trigger hidden file input
   };
 
   const calculateBMI = () => {
@@ -218,25 +240,21 @@ const UserProfile = () => {
     const bmi = parseFloat(calculateBMI());
     if (isNaN(bmi))
       return {
-        text: "Không có dữ liệu",
+        text: "No data",
         color: "text-gray-600",
         bg: "bg-gray-100",
       };
     if (bmi < 18)
-      return { text: "Thiếu cân", color: "text-blue-600", bg: "bg-blue-100" };
+      return { text: "Underweight", color: "text-blue-600", bg: "bg-blue-100" };
     if (bmi < 30)
-      return {
-        text: "Bình thường",
-        color: "text-green-600",
-        bg: "bg-green-100",
-      };
+      return { text: "Normal", color: "text-green-600", bg: "bg-green-100" };
     if (bmi < 40)
       return {
-        text: "Thừa cân",
+        text: "Overweight",
         color: "text-yellow-600",
         bg: "bg-yellow-100",
       };
-    return { text: "Béo phì", color: "text-red-600", bg: "bg-red-100" };
+    return { text: "Obese", color: "text-red-600", bg: "bg-red-100" };
   };
 
   const InfoItem = ({
@@ -270,7 +288,7 @@ const UserProfile = () => {
         <div className="p-6 bg-white rounded-lg shadow-lg animate-pulse">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-lg font-medium text-gray-700">Đang tải...</p>
+            <p className="text-lg font-medium text-gray-700">Loading...</p>
           </div>
         </div>
       </div>
@@ -288,27 +306,27 @@ const UserProfile = () => {
                 onClick={handleEditClick}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 shadow-md"
               >
-                <FaEdit /> Chỉnh sửa hồ sơ
+                <FaEdit /> Edit Profile
               </button>
               <button
                 onClick={() => setShowPasswordReset(!showPasswordReset)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-300 shadow-md"
               >
-                <FaKey /> Đổi mật khẩu
+                <FaKey /> Change Password
               </button>
               <button
                 onClick={handleReset}
                 disabled={resetInProgress}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-300 shadow-md disabled:bg-red-300"
               >
-                {resetInProgress ? "Đang xóa..." : "Xóa dữ liệu cá nhân"}
+                {resetInProgress ? "Deleting..." : "Delete Personal Data"}
               </button>
               <button
                 onClick={handleDeleteUser}
                 disabled={deleteInProgress}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-all duration-300 shadow-md disabled:bg-red-400"
               >
-                {deleteInProgress ? "Đang xóa..." : "Xóa tài khoản"}
+                {deleteInProgress ? "Deleting..." : "Delete Account"}
               </button>
             </div>
           </div>
@@ -321,9 +339,9 @@ const UserProfile = () => {
             <div className="bg-gradient-to-r from-indigo-600 to-blue-500 p-6 text-white">
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative">
-                  {user.avatar_url ? (
+                  {userData?.avatarUrl ? (
                     <img
-                      src={user.avatar_url}
+                      src={userData.avatarUrl}
                       alt="Avatar"
                       className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                     />
@@ -332,16 +350,31 @@ const UserProfile = () => {
                       {user.username ? user.username[0].toUpperCase() : "?"}
                     </div>
                   )}
-                  <button className="absolute bottom-0 right-0 bg-white text-indigo-600 p-2 rounded-full shadow-md hover:bg-indigo-100 transition-all duration-300">
-                    <FaUpload />
+                  <button
+                    onClick={triggerFileInput}
+                    disabled={uploading}
+                    className="absolute bottom-0 right-0 bg-white text-indigo-600 p-2 rounded-full shadow-md hover:bg-indigo-100 transition-all duration-300 disabled:opacity-50"
+                  >
+                    {uploading ? (
+                      <span className="text-xs">{uploadProgress}%</span>
+                    ) : (
+                      <FaUpload />
+                    )}
                   </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
                 </div>
                 <div className="text-center sm:text-left">
                   <h1 className="text-2xl sm:text-3xl font-bold">
-                    {userData?.name || user.username || "Người dùng"}
+                    {userData?.name || user.username || "User"}
                   </h1>
                   <p className="text-indigo-100 mt-1">
-                    {userData?.email || user.email || "Chưa có email"}
+                    {userData?.email || user.email || "No email"}
                   </p>
                 </div>
               </div>
@@ -351,14 +384,14 @@ const UserProfile = () => {
             <div className="p-6">
               {/* Body Measurements */}
               <SectionTitle
-                title="Chỉ số cơ thể"
+                title="Body Measurements"
                 icon={<FaCalculator className="text-indigo-600" />}
               />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                 <div className="bg-blue-50 p-4 rounded-lg shadow-sm flex items-center gap-3">
                   <FaWeight className="text-blue-500 text-2xl" />
                   <div>
-                    <p className="text-gray-600">Cân nặng</p>
+                    <p className="text-gray-600">Weight</p>
                     <p className="text-xl font-semibold text-blue-700">
                       {userData?.weight || "?"}{" "}
                       <span className="text-sm">kg</span>
@@ -368,7 +401,7 @@ const UserProfile = () => {
                 <div className="bg-green-50 p-4 rounded-lg shadow-sm flex items-center gap-3">
                   <FaRuler className="text-green-500 text-2xl" />
                   <div>
-                    <p className="text-gray-600">Chiều cao</p>
+                    <p className="text-gray-600">Height</p>
                     <p className="text-xl font-semibold text-green-700">
                       {userData?.height || "?"}{" "}
                       <span className="text-sm">cm</span>
@@ -398,29 +431,29 @@ const UserProfile = () => {
               {userData ? (
                 <>
                   <SectionTitle
-                    title="Thông tin cá nhân"
+                    title="Personal Information"
                     icon={<FaUser className="text-indigo-600" />}
                   />
                   <div className="space-y-8">
                     <div>
                       <h4 className="text-lg font-semibold text-gray-700 mb-4">
-                        Thông tin cơ bản
+                        Basic Information
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <InfoItem
-                          label="Tuổi"
+                          label="Age"
                           value={userData.age}
                           colorClass="bg-blue-50"
                           textClass="text-blue-700"
                         />
                         <InfoItem
-                          label="Giới tính"
+                          label="Gender"
                           value={userData.gender}
                           colorClass="bg-purple-50"
                           textClass="text-purple-700"
                         />
                         <InfoItem
-                          label="Số điện thoại"
+                          label="Phone Number"
                           value={userData.phoneNumber}
                           colorClass="bg-indigo-50"
                           textClass="text-indigo-700"
@@ -429,17 +462,17 @@ const UserProfile = () => {
                     </div>
                     <div>
                       <h4 className="text-lg font-semibold text-gray-700 mb-4">
-                        Mục tiêu dinh dưỡng
+                        Nutrition Goals
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <InfoItem
-                          label="Mục tiêu"
+                          label="Goal"
                           value={userData.goal}
                           colorClass="bg-green-50"
                           textClass="text-green-700"
                         />
                         <InfoItem
-                          label="Thời hạn kế hoạch"
+                          label="Plan Duration"
                           value={userData.longOfPlan}
                           colorClass="bg-teal-50"
                           textClass="text-teal-700"
@@ -448,35 +481,35 @@ const UserProfile = () => {
                     </div>
                     <div>
                       <h4 className="text-lg font-semibold text-gray-700 mb-4">
-                        Sở thích ăn uống
+                        Eating Preferences
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <InfoItem
-                          label="Chế độ ăn"
+                          label="Diet"
                           value={userData.diet}
                           colorClass="bg-amber-50"
                           textClass="text-amber-700"
                         />
                         <InfoItem
-                          label="Thói quen ăn uống"
+                          label="Eating Habits"
                           value={userData.eatHabit?.join(", ")}
                           colorClass="bg-orange-50"
                           textClass="text-orange-700"
                         />
                         <InfoItem
-                          label="Thực phẩm ưa thích"
+                          label="Favorite Foods"
                           value={userData.favorite?.join(", ")}
                           colorClass="bg-yellow-50"
                           textClass="text-yellow-700"
                         />
                         <InfoItem
-                          label="Dị ứng thực phẩm"
+                          label="Food Allergies"
                           value={userData.hate?.join(", ")}
                           colorClass="bg-red-50"
                           textClass="text-red-700"
                         />
                         <InfoItem
-                          label="Số bữa ăn/ngày"
+                          label="Meals per Day"
                           value={userData.mealNumber}
                           colorClass="bg-amber-50"
                           textClass="text-amber-700"
@@ -485,24 +518,24 @@ const UserProfile = () => {
                     </div>
                     <div>
                       <h4 className="text-lg font-semibold text-gray-700 mb-4">
-                        Chỉ số sức khỏe
+                        Health Metrics
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <InfoItem
-                          label="Thời gian ngủ"
+                          label="Sleep Duration"
                           value={userData.sleepTime}
                           colorClass="bg-purple-50"
                           textClass="text-purple-700"
                         />
                         <InfoItem
-                          label="Lượng nước (L)"
+                          label="Water Intake (L)"
                           value={userData.waterDrink}
                           colorClass="bg-blue-50"
                           textClass="text-blue-700"
                         />
                         <InfoItem
-                          label="Bệnh nền"
-                          value={userData.underDisease || "Không có"}
+                          label="Medical Conditions"
+                          value={userData.underDisease || "None"}
                           colorClass="bg-pink-50"
                           textClass="text-pink-700"
                         />
@@ -513,12 +546,14 @@ const UserProfile = () => {
               ) : (
                 <div className="text-center p-8 bg-gray-50 rounded-lg">
                   <FaUser className="text-4xl text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">Chưa có dữ liệu cá nhân</p>
+                  <p className="text-gray-600 mb-4">
+                    No personal data available
+                  </p>
                   <button
                     onClick={handleEditClick}
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300"
                   >
-                    Nhập thông tin ngay
+                    Enter Information Now
                   </button>
                 </div>
               )}
@@ -532,7 +567,7 @@ const UserProfile = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Đổi mật khẩu
+              Change Password
             </h2>
             <div className="space-y-4">
               <div>
@@ -544,11 +579,11 @@ const UserProfile = () => {
                     setPasswordData({ ...passwordData, email: e.target.value })
                   }
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Nhập email"
+                  placeholder="Enter email"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-1">Mật khẩu mới</label>
+                <label className="block text-gray-700 mb-1">New Password</label>
                 <input
                   type="password"
                   value={passwordData.password}
@@ -559,12 +594,12 @@ const UserProfile = () => {
                     })
                   }
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Nhập mật khẩu mới"
+                  placeholder="Enter new password"
                 />
               </div>
               <div>
                 <label className="block text-gray-700 mb-1">
-                  Xác nhận mật khẩu
+                  Confirm Password
                 </label>
                 <input
                   type="password"
@@ -576,7 +611,7 @@ const UserProfile = () => {
                     })
                   }
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Xác nhận mật khẩu"
+                  placeholder="Confirm password"
                 />
               </div>
               <div className="flex justify-end gap-3 mt-6">
@@ -584,19 +619,28 @@ const UserProfile = () => {
                   onClick={() => setShowPasswordReset(false)}
                   className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300"
                 >
-                  Hủy
+                  Cancel
                 </button>
                 <button
                   onClick={handleResetPassword}
                   disabled={passwordResetInProgress}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-indigo-300"
                 >
-                  {passwordResetInProgress ? "Đang xử lý..." : "Xác nhận"}
+                  {passwordResetInProgress ? "Processing..." : "Confirm"}
                 </button>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <UserProfileUpdate
+          userPreferenceId={user.userPreferenceId}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={handleUpdateProfile}
+        />
       )}
     </div>
   );

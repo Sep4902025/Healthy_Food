@@ -3,9 +3,11 @@ module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   darkMode: "class",
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        "custom-green": "#40B491", // Màu hệ thống,
+      },
+    },
   },
   plugins: [],
 };
-
-

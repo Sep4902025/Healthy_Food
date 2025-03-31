@@ -152,9 +152,9 @@ const UnderDisease = () => {
         <ProgressBar progress={84} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Bệnh nền</h2>
+      <h2 className="text-2xl font-bold text-center">Underlying conditions</h2>
       <p className="text-center text-gray-600">
-        Hãy cho tôi biết về bệnh nền của bạn
+        Please tell me about your underlying health conditions
       </p>
 
       {loading && (

@@ -3,38 +3,44 @@ import { useNavigate } from "react-router-dom";
 import mealPlanService from "../../../services/mealPlanServices";
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../../store/selectors/authSelectors";
+import Pagination from "../../../components/Pagination";
+import Loading from "../../../components/Loading";
+import { EditIcon, TrashIcon } from "lucide-react";
 
 const TableMealPlan = () => {
   const { user } = useSelector(selectAuth);
   const navigate = useNavigate();
   const [mealPlans, setMealPlans] = useState([]);
-  console.log("MLLL", mealPlans);
-
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0); // Bắt đầu từ 0 để đồng bộ với ReactPaginate
   const [totalPages, setTotalPages] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Fetch meal plans
-  const fetchMealPlans = async () => {
-    setLoading(true);
+  const fetchMealPlans = async (callback) => {
+    setIsTransitioning(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(currentPage, limit);
+      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // +1 vì API có thể dùng 1-based
       if (response.success) {
         setMealPlans(response.data || []);
         setTotalPages(response.totalPages || 1);
         setTotalItems(response.total || 0);
+        if (callback) callback(response);
       } else {
         setError(response.message);
         setMealPlans([]);
+        setTotalPages(1);
+        setTotalItems(0);
       }
     } catch (err) {
-      setError("Error fetching meal plans");
+      setError("Lỗi không xác định khi tải dữ liệu");
       setMealPlans([]);
+      setTotalPages(1);
+      setTotalItems(0);
     } finally {
-      setLoading(false);
+      setIsTransitioning(false);
     }
   };
 
@@ -42,17 +48,10 @@ const TableMealPlan = () => {
     fetchMealPlans();
   }, [currentPage, limit]);
 
-  // Handle page change
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  // Handle limit change
-  const handleLimitChange = (e) => {
-    setLimit(Number(e.target.value));
-    setCurrentPage(1);
+  // Handle page change for Pagination component
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected; // ReactPaginate trả về 0-based index
+    setCurrentPage(selectedPage);
   };
 
   // Handle edit
@@ -66,7 +65,15 @@ const TableMealPlan = () => {
       try {
         const response = await mealPlanService.deleteMealPlan(id);
         if (response.success) {
-          fetchMealPlans();
+          fetchMealPlans((result) => {
+            const totalItems = result.total;
+            const newTotalPages = Math.ceil(totalItems / limit) || 1;
+            if (result.data.length === 0 && currentPage > 0) {
+              setCurrentPage(currentPage - 1);
+            } else if (currentPage >= newTotalPages) {
+              setCurrentPage(newTotalPages - 1);
+            }
+          });
         } else {
           alert("Failed to delete meal plan");
         }
@@ -90,197 +97,149 @@ const TableMealPlan = () => {
     const start = new Date(startDate);
     const end = new Date(start);
     end.setDate(start.getDate() + duration);
-    return new Date() > end; // Current date is past the end date
+    return new Date() > end;
   };
 
-  // Render table content
-  const renderTableContent = () => {
-    if (loading) {
-      return (
-        <tr>
-          <td colSpan="8" className="px-6 py-4 text-center text-sm text-gray-500">
-            Loading...
-          </td>
-        </tr>
-      );
-    }
-
-    if (mealPlans.length === 0) {
-      return (
-        <tr>
-          <td colSpan="8" className="px-6 py-4 text-center text-sm text-gray-500">
-            No meal plans found.{" "}
-            <button
-              onClick={() => navigate("/nutritionist/mealplan/create")}
-              className="text-green-500 hover:text-green-700 underline"
-            >
-              Create a new meal plan
-            </button>
-            .
-          </td>
-        </tr>
-      );
-    }
-
-    return mealPlans.map((mealPlan) => {
-      const expired = isExpired(mealPlan.startDate, mealPlan.duration);
-      return (
-        <tr key={mealPlan._id} className="hover:bg-gray-50">
-          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-            {mealPlan.title}
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-            {formatDate(mealPlan.startDate)}
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-            {mealPlan.duration} days
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-            {mealPlan.type === "fixed" ? "Fixed" : "Custom"}
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-            {mealPlan.price ? `$${mealPlan.price}` : "N/A"}
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-            <div className="flex items-center">
-              <img
-                src={
-                  mealPlan.userId?.avatarUrl ||
-                  "https://i.pinimg.com/736x/81/ec/02/81ec02c841e7aa13d0f099b5df02b25c.jpg"
-                }
-                alt="Avatar"
-                className="w-8 h-8 rounded-full mr-2"
-              />
-              <span>{mealPlan.userId?.email || "Unknown"}</span>
-            </div>
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm">
-            <span
-              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                expired
-                  ? "bg-red-100 text-red-800"
-                  : mealPlan.isPause
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-green-100 text-green-800"
-              }`}
-            >
-              {expired ? "Expired" : mealPlan.isPause ? "Paused" : "Active"}
-            </span>
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex space-x-4">
-            <button
-              onClick={() => handleEdit(mealPlan._id)}
-              className="text-blue-500 hover:text-blue-700"
-              title="Edit"
-            >
-              ✏️ {/* Pencil icon */}
-            </button>
-            <button
-              onClick={() => handleDelete(mealPlan._id)}
-              className="text-red-500 hover:text-red-700"
-              title="Delete"
-            >
-              🗑️ {/* Trash icon */}
-            </button>
-          </td>
-        </tr>
-      );
-    });
-  };
+  if (isTransitioning)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-[#40B491] text-lg font-semibold">Loading...</p>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-red-500 text-lg font-semibold">Error: {error}</p>
+      </div>
+    );
 
   return (
-    <div className="w-full mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-semibold text-green-600">Meal Plans</h1>
+    <div className="container mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">Meal Plans</h1>
         <button
+          className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
           onClick={() => navigate("/nutritionist/mealplan/create")}
-          className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
         >
-          Create Meal Plan
+          + Add New
         </button>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Title
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Start Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Duration
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Price
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Created For
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">{renderTableContent()}</tbody>
-        </table>
-      </div>
+      {/* Data Container */}
+      <Loading isLoading={isTransitioning}>
+        <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
+          {/* Table Header */}
+          <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
+            <div className="col-span-1">No.</div>
+            <div className="col-span-2">Title</div>
+            <div className="col-span-1">Start Date</div>
+            <div className="col-span-1">Duration</div>
+            <div className="col-span-1">Type</div>
+            <div className="col-span-1">Price</div>
+            <div className="col-span-2">Created For</div>
+            <div className="col-span-1 text-center">Status</div>
+            <div className="col-span-2 text-center">Actions</div>
+          </div>
 
-      {/* Pagination and Limit Controls */}
-      <div className="flex justify-between items-center mt-4">
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-700">
-            Showing {mealPlans.length} of {totalItems} meal plans
-          </span>
-          <select
-            value={limit}
-            onChange={handleLimitChange}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value={5}>5 per page</option>
-            <option value={10}>10 per page</option>
-            <option value={20}>20 per page</option>
-            <option value={50}>50 per page</option>
-          </select>
-        </div>
+          {/* Table Body */}
+          <div className="divide-y divide-gray-200">
+            {mealPlans.length > 0 ? (
+              mealPlans.map((mealPlan, index) => {
+                const expired = isExpired(mealPlan.startDate, mealPlan.duration);
+                return (
+                  <div
+                    key={mealPlan._id}
+                    className={`grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300 ${
+                      isTransitioning ? "opacity-0" : "opacity-100"
+                    }`}
+                  >
+                    <div className="col-span-1 text-gray-600 font-medium">
+                      {currentPage * limit + index + 1} {/* Điều chỉnh số thứ tự */}
+                    </div>
+                    <div className="col-span-2 text-gray-700 text-sm line-clamp-2">
+                      {mealPlan.title}
+                    </div>
+                    <div className="col-span-1 text-gray-700 text-sm">
+                      {formatDate(mealPlan.startDate)}
+                    </div>
+                    <div className="col-span-1 text-gray-700 text-sm">{mealPlan.duration} days</div>
+                    <div className="col-span-1 text-gray-700 text-sm">
+                      {mealPlan.type === "fixed" ? "Fixed" : "Custom"}
+                    </div>
+                    <div className="col-span-1 text-gray-700 text-sm">
+                      {mealPlan.price ? `$${mealPlan.price}` : "N/A"}
+                    </div>
+                    <div className="col-span-2 text-gray-700 text-sm flex items-center">
+                      <img
+                        src={
+                          mealPlan.userId?.avatarUrl ||
+                          "https://i.pinimg.com/736x/81/ec/02/81ec02c841e7aa13d0f099b5df02b25c.jpg"
+                        }
+                        alt="Avatar"
+                        className="w-8 h-8 rounded-full mr-2"
+                      />
+                      <span className="line-clamp-1">{mealPlan.userId?.email || "Unknown"}</span>
+                    </div>
+                    <div className="col-span-1 text-center">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          expired
+                            ? "bg-red-100 text-red-800"
+                            : mealPlan.isPause
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-[#40B491] text-white"
+                        }`}
+                      >
+                        {expired ? "Expired" : mealPlan.isPause ? "Paused" : "Active"}
+                      </span>
+                    </div>
+                    <div className="col-span-2 flex justify-center space-x-3">
+                      <button
+                        className="p-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                        onClick={() => handleEdit(mealPlan._id)}
+                        title="Edit"
+                      >
+                        <EditIcon size={16} />
+                      </button>
+                      <button
+                        className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                        onClick={() => handleDelete(mealPlan._id)}
+                        title="Delete"
+                      >
+                        <TrashIcon size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-6 text-center text-gray-500">
+                No meal plans found.{" "}
+                <button
+                  onClick={() => navigate("/nutritionist/mealplan/create")}
+                  className="text-[#40B491] hover:text-[#359c7a] underline"
+                >
+                  Create a new meal plan
+                </button>
+                .
+              </div>
+            )}
+          </div>
 
-        <div className="flex space-x-2">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1 || loading}
-            className={`px-3 py-1 rounded-md text-sm ${
-              currentPage === 1 || loading
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                : "bg-green-500 text-white hover:bg-green-600"
-            }`}
-          >
-            Previous
-          </button>
-          <span className="px-3 py-1 text-sm text-gray-700">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages || loading}
-            className={`px-3 py-1 rounded-md text-sm ${
-              currentPage === totalPages || loading
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                : "bg-green-500 text-white hover:bg-green-600"
-            }`}
-          >
-            Next
-          </button>
+          {/* Pagination */}
+          <div className="p-4 bg-gray-50">
+            <Pagination
+              limit={limit}
+              setLimit={setLimit}
+              totalItems={totalItems}
+              handlePageClick={handlePageClick}
+              currentPage={currentPage} // Truyền currentPage
+              text={"Meal Plans"}
+            />
+          </div>
         </div>
-      </div>
+      </Loading>
     </div>
   );
 };

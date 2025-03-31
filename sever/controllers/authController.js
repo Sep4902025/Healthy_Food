@@ -300,6 +300,26 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res, "Password reset successfully!");
 });
 
+exports.changePassword = catchAsync(async (req, res, next) => {
+  const { currentPassword, newPassword, newPasswordConfirm } = req.body;
+
+  if (!currentPassword || !newPassword || !newPasswordConfirm) {
+    return next(new AppError("Please provide all required fields", 400));
+  }
+
+  const user = await UserModel.findById(req.user.id).select("+password");
+
+  if (!user || !(await user.correctPassword(currentPassword, user.password))) {
+    return next(new AppError("Current password is incorrect", 401));
+  }
+
+  user.password = newPassword;
+  user.passwordConfirm = newPasswordConfirm;
+  await user.save();
+
+  createSendToken(user, 200, res, "Password changed successfully!");
+});
+
 //
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {

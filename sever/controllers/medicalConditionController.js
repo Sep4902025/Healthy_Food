@@ -123,6 +123,7 @@ exports.deleteMedicalCondition = async (req, res) => {
     });
   }
 };
+
 // Tìm kiếm Medical Condition theo tên
 exports.searchMedicalConditionByName = async (req, res) => {
   try {

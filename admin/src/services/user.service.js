@@ -475,6 +475,71 @@ const UserService = {
       };
     }
   },
+
+  // 📌 Nộp đơn xin trở thành Nutritionist
+  submitNutritionistApplication: async (data) => {
+    try {
+      const response = await axiosInstance.post("/users/submit-nutritionist", data);
+      return {
+        success: true,
+        message: "Đơn xin đã được gửi thành công",
+        application: response.data.data.application,
+      };
+    } catch (error) {
+      console.error(
+        "Lỗi gửi đơn xin Nutritionist:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || "Không thể gửi đơn xin Nutritionist",
+      };
+    }
+  },
+
+  // 📌 Lấy danh sách người dùng chờ phê duyệt Nutritionist
+  getPendingNutritionists: async () => {
+    try {
+      const response = await axiosInstance.get("/users/pending-nutritionists");
+      return {
+        success: true,
+        users: response.data.data.users,
+      };
+    } catch (error) {
+      console.error(
+        "Lỗi lấy danh sách chờ phê duyệt:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || "Không thể lấy danh sách chờ phê duyệt",
+      };
+    }
+  },
+
+  // 📌 Phê duyệt hoặc từ chối đơn xin Nutritionist
+  reviewNutritionistApplication: async (data) => {
+    try {
+      const response = await axiosInstance.post("/users/review-nutritionist", data);
+      return {
+        success: true,
+        message: "Xử lý đơn xin thành công",
+        user: response.data.data.user,
+      };
+    } catch (error) {
+      console.error(
+        "Lỗi xử lý đơn xin Nutritionist:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || "Không thể xử lý đơn xin Nutritionist",
+      };
+    }
+  },
 };
 
 // Hàm kiểm tra quyền admin

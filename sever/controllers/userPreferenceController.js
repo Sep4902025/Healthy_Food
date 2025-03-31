@@ -187,45 +187,29 @@ exports.getUserPreferenceById = async (req, res) => {
   }
 };
 
-// Update User Preference
 exports.updateUserPreference = async (req, res) => {
   try {
-    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-      }
+    const userPreferenceId = req.params.userPreferenceId; // Lấy đúng tham số từ route
+
+    // Cập nhật bản ghi và kiểm tra ngay trong một bước
+    const updatedPreference = await UserPreferenceModel.findOneAndUpdate(
+      { _id: userPreferenceId, isDelete: false }, // Tìm bản ghi chưa bị xóa
+      req.body, // Dữ liệu cập nhật từ client
+      { new: true } // Trả về bản ghi đã cập nhật
     );
-    if (!updatedPreference || updatedPreference.isDelete) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User Preference not found" });
-    }
 
-    const preference = await UserPreferenceModel.findOne({
-      _id: userPreferenceId,
-      isDelete: false,
-    });
-
-    if (!preference) {
+    // Nếu không tìm thấy bản ghi hoặc bản ghi đã bị xóa
+    if (!updatedPreference) {
       return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy sở thích người dùng!",
+        status: "fail",
+        message: "User Preference not found",
       });
     }
-
-    // Cập nhật các trường được gửi lên
-    Object.keys(updatedData).forEach((key) => {
-      preference[key] = updatedData[key];
-    });
-
-    await preference.save();
 
     res.status(200).json({
       success: true,
       message: "Cập nhật sở thích người dùng thành công!",
-      data: preference,
+      data: updatedPreference,
     });
   } catch (error) {
     res.status(500).json({

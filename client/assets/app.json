@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "client",
-    "slug": "client",
+    "name": "Healthy-Food-App",
+    "slug": "healthy-food-app",
+    "scheme": "com.tructht.HealthyFoodApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,10 +20,19 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.tructht.HealthyFoodApp"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "static"
+    },
+    "plugins": ["expo-font"],
+    "owner": "tructht",
+    "extra": {
+      "eas": {
+        "projectId": "06e38a55-f8cf-43a2-9401-ea0b16cd09b1"
+      }
     }
   }
 }
