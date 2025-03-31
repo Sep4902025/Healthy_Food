@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Image,
 } from "react-native";
 import {
   GestureHandlerRootView,
@@ -112,9 +113,9 @@ const CustomDrawerLayout = forwardRef(
           ]}
         >
           <View style={styles.drawerHeader}>
-            {user?.avatar_url ? (
+            {user?.avatarUrl ? (
               <Image
-                source={{ uri: user.avatar_url }}
+                source={{ uri: user.avatarUrl }}
                 resizeMode="cover"
                 style={[styles.profileImage, styles.avtImage]}
               />

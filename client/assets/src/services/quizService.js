@@ -34,8 +34,11 @@ const quizService = {
   getUserPreference: async (userId) => {
     try {
       const response = await axios.get(`${API_URL}/userPreference/${userId}`);
+<<<<<<< HEAD
       console.log("RESSSS", response);
 
+=======
+>>>>>>> 168395b (App v3)
       return { success: true, data: response.data.data };
     } catch (error) {
       return {
@@ -71,4 +74,8 @@ const quizService = {
   },
 };
 
+<<<<<<< HEAD
 export default quizService;
+=======
+export default quizService;
+>>>>>>> 168395b (App v3)

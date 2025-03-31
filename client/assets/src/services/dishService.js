@@ -104,7 +104,10 @@ const dishesService = {
     try {
       const headers = await getAuthHeaders();
       const response = await axiosInstance.get(`/dishes/${dishId}`, { headers });
+<<<<<<< HEAD
       console.log("Fetched Dish:", response.data); // Debug API response
+=======
+>>>>>>> 168395b (App v3)
       return {
         success: true,
         data: response.data.data || {}, // Đảm bảo data luôn là object
@@ -119,4 +122,8 @@ const dishesService = {
   },
 };
 
+<<<<<<< HEAD
 export default dishesService;
+=======
+export default dishesService;
+>>>>>>> 168395b (App v3)

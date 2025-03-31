@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react"; // Thêm useEffect
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
@@ -6,28 +6,37 @@ import { useDispatch, useSelector } from "react-redux";
 import { userSelector } from "../../redux/selectors/selector";
 import { ScreensName } from "../../constants/ScreensName";
 import { useTheme } from "../../contexts/ThemeContext";
-import FontistoIcon from "../common/VectorIcons/FontistoIcon";
 import MaterialIcons from "../common/VectorIcons/MaterialIcons";
 import { toggleVisible } from "../../redux/reducers/drawerReducer";
+import ReminderNotification from "../../screens/MealPlan/ReminderNotification";
+import RemindService from "../../services/reminderService";
 
 function Header() {
   const navigation = useNavigation();
   const user = useSelector(userSelector);
+  console.log("USERRR", user);
+
   const dispatch = useDispatch();
   const { theme } = useTheme();
-  // console.log(navigation.canGoBack());
+
+  // Giả sử token được lưu trong user.token
+  const token = user?.accessToken; // Lấy token từ Redux store
+
+  // Kết nối socket khi user và token có sẵn
+  useEffect(() => {
+    if (user?._id && token) {
+      RemindService.connectSocket(user._id);
+    }
+
+    // Ngắt kết nối socket khi component unmount
+    return () => {
+      RemindService.disconnect();
+    };
+  }, [user, token]); // Chạy lại khi user hoặc token thay đổi
 
   const checkAuth = () => {
     if (user) {
       navigation.navigate(ScreensName.profile);
-    } else {
-      navigation.navigate(ScreensName.signin);
-    }
-  };
-
-  const notificationNav = () => {
-    if (user) {
-      navigation.navigate(ScreensName.notification);
     } else {
       navigation.navigate(ScreensName.signin);
     }
@@ -44,34 +53,27 @@ function Header() {
         backgroundColor: theme.headerBackgroundColor,
       }}
     >
+      {/* Nút Drawer */}
       <TouchableOpacity style={styles.backIcon} onPress={onDrawerPress}>
         <Ionicons
-          name="reorder-three" // Tên icon
-          size={32} // Kích thước icon
-          color={theme.backButtonColor} // Màu sắc (active/inactive)
+          name="reorder-three"
+          size={32}
+          color={theme.backButtonColor}
         />
       </TouchableOpacity>
-      {/* {navigation.canGoBack() && (
+
+      {/* Tích hợp ReminderNotification */}
+      {user ? (
+        <ReminderNotification userId={user?._id} /> // Truyền userId từ user
+      ) : (
         <TouchableOpacity
-          style={styles.backIcon}
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate(ScreensName.signin)}
         >
-          <Ionicons
-            name="chevron-back" // Tên icon
-            size={32} // Kích thước icon
-            color={theme.backButtonColor} // Màu sắc (active/inactive)
-          />
+          <Text style={{ fontSize: 32, color: theme.backButtonColor }}>🔔</Text>
         </TouchableOpacity>
-      )} */}
+      )}
 
-      <TouchableOpacity onPress={notificationNav}>
-        <FontistoIcon
-          name="bell" // Tên icon
-          size={32} // Kích thước icon
-          color={theme.backButtonColor} // Màu sắc (active/inactive)
-        />
-      </TouchableOpacity>
-
+      {/* Avatar hoặc icon profile */}
       <TouchableOpacity onPress={checkAuth}>
         {user?.avatar_url ? (
           <Image
@@ -81,9 +83,9 @@ function Header() {
           />
         ) : (
           <MaterialIcons
-            name="account-circle" // Tên icon
-            size={40} // Kích thước icon
-            color={theme.backButtonColor} // Màu sắc (active/inactive)
+            name="account-circle"
+            size={40}
+            color={theme.backButtonColor}
           />
         )}
       </TouchableOpacity>
@@ -110,7 +112,6 @@ const styles = StyleSheet.create({
   profileImage: {
     height: 40,
     width: 40,
-    // borderRadius: 100,
   },
   avtImage: {
     borderRadius: 100,
