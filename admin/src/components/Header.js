@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+  useRef,
+} from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -75,7 +81,9 @@ const Header = () => {
     const fetchUnpaidMealPlans = async () => {
       if (user) {
         try {
-          const response = await mealPlanService.getUnpaidMealPlanForUser(user._id);
+          const response = await mealPlanService.getUnpaidMealPlanForUser(
+            user._id
+          );
           if (response.success) {
             console.log("List of unpaid meal plans:", response.data);
             setMealPlans(response.data);
@@ -95,7 +103,11 @@ const Header = () => {
     const fetchPaymentHistory = async () => {
       if (user) {
         try {
-          const response = await mealPlanService.getPaymentHistory(user._id, 1, 5);
+          const response = await mealPlanService.getPaymentHistory(
+            user._id,
+            1,
+            5
+          );
           if (response.success) {
             setPaymentHistory(response.data);
           } else {
@@ -230,7 +242,10 @@ const Header = () => {
       {/* Main Header */}
       <div className="flex items-center justify-between px-4">
         {/* Logo */}
-        <div className="flex items-center cursor-pointer" onClick={() => navigate("/")}>
+        <div
+          className="flex items-center cursor-pointer"
+          onClick={() => navigate("/")}
+        >
           <img src={logo} alt="Healthy Food" className="h-12" />
         </div>
 
@@ -260,18 +275,37 @@ const Header = () => {
           )}
           {user?.role === "user" && (
             <>
-              <a
-                href="/survey/name"
-                className={`font-medium transition-colors ${
-                  isActive("/survey/name") ? "text-green-600" : "text-gray-700 hover:text-green-600"
-                }`}
-              >
-                Survey
-              </a>
+              {/* If userPreferenceId exists, show "For You" instead of "Survey" */}
+              {user?.userPreferenceId ? (
+                <a
+                  href="/foryou"
+                  className={`font-medium transition-colors ${
+                    isActive("/foryou")
+                      ? "text-green-600"
+                      : "text-gray-700 hover:text-green-600"
+                  }`}
+                >
+                  For You
+                </a>
+              ) : (
+                <a
+                  href="/survey/name"
+                  className={`font-medium transition-colors ${
+                    isActive("/survey/name")
+                      ? "text-green-600"
+                      : "text-gray-700 hover:text-green-600"
+                  }`}
+                >
+                  Survey
+                </a>
+              )}
+
               <a
                 href="/mealplan"
                 className={`font-medium transition-colors ${
-                  isActive("/mealplan") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                  isActive("/mealplan")
+                    ? "text-green-600"
+                    : "text-gray-700 hover:text-green-600"
                 }`}
               >
                 Meal Plan
@@ -340,13 +374,23 @@ const Header = () => {
                         mealPlans.length > 0 ? (
                           <div className="max-h-48 overflow-y-auto">
                             {mealPlans.map((mealPlan) => (
-                              <div key={mealPlan._id} className="border-b py-2 last:border-b-0">
-                                <p className="font-medium text-gray-700">Name: {mealPlan.title}</p>
-                                <p className="text-sm text-gray-600">
-                                  Start: {new Date(mealPlan.startDate).toLocaleDateString()}
+                              <div
+                                key={mealPlan._id}
+                                className="border-b py-2 last:border-b-0"
+                              >
+                                <p className="font-medium text-gray-700">
+                                  Name: {mealPlan.title}
                                 </p>
                                 <p className="text-sm text-gray-600">
-                                  Price: {(mealPlan.price || 1500000).toLocaleString()} VND
+                                  Start:{" "}
+                                  {new Date(
+                                    mealPlan.startDate
+                                  ).toLocaleDateString()}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  Price:{" "}
+                                  {(mealPlan.price || 1500000).toLocaleString()}{" "}
+                                  VND
                                 </p>
                                 <div className="mt-2 flex space-x-2">
                                   <button
@@ -356,7 +400,9 @@ const Header = () => {
                                     Pay Now
                                   </button>
                                   <button
-                                    onClick={() => handlePreviewMealPlan(mealPlan)}
+                                    onClick={() =>
+                                      handlePreviewMealPlan(mealPlan)
+                                    }
                                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded-md text-xs font-medium"
                                   >
                                     Preview
@@ -366,7 +412,9 @@ const Header = () => {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500">No meal plans to pay.</p>
+                          <p className="text-sm text-gray-500">
+                            No meal plans to pay.
+                          </p>
                         )
                       ) : (
                         <div>
@@ -378,17 +426,21 @@ const Header = () => {
                                   className="border-b py-2 text-sm text-gray-600"
                                 >
                                   <p>
-                                    <strong>Meal Plan:</strong> {payment.mealPlanName || "N/A"}
+                                    <strong>Meal Plan:</strong>{" "}
+                                    {payment.mealPlanName || "N/A"}
                                   </p>
                                   <p>
-                                    <strong>Amount:</strong> {payment.amount.toLocaleString()} VND
+                                    <strong>Amount:</strong>{" "}
+                                    {payment.amount.toLocaleString()} VND
                                   </p>
                                   <p>
                                     <strong>Status:</strong> {payment.status}
                                   </p>
                                   <p>
                                     <strong>Date:</strong>{" "}
-                                    {new Date(payment.createdAt).toLocaleDateString()}
+                                    {new Date(
+                                      payment.createdAt
+                                    ).toLocaleDateString()}
                                   </p>
                                 </div>
                               ))}
@@ -400,7 +452,9 @@ const Header = () => {
                               </button>
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-500">No payment history.</p>
+                            <p className="text-sm text-gray-500">
+                              No payment history.
+                            </p>
                           )}
                         </div>
                       )}
@@ -472,7 +526,9 @@ const Header = () => {
             <button
               onClick={() => toggleDropdown("dishes")}
               className={`font-medium transition-colors ${
-                isActive("/dishes") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                isActive("/dishes")
+                  ? "text-green-600"
+                  : "text-gray-700 hover:text-green-600"
               }`}
             >
               Dishes {activeDropdown === "dishes" ? "▲" : "▼"}
@@ -493,7 +549,9 @@ const Header = () => {
                     </li>
                   ))
                 ) : (
-                  <li className="px-4 py-2 text-gray-500">No dish types available</li>
+                  <li className="px-4 py-2 text-gray-500">
+                    No dish types available
+                  </li>
                 )}
               </ul>
             )}
@@ -503,7 +561,9 @@ const Header = () => {
             <button
               onClick={() => toggleDropdown("ingredients")}
               className={`font-medium transition-colors ${
-                isActive("/ingredients") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                isActive("/ingredients")
+                  ? "text-green-600"
+                  : "text-gray-700 hover:text-green-600"
               }`}
             >
               Ingredients {activeDropdown === "ingredients" ? "▲" : "▼"}
@@ -524,7 +584,9 @@ const Header = () => {
                     </li>
                   ))
                 ) : (
-                  <li className="px-4 py-2 text-gray-500">No categories available</li>
+                  <li className="px-4 py-2 text-gray-500">
+                    No categories available
+                  </li>
                 )}
               </ul>
             )}
@@ -533,7 +595,9 @@ const Header = () => {
           <a
             href="/medical"
             className={`font-medium transition-colors ${
-              isActive("/medical") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+              isActive("/medical")
+                ? "text-green-600"
+                : "text-gray-700 hover:text-green-600"
             }`}
           >
             Medical

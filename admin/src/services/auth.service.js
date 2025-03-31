@@ -193,6 +193,38 @@ const AuthService = {
       throw error;
     }
   },
+
+  // Hàm mới: getUpdatedUser
+  getUpdatedUser: async () => {
+    try {
+      const response = await axiosInstance.get("/users/me", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      console.log("Get updated user response:", response.data);
+
+      if (response.data) {
+        return {
+          success: true,
+          message: response.data.message || "Lấy thông tin user thành công",
+          user: response.data.data?.user || response.data.user, // Linh hoạt với format trả về
+        };
+      }
+
+      return {
+        success: false,
+        message: "Không nhận được phản hồi từ server",
+      };
+    } catch (error) {
+      console.error(
+        "Lỗi lấy thông tin user:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: error.response?.data?.message || "Lấy thông tin user thất bại",
+      };
+    }
+  },
 };
 
 const CHAT_ALLOWED_ROLES = ["user", "nutritionist"];

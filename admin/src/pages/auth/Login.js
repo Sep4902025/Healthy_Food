@@ -37,8 +37,6 @@ const Login = () => {
     localStorage.removeItem("authToken"); // Xóa token cũ
     dispatch(logout()); // Reset Redux state
   }, [dispatch]);
-  
-  
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Link } from "react-router-dom";
 import mealPlanService from "../../../services/mealPlanServices";
 import quizService from "../../../services/quizService";
+import UserService from "../../../services/user.service";
 
 const Modal = ({ isOpen, onClose, children }) => {
   if (!isOpen) return null;
@@ -38,23 +39,48 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
         setLoading(true);
         setError(null);
 
-        // Fetch meal plan data
+        // Bước 1: Lấy dữ liệu Meal Plan
         const mealPlanData = await mealPlanService.getMealPlanById(mealPlanId);
         if (!isMounted) return;
 
-        if (!mealPlanData.success) {
+        if (!mealPlanData.success || !mealPlanData.data) {
           throw new Error(mealPlanData.message || "Unable to fetch MealPlan data");
         }
         setMealPlan(mealPlanData.data);
 
-        // Fetch user preferences
-        const userData = await quizService.getUserPreference(mealPlanData.data.userId);
+        // Kiểm tra userId từ Meal Plan
+        const userId = mealPlanData.data.userId;
+        if (!userId) {
+          throw new Error("User ID not found in Meal Plan data");
+        }
+
+        // Bước 2: Lấy thông tin User bằng userId
+        const userData = await UserService.getUserById(userId);
+        console.log("USDDD", userData);
+
         if (!isMounted) return;
 
-        if (!userData.success || !userData.data) {
+        if (!userData.success || !userData.user) {
+          throw new Error(userData.message || "Unable to fetch User data");
+        }
+
+        // Kiểm tra userPreferenceId từ User
+        const userPreferenceId = userData.user.userPreferenceId._id;
+        if (!userPreferenceId) {
+          setNeedsSurvey(true);
+          throw new Error("User Preference ID not found in User data");
+        }
+
+        // Bước 3: Lấy User Preference bằng userPreferenceId
+        const preferenceData = await quizService.getUserPreferenceByUserPreferenceId(
+          userPreferenceId
+        );
+        if (!isMounted) return;
+
+        if (!preferenceData.success || !preferenceData.data) {
           setNeedsSurvey(true);
         } else {
-          setUserPreference(userData.data);
+          setUserPreference(preferenceData.data);
           setNeedsSurvey(false);
         }
       } catch (error) {
@@ -269,11 +295,11 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
           <div>
             <p>
               <strong>Current Weight:</strong>{" "}
-              {userPreference.weight ? `${userPreference.weight} kg` : "No data available"}
+              {userPreference?.weight ? `${userPreference.weight} kg` : "No data available"}
             </p>
             <p>
               <strong>Weight Goal:</strong>{" "}
-              {userPreference.weightGoal ? `${userPreference.weightGoal} kg` : "No data available"}
+              {userPreference?.weightGoal ? `${userPreference.weightGoal} kg` : "No data available"}
             </p>
             <p>
               <strong>Plan Duration:</strong> {duration} days

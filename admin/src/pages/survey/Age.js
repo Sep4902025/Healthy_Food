@@ -45,8 +45,15 @@ const Age = () => {
     navigate("/survey/goal");
   };
 
+  // Hàm xử lý khi nhấn phím
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) {
+      handleNext();
+    }
+  };
+
   return (
-    <div className="max-w-md mx-auto p-4">
+    <div className="w-[1/2] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/gender")}
@@ -70,14 +77,8 @@ const Age = () => {
             }`}
             onClick={() => setSelectedAge(item.age)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.age}
-            </span>
-            <img
-              src={item.img}
-              alt=""
-              className="w-16 h-16 rounded-full object-cover"
-            />
+            <span className="text-lg font-semibold flex-1 text-left">{item.age}</span>
+            <img src={item.img} alt="" className="w-16 h-16 rounded-full object-cover" />
           </div>
         ))}
       </div>

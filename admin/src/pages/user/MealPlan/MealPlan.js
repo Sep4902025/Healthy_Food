@@ -9,6 +9,8 @@ import MealPlanAimChart from "./MealPlanAimChart";
 
 const MealPlan = () => {
   const { user } = useSelector(selectAuth);
+  console.log("USER redux", user);
+
   const [userMealPlan, setUserMealPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);

@@ -11,7 +11,8 @@ const {
   changePassword,
 } = require("../controllers/authController");
 const {
-  updateUserById, searchUserByEmail,
+  updateUserById,
+  searchUserByEmail,
   createUser,
   getAllUsers,
   getUserById,
@@ -26,13 +27,15 @@ const userRouter = express.Router();
 // Các route hiện có
 userRouter.get("/", getAllUsers);
 userRouter.get("/search", searchUserByEmail);
-userRouter.get("/pending-nutritionists", isAuthenticated, isAdmin, getPendingNutritionists);
+userRouter.get(
+  "/pending-nutritionists",
+  isAuthenticated,
+  isAdmin,
+  getPendingNutritionists
+);
 userRouter.get("/:id", getUserById);
 userRouter.post("/", createUser);
 userRouter.put("/:id", updateUserById);
-
-userRouter.put("/:id", updateUserById);
-
 userRouter.post("/signup", signup);
 userRouter.post("/verify", verifyAccount);
 userRouter.post("/resend-otp", resendOTP);
@@ -44,7 +47,16 @@ userRouter.post("/reset-password", resetPassword);
 userRouter.post("/change-password", changePassword);
 
 // Các route mới cho Nutritionist Application
-userRouter.post("/submit-nutritionist", isAuthenticated, submitNutritionistApplication); 
-userRouter.post("/review-nutritionist", isAuthenticated, isAdmin, reviewNutritionistApplication); 
+userRouter.post(
+  "/submit-nutritionist",
+  isAuthenticated,
+  submitNutritionistApplication
+);
+userRouter.post(
+  "/review-nutritionist",
+  isAuthenticated,
+  isAdmin,
+  reviewNutritionistApplication
+);
 
 module.exports = userRouter;

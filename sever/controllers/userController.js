@@ -24,7 +24,10 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
   const totalUsers = await UserModel.countDocuments(query);
 
   // Lấy danh sách người dùng với phân trang
-  const users = await UserModel.find(query).skip(skip).limit(limit).populate("userPreferenceId");
+  const users = await UserModel.find(query)
+    .skip(skip)
+    .limit(limit)
+    .populate("userPreferenceId");
 
   // Tính tổng số trang
   const totalPages = Math.ceil(totalUsers / limit);
@@ -146,7 +149,8 @@ exports.restoreUser = catchAsync(async (req, res, next) => {
 // 📌 Create new user
 exports.createUser = catchAsync(async (req, res, next) => {
   try {
-    const { userName, email, phoneNumber, gender, status, role, profileImage } = req.body;
+    const { userName, email, phoneNumber, gender, status, role, profileImage } =
+      req.body;
 
     // Check if user with this email already exists
     const existingUser = await UserModel.findOne({ email, isDelete: false });
@@ -274,7 +278,8 @@ exports.reviewNutritionistApplication = catchAsync(async (req, res, next) => {
   if (action === "approve") {
     user.nutritionistApplication.status = "approved";
     user.role = "nutritionist";
-    emailSubject = "Chúc mừng! Đơn xin trở thành Nutritionist của bạn đã được phê duyệt";
+    emailSubject =
+      "Chúc mừng! Đơn xin trở thành Nutritionist của bạn đã được phê duyệt";
     emailHtml = `
       <h2>Chúc mừng ${user.username}!</h2>
       <p>Chúng tôi rất vui mừng thông báo rằng đơn xin trở thành Nutritionist của bạn đã được phê duyệt.</p>

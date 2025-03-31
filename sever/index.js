@@ -24,7 +24,9 @@ const commentRatingRouter = require("./routes/commentRatingRouter");
 const medicalConditionRouter = require("./routes/medicalConditionRouter");
 const userFavoriteDishesRouter = require("./routes/userFavoriteDishesRouter");
 const paymentRouter = require("./routes/paymentRouter");
+const foryouRouter = require("./routes/foryouRouter"); // Thêm router mới
 const userPreferenceRouter = require("./routes/userPreferenceRouter");
+
 const app = express();
 const server = http.createServer(app);
 
@@ -103,7 +105,8 @@ app.use("/api/v1/recipe", commentRatingRouter);
 app.use("/api/v1/medicalConditions", medicalConditionRouter);
 app.use("/api/v1/favoriteDishes", userFavoriteDishesRouter);
 app.use("/api/v1/recipes", dishRouter);
-app.use("/api/v1/userPreference", userPreferenceRouter);
+app.use("/api/v1/foryou", foryouRouter); // Thêm endpoint mới
+app.use("/api/v1/userpreference", userPreferenceRouter);
 
 // Xử lý route không tồn tại
 app.all("*", (req, res, next) => {

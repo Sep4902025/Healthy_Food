@@ -34,10 +34,14 @@ const medicalConditionService = {
         },
       };
     } catch (error) {
-      console.error("❌ Error fetching medical conditions:", error.response?.data || error.message);
+      console.error(
+        "❌ Error fetching medical conditions:",
+        error.response?.data || error.message
+      );
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to load medical conditions!",
+        message:
+          error.response?.data?.message || "Failed to load medical conditions!",
       };
     }
   },
@@ -56,10 +60,14 @@ const medicalConditionService = {
         data: response.data.data,
       };
     } catch (error) {
-      console.error("❌ Error fetching medical condition:", error.response?.data || error.message);
+      console.error(
+        "❌ Error fetching medical condition:",
+        error.response?.data || error.message
+      );
       return {
         success: false,
-        message: error.response?.data?.message || "Medical condition not found!",
+        message:
+          error.response?.data?.message || "Medical condition not found!",
       };
     }
   },
@@ -81,10 +89,15 @@ const medicalConditionService = {
         data: response.data.data,
       };
     } catch (error) {
-      console.error("❌ Error creating medical condition:", error.response?.data || error.message);
+      console.error(
+        "❌ Error creating medical condition:",
+        error.response?.data || error.message
+      );
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to create medical condition!",
+        message:
+          error.response?.data?.message ||
+          "Failed to create medical condition!",
       };
     }
   },
@@ -93,23 +106,32 @@ const medicalConditionService = {
   updateMedicalCondition: async (id, data) => {
     try {
       console.log(`✏️ Updating medical condition ID ${id}:`, data);
-      const response = await axios.put(`${API_URL}/medicalConditions/${id}`, data, {
-        headers: {
-          ...getAuthHeaders(),
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      });
+      const response = await axios.put(
+        `${API_URL}/medicalConditions/${id}`,
+        data,
+        {
+          headers: {
+            ...getAuthHeaders(),
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
       console.log("✅ Update response:", response.data);
       return {
         success: true,
         data: response.data.data,
       };
     } catch (error) {
-      console.error("❌ Error updating medical condition:", error.response?.data || error.message);
+      console.error(
+        "❌ Error updating medical condition:",
+        error.response?.data || error.message
+      );
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to update medical condition!",
+        message:
+          error.response?.data?.message ||
+          "Failed to update medical condition!",
       };
     }
   },
@@ -118,10 +140,13 @@ const medicalConditionService = {
   deleteMedicalCondition: async (id) => {
     try {
       console.log(`🗑 Soft deleting medical condition ID: ${id}`);
-      const response = await axios.delete(`${API_URL}/medicalConditions/${id}`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
+      const response = await axios.delete(
+        `${API_URL}/medicalConditions/${id}`,
+        {
+          headers: getAuthHeaders(),
+          withCredentials: true,
+        }
+      );
       console.log("✅ Delete response:", response.data);
       return {
         success: true,
@@ -134,7 +159,9 @@ const medicalConditionService = {
       );
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to soft delete medical condition!",
+        message:
+          error.response?.data?.message ||
+          "Failed to soft delete medical condition!",
       };
     }
   },
@@ -151,7 +178,10 @@ const medicalConditionService = {
           limit,
         },
       });
-      console.log(`📌 Search results for medical condition name "${name}":`, response.data);
+      console.log(
+        `📌 Search results for medical condition name "${name}":`,
+        response.data
+      );
       return {
         success: true,
         data: {
@@ -168,7 +198,9 @@ const medicalConditionService = {
       );
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to search medical conditions!",
+        message:
+          error.response?.data?.message ||
+          "Failed to search medical conditions!",
       };
     }
   },

@@ -2,7 +2,18 @@ import React, { useEffect, useState } from "react";
 import medicalConditionService from "../../../services/nutritionist/medicalConditionServices";
 import dishService from "../../../services/nutritionist/dishesServices";
 import recipesService from "../../../services/nutritionist/recipesServices";
-import { HeartPulse, Pencil, Trash2, Flame, Dumbbell, Wheat, Droplet, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  HeartPulse,
+  Pencil,
+  Trash2,
+  Flame,
+  Dumbbell,
+  Wheat,
+  Droplet,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import FoodSelectionModal from "./FoodSelectionModal";
 import Pagination from "../../../components/Pagination";
 
@@ -40,10 +51,10 @@ const TableMedicalConditions = () => {
       const [conditionsResponse, dishesResponse] = await Promise.all([
         searchTerm
           ? medicalConditionService.searchMedicalConditionByName(
-            searchTerm,
-            currentPage,
-            itemsPerPage
-          )
+              searchTerm,
+              currentPage,
+              itemsPerPage
+            )
           : medicalConditionService.getAllMedicalConditions(currentPage, itemsPerPage),
         dishService.getAllDishes(1, 1000),
       ]);
@@ -79,7 +90,12 @@ const TableMedicalConditions = () => {
           }
           return {
             ...dish,
-            nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" },
+            nutritions: {
+              calories: "N/A",
+              protein: "N/A",
+              carbs: "N/A",
+              fat: "N/A",
+            },
           };
         })
       );
@@ -194,7 +210,9 @@ const TableMedicalConditions = () => {
     ["carbs", "fat", "protein", "calories"].forEach((field) => {
       const value = editData.nutritionalConstraints[field];
       if (value && (isNaN(value) || Number(value) < 0)) {
-        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} must be a positive number`;
+        newErrors[field] = `${
+          field.charAt(0).toUpperCase() + field.slice(1)
+        } must be a positive number`;
       }
     });
     setErrors(newErrors);
@@ -359,7 +377,7 @@ const TableMedicalConditions = () => {
       {conditions.length > 0 && !isLoading && (
         <div className="p-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-，三            <span>Show</span>
+            ，三 <span>Show</span>
             <select
               className="border rounded px-2 py-1"
               value={itemsPerPage}
@@ -384,7 +402,9 @@ const TableMedicalConditions = () => {
             {Array.from({ length: totalPages }, (_, i) => (
               <button
                 key={i}
-                className={`px-3 py-1 rounded ${currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"}`}
+                className={`px-3 py-1 rounded ${
+                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                }`}
                 onClick={() => paginate(i + 1)}
               >
                 {i + 1}
@@ -430,19 +450,25 @@ const TableMedicalConditions = () => {
                     value={editData.name}
                     onChange={handleChange}
                     placeholder="Enter condition name"
-                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${
+                      errors.name ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description *
+                  </label>
                   <textarea
                     name="description"
                     value={editData.description}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${
+                      errors.description ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">{errors.description}</p>
@@ -452,7 +478,9 @@ const TableMedicalConditions = () => {
 
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Restricted Foods</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Restricted Foods
+                  </label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {editData.restrictedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
@@ -488,7 +516,9 @@ const TableMedicalConditions = () => {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Recommended Foods</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Recommended Foods
+                  </label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {editData.recommendedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
@@ -539,7 +569,9 @@ const TableMedicalConditions = () => {
                         value={editData.nutritionalConstraints.calories}
                         onChange={handleChange}
                         placeholder="Max calories"
-                        className={`w-full border ${errors.calories ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${
+                          errors.calories ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.calories && (
                         <p className="text-red-500 text-sm mt-1">{errors.calories}</p>
@@ -553,7 +585,9 @@ const TableMedicalConditions = () => {
                         value={editData.nutritionalConstraints.protein}
                         onChange={handleChange}
                         placeholder="Max protein"
-                        className={`w-full border ${errors.protein ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${
+                          errors.protein ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.protein && (
                         <p className="text-red-500 text-sm mt-1">{errors.protein}</p>
@@ -567,7 +601,9 @@ const TableMedicalConditions = () => {
                         value={editData.nutritionalConstraints.carbs}
                         onChange={handleChange}
                         placeholder="Max carbs"
-                        className={`w-full border ${errors.carbs ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${
+                          errors.carbs ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.carbs && <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>}
                     </div>
@@ -579,7 +615,9 @@ const TableMedicalConditions = () => {
                         value={editData.nutritionalConstraints.fat}
                         onChange={handleChange}
                         placeholder="Max fat"
-                        className={`w-full border ${errors.fat ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${
+                          errors.fat ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.fat && <p className="text-red-500 text-sm mt-1">{errors.fat}</p>}
                     </div>
@@ -612,14 +650,18 @@ const TableMedicalConditions = () => {
                   <p className="text-gray-900">{viewData.name}</p>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
                   <p className="text-gray-900">{viewData.description}</p>
                 </div>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Restricted Foods</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Restricted Foods
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {viewData.restrictedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
@@ -632,7 +674,9 @@ const TableMedicalConditions = () => {
                   </div>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Recommended Foods</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Recommended Foods
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {viewData.recommendedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
