@@ -18,8 +18,10 @@ const ingredientsService = {
         params: {
           page,
           limit,
-          type, // Lọc theo loại nguyên liệu
+          type,  // Lọc theo loại nguyên liệu
           search, // Tìm kiếm theo tên
+          sort: "createdAt", // Thêm tham số sắp xếp
+          order: "desc",     // Sắp xếp theo thứ tự giảm dần
         },
       });
       console.log("📌 Danh sách nguyên liệu:", response.data);
@@ -37,6 +39,7 @@ const ingredientsService = {
       return { success: false, message: "Lỗi khi tải danh sách nguyên liệu" };
     }
   },
+  
 
   // 🔹 Lấy nguyên liệu theo ID
   getIngredientById: async (id) => {

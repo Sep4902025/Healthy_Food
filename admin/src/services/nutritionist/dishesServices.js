@@ -19,6 +19,8 @@ const dishesService = {
           page,
           limit,
           search, // Thêm tham số tìm kiếm
+          sort: "createdAt", // Thêm tham số sắp xếp
+          order: "desc",    // Thứ tự giảm dần
         },
       });
       console.log("🔍 Danh sách món ăn từ API:", response.data);
@@ -40,7 +42,7 @@ const dishesService = {
     }
   },
 
-  // 🔹 Thêm món ăn mới
+  // Các hàm khác giữ nguyên
   createDish: async (data) => {
     try {
       const response = await axios.post(`${API_URL}/dishes`, data, {
@@ -58,7 +60,6 @@ const dishesService = {
     }
   },
 
-  // 🔹 Cập nhật món ăn
   updateDish: async (id, data) => {
     try {
       console.log(`📤 Cập nhật món ăn ID: ${id}`, data);
@@ -76,7 +77,6 @@ const dishesService = {
     }
   },
 
-  // 🔹 Xóa vĩnh viễn món ăn
   hardDeleteDish: async (id) => {
     try {
       console.log(`🗑️ Xóa vĩnh viễn món ăn ID: ${id}`);
@@ -94,7 +94,6 @@ const dishesService = {
     }
   },
 
-  // 🔹 Lấy thông tin món ăn theo ID
   getDishById: async (dishId) => {
     try {
       const response = await axios.get(`${API_URL}/dishes/${dishId}`, {

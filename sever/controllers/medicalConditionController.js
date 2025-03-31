@@ -21,21 +21,49 @@ exports.createMedicalCondition = async (req, res) => {
 // Lấy tất cả Medical Conditions (chỉ lấy những chưa bị soft delete)
 exports.getAllMedicalConditions = async (req, res) => {
   try {
-    const conditions = await MedicalCondition.find({ isDelete: false })
+    const { page = 1, limit = 10, search = "", sort = "createdAt", order = "desc" } = req.query;
+
+    // Tạo bộ lọc tìm kiếm
+    let filter = { isDelete: false };
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    // Xử lý phân trang
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Xử lý sắp xếp
+    const sortOrder = order === "desc" ? -1 : 1;
+    const sortOptions = { [sort]: sortOrder };
+
+    // Lấy tổng số điều kiện y tế
+    const totalItems = await MedicalCondition.countDocuments(filter);
+    
+    // Lấy danh sách bệnh lý
+    const conditions = await MedicalCondition.find(filter)
       .populate("restrictedFoods")
-      .populate("recommendedFoods");
+      .populate("recommendedFoods")
+      .sort(sortOptions)  // Sắp xếp dữ liệu
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
     res.status(200).json({
       status: "success",
-      results: conditions.length,
-      data: conditions,
+      data: {
+        items: conditions,
+        total: totalItems,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalItems / limitNum),
+      },
     });
   } catch (error) {
-    res.status(400).json({
-      status: "fail",
-      message: error.message,
-    });
+    res.status(500).json({ status: "fail", message: error.message });
   }
 };
+
 
 // Lấy Medical Condition theo ID
 exports.getMedicalConditionById = async (req, res) => {

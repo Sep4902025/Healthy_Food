@@ -50,10 +50,10 @@ const TableMedicalConditions = () => {
       const [conditionsResponse, dishesResponse] = await Promise.all([
         searchTerm
           ? medicalConditionService.searchMedicalConditionByName(
-              searchTerm,
-              currentPage,
-              itemsPerPage
-            )
+            searchTerm,
+            currentPage,
+            itemsPerPage
+          )
           : medicalConditionService.getAllMedicalConditions(currentPage, itemsPerPage),
         dishService.getAllDishes(1, 1000),
       ]);
@@ -208,9 +208,8 @@ const TableMedicalConditions = () => {
     ["carbs", "fat", "protein", "calories"].forEach((field) => {
       const value = editData.nutritionalConstraints[field];
       if (value && (isNaN(value) || Number(value) < 0)) {
-        newErrors[field] = `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } must be a positive number`;
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)
+          } must be a positive number`;
       }
     });
     setErrors(newErrors);
@@ -320,7 +319,7 @@ const TableMedicalConditions = () => {
                   key={condition._id}
                   className="bg-white rounded-lg shadow-md overflow-hidden relative"
                 >
-                  <div className="p-4">
+                  <div className="p-4 h-[110px] flex flex-col justify-between">
                     <h3 className="text-lg font-semibold text-center">{condition.name}</h3>
                     <p className="text-sm text-gray-600 mt-2 text-center line-clamp-2">
                       {condition.description}
@@ -392,9 +391,8 @@ const TableMedicalConditions = () => {
             {Array.from({ length: totalPages }, (_, i) => (
               <button
                 key={i}
-                className={`px-3 py-1 rounded ${
-                  currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                }`}
+                className={`px-3 py-1 rounded ${currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
+                  }`}
                 onClick={() => paginate(i + 1)}
               >
                 {i + 1}
@@ -440,9 +438,8 @@ const TableMedicalConditions = () => {
                     value={editData.name}
                     onChange={handleChange}
                     placeholder="Enter condition name"
-                    className={`w-full border ${
-                      errors.name ? "border-red-500" : "border-gray-300"
-                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
@@ -456,9 +453,8 @@ const TableMedicalConditions = () => {
                     value={editData.description}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${
-                      errors.description ? "border-red-500" : "border-gray-300"
-                    } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">{errors.description}</p>
@@ -559,9 +555,8 @@ const TableMedicalConditions = () => {
                         value={editData.nutritionalConstraints.calories}
                         onChange={handleChange}
                         placeholder="Max calories"
-                        className={`w-full border ${
-                          errors.calories ? "border-red-500" : "border-gray-300"
-                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${errors.calories ? "border-red-500" : "border-gray-300"
+                          } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.calories && (
                         <p className="text-red-500 text-sm mt-1">{errors.calories}</p>
@@ -575,9 +570,8 @@ const TableMedicalConditions = () => {
                         value={editData.nutritionalConstraints.protein}
                         onChange={handleChange}
                         placeholder="Max protein"
-                        className={`w-full border ${
-                          errors.protein ? "border-red-500" : "border-gray-300"
-                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${errors.protein ? "border-red-500" : "border-gray-300"
+                          } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.protein && (
                         <p className="text-red-500 text-sm mt-1">{errors.protein}</p>
@@ -591,9 +585,8 @@ const TableMedicalConditions = () => {
                         value={editData.nutritionalConstraints.carbs}
                         onChange={handleChange}
                         placeholder="Max carbs"
-                        className={`w-full border ${
-                          errors.carbs ? "border-red-500" : "border-gray-300"
-                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${errors.carbs ? "border-red-500" : "border-gray-300"
+                          } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.carbs && <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>}
                     </div>
@@ -605,9 +598,8 @@ const TableMedicalConditions = () => {
                         value={editData.nutritionalConstraints.fat}
                         onChange={handleChange}
                         placeholder="Max fat"
-                        className={`w-full border ${
-                          errors.fat ? "border-red-500" : "border-gray-300"
-                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${errors.fat ? "border-red-500" : "border-gray-300"
+                          } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
                       />
                       {errors.fat && <p className="text-red-500 text-sm mt-1">{errors.fat}</p>}
                     </div>

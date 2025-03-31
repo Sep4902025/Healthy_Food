@@ -9,6 +9,8 @@ exports.getAllFAQs = catchAsync(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
   const limit = parseInt(req.query.limit) || 10; // Mặc định 10 FAQs mỗi trang
   const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
+  const sort = req.query.sort || "createdAt"; // Mặc định sắp xếp theo createdAt
+  const order = req.query.order || "desc"; // Mặc định thứ tự giảm dần
 
   // 🛠️ Kiểm tra token để phân quyền
   let filter = { isDeleted: false, isVisible: true }; // Mặc định: Chỉ lấy FAQ chưa bị xóa và hiển thị
@@ -25,11 +27,18 @@ exports.getAllFAQs = catchAsync(async (req, res, next) => {
     }
   }
 
+  // Xử lý sắp xếp
+  const sortOrder = order === "desc" ? -1 : 1;
+  const sortOptions = { [sort]: sortOrder };
+
   // Đếm tổng số FAQs thỏa mãn điều kiện
   const totalFAQs = await FAQ.countDocuments(filter);
 
-  // Lấy danh sách FAQs với phân trang
-  const faqs = await FAQ.find(filter).skip(skip).limit(limit);
+  // Lấy danh sách FAQs với phân trang và sắp xếp
+  const faqs = await FAQ.find(filter)
+    .sort(sortOptions) // Áp dụng sắp xếp
+    .skip(skip)
+    .limit(limit);
 
   // Tính tổng số trang
   const totalPages = Math.ceil(totalFAQs / limit);
