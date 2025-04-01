@@ -20,6 +20,27 @@ import { Image, View } from "react-native";
 import OcticonsIcon from "../components/common/VectorIcons/OcticonsIcon";
 import Profile from "../screens/Profile";
 import MealPlan from "../screens/MealPlan/MealPlan";
+import ForYou from "../screens/ForYou";
+import UnderDisease from "../screens/Survey/UnderDisease";
+import EatHabit from "../screens/Survey/EatHabit";
+import Favorite from "../screens/Survey/Favorite";
+import Hate from "../screens/Survey/Hate";
+import LongOfPlan from "../screens/Survey/LongOfPlan";
+import MealNumber from "../screens/Survey/MealNumber";
+import Diet from "../screens/Survey/Diet";
+import WaterDrink from "../screens/Survey/WaterDrink";
+import ActivityLevel from "../screens/Survey/ActivityLevel";
+import SleepTime from "../screens/Survey/SleepTime";
+import Goal from "../screens/Survey/Goal";
+import Age from "../screens/Survey/Age";
+import Gender from "../screens/Survey/Gender";
+import WeightGoal from "../screens/Survey/WeightGoal";
+import Height from "../screens/Survey/Height";
+import Weight from "../screens/Survey/Weight";
+import Email from "../screens/Survey/Email";
+import PhoneNumber from "../screens/Survey/PhoneNumber";
+import Name from "../screens/Survey/Name";
+import SurveyScreen from "../screens/SurveyScreen";
 
 export const ScreensMap = [
   {
@@ -110,6 +131,7 @@ export const ScreensMap = [
         );
       },
       iconStyles: { transform: [{ translateX: 25 }] },
+      requireAuthen: true,
     },
   },
 
@@ -118,6 +140,16 @@ export const ScreensMap = [
     component: Profile,
     options: {
       tabBarIcon: ({ color, focused }) => <AntDesignIcon name="setting" size={28} color={color} />,
+      requireAuthen: true,
+    },
+    hiddenBottomTab: true,
+  },
+  // Thêm các màn hình khảo sát
+  {
+    name: ScreensName.survey,
+    component: SurveyScreen, // Màn hình đầu tiên của khảo sát
+    options: {
+      tabBarButton: () => null,
       requireAuthen: true,
     },
     hiddenBottomTab: true,
@@ -156,5 +188,166 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
+  },
+
+  {
+    name: "Name",
+    component: Name,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "PhoneNumber",
+    component: PhoneNumber,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "Email",
+    component: Email,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "Weight",
+    component: Weight,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "Height",
+    component: Height,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "WeightGoal",
+    component: WeightGoal,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "Gender",
+    component: Gender,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "Age",
+    component: Age,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "Goal",
+    component: Goal,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "SleepTime",
+    component: SleepTime,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "ActivityLevel",
+    component: ActivityLevel,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "WaterDrink",
+    component: WaterDrink,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "Diet",
+    component: Diet,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "MealNumber",
+    component: MealNumber,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "LongOfPlan",
+    component: LongOfPlan,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "EatHabit",
+    component: EatHabit,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "UnderDisease",
+    component: UnderDisease,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "Favorite",
+    component: Favorite,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: "Hate",
+    component: Hate,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
+  {
+    name: ScreensName.forYou,
+    component: ForYou,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
   },
 ];

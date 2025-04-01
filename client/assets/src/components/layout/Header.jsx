@@ -14,8 +14,6 @@ import RemindService from "../../services/reminderService";
 function Header() {
   const navigation = useNavigation();
   const user = useSelector(userSelector);
-  console.log("USERRR", user);
-
   const dispatch = useDispatch();
   const { theme } = useTheme();
 

@@ -10,6 +10,8 @@ export const ScreensName = {
   list: "list",
   search: "search",
   setting: "setting",
+  survey: "survey",
+  forYou: "forYou",
   notification: "notification",
   message: "message",
   mealPlan: "mealPlan",

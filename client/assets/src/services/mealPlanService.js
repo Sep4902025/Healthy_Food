@@ -142,6 +142,8 @@ const mealPlanService = {
   getUserMealPlan: async (userId) => {
     try {
       const response = await axiosInstance.get(`/mealPlan/user/${userId}`);
+      console.log("RESSSPS", response);
+
       return response.data;
     } catch (error) {
       console.error("Lỗi lấy meal plan của user:", error);

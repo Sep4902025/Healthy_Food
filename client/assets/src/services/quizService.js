@@ -1,29 +1,26 @@
 import axios from "axios";
+import axiosInstance from "./axiosInstance";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const quizService = {
-  submitQuizData: async () => {
+  submitQuizData: async (finalData) => {
     try {
-      // Lấy dữ liệu từ sessionStorage
-      const finalData = JSON.parse(sessionStorage.getItem("finalData"));
-      console.log("FINALDATA", finalData);
+      console.log("GOO");
       if (!finalData) {
         return {
           success: false,
-          message: "No quiz data found in sessionStorage.",
+          message: "No quiz data provided.",
         };
       }
 
-      // Gửi dữ liệu lên BE
-      const response = await axios.post(`${API_URL}/userPreference`, finalData);
-
-      // Xoá dữ liệu sau khi gửi thành công
-      sessionStorage.removeItem("quizData");
-      sessionStorage.removeItem("finalData");
+      const response = await axiosInstance.post(`${API_URL}/userpreference`, finalData);
+      await AsyncStorage.removeItem("quizData"); // Thay sessionStorage bằng AsyncStorage nếu dùng React Native
 
       return { success: true, data: response.data };
     } catch (error) {
+      console.error("Submit quiz error:", error);
       return {
         success: false,
         message: error.response?.data?.error || "Failed to submit quiz data.",
@@ -31,14 +28,38 @@ const quizService = {
     }
   },
 
-  getUserPreference: async (userId) => {
-    try {
-      const response = await axios.get(`${API_URL}/userPreference/${userId}`);
-      return { success: true, data: response.data.data };
-    } catch (error) {
+  getUserPreferenceByUserPreferenceId: async (userPreferenceId) => {
+    if (!userPreferenceId) {
       return {
         success: false,
-        message: error.response?.data?.error || "Failed to fetch user preference.",
+        message: "userPreferenceId là bắt buộc để lấy sở thích người dùng",
+      };
+    }
+
+    try {
+      console.log("🚀 Đang lấy sở thích người dùng với userPreferenceId:", userPreferenceId);
+      const response = await axiosInstance.get(`${API_URL}/userpreference/${userPreferenceId}`);
+      console.log("🚀 Phản hồi từ /userPreference:", response.data);
+
+      if (response.data.success) {
+        return {
+          success: true,
+          data: response.data.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || "Không thể lấy sở thích người dùng",
+        };
+      }
+    } catch (error) {
+      console.error(
+        "🚨 Lỗi trong getUserPreferenceByUserPreferenceId:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: error.response?.data?.message || "Không thể lấy sở thích người dùng",
       };
     }
   },

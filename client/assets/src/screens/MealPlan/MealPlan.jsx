@@ -8,10 +8,16 @@ import MealDays from "./MealDays";
 import CreateMealPlanForm from "./CreateMealPlanForm";
 import MealPlanAimChart from "./MealPlanAimChart";
 import { useSelector } from "react-redux";
+import { useNavigation } from "@react-navigation/native";
+import { ScreensName } from "../../constants/ScreensName";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const MealPlan = () => {
   const user = useSelector(userSelector);
-  console.log("USSSERRR", user);
+  console.log("USER", user);
+
+  const navigation = useNavigation();
+  const { theme } = useTheme(); // Sử dụng theme để đồng bộ giao diện
 
   const [userMealPlan, setUserMealPlan] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,10 +35,12 @@ const MealPlan = () => {
         console.log("Set userMealPlan:", response.data);
       } else {
         setUserMealPlan(null);
+        setShowCreateForm(true); // Nếu không có meal plan, hiển thị form ngay
       }
     } catch (error) {
       console.error("❌ Error fetching MealPlan:", error);
       setUserMealPlan(null);
+      setShowCreateForm(true); // Nếu có lỗi, cũng hiển thị form
     } finally {
       setLoading(false);
     }
@@ -100,7 +108,8 @@ const MealPlan = () => {
       if (response.success) {
         Alert.alert("Success", "🗑️ MealPlan has been deleted successfully!");
         setUserMealPlan(null);
-        setShowCreateForm(true);
+        setShowCreateForm(true); // Hiển thị form ngay sau khi xóa
+        navigation.navigate(ScreensName.mealPlan); // Điều hướng để làm mới
       } else {
         Alert.alert("Error", `❌ Error: ${response.message}`);
       }
@@ -109,11 +118,6 @@ const MealPlan = () => {
     } finally {
       setProcessingAction(false);
     }
-  };
-
-  const handleTakeSurvey = () => {
-    console.log("Take Survey pressed");
-    setShowCreateForm(true);
   };
 
   const handleNutritionTargetsCalculated = (targets) => {
@@ -125,7 +129,7 @@ const MealPlan = () => {
     return (
       <MainLayoutWrapper>
         <SafeAreaView className="flex-1 justify-center items-center bg-white">
-          <ActivityIndicator size="large" color="#16a34a" />
+          <ActivityIndicator size="large" color={theme.primaryColor || "#16a34a"} />
           <Text className="mt-2 text-base text-green-600">Loading...</Text>
         </SafeAreaView>
       </MainLayoutWrapper>
@@ -216,7 +220,7 @@ const MealPlan = () => {
                   <View className="mb-4 border-t border-gray-200 pt-4">
                     <MealPlanAimChart
                       mealPlanId={userMealPlan._id}
-                      userId={user._id}
+                      userId={user.userPreferenceId}
                       duration={userMealPlan.duration || 7}
                       onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
                     />
@@ -230,28 +234,10 @@ const MealPlan = () => {
               </View>
             </View>
           ) : (
-            <View className="flex-1 justify-center items-center bg-white p-6 rounded-lg shadow-md">
-              {!showCreateForm ? (
-                <View className="items-center">
-                  <Text className="text-lg font-medium text-gray-800 mb-4">No Meal Plan Found</Text>
-                  <Text className="text-gray-600 text-center mb-6">
-                    Complete the survey to calculate your nutrition targets and create a meal plan.
-                  </Text>
-                  <TouchableOpacity
-                    onPress={handleTakeSurvey}
-                    className="bg-blue-600 px-6 py-3 rounded-lg"
-                  >
-                    <Text className="text-white text-base font-semibold">Take Survey</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
+            <View className="flex-1 bg-white p-6 rounded-lg shadow-md">
+              {showCreateForm && (
                 <View className="w-full">
-                  <View className="flex-row justify-between items-center mb-4">
-                    <Text className="text-xl font-bold text-gray-800">Create New Meal Plan</Text>
-                    <TouchableOpacity onPress={() => setShowCreateForm(false)}>
-                      <Ionicons name="close" size={24} color="#6b7280" />
-                    </TouchableOpacity>
-                  </View>
+                  <Text className="text-xl font-bold text-gray-800 mb-4">Create New Meal Plan</Text>
                   <CreateMealPlanForm
                     userId={user._id}
                     userRole={user.role}
