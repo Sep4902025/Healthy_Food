@@ -8,7 +8,7 @@ import { DarkModeContext } from "../context/DarkModeContext";
 import UserService from "../../services/user.service";
 import { useSelector } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
-
+import { toast } from "react-toastify";
 
 const ForYouPage = () => {
   const sliderRef = useRef(null);
@@ -22,12 +22,17 @@ const ForYouPage = () => {
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   // Hàm xử lý sự kiện khi nhấn vào món ăn
-  const handleRecipeClick = (dishId, recipeId) => {
-    // navigate(`/${dishId}/recipes/${recipeId}`) // Chuyển hướng đến trang chi tiết món ăn
-    console.log("Dish ID:", dishId);
-  }
+  const handleRecipeClick = (recipe) => {
+    if (!recipe.recipeId || recipe.recipeId === "" || recipe.recipeId === null) {
+      toast.info("This food don't have recipe yet!", {
+                autoClose: 3000,
+              });
+    } else {
+      console.log("Recipe ID:", recipe);
+      navigate(`/${recipe._id}/recipes/${recipe.recipeId._id}`);
+    }
+  };
 
   
 
