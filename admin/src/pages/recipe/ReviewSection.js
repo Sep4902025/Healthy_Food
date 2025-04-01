@@ -6,7 +6,7 @@ import commentService from "../../services/comment.service";
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
 import FemaleUser from "../../assets/images/FemaleUser.png";
-
+import { useNavigate } from "react-router-dom";
 const ReviewSection = ({ recipeId, dishId }) => {
   const [reviews, setReviews] = useState([]);
   const [newComment, setNewComment] = useState("");
@@ -15,7 +15,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
   const user = useSelector(selectAuth)?.user;
   const userId = user?._id;
   const isAdmin = user?.role === "admin";
-
+  const navigate = useNavigate();
   useEffect(() => {
     setReviews([]);
     const fetchReviews = async () => {
@@ -74,6 +74,13 @@ const ReviewSection = ({ recipeId, dishId }) => {
 
   const handleDeleteComment = async (commentId) => {
     try {
+      if (!userId) {
+        toast.info("Bạn cần đăng nhập để xóa bình luận!", {
+          autoClose: 3000,
+          onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
+        });
+        return;
+      }
       await commentService.deleteComment(commentId);
       setReviews((prevReviews) =>
         prevReviews.map((review) => ({
@@ -89,6 +96,14 @@ const ReviewSection = ({ recipeId, dishId }) => {
 
   const handleRateRecipe = async (ratingValue) => {
     try {
+      if (!userId) {
+        toast.info("Bạn cần đăng nhập để đánh giá công thức!", {
+          autoClose: 3000,
+          onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
+        });
+        return;
+      }
+
       const response = await commentService.rateRecipe(recipeId, userId, ratingValue);
       if (response.success) {
         toast.success("Thank you for your rating! 😍");
@@ -109,6 +124,13 @@ const ReviewSection = ({ recipeId, dishId }) => {
   const handleCommentSubmit = async () => {
     if (!newComment.trim()) return;
     try {
+      if (!userId) {
+        toast.info("Bạn cần đăng nhập để gửi bình luận", {
+          autoClose: 3000,
+          onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
+        });
+        return;
+      }
       const response = await commentService.addComment(dishId, newComment, userId);
       const newCommentData = response.data;
 
@@ -146,6 +168,13 @@ const ReviewSection = ({ recipeId, dishId }) => {
 
   const handleLikeComment = async (commentId) => {
     try {
+      if (!userId) {
+        toast.info("Bạn cần đăng nhập để yêu thích công thức!", {
+          autoClose: 3000,
+          onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
+        });
+        return;
+      }
       await commentService.toggleLikeComment(commentId, userId);
       setReviews((prevReviews) =>
         prevReviews.map((review) => ({

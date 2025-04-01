@@ -15,6 +15,13 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
   }, [selectedSeason]);
 
   const handleLike = async (dishId) => {
+    if (!userId) {
+      toast.info("Bạn cần đăng nhập để thích món ăn!", {
+        autoClose: 3000,
+        onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
+      });
+      return;
+    }
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
     const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
 
