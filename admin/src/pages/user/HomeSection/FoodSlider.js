@@ -20,7 +20,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
 
   const handleLike = async (dishId) => {
     if (!userId) {
-      toast.info("Bạn cần đăng nhập để thích món ăn!", {
+      toast.info("You need to login to like dish!", {
         autoClose: 3000,
         onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
       });
