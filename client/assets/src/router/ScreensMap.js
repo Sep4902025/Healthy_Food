@@ -1,12 +1,7 @@
-<<<<<<< HEAD
-import Signin from "../screens/Signin";
-import Signup from "../screens/Signup";
-=======
 // PHẦN 1: IMPORTS
 import Signin from "../screens/Signin";
 import Signup from "../screens/Signup";
 // ↑ Import các component màn hình sẽ được sử dụng trong navigation
->>>>>>> 168395b (App v3)
 
 import { ScreensName } from "../constants/ScreensName";
 import ChangePassword from "../screens/ChangePassword";
@@ -25,18 +20,14 @@ import Message from "../screens/Message";
 import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon";
 import { Image, View } from "react-native";
 import OcticonsIcon from "../components/common/VectorIcons/OcticonsIcon";
+import HeartBeat from "../screens/HeartBeat";
 import Profile from "../screens/Profile";
 import MealPlan from "../screens/MealPlan/MealPlan";
-<<<<<<< HEAD
-=======
 // ↑ Import enum chứa tên các màn hình
 // Giúp tránh lỗi typo và dễ dàng quản lý tên màn hình
->>>>>>> 168395b (App v3)
 
 // PHẦN 2: KHAI BÁO CẤU HÌNH SCREENS
 export const ScreensMap = [
-<<<<<<< HEAD
-=======
   // {
   //   name: ScreensName.welcome,
   //   component: Welcome,
@@ -45,29 +36,12 @@ export const ScreensMap = [
   //   },
   //   hiddenBottomTab: true,
   // },
->>>>>>> 168395b (App v3)
   {
     name: ScreensName.home,
     component: Home,
     options: {
       tabBarButton: () => null,
     },
-<<<<<<< HEAD
-  },
-  {
-    name: ScreensName.signup,
-
-    component: Signup,
-
-    options: {
-      tabBarButton: () => null,
-    },
-
-    hiddenBottomTab: true,
-  },
-
-  {
-=======
     // hiddenBottomTab: true,
   },
   {
@@ -89,15 +63,12 @@ export const ScreensMap = [
 
   {
     // Cấu hình cho màn hình Signin
->>>>>>> 168395b (App v3)
     name: ScreensName.signin,
     component: Signin,
     options: {
       tabBarButton: () => null,
     },
     hiddenBottomTab: true,
-<<<<<<< HEAD
-=======
 
     // Code mẫu về cách cấu hình icon cho tab (đã comment)
     // options: {
@@ -109,7 +80,6 @@ export const ScreensMap = [
     //     />
     //   ),
     // },
->>>>>>> 168395b (App v3)
   },
   {
     name: ScreensName.verifyEmail,
@@ -127,9 +97,6 @@ export const ScreensMap = [
     },
     hiddenBottomTab: true,
   },
-<<<<<<< HEAD
-
-=======
   // {
   //   name: ScreensName.home,
   //   component: Home,
@@ -138,14 +105,10 @@ export const ScreensMap = [
   //   },
   //   hiddenBottomTab: true,
   // },
->>>>>>> 168395b (App v3)
   {
     name: ScreensName.favorList,
     component: FavorList,
     options: {
-<<<<<<< HEAD
-      tabBarIcon: ({ color, focused }) => <Ionicons name="heart-outline" size={28} color={color} />,
-=======
       tabBarIcon: ({ color, focused }) => (
         <Ionicons
           name="heart-outline" // Tên icon
@@ -153,7 +116,6 @@ export const ScreensMap = [
           color={color} // Màu sắc (active/inactive)
         />
       ),
->>>>>>> 168395b (App v3)
       requireAuthen: true,
     },
   },
@@ -162,15 +124,11 @@ export const ScreensMap = [
     component: Message,
     options: {
       tabBarIcon: ({ color, focused }) => (
-<<<<<<< HEAD
-        <Ionicons name="chatbubble-ellipses-outline" size={28} color={color} />
-=======
         <Ionicons
           name="chatbubble-ellipses-outline" // Tên icon
           size={28} // Kích thước icon
           color={color} // Màu sắc (active/inactive)
         />
->>>>>>> 168395b (App v3)
       ),
       iconStyles: { transform: [{ translateX: -25 }] },
       requireAuthen: true,
@@ -208,9 +166,6 @@ export const ScreensMap = [
     name: ScreensName.profile,
     component: Profile,
     options: {
-<<<<<<< HEAD
-      tabBarIcon: ({ color, focused }) => <AntDesignIcon name="setting" size={28} color={color} />,
-=======
       tabBarIcon: ({ color, focused }) => (
         <AntDesignIcon
           name="setting" // Tên icon
@@ -218,7 +173,6 @@ export const ScreensMap = [
           color={color} // Màu sắc (active/inactive)
         />
       ),
->>>>>>> 168395b (App v3)
       requireAuthen: true,
     },
     hiddenBottomTab: true,
