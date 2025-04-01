@@ -75,7 +75,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
   const handleDeleteComment = async (commentId) => {
     try {
       if (!userId) {
-        toast.info("Bạn cần đăng nhập để xóa bình luận!", {
+        toast.info("You need to login to delete comment!", {
           autoClose: 3000,
           onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
         });
@@ -97,7 +97,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
   const handleRateRecipe = async (ratingValue) => {
     try {
       if (!userId) {
-        toast.info("Bạn cần đăng nhập để đánh giá công thức!", {
+        toast.info("You need to login to rate recipe", {
           autoClose: 3000,
           onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
         });
@@ -125,7 +125,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
     if (!newComment.trim()) return;
     try {
       if (!userId) {
-        toast.info("Bạn cần đăng nhập để gửi bình luận", {
+        toast.info("You need to login to submit comment! ", {
           autoClose: 3000,
           onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
         });
@@ -169,7 +169,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
   const handleLikeComment = async (commentId) => {
     try {
       if (!userId) {
-        toast.info("Bạn cần đăng nhập để yêu thích công thức!", {
+        toast.info("You need to log in to favorite this recipe!", {
           autoClose: 3000,
           onClose: () => navigate("/signin"), // Chuyển hướng sau khi thông báo đóng
         });
