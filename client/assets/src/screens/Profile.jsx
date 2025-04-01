@@ -22,7 +22,10 @@ import { ScreensName } from "../constants/ScreensName";
 import ShowToast from "../components/common/CustomToast";
 import { deleteUser, updateUser } from "../services/authService";
 import { removeUser, updateUserAct } from "../redux/reducers/userReducer";
-import { getUserPreference, updateUserPreference } from "../services/userPreference";
+import {
+  getUserPreference,
+  updateUserPreference,
+} from "../services/userPreference";
 import { useFocusEffect } from "@react-navigation/native";
 import ConfirmDeleteAccountModal from "../components/modal/ConfirmDeleteAccountModal";
 import { toggleVisible } from "../redux/reducers/drawerReducer";
@@ -119,7 +122,8 @@ function Profile({ navigation }) {
         ConfirmDeleteModal: false,
       });
     } else {
-      const message = response?.response?.data?.message || "Something went wrong";
+      const message =
+        response?.response?.data?.message || "Something went wrong";
       ShowToast("error", message);
     }
   };
@@ -142,26 +146,28 @@ function Profile({ navigation }) {
         >
           <Ionicons name="reorder-three" size={24} color={theme.textColor} />
         </TouchableOpacity>
-        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>My Profile</Text>
+        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
+          My Profile
+        </Text>
       </View>
 
       {/* Profile section */}
       <View style={styles.profileSection}>
         <Image
           source={
-<<<<<<< HEAD
-            user?.avatar_url ? { uri: user.avatar_url } : require("../../assets/image/Profile.png")
-=======
             user?.avatarUrl
               ? { uri: user.avatarUrl }
               : require("../../assets/image/Profile.png")
->>>>>>> 168395b (App v3)
           }
           style={styles.profileImage}
         />
         <View style={styles.profileInfoContainer}>
-          <Text style={{ ...styles.profileName, color: theme.textColor }}>{user?.username}</Text>
-          <Text style={{ ...styles.profileEmail, color: theme.textColor }}>{user?.email}</Text>
+          <Text style={{ ...styles.profileName, color: theme.textColor }}>
+            {user?.username}
+          </Text>
+          <Text style={{ ...styles.profileEmail, color: theme.textColor }}>
+            {user?.email}
+          </Text>
           <View style={styles.editButtonContainer}>
             <TouchableOpacity
               style={styles.editButton}
@@ -172,7 +178,9 @@ function Profile({ navigation }) {
                 });
               }}
             >
-              <Text style={{ ...styles.editButtonText, color: "white" }}>Edit Profile</Text>
+              <Text style={{ ...styles.editButtonText, color: "white" }}>
+                Edit Profile
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -187,7 +195,9 @@ function Profile({ navigation }) {
           }}
         >
           <Ionicons name="heart-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>Favourites</Text>
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>
+            Favourites
+          </Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
@@ -201,11 +211,15 @@ function Profile({ navigation }) {
           }}
         >
           <Ionicons name="body-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>Health Information</Text>
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>
+            Health Information
+          </Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
-        <View style={{ ...styles.separator, backgroundColor: theme.textColor }} />
+        <View
+          style={{ ...styles.separator, backgroundColor: theme.textColor }}
+        />
 
         <TouchableOpacity
           style={styles.menuItem}
@@ -214,13 +228,17 @@ function Profile({ navigation }) {
           }}
         >
           <FontAwesomeIcon name="edit" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>Change password</Text>
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>
+            Change password
+          </Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
         <View style={styles.menuItem}>
           <Ionicons name="contrast-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>Dark/Light</Text>
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>
+            Dark/Light
+          </Text>
           <Switch
             value={themeMode === "dark"}
             onValueChange={changeLightMode}
@@ -237,20 +255,30 @@ function Profile({ navigation }) {
             });
           }}
         >
-          <Ionicons name="trash-bin-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>Delete Account</Text>
+          <Ionicons
+            name="trash-bin-outline"
+            size={24}
+            color={theme.textColor}
+          />
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>
+            Delete Account
+          </Text>
           {/* <Ionicons name="chevron-forward" size={24} color="#999" /> */}
           <Text style={{ color: theme.textColor }}>YES</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>Logout</Text>
+          <Text style={{ ...styles.menuText, color: theme.textColor }}>
+            Logout
+          </Text>
           <Text style={{ color: theme.textColor }}>YES</Text>
           {/* <Ionicons name="chevron-forward" size={24} color="#999" /> */}
         </TouchableOpacity>
 
-        <View style={{ ...styles.separator, backgroundColor: theme.textColor }} />
+        <View
+          style={{ ...styles.separator, backgroundColor: theme.textColor }}
+        />
       </View>
       <EditHealthModal
         visible={modalVisible.EditHealthModal}

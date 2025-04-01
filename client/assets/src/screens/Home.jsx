@@ -73,10 +73,7 @@ function Home({ navigation }) {
         const newDishes = response.data.items.filter(
           (dish) => dish.season && typeof dish.season === "string"
         );
-<<<<<<< HEAD
-=======
         console.log(response?.data);
->>>>>>> 168395b (App v3)
 
         setSeasonalDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
 
