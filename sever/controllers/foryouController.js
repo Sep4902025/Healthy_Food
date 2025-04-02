@@ -8,6 +8,11 @@ const foryouController = {
   getForyou: async (req, res) => {
     try {
       const userId = req.user?.id || req.params.userId;
+      // Thêm các tham số phân trang
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+
       if (!userId) {
         return res.status(400).json({
           success: false,
@@ -31,8 +36,7 @@ const foryouController = {
       if (!userPreferenceId) {
         return res.status(404).json({
           success: false,
-          message:
-            "Người dùng chưa có sở thích (userPreferenceId) được thiết lập!",
+          message: "Người dùng chưa có sở thích (userPreferenceId) được thiết lập!",
         });
       }
 
@@ -53,18 +57,30 @@ const foryouController = {
 
       // Trường hợp không có điều kiện y tế hoặc nguyên liệu ghét
       if (underDiseases.length === 0 && hateIngredients.length === 0) {
+        const totalItems = await Dish.countDocuments({
+          isVisible: true,
+          isDelete: false,
+        });
+
         const foryouItems = await Dish.find({
           isVisible: true,
           isDelete: false,
         })
           .populate("recipeId")
-          .populate("medicalConditionId");
+          .populate("medicalConditionId")
+          .skip(skip)
+          .limit(limit);
 
         return res.status(200).json({
           success: true,
-          message:
-            "Danh sách món ăn được lấy thành công (không có điều kiện y tế hoặc ghét)",
-          data: foryouItems,
+          message: "Danh sách món ăn được lấy thành công (không có điều kiện y tế hoặc ghét)",
+          data: {
+            items: foryouItems,
+            totalItems,
+            currentPage: page,
+            totalPages: Math.ceil(totalItems / limit),
+            itemsPerPage: limit,
+          },
         });
       }
 
@@ -84,34 +100,25 @@ const foryouController = {
         .flatMap((condition) => condition.recommendedFoods)
         .map((dish) => dish._id.toString());
 
-      const nutritionalConstraints = medicalConditions.reduce(
-        (acc, condition) => {
-          if (condition.nutritionalConstraints) {
-            if (condition.nutritionalConstraints.carbs)
-              acc.carbs = Math.min(
-                acc.carbs || Infinity,
-                condition.nutritionalConstraints.carbs
-              );
-            if (condition.nutritionalConstraints.fat)
-              acc.fat = Math.min(
-                acc.fat || Infinity,
-                condition.nutritionalConstraints.fat
-              );
-            if (condition.nutritionalConstraints.protein)
-              acc.protein = Math.min(
-                acc.protein || Infinity,
-                condition.nutritionalConstraints.protein
-              );
-            if (condition.nutritionalConstraints.calories)
-              acc.calories = Math.min(
-                acc.calories || Infinity,
-                condition.nutritionalConstraints.calories
-              );
-          }
-          return acc;
-        },
-        {}
-      );
+      const nutritionalConstraints = medicalConditions.reduce((acc, condition) => {
+        if (condition.nutritionalConstraints) {
+          if (condition.nutritionalConstraints.carbs)
+            acc.carbs = Math.min(acc.carbs || Infinity, condition.nutritionalConstraints.carbs);
+          if (condition.nutritionalConstraints.fat)
+            acc.fat = Math.min(acc.fat || Infinity, condition.nutritionalConstraints.fat);
+          if (condition.nutritionalConstraints.protein)
+            acc.protein = Math.min(
+              acc.protein || Infinity,
+              condition.nutritionalConstraints.protein
+            );
+          if (condition.nutritionalConstraints.calories)
+            acc.calories = Math.min(
+              acc.calories || Infinity,
+              condition.nutritionalConstraints.calories
+            );
+        }
+        return acc;
+      }, {});
 
       // Xử lý nguyên liệu bị ghét và công thức bị hạn chế
       let restrictedRecipeIds = [];
@@ -119,9 +126,7 @@ const foryouController = {
         const recipesWithHatedIngredients = await Recipe.find({
           "ingredients.ingredientId": { $in: hateIngredients },
         });
-        restrictedRecipeIds = recipesWithHatedIngredients.map((recipe) =>
-          recipe._id.toString()
-        );
+        restrictedRecipeIds = recipesWithHatedIngredients.map((recipe) => recipe._id.toString());
       }
 
       // Truy vấn món ăn với điều kiện
@@ -129,24 +134,23 @@ const foryouController = {
         isVisible: true,
         isDelete: false,
         _id: { $nin: restrictedFoods },
-        $or: [
-          { recipeId: { $nin: restrictedRecipeIds } }, // Công thức không bị hạn chế
-          { recipeId: { $exists: false } }, // Hoặc không có recipeId
-        ],
+        $or: [{ recipeId: { $nin: restrictedRecipeIds } }, { recipeId: { $exists: false } }],
       };
 
-      if (nutritionalConstraints.carbs)
-        query.carbs = { $lte: nutritionalConstraints.carbs };
-      if (nutritionalConstraints.fat)
-        query.fat = { $lte: nutritionalConstraints.fat };
-      if (nutritionalConstraints.protein)
-        query.protein = { $lte: nutritionalConstraints.protein };
+      if (nutritionalConstraints.carbs) query.carbs = { $lte: nutritionalConstraints.carbs };
+      if (nutritionalConstraints.fat) query.fat = { $lte: nutritionalConstraints.fat };
+      if (nutritionalConstraints.protein) query.protein = { $lte: nutritionalConstraints.protein };
       if (nutritionalConstraints.calories)
         query.calories = { $lte: nutritionalConstraints.calories };
 
+      // Đếm tổng số items trước khi phân trang
+      const totalItems = await Dish.countDocuments(query);
+
       const foryouItems = await Dish.find(query)
         .populate("recipeId")
-        .populate("medicalConditionId");
+        .populate("medicalConditionId")
+        .skip(skip)
+        .limit(limit);
 
       // Sắp xếp ưu tiên món ăn được khuyến nghị
       const sortedItems = foryouItems.sort((a, b) => {
@@ -159,15 +163,26 @@ const foryouController = {
         return res.status(200).json({
           success: true,
           message: "Không tìm thấy món ăn nào khớp với tiêu chí",
-          data: [],
+          data: {
+            items: [],
+            totalItems: 0,
+            currentPage: page,
+            totalPages: 0,
+            itemsPerPage: limit,
+          },
         });
       }
 
       return res.status(200).json({
         success: true,
-        message:
-          "Danh sách món ăn được lấy thành công dựa trên điều kiện y tế và sở thích",
-        data: sortedItems,
+        message: "Danh sách món ăn được lấy thành công dựa trên điều kiện y tế và sở thích",
+        data: {
+          items: sortedItems,
+          totalItems,
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          itemsPerPage: limit,
+        },
       });
     } catch (error) {
       console.error("Lỗi trong getForyou:", error);
@@ -269,11 +284,7 @@ const foryouController = {
     try {
       const { id } = req.params;
 
-      const deletedForyou = await Dish.findByIdAndUpdate(
-        id,
-        { isDelete: true },
-        { new: true }
-      );
+      const deletedForyou = await Dish.findByIdAndUpdate(id, { isDelete: true }, { new: true });
 
       if (!deletedForyou) {
         return res.status(404).json({
