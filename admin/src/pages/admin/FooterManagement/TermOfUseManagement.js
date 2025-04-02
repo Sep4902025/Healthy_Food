@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import termService from "../../../services/footer/termServices";
 import UploadComponent from "../../../components/UploadComponent";
+import uploadFile from "../../../helpers/uploadFile";
+import imageCompression from "browser-image-compression";
 import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
 import Pagination from "../../../components/Pagination";
 
@@ -11,6 +13,8 @@ const TermOfUseManagement = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [termsPerPage, setTermsPerPage] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
@@ -22,7 +26,7 @@ const TermOfUseManagement = () => {
   const fetchTerms = async () => {
     setLoading(true);
     try {
-      const result = await termService.getTerms(currentPage + 1, termsPerPage); // +1 vì API dùng từ 1
+      const result = await termService.getTerms(currentPage + 1, termsPerPage);
       if (result.success) {
         setTerms(result.data.data.terms || []);
         setTotalItems(result.data.total || 0);
@@ -58,15 +62,52 @@ const TermOfUseManagement = () => {
     if (item) {
       setEditData(item);
       setFormData({ bannerUrl: item.bannerUrl, content: item.content });
+      setImagePreview(item.bannerUrl);
+      setImageFile(null); // Reset imageFile khi edit
     } else {
       setEditData(null);
       setFormData({ bannerUrl: "", content: "" });
+      setImageFile(null);
+      setImagePreview("");
     }
     setModalOpen(true);
   };
 
+  const compressImage = async (file) => {
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1024,
+      useWebWorker: true,
+    };
+    try {
+      return await imageCompression(file, options);
+    } catch (error) {
+      console.error("Image compression error:", error);
+      return file;
+    }
+  };
+
+  const handleFileSelect = (file) => {
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setImageFile(file);
+      setImagePreview(previewUrl);
+      setFormData({ ...formData, bannerUrl: "" });
+    } else {
+      setImageFile(null);
+      setImagePreview("");
+    }
+  };
+
+  const handleImageUrlChange = (e) => {
+    const url = e.target.value;
+    setFormData({ ...formData, bannerUrl: url });
+    setImageFile(null);
+    setImagePreview(url);
+  };
+
   const handleSave = async () => {
-    if (!formData.bannerUrl.trim()) {
+    if (!formData.bannerUrl.trim() && !imageFile) {
       alert("Banner cannot be empty!");
       return;
     }
@@ -74,21 +115,39 @@ const TermOfUseManagement = () => {
       alert("Content cannot be empty!");
       return;
     }
+
+    let finalBannerUrl = formData.bannerUrl;
+    if (imageFile) {
+      try {
+        const compressedFile = await compressImage(imageFile);
+        const uploadedImage = await uploadFile(compressedFile, (percent) =>
+          console.log(`Upload progress: ${percent}%`)
+        );
+        finalBannerUrl = uploadedImage.secure_url;
+      } catch (error) {
+        alert("Image upload failed!");
+        console.error("Upload error:", error);
+        return;
+      }
+    }
+
+    const dataToSave = { ...formData, bannerUrl: finalBannerUrl };
     const response = editData
-      ? await termService.updateTerm(editData._id, formData)
-      : await termService.createTerm(formData);
+      ? await termService.updateTerm(editData._id, dataToSave)
+      : await termService.createTerm(dataToSave);
+
     if (response.success) {
       setModalOpen(false);
       setEditData(null);
       setFormData({ bannerUrl: "", content: "" });
+      setImageFile(null);
+      setImagePreview("");
       fetchTerms();
     } else {
       console.error("Error:", response.message);
       alert(response.message);
     }
   };
-
-  const handleImageUpload = (imageUrl) => setFormData({ ...formData, bannerUrl: imageUrl });
 
   const handlePageClick = ({ selected }) => setCurrentPage(selected);
 
@@ -107,7 +166,6 @@ const TermOfUseManagement = () => {
 
   return (
     <div className="container mx-auto px-6 py-8">
-      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
           Terms of Use Management
@@ -120,9 +178,7 @@ const TermOfUseManagement = () => {
         </button>
       </div>
 
-      {/* Table */}
       <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
-        {/* Table Header */}
         <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
           <div className="col-span-1">No.</div>
           <div className="col-span-2">Banner</div>
@@ -131,7 +187,6 @@ const TermOfUseManagement = () => {
           <div className="col-span-2 text-center">Actions</div>
         </div>
 
-        {/* Table Body */}
         <div className="divide-y divide-gray-200">
           {terms.length > 0 ? (
             terms.map((item, index) => (
@@ -197,13 +252,12 @@ const TermOfUseManagement = () => {
           )}
         </div>
 
-        {/* Pagination */}
         <div className="p-4 bg-gray-50">
           <Pagination
             limit={termsPerPage}
             setLimit={(value) => {
               setTermsPerPage(value);
-              setCurrentPage(0); // Reset về trang đầu khi thay đổi số lượng item mỗi trang
+              setCurrentPage(0);
             }}
             totalItems={totalItems}
             handlePageClick={handlePageClick}
@@ -212,7 +266,6 @@ const TermOfUseManagement = () => {
         </div>
       </div>
 
-      {/* Modal Form */}
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
@@ -222,15 +275,26 @@ const TermOfUseManagement = () => {
 
             <label className="block mb-2 text-gray-700">Banner:</label>
             <UploadComponent
-              onUploadSuccess={handleImageUpload}
-              reset={formData.bannerUrl === ""}
+              onFileSelect={handleFileSelect}
+              reset={!imageFile && !formData.bannerUrl}
             />
-            {formData.bannerUrl && (
-              <img
-                src={formData.bannerUrl}
-                alt="Preview"
-                className="mt-2 w-20 h-20 object-cover rounded-md"
+            {!editData && (
+              <input
+                type="text"
+                value={formData.bannerUrl}
+                onChange={handleImageUrlChange}
+                placeholder="Or enter banner URL"
+                className="w-full border p-2 mt-2 mb-2 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               />
+            )}
+            {imagePreview && (
+              <div className="mt-2 flex justify-center">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-20 h-20 object-cover rounded-md"
+                />
+              </div>
             )}
 
             <label className="block mb-2 mt-4 text-gray-700">Content:</label>
@@ -243,13 +307,13 @@ const TermOfUseManagement = () => {
 
             <div className="flex justify-end space-x-2">
               <button
-                className="w-11 h-14 flex items-center justify-center bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
                 onClick={() => setModalOpen(false)}
               >
                 Cancel
               </button>
               <button
-                className="w-11 h-14 flex items-center justify-center bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition"
+                className="px-4 py-2 bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition"
                 onClick={handleSave}
               >
                 Save

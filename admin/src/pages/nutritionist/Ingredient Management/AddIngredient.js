@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ingredientService from "../../../services/nutritionist/ingredientsServices";
 import UploadComponent from "../../../components/UploadComponent";
+import uploadFile from "../../../helpers/uploadFile";
+import imageCompression from "browser-image-compression";
 
 const TYPE_OPTIONS = [
   "Meat & Seafood",
@@ -16,6 +18,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    imageFile: null,
     imageUrl: "",
     type: "",
     customType: "",
@@ -28,13 +31,18 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
     unit: "",
   });
   const [errors, setErrors] = useState({});
+  const [imagePreview, setImagePreview] = useState("");
+  const [isValidImageUrl, setIsValidImageUrl] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.name.trim()) newErrors.name = "Name is required!";
     if (!formData.description.trim()) newErrors.description = "Description is required!";
-    if (!formData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required!";
+    if (!formData.imageFile && !formData.imageUrl.trim())
+      newErrors.imageUrl = "Image (file or URL) is required!";
+    else if (formData.imageUrl && !isValidImageUrl)
+      newErrors.imageUrl = "Invalid image URL. Please provide a valid image link.";
     if (!formData.type) newErrors.type = "Type is required!";
     if (formData.type === "Others" && !formData.customType.trim())
       newErrors.customType = "Custom Type is required when Type is 'Others'!";
@@ -68,12 +76,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   const handleCaloriesChange = (e) => {
     let value = e.target.value.replace(/[^0-9]/g, "");
     value = value === "" ? "" : parseInt(value, 10);
-
-    if (value > 1000) {
-      value = 1000;
-      e.target.value = value;
-    }
-
+    if (value > 1000) value = 1000;
     setFormData({ ...formData, calories: value });
     setErrors({ ...errors, calories: "" });
   };
@@ -81,12 +84,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   const handleProteinChange = (e) => {
     let value = e.target.value.replace(/[^0-9]/g, "");
     value = value === "" ? "" : parseInt(value, 10);
-
-    if (value > 100) {
-      value = 100;
-      e.target.value = value;
-    }
-
+    if (value > 100) value = 100;
     setFormData({ ...formData, protein: value });
     setErrors({ ...errors, protein: "" });
   };
@@ -94,12 +92,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   const handleCarbsChange = (e) => {
     let value = e.target.value.replace(/[^0-9]/g, "");
     value = value === "" ? "" : parseInt(value, 10);
-
-    if (value > 100) {
-      value = 100;
-      e.target.value = value;
-    }
-
+    if (value > 100) value = 100;
     setFormData({ ...formData, carbs: value });
     setErrors({ ...errors, carbs: "" });
   };
@@ -107,19 +100,65 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   const handleFatChange = (e) => {
     let value = e.target.value.replace(/[^0-9]/g, "");
     value = value === "" ? "" : parseInt(value, 10);
-
-    if (value > 100) {
-      value = 100;
-      e.target.value = value;
-    }
-
+    if (value > 100) value = 100;
     setFormData({ ...formData, fat: value });
     setErrors({ ...errors, fat: "" });
   };
 
-  const handleImageUpload = (imageUrl) => {
-    setFormData({ ...formData, imageUrl });
+  const handleFileSelect = (file) => {
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      setIsValidImageUrl(true);
+      setFormData({ ...formData, imageFile: file, imageUrl: "" });
+    } else {
+      setImagePreview("");
+      setIsValidImageUrl(false);
+      setFormData({ ...formData, imageFile: null });
+    }
     setErrors({ ...errors, imageUrl: "" });
+  };
+
+  const handleImageUrlChange = (e) => {
+    const url = e.target.value;
+    setFormData({ ...formData, imageUrl: url, imageFile: null });
+    setErrors({ ...errors, imageUrl: "" });
+
+    if (url) {
+      checkImageUrl(url);
+    } else {
+      setImagePreview("");
+      setIsValidImageUrl(false);
+    }
+  };
+
+  const checkImageUrl = (url) => {
+    const img = new Image();
+    img.onload = () => {
+      setImagePreview(url);
+      setIsValidImageUrl(true);
+    };
+    img.onerror = () => {
+      setImagePreview("");
+      setIsValidImageUrl(false);
+      setErrors({ ...errors, imageUrl: "Invalid image URL. Please provide a valid image link." });
+    };
+    img.src = url;
+  };
+
+  const compressImage = async (file) => {
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1024,
+      useWebWorker: true,
+    };
+    try {
+      const compressedFile = await imageCompression(file, options);
+      return compressedFile;
+    } catch (error) {
+      console.error("Image compression error:", error);
+      return file;
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -129,8 +168,24 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
       return;
     }
 
+    let imageUrl = formData.imageUrl;
+    if (formData.imageFile) {
+      try {
+        const compressedFile = await compressImage(formData.imageFile);
+        const uploadedImage = await uploadFile(compressedFile, (percentComplete) => {
+          console.log(`Upload progress: ${percentComplete}%`);
+        });
+        imageUrl = uploadedImage.secure_url;
+      } catch (error) {
+        alert("Image upload failed!");
+        console.error("Upload error:", error);
+        return;
+      }
+    }
+
     const finalData = {
       ...formData,
+      imageUrl,
       type: formData.type === "Others" ? formData.customType : formData.type,
     };
     const response = await ingredientService.createIngredient(finalData);
@@ -139,6 +194,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
       setFormData({
         name: "",
         description: "",
+        imageFile: null,
         imageUrl: "",
         type: "",
         customType: "",
@@ -151,15 +207,24 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
         unit: "",
       });
       setErrors({});
+      setImagePreview("");
+      setIsValidImageUrl(false);
       onIngredientAdded();
     } else {
       alert("Failed to add ingredient: " + response.message);
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   return (
     <div className="container mx-auto px-6 py-8">
-      {/* Header */}
       <div className="flex items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
           Add New Ingredient
@@ -175,7 +240,6 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Column */}
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
@@ -201,11 +265,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   name="calories"
                   value={formData.calories}
                   onChange={handleCaloriesChange}
-                  onKeyPress={(e) => {
-                    if (!/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
+                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter calories"
                   min="0"
                   max="1000"
@@ -264,11 +324,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   name="protein"
                   value={formData.protein}
                   onChange={handleProteinChange}
-                  onKeyPress={(e) => {
-                    if (!/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
+                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter protein"
                   min="0"
                   max="100"
@@ -288,11 +344,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   name="carbs"
                   value={formData.carbs}
                   onChange={handleCarbsChange}
-                  onKeyPress={(e) => {
-                    if (!/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
+                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter carbs"
                   min="0"
                   max="100"
@@ -315,11 +367,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   name="fat"
                   value={formData.fat}
                   onChange={handleFatChange}
-                  onKeyPress={(e) => {
-                    if (!/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
+                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter fat"
                   min="0"
                   max="100"
@@ -372,43 +420,19 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
           </div>
 
           <div className="bg-gray-50 p-6 rounded-lg">
-            <div className="flex justify-center items-center mb-2">
-              {formData.imageUrl ? (
-                <img
-                  src={formData.imageUrl}
-                  alt="Ingredient preview"
-                  className="w-24 h-24 object-cover rounded-lg"
-                />
-              ) : (
-                <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-              )}
-            </div>
-            <div className="text-center">
+            <div className="text-center mb-4">
               <UploadComponent
-                onUploadSuccess={handleImageUpload}
-                reset={formData.imageUrl === ""}
+                onFileSelect={handleFileSelect}
+                reset={formData.imageFile === null && !formData.imageUrl}
               />
             </div>
-            <div className="mt-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Image URL *</label>
               <input
                 type="text"
+                name="imageUrl"
                 value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                onChange={handleImageUrlChange}
                 placeholder="Enter image URL"
                 className={`w-full border ${
                   errors.imageUrl ? "border-red-500" : "border-gray-300"
@@ -416,10 +440,18 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               />
               {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
             </div>
+            {imagePreview && (
+              <div className="mt-2 flex justify-center">
+                <img
+                  src={imagePreview}
+                  alt="Ingredient preview"
+                  className="w-24 h-24 object-cover rounded border"
+                />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column */}
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>

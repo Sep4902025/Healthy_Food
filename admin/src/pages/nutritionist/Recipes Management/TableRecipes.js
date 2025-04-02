@@ -365,11 +365,10 @@ const TableRecipes = () => {
               setFilterType("all");
               setCurrentPage(1);
             }}
-            className={`px-4 py-2 rounded-md font-semibold ${
-              filterType === "all"
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            } transition duration-200`}
+            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
+              ? "bg-[#40B491] text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
           >
             All
           </button>
@@ -380,11 +379,10 @@ const TableRecipes = () => {
                 setFilterType(type);
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
-                filterType === type
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
             >
               {type}
             </button>
@@ -425,8 +423,9 @@ const TableRecipes = () => {
                   />
                   <div className="p-4">
                     <h3 className="text-lg font-semibold text-center text-gray-800">{dish.name}</h3>
+
+
                     <div className="text-sm text-gray-600 mt-2 space-y-2">
-                      {/* First Row: Cooking Time, Servings, Calories */}
                       <div className="flex justify-between items-center px-4">
                         <span className="flex items-center">
                           <Clock className="w-4 h-4 mr-1 text-gray-500" />
@@ -438,22 +437,21 @@ const TableRecipes = () => {
                         </span>
                         <span className="flex items-center">
                           <Flame className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.calories || "N/A"} kcal
+                          {dish.totalServing && dish.calories ? (dish.calories / dish.totalServing).toFixed(2) : "N/A"} kcal
                         </span>
                       </div>
-                      {/* Second Row: Protein, Carbs, Fat */}
                       <div className="flex justify-between items-center px-4">
                         <span className="flex items-center">
                           <Dumbbell className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.protein || "N/A"}g
+                          {dish.totalServing && dish.protein ? (dish.protein / dish.totalServing).toFixed(2) : "N/A"}g
                         </span>
                         <span className="flex items-center">
                           <Wheat className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.carbs || "N/A"}g
+                          {dish.totalServing && dish.carbs ? (dish.carbs / dish.totalServing).toFixed(2) : "N/A"}g
                         </span>
                         <span className="flex items-center">
                           <Droplet className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.fat || "N/A"}g
+                          {dish.totalServing && dish.fat ? (dish.fat / dish.totalServing).toFixed(2) : "N/A"}g
                         </span>
                       </div>
                     </div>
@@ -555,9 +553,8 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${
-                        errors.cookingTime ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.cookingTime ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.cookingTime}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -588,15 +585,14 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${
-                        errors.totalServing ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.totalServing ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.totalServing}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
                         value = value === "" ? "" : parseInt(value, 10);
-                        if (value > 10) {
-                          value = 10;
+                        // Tùy chọn: Giới hạn tối đa là 50 (hoặc bỏ hẳn nếu không cần giới hạn)
+                        if (value > 50) {
+                          value = 50;
                           e.target.value = value;
                         }
                         setNewRecipeData({ ...newRecipeData, totalServing: value });
@@ -608,8 +604,7 @@ const TableRecipes = () => {
                         }
                       }}
                       placeholder="Enter serving size"
-                      min="1"
-                      max="10"
+                      min="1" // Tối thiểu là 1
                     />
                     {errors.totalServing && (
                       <p className="text-red-500 text-sm mt-1">{errors.totalServing}</p>
@@ -808,9 +803,9 @@ const TableRecipes = () => {
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Nutrition</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Nutrition (Total for {newRecipeData.totalServing || 1} Servings)</h3>
                   {newRecipeData.ingredients.length > 0 &&
-                  newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
+                    newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
@@ -828,11 +823,28 @@ const TableRecipes = () => {
                         <span className="text-gray-700">Carbs:</span>
                         <span className="font-medium">{nutritionData.carbs} g</span>
                       </div>
+                      {/* Thêm phần dinh dưỡng cho 1 phần ăn */}
+                      <h4 className="text-md font-semibold text-gray-700 mt-4">Per Serving (1 Serving)</h4>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Calories:</span>
+                        <span className="font-medium">{(nutritionData.calories / (newRecipeData.totalServing || 1)).toFixed(2)} kcal</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Protein:</span>
+                        <span className="font-medium">{(nutritionData.protein / (newRecipeData.totalServing || 1)).toFixed(2)} g</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Fat:</span>
+                        <span className="font-medium">{(nutritionData.fat / (newRecipeData.totalServing || 1)).toFixed(2)} g</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Carbs:</span>
+                        <span className="font-medium">{(nutritionData.carbs / (newRecipeData.totalServing || 1)).toFixed(2)} g</span>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-gray-500">
-                      No nutrition data available. Add ingredients with quantities and units to see
-                      nutrition details.
+                      No nutrition data available. Add ingredients with quantities and units to see nutrition details.
                     </p>
                   )}
                 </div>
@@ -874,22 +886,31 @@ const IngredientSelectionModal = ({
 
   useEffect(() => {
     fetchIngredients();
-  }, [currentPage, filterType, searchTerm, itemsPerPage]);
+  }, [currentPage, itemsPerPage, filterType, searchTerm]);
 
   const fetchIngredients = async () => {
     setIsLoading(true);
-    const response = await ingredientService.getAllIngredients(
-      currentPage,
-      itemsPerPage,
-      filterType === "all" ? "" : filterType,
-      searchTerm
-    );
-    if (response.success) {
-      setCurrentIngredients(response.data.items || []);
-      setTotalItems(response.data.total || 0);
-      setTotalPages(response.data.totalPages || 1);
-    } else {
+    try {
+      const response = await ingredientService.getAllIngredients(
+        currentPage,
+        itemsPerPage,
+        filterType,
+        searchTerm
+      );
+      if (response.success) {
+        setCurrentIngredients(response.data.items || []);
+        setTotalItems(response.data.total || 0);
+        setTotalPages(response.data.totalPages || 1);
+      } else {
+        console.error("Failed to fetch ingredients:", response.message);
+        setCurrentIngredients([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      }
+    } catch (error) {
+      console.error("Error in fetchIngredients:", error);
       setCurrentIngredients([]);
+      setTotalItems(0);
       setTotalPages(1);
     }
     setIsLoading(false);
@@ -913,6 +934,7 @@ const IngredientSelectionModal = ({
     onSelect(tempSelectedIngredients);
     setTempSelectedIngredients([]);
     setCurrentPage(1);
+    onClose();
   };
 
   const handlePageClick = (data) => {
@@ -951,11 +973,10 @@ const IngredientSelectionModal = ({
                 setFilterType("all");
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold ${
-                filterType === "all"
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
             >
               All
             </button>
@@ -966,11 +987,10 @@ const IngredientSelectionModal = ({
                   setFilterType(type);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
-                  filterType === type
-                    ? "bg-[#40B491] text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                } transition duration-200`}
+                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  } transition duration-200`}
               >
                 {type}
               </button>
@@ -1014,23 +1034,29 @@ const IngredientSelectionModal = ({
                       <h3 className="text-lg font-semibold text-center text-gray-800">
                         {ing.name}
                       </h3>
-                      <div className="flex flex-wrap justify-center items-center text-sm text-gray-600 mt-2 gap-3">
-                        <span className="flex items-center">
-                          <Flame className="w-4 h-4 mr-1" />
-                          {ing.calories || "N/A"} kcal
-                        </span>
-                        <span className="flex items-center">
-                          <Dumbbell className="w-4 h-4 mr-1" />
-                          {ing.protein || "N/A"}g
-                        </span>
-                        <span className="flex items-center">
-                          <Wheat className="w-4 h-4 mr-1" />
-                          {ing.carbs || "N/A"}g
-                        </span>
-                        <span className="flex items-center">
-                          <Droplet className="w-4 h-4 mr-1" />
-                          {ing.fat || "N/A"}g
-                        </span>
+                      <div className="text-sm text-gray-600 mt-2 space-y-2">
+                        {/* First Row: Calories, Protein */}
+                        <div className="flex justify-between items-center px-10">
+                          <span className="flex items-center">
+                            <Flame className="w-4 h-4 mr-1" />
+                            {ing.calories || "N/A"} kcal
+                          </span>
+                          <span className="flex items-center">
+                            <Dumbbell className="w-4 h-4 mr-1" />
+                            {ing.protein || "N/A"}g
+                          </span>
+                        </div>
+                        {/* Second Row: Carbs, Fat */}
+                        <div className="flex justify-between items-center px-10">
+                          <span className="flex items-center">
+                            <Wheat className="w-4 h-4 mr-1" />
+                            {ing.carbs || "N/A"}g
+                          </span>
+                          <span className="flex items-center">
+                            <Droplet className="w-4 h-4 mr-1" />
+                            {ing.fat || "N/A"}g
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
