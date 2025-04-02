@@ -183,6 +183,7 @@ exports.login = catchAsync(async (req, res, next) => {
 
   createSendToken(user, 200, res, "Login Successful");
 });
+
 // Google Login
 exports.googleLogin = catchAsync(async (req, res, next) => {
   const { idToken } = req.body;
@@ -307,9 +308,16 @@ exports.changePassword = catchAsync(async (req, res, next) => {
     return next(new AppError("Please provide all required fields", 400));
   }
 
-  const user = await UserModel.findById(req.user.id).select("+password");
+  if (!req.user) {
+    return next(new AppError("Authentication required. Please log in.", 401));
+  }
 
-  if (!user || !(await user.correctPassword(currentPassword, user.password))) {
+  const user = await UserModel.findById(req.user._id).select("+password");
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  if (!(await user.correctPassword(currentPassword, user.password))) {
     return next(new AppError("Current password is incorrect", 401));
   }
 
@@ -319,7 +327,6 @@ exports.changePassword = catchAsync(async (req, res, next) => {
 
   createSendToken(user, 200, res, "Password changed successfully!");
 });
-
 //
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {

@@ -18,9 +18,9 @@ const dishesService = {
         params: {
           page,
           limit,
-          search, // Thêm tham số tìm kiếm
-          sort: "createdAt", // Thêm tham số sắp xếp
-          order: "desc",    // Thứ tự giảm dần
+          search,
+          sort: "createdAt",
+          order: "desc",
         },
       });
       console.log("🔍 Danh sách món ăn từ API:", response.data);
@@ -42,7 +42,6 @@ const dishesService = {
     }
   },
 
-  // Các hàm khác giữ nguyên
   createDish: async (data) => {
     try {
       const response = await axios.post(`${API_URL}/dishes`, data, {

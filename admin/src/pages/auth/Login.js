@@ -12,7 +12,9 @@ import {
   selectAuthLoading,
 } from "../../store/selectors/authSelectors";
 import { loginFailure, logout } from "../../store/slices/authSlice";
+
 const Login = () => {
+  const [credentials, setCredentials] = useState({ email: "", password: "" });
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -34,11 +36,11 @@ const Login = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    localStorage.removeItem("authToken"); // Xóa token cũ
-    dispatch(logout()); // Reset Redux state
+    dispatch(loginFailure(null)); // Reset error and loading state
+    // Remove this line to prevent clearing the token on mount
+    // localStorage.removeItem("authToken");
+    // dispatch(logout()); // Only call logout explicitly when needed
   }, [dispatch]);
-  
-  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,15 +53,14 @@ const Login = () => {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await dispatch(loginWithEmail(formData));
-      if (!response) {
-        navigate("/signin");
-        return;
-      }
+      const response = await dispatch(loginWithEmail(formData)).unwrap(); // Use unwrap to handle async thunk
+      console.log("Login response:", response);
 
       if (response.success) {
+        localStorage.setItem("token", response.token); // Ensure token is saved
+        console.log("Token saved after login:", response.token); // Debug
         const userRole = response.user.role;
-        console.log("User role:", userRole);
+        toast.success(response.message);
 
         if (userRole === "admin") {
           navigate("/admin");
@@ -68,24 +69,28 @@ const Login = () => {
         } else {
           navigate("/");
         }
+      } else {
+        toast.error(response.message);
       }
     } catch (error) {
       console.error("Login error:", error);
+      toast.error(error.message || "Đăng nhập thất bại");
     }
   };
 
   const handleGoogleLogin = async (credentialResponse) => {
     try {
-      const success = await dispatch(
+      const response = await dispatch(
         loginWithGoogle(credentialResponse.credential)
-      );
-      if (!success) {
-        navigate("/signin");
-        return;
+      ).unwrap();
+      if (response.success) {
+        localStorage.setItem("token", response.token); // Save token
+        console.log("Token saved after Google login:", response.token); // Debug
+        toast.success("Đăng nhập Google thành công!");
+        navigate("/");
+      } else {
+        toast.error(response.message);
       }
-
-      toast.success("Đăng nhập Google thành công!");
-      navigate("/");
     } catch (error) {
       toast.error("Đăng nhập Google thất bại");
     }

@@ -431,7 +431,7 @@ const Header = () => {
                     </div>
                     <div className="py-1">
                       <button
-                        onClick={() => navigate("/user")}
+                        onClick={handleProfileClick}
                         className="w-full text-left px-4 py-2 hover:bg-gray-100"
                       >
                         Profile

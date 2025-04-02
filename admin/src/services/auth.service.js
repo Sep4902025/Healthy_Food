@@ -158,27 +158,36 @@ const AuthService = {
     }
   },
 
-  changePassword: async ({ oldPassword, newPassword, confirmPassword }) => {
+  changePassword: async ({
+    currentPassword,
+    newPassword,
+    newPasswordConfirm,
+  }) => {
     try {
-      console.log("Request gửi lên:", {
-        oldPassword,
+      const response = await axiosInstance.patch("/users/change-password", {
+        currentPassword,
         newPassword,
-        confirmPassword,
+        newPasswordConfirm,
       });
 
-      const response = await axiosInstance.post(
-        "/users/change-password",
-        { oldPassword, newPassword, confirmPassword },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token); // Update token if refreshed
+      }
 
-      console.log("Response từ server:", response.data);
-      return response.data;
+      return {
+        success: true,
+        message: response.data.message || "Password changed successfully",
+        token: response.data.token,
+      };
     } catch (error) {
-      console.error("Lỗi đổi mật khẩu:", error.response?.data || error.message);
-      throw error.response?.data || error;
+      console.error(
+        "Password change error:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to change password",
+      };
     }
   },
 

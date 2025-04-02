@@ -68,6 +68,8 @@ import EditMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/
 import Medical from "../pages/user/Medical";
 import NutritionistApplicationForm from "../pages/user/NutritionistApplicationForm";
 import MealPlansAnalytics from "../pages/nutritionist/MealPlan Management/MealPlansAnalytics";
+import TableMealPlanAdmin from "../pages/admin/pages/TableMealPlanAdmin";
+import FinanceManagement from "../pages/admin/pages/FinanceManagement";
 
 const AppRoutes = () => {
   return (
@@ -185,17 +187,16 @@ const AppRoutes = () => {
         <Route path="contactusmanagement" element={<ContactUsManagement />} />
 
         <Route path="usermanagement" element={<UserManagement />} />
+        <Route path="financemanagement" element={<FinanceManagement />} />
         <Route path="dishmanagement" element={<DishManagement />} />
-        <Route path="ingredientsmanagement" element={<IngredientsManagement />} />
-        <Route path="mealplan" element={<TableMealPlan />} />
+        
         <Route path="change-password" element={<ChangePassword />} />
         <Route path="adminprofile/:id" element={<AdminProfile />} />
         <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
         <Route path="viewprofile/:id" element={<ViewProfile />} />
 
-        <Route path="mealplan" element={<TableMealPlan />} />
-        <Route path="mealPlan/analytics" element={<MealPlansAnalytics />} />
+        <Route path="mealplan" element={<TableMealPlanAdmin />} />
       </Route>
 
       {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist */}
@@ -208,7 +209,7 @@ const AppRoutes = () => {
         }
       >
         <Route path="chat" element={<NutritionChat />} />
-        <Route path="mealplan" element={<TableMealPlan />} />
+        {/* <Route path="mealplan" element={<TableMealPlan />} /> */}
         <Route path="mealPlan/analytics" element={<MealPlansAnalytics />} />
 
         <Route path="mealplan/create" element={<CreateMealPlanNutritionist />} />

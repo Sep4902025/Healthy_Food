@@ -3,15 +3,26 @@ const crypto = require("crypto");
 const moment = require("moment");
 const VNPAY_CONFIG = require("../config/vnpay");
 const Payment = require("../models/Payment");
-const { MealPlan, UserMealPlan, MealDay, Meal, MealTracking } = require("../models/MealPlan");
+const {
+  MealPlan,
+  UserMealPlan,
+  MealDay,
+  Meal,
+  MealTracking,
+} = require("../models/MealPlan");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
+const UserModel = require("../models/UserModel");
+const PaymentModel = require("../models/Payment"); // Giả sử bạn có model này
+const sendEmail = require("../utils/email");
+const catchAsync = require("../utils/catchAsync");
+const AppError = require("../utils/appError");
 
 // API lấy danh sách tất cả các payment
 exports.getAllPayments = async (req, res) => {
   try {
     const moment = require("moment");
-    
+
     const payments = await Payment.find();
 
     const revenueByMonth = {};
@@ -62,7 +73,7 @@ exports.getAllPayments = async (req, res) => {
       totalRevenue,
       paymentStats,
       revenueByYear,
-      revenueByMonth
+      revenueByMonth,
     });
   } catch (error) {
     console.error("Lỗi lấy dữ liệu Payment:", error);
@@ -83,17 +94,26 @@ exports.createPaymentUrl = async (req, res) => {
     }
 
     if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ status: "error", message: "Amount phải là số dương" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Amount phải là số dương" });
     }
 
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res.status(400).json({ status: "error", message: "MealPlan không tồn tại" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "MealPlan không tồn tại" });
     }
 
-    const successPayment = await Payment.findOne({ mealPlanId, status: "success" });
+    const successPayment = await Payment.findOne({
+      mealPlanId,
+      status: "success",
+    });
     if (successPayment) {
-      return res.status(400).json({ status: "error", message: "MealPlan này đã được thanh toán" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "MealPlan này đã được thanh toán" });
     }
 
     let payment = await Payment.findOne({
@@ -121,7 +141,10 @@ exports.createPaymentUrl = async (req, res) => {
     }
 
     const clientIp =
-      req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.ip || "127.0.0.1";
+      req.headers["x-forwarded-for"] ||
+      req.connection.remoteAddress ||
+      req.ip ||
+      "127.0.0.1";
 
     let vnp_Params = {
       vnp_Version: "2.1.0",
@@ -163,11 +186,15 @@ exports.createPaymentUrl = async (req, res) => {
 
     sortedParams["vnp_SecureHash"] = secureHash;
 
-    const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(sortedParams).toString()}`;
+    const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(
+      sortedParams
+    ).toString()}`;
 
     return res.json({ status: "success", paymentUrl, paymentId: payment._id });
   } catch (error) {
-    return res.status(500).json({ status: "error", message: "Lỗi tạo URL thanh toán" });
+    return res
+      .status(500)
+      .json({ status: "error", message: "Lỗi tạo URL thanh toán" });
   }
 };
 
@@ -193,10 +220,14 @@ exports.vnpayReturn = async (req, res) => {
 
     const clientType = req.query.clientType || "web";
     const baseUrl =
-      clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
+      clientType === "app"
+        ? process.env.MOBILE_CLIENT_URL
+        : process.env.ADMIN_WEB_URL;
 
     if (secureHash !== signed) {
-      return res.status(400).redirect(`${baseUrl}/mealplan?status=error&message=Invalid+signature`);
+      return res
+        .status(400)
+        .redirect(`${baseUrl}/mealplan?status=error&message=Invalid+signature`);
     }
 
     const transactionNo = vnp_Params["vnp_TransactionNo"];
@@ -216,7 +247,9 @@ exports.vnpayReturn = async (req, res) => {
     );
 
     if (!payment) {
-      return res.status(404).redirect(`${baseUrl}/mealplan?status=error&message=Payment+not+found`);
+      return res
+        .status(404)
+        .redirect(`${baseUrl}/mealplan?status=error&message=Payment+not+found`);
     }
 
     if (status === "success") {
@@ -229,10 +262,14 @@ exports.vnpayReturn = async (req, res) => {
       if (!updatedMealPlan) {
         return res
           .status(404)
-          .redirect(`${baseUrl}/mealplan?status=error&message=MealPlan+not+found`);
+          .redirect(
+            `${baseUrl}/mealplan?status=error&message=MealPlan+not+found`
+          );
       }
 
-      const oldUserMealPlan = await UserMealPlan.findOne({ userId: payment.userId });
+      const oldUserMealPlan = await UserMealPlan.findOne({
+        userId: payment.userId,
+      });
 
       if (oldUserMealPlan) {
         const oldMealPlanId = oldUserMealPlan.mealPlanId;
@@ -266,8 +303,12 @@ exports.vnpayReturn = async (req, res) => {
   } catch (error) {
     const clientType = req.query.clientType || "web";
     const baseUrl =
-      clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
-    res.redirect(`${baseUrl}/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`);
+      clientType === "app"
+        ? process.env.MOBILE_CLIENT_URL
+        : process.env.ADMIN_WEB_URL;
+    res.redirect(
+      `${baseUrl}/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`
+    );
   }
 };
 
@@ -294,7 +335,9 @@ exports.getPaymentHistory = async (req, res) => {
 
     const paymentDetails = await Promise.all(
       payments.map(async (payment) => {
-        const mealPlan = await MealPlan.findById(payment.mealPlanId).select("title").lean();
+        const mealPlan = await MealPlan.findById(payment.mealPlanId)
+          .select("title")
+          .lean();
         return {
           _id: payment._id,
           mealPlanName: mealPlan ? mealPlan.title : "N/A",
@@ -312,7 +355,12 @@ exports.getPaymentHistory = async (req, res) => {
     return res.json({
       status: "success",
       data: paymentDetails,
-      pagination: { total: totalPayments, page, limit, totalPages: Math.ceil(totalPayments / limit) },
+      pagination: {
+        total: totalPayments,
+        page,
+        limit,
+        totalPages: Math.ceil(totalPayments / limit),
+      },
     });
   } catch (error) {
     return res.status(500).json({
@@ -329,7 +377,9 @@ exports.checkPaymentStatus = async (req, res) => {
 
     const payment = await Payment.findById(paymentId);
     if (!payment) {
-      return res.status(404).json({ status: "error", message: "Payment not found" });
+      return res
+        .status(404)
+        .json({ status: "error", message: "Payment not found" });
     }
 
     return res.json({
@@ -345,7 +395,9 @@ exports.checkPaymentStatus = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ status: "error", message: "Error checking payment status" });
+    return res
+      .status(500)
+      .json({ status: "error", message: "Error checking payment status" });
   }
 };
 
@@ -424,13 +476,145 @@ exports.getPaymentHistoryForNutritionist = async (req, res) => {
     const mealPlans = await MealPlan.find().lean();
 
     if (!mealPlans || mealPlans.length === 0) {
-      return res.status(200).json({ success: true, data: [], message: "Không có meal plans nào" });
+      return res
+        .status(200)
+        .json({ success: true, data: [], message: "Không có meal plans nào" });
     }
 
     const payments = await Payment.find().lean();
 
     return res.status(200).json({ success: true, data: payments });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi lấy lịch sử thanh toán", error: error.message });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Lỗi khi lấy lịch sử thanh toán",
+        error: error.message,
+      });
   }
 };
+
+exports.calculateSalary = catchAsync(async (req, res, next) => {
+  const { nutriId } = req.params;
+
+  // Tìm nutritionist
+  const nutritionist = await UserModel.findById(nutriId);
+  if (!nutritionist || nutritionist.role !== "nutritionist") {
+    return next(new AppError("Nutritionist not found or invalid role", 404));
+  }
+
+  // Lấy tất cả meal plans của nutritionist
+  const mealPlans = await MealPlan.find({ createdBy: nutriId }).populate(
+    "userId",
+    "username"
+  );
+
+  // Lấy tất cả payments liên quan đến meal plans này
+  const mealPlanIds = mealPlans.map((mp) => mp._id);
+  const payments = await PaymentModel.find({
+    mealPlanId: { $in: mealPlanIds },
+  });
+
+  // Tính lương
+  const baseSalary = 5000000; // 5,000,000 VND
+  const commission = payments
+    .filter((payment) => payment.status === "success")
+    .reduce((sum, payment) => {
+      const mealPlan = mealPlans.find(
+        (mp) => mp._id.toString() === payment.mealPlanId.toString()
+      );
+      return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
+    }, 0);
+
+  const totalSalary = baseSalary + commission;
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      nutritionist: {
+        id: nutritionist._id,
+        name: nutritionist.username,
+      },
+      salary: {
+        baseSalary,
+        commission,
+        totalSalary,
+      },
+    },
+  });
+});
+
+exports.sendSalaryEmail = catchAsync(async (req, res, next) => {
+  const { nutriId } = req.body;
+
+  // Tính lương trước
+  const nutritionist = await UserModel.findById(nutriId);
+  if (!nutritionist || nutritionist.role !== "nutritionist") {
+    return next(new AppError("Nutritionist not found or invalid role", 404));
+  }
+
+  const mealPlans = await MealPlan.find({ createdBy: nutriId });
+  const mealPlanIds = mealPlans.map((mp) => mp._id);
+  const payments = await PaymentModel.find({
+    mealPlanId: { $in: mealPlanIds },
+  });
+
+  const baseSalary = 5000000;
+  const commission = payments
+    .filter((payment) => payment.status === "success")
+    .reduce((sum, payment) => {
+      const mealPlan = mealPlans.find(
+        (mp) => mp._id.toString() === payment.mealPlanId.toString()
+      );
+      return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
+    }, 0);
+  const totalSalary = baseSalary + commission;
+
+  // Định dạng số tiền
+  const formattedSalary = totalSalary.toLocaleString("vi-VN") + " VND";
+  const formattedCommission = commission.toLocaleString("vi-VN") + " VND";
+  const formattedBaseSalary = baseSalary.toLocaleString("vi-VN") + " VND";
+
+  // Nội dung email
+  const emailSubject = "Thông báo lương tháng từ Healthy Food";
+  const emailHtml = `
+    <h2>Xin chào ${nutritionist.username},</h2>
+    <p>Chúng tôi xin thông báo lương tháng của bạn như sau:</p>
+    <ul>
+      <li><strong>Lương cơ bản:</strong> ${formattedBaseSalary}</li>
+      <li><strong>Thưởng (10% doanh thu):</strong> ${formattedCommission}</li>
+      <li><strong>Tổng lương:</strong> ${formattedSalary}</li>
+    </ul>
+    <p>Cảm ơn bạn đã đồng hành cùng Healthy Food!</p>
+    <p>Trân trọng,<br/>Đội ngũ Healthy Food</p>
+  `;
+
+  // Gửi email
+  try {
+    await sendEmail({
+      email: nutritionist.email,
+      subject: emailSubject,
+      html: emailHtml,
+    });
+    console.log(`Email lương gửi đến ${nutritionist.email}`);
+  } catch (emailError) {
+    console.error(
+      `Không gửi được email đến ${nutritionist.email}:`,
+      emailError
+    );
+    return res.status(200).json({
+      status: "success",
+      message: "Lương đã được xác nhận, nhưng email gửi thất bại",
+      emailError: emailError.message,
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Lương đã được xác nhận và email gửi thành công",
+    data: {
+      salary: totalSalary,
+    },
+  });
+});
