@@ -113,15 +113,21 @@ const AddMedicalCondition = () => {
     };
   };
 
-  // Handle form changes
+  // Handle form changes with max value constraint of 1000
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // Nếu là trường trong nutritionalConstraints, giới hạn giá trị tối đa là 1000
     if (name in formData.nutritionalConstraints) {
+      let constrainedValue = value;
+      if (value !== "" && !isNaN(value)) {
+        constrainedValue = Math.min(Number(value), 10000).toString(); // Giới hạn tối đa 1000
+      }
       setFormData({
         ...formData,
         nutritionalConstraints: {
           ...formData.nutritionalConstraints,
-          [name]: value,
+          [name]: constrainedValue,
         },
       });
     } else {
@@ -130,22 +136,31 @@ const AddMedicalCondition = () => {
     setErrors({ ...errors, [name]: "" });
   };
 
-  // Validate form
+  // Validate form with all fields required
   const validateForm = () => {
     const newErrors = {};
+
+    // Kiểm tra các trường bắt buộc
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.description.trim()) newErrors.description = "Description is required";
+    if (formData.restrictedFoods.length === 0)
+      newErrors.restrictedFoods = "At least one restricted food is required";
+    if (formData.recommendedFoods.length === 0)
+      newErrors.recommendedFoods = "At least one recommended food is required";
     if (formData.restrictedFoods.some((food) => formData.recommendedFoods.includes(food))) {
       newErrors.foodConflict = "A dish cannot be both restricted and recommended!";
     }
+
+    // Kiểm tra các trường nutritionalConstraints
     ["carbs", "fat", "protein", "calories"].forEach((field) => {
       const value = formData.nutritionalConstraints[field];
-      if (value && (isNaN(value) || Number(value) < 0)) {
-        newErrors[field] = `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } must be a positive number`;
+      if (value === "" || value === null || value === undefined) {
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
+      } else if (isNaN(value) || Number(value) < 0) {
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} must be a positive number`;
       }
     });
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -164,18 +179,10 @@ const AddMedicalCondition = () => {
       restrictedFoods: formData.restrictedFoods,
       recommendedFoods: formData.recommendedFoods,
       nutritionalConstraints: {
-        carbs: formData.nutritionalConstraints.carbs
-          ? Number(formData.nutritionalConstraints.carbs)
-          : null,
-        fat: formData.nutritionalConstraints.fat
-          ? Number(formData.nutritionalConstraints.fat)
-          : null,
-        protein: formData.nutritionalConstraints.protein
-          ? Number(formData.nutritionalConstraints.protein)
-          : null,
-        calories: formData.nutritionalConstraints.calories
-          ? Number(formData.nutritionalConstraints.calories)
-          : null,
+        carbs: Number(formData.nutritionalConstraints.carbs),
+        fat: Number(formData.nutritionalConstraints.fat),
+        protein: Number(formData.nutritionalConstraints.protein),
+        calories: Number(formData.nutritionalConstraints.calories),
       },
     };
 
@@ -243,9 +250,7 @@ const AddMedicalCondition = () => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
                 <textarea
                   name="description"
                   value={formData.description}
@@ -265,7 +270,7 @@ const AddMedicalCondition = () => {
             <div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Restricted Foods
+                  Restricted Foods *
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {formData.restrictedFoods.map((foodId) => {
@@ -300,11 +305,14 @@ const AddMedicalCondition = () => {
                 >
                   Add Restricted Foods
                 </button>
+                {errors.restrictedFoods && (
+                  <p className="text-red-500 text-sm mt-1">{errors.restrictedFoods}</p>
+                )}
               </div>
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Recommended Foods
+                  Recommended Foods *
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {formData.recommendedFoods.map((foodId) => {
@@ -339,6 +347,9 @@ const AddMedicalCondition = () => {
                 >
                   Add Recommended Foods
                 </button>
+                {errors.recommendedFoods && (
+                  <p className="text-red-500 text-sm mt-1">{errors.recommendedFoods}</p>
+                )}
                 {errors.foodConflict && (
                   <p className="text-red-500 text-sm mt-1">{errors.foodConflict}</p>
                 )}
@@ -346,7 +357,7 @@ const AddMedicalCondition = () => {
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nutritional Constraints (Max Values)
+                  Nutritional Constraints (Max Values) *
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <div>

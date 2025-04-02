@@ -41,7 +41,6 @@ exports.getAllTerms = catchAsync(async (req, res, next) => {
     .skip(skip)
     .limit(limit);
 
-  // Tính tổng số trang
   const totalPages = Math.ceil(totalTerms / limit);
 
   res.status(200).json({

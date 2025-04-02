@@ -88,15 +88,18 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
 
     try {
       setIsAdding(true);
+      // Tính lại giá trị dinh dưỡng cho 1 phần ăn nếu totalServing > 1
+      const servingSize = selectedDish.totalServing || 1; // Mặc định là 1 nếu không có totalServing
       const newDish = {
         dishId: selectedDish._id,
         recipeId: selectedDish?.recipeId,
         imageUrl: selectedDish?.imageUrl,
         name: selectedDish?.name,
-        calories: selectedDish?.calories,
-        protein: selectedDish?.protein,
-        carbs: selectedDish?.carbs,
-        fat: selectedDish?.fat,
+        calories: (selectedDish?.calories || 0) / servingSize,
+        protein: (selectedDish?.protein || 0) / servingSize,
+        carbs: (selectedDish?.carbs || 0) / servingSize,
+        fat: (selectedDish?.fat || 0) / servingSize,
+        totalServing: servingSize, // Lưu totalServing để biết giá trị gốc
       };
 
       const response = await mealPlanService.addDishToMeal(
@@ -285,18 +288,21 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
                       <div className="flex justify-between items-start">
                         <h3 className="font-medium text-gray-800">{dish.name}</h3>
                         <span className="text-sm font-bold text-blue-600">
-                          {dish.calories} kcal
+                          {(dish.calories / (dish.totalServing || 1)).toFixed(2)} kcal
                         </span>
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        Serves: {dish.totalServing || 1}
                       </div>
                       <div className="mt-2 flex justify-between text-xs text-gray-600">
                         <span className="inline-block bg-red-100 rounded-full px-2 py-1">
-                          Pro: {dish.protein || 0}g
+                          Pro: {(dish.protein / (dish.totalServing || 1)).toFixed(2)}g
                         </span>
                         <span className="inline-block bg-green-100 rounded-full px-2 py-1">
-                          Carbs: {dish.carbs || 0}g
+                          Carbs: {(dish.carbs / (dish.totalServing || 1)).toFixed(2)}g
                         </span>
                         <span className="inline-block bg-yellow-100 rounded-full px-2 py-1">
-                          Fat: {dish.fat || 0}g
+                          Fat: {(dish.fat / (dish.totalServing || 1)).toFixed(2)}g
                         </span>
                       </div>
                     </div>
