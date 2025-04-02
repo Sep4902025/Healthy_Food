@@ -17,7 +17,6 @@ const MainLayout = () => {
   const handleLogout = () => {
     dispatch(logoutUser());
     navigate("/signin");
-    toast.success("Đăng xuất thành công!");
   };
 
   return (
@@ -48,14 +47,7 @@ const MainLayout = () => {
                 <a href="/about" className="text-gray-700 hover:text-gray-900">
                   About
                 </a>
-<<<<<<< HEAD
-                <a
-                  href="/contact"
-                  className="text-gray-700 hover:text-gray-900"
-                >
-=======
                 <a href="/contact" className="text-gray-700 hover:text-gray-900">
->>>>>>> main
                   Contact
                 </a>
               </nav>
@@ -63,15 +55,9 @@ const MainLayout = () => {
                 <>
                   <div className="flex items-center space-x-3">
                     {user.avatar_url && (
-                      <img
-                        src={user.avatar_url}
-                        alt="Avatar"
-                        className="w-8 h-8 rounded-full"
-                      />
+                      <img src={user.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full" />
                     )}
-                    <span className="text-gray-700">
-                      Xin chào, {user.username}
-                    </span>
+                    <span className="text-gray-700">Xin chào, {user.username}</span>
                   </div>
                   <button
                     onClick={handleLogout}
@@ -99,9 +85,7 @@ const MainLayout = () => {
       {/* Footer */}
       <footer className="bg-white shadow-md mt-auto">
         <div className="container mx-auto px-4 py-4">
-          <p className="text-center text-gray-600">
-            © 2025 Your Company. All rights reserved.
-          </p>
+          <p className="text-center text-gray-600">© 2025 Your Company. All rights reserved.</p>
         </div>
       </footer>
       {user?.role === "user" && <UserChatButton />}

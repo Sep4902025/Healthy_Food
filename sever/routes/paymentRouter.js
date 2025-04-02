@@ -9,10 +9,14 @@ const {
   getPaymentHistoryForNutritionist,
   checkPaymentStatus,
 } = require("../controllers/paymentController");
-const { isAuthenticated} = require("../middlewares/isAuthenticated");
+const { calculateSalary, sendSalaryEmail } = require("../controllers/paymentController");
+const { isAuthenticated } = require("../middlewares/isAuthenticated");
 
 paymentRouter.get("/", getAllPayments);
 paymentRouter.get("/:id", getPaymentById);
+
+paymentRouter.get("/calculate-salary/:nutriId", isAuthenticated, calculateSalary);
+paymentRouter.post("/send-salary-email", isAuthenticated, sendSalaryEmail);
 
 paymentRouter.post("/vnpay/pay", createPaymentUrl);
 paymentRouter.get("/vnpay/return", vnpayReturn);

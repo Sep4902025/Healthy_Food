@@ -11,26 +11,27 @@ const getAuthHeaders = () => {
 
 const mealPlanService = {
   // Lấy danh sách meal plans với phân trang
+  // Lấy danh sách meal plans với phân trang
   getAllMealPlans: async () => {
     try {
       let allMealPlans = [];
       let page = 1;
       let totalPages = 1;
-  
+
       while (page <= totalPages) {
         const response = await api.get(`/mealPlan`, {
           params: {
             page,
             limit: 100,
             sort: "createdAt", // Sắp xếp theo thời gian tạo
-            order: "desc",     // Giảm dần (mới nhất trước)
+            order: "desc", // Giảm dần (mới nhất trước)
           },
         });
-                const data = response.data.data;
-        
+        const data = response.data.data;
+
         // Gộp dữ liệu mới lên đầu danh sách
         allMealPlans = [...data.mealPlans, ...allMealPlans]; // 🆕 Đảo ngược thứ tự khi gộp
-  
+
         totalPages = response.data.totalPages;
         page++;
       }
@@ -44,7 +45,6 @@ const mealPlanService = {
       };
     }
   },
-  
 
   // Lấy chi tiết một MealPlan theo ID
   getMealPlanById: async (id) => {
@@ -66,11 +66,20 @@ const mealPlanService = {
       return {
         success: response.data.status === "success",
         data: response.data.status === "success" ? response.data.data : null,
-        message: response.data.status !== "success" ? response.data.message || "No unpaid meal plan found" : undefined,
+        message:
+          response.data.status !== "success"
+            ? response.data.message || "No unpaid meal plan found"
+            : undefined,
       };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy MealPlan cần thanh toán:", error.response?.data || error.message);
-      return { success: false, message: "Không tìm thấy MealPlan cần thanh toán!" };
+      console.error(
+        "❌ Lỗi khi lấy MealPlan cần thanh toán:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: "Không tìm thấy MealPlan cần thanh toán!",
+      };
     }
   },
 
@@ -82,7 +91,10 @@ const mealPlanService = {
       return {
         success: response.data.status === "success",
         data: response.data.status === "success" ? response.data.data : null,
-        message: response.data.status !== "success" ? response.data.message || "Cannot fetch meal plan details" : undefined,
+        message:
+          response.data.status !== "success"
+            ? response.data.message || "Cannot fetch meal plan details"
+            : undefined,
       };
     } catch (error) {
       console.error("❌ Lỗi khi lấy chi tiết MealPlan:", error.response?.data || error.message);
@@ -110,12 +122,18 @@ const mealPlanService = {
       return {
         success: response.data.status === "success",
         data: response.data.status === "success" ? response.data.data : null,
-        pagination: response.data.status === "success" ? (response.data.pagination || {
-          currentPage: page,
-          totalPages: 1,
-          totalItems: response.data.data.length,
-        }) : undefined,
-        message: response.data.status !== "success" ? response.data.message || "No payment history found" : undefined,
+        pagination:
+          response.data.status === "success"
+            ? response.data.pagination || {
+                currentPage: page,
+                totalPages: 1,
+                totalItems: response.data.data.length,
+              }
+            : undefined,
+        message:
+          response.data.status !== "success"
+            ? response.data.message || "No payment history found"
+            : undefined,
       };
     } catch (error) {
       console.error("❌ Lỗi khi lấy lịch sử giao dịch:", error.response?.data || error.message);
@@ -136,7 +154,10 @@ const mealPlanService = {
         success: response.data.status === "success",
         paymentUrl: response.data.status === "success" ? response.data.paymentUrl : undefined,
         paymentId: response.data.status === "success" ? response.data.paymentId : undefined,
-        message: response.data.status !== "success" ? response.data.message || "Failed to create payment URL" : undefined,
+        message:
+          response.data.status !== "success"
+            ? response.data.message || "Failed to create payment URL"
+            : undefined,
       };
     } catch (error) {
       console.error("❌ Lỗi khi tạo URL thanh toán:", error.response?.data || error.message);
@@ -157,11 +178,20 @@ const mealPlanService = {
         }
         return { success: true, data: paymentData };
       } else {
-        return { success: false, message: response.data.message || "Cannot check payment status" };
+        return {
+          success: false,
+          message: response.data.message || "Cannot check payment status",
+        };
       }
     } catch (error) {
-      console.error("❌ Lỗi khi kiểm tra trạng thái thanh toán:", error.response?.data || error.message);
-      return { success: false, message: "Không thể kiểm tra trạng thái thanh toán!" };
+      console.error(
+        "❌ Lỗi khi kiểm tra trạng thái thanh toán:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: "Không thể kiểm tra trạng thái thanh toán!",
+      };
     }
   },
 
@@ -280,7 +310,10 @@ const mealPlanService = {
       );
       if (isAlreadyAdded) {
         console.warn("⚠️ Món ăn đã tồn tại trong bữa ăn!");
-        return { success: false, message: "Món ăn này đã được thêm vào bữa ăn!" };
+        return {
+          success: false,
+          message: "Món ăn này đã được thêm vào bữa ăn!",
+        };
       }
       const dishData = {
         userId: userId,
@@ -343,7 +376,9 @@ const mealPlanService = {
   toggleMealPlanStatus: async (mealPlanId, isPause) => {
     try {
       console.log(`📤 ${isPause ? "Pausing" : "Resuming"} MealPlan ID: ${mealPlanId}`);
-      const response = await api.patch(`/mealPlan/${mealPlanId}/toggle`, { isPause });
+      const response = await api.patch(`/mealPlan/${mealPlanId}/toggle`, {
+        isPause,
+      });
       console.log(`✅ MealPlan has been ${isPause ? "paused" : "resumed"}:`, response.data);
       if (response.data.success) {
         if (response.data.message?.includes("failed to update reminders")) {
@@ -374,20 +409,24 @@ const mealPlanService = {
     try {
       const response = await api.get(`/payment/history/nutritionist`);
       console.log("🔍 Raw response from /payment/history/nutritionist:", response.data);
-      if (response.data.success) { // Sửa từ status thành success để khớp với backend
+      if (response.data.success) {
+        // Sửa từ status thành success để khớp với backend
         const payments = response.data.data || [];
         console.log("🔍 All Payments fetched in service:", payments);
         return { success: true, data: payments };
       } else {
         console.log("⚠️ API returned non-success status:", response.data);
-        return { success: false, message: response.data.message || "No payment history found" };
+        return {
+          success: false,
+          message: response.data.message || "No payment history found",
+        };
       }
     } catch (error) {
       console.error("❌ Error fetching payment history:", error.response?.data || error.message);
-      return { 
-        success: false, 
+      return {
+        success: false,
         message: error.response?.data?.message || "Cannot fetch payment history!",
-        error: error.response?.status // Thêm status code để debug dễ hơn
+        error: error.response?.status, // Thêm status code để debug dễ hơn
       };
     }
   },
@@ -401,6 +440,41 @@ const mealPlanService = {
     } catch (error) {
       console.error("❌ Lỗi khi xóa MealPlan:", error.response?.data || error.message);
       return { success: false, message: "Xóa MealPlan thất bại!" };
+    }
+  },
+
+  calculateSalary: async (nutriId) => {
+    try {
+      const response = await api.get(`/payment/calculate-salary/${nutriId}`);
+      return {
+        success: response.data.status === "success",
+        data: response.data.data,
+        message: response.data.message || "Tính lương thành công",
+      };
+    } catch (error) {
+      console.error("❌ Lỗi khi tính lương:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Không thể tính lương",
+      };
+    }
+  },
+
+  sendSalaryEmail: async (nutriId) => {
+    try {
+      const response = await api.post("/payment/send-salary-email", {
+        nutriId,
+      });
+      return {
+        success: response.data.status === "success",
+        message: response.data.message || "Email gửi thành công",
+      };
+    } catch (error) {
+      console.error("❌ Lỗi khi gửi email lương:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Không thể gửi email lương",
+      };
     }
   },
 };

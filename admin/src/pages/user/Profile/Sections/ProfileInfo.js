@@ -15,30 +15,31 @@ import quizService from "../../../../services/quizService";
 import { selectUser } from "../../../../store/selectors/authSelectors";
 import axios from "axios";
 import UserProfileUpdate from "../../UpdateUser";
-
 import AuthService from "../../../../services/auth.service";
 import uploadFile from "../../../../helpers/uploadFile";
 import { updateUser } from "../../../../store/actions/authActions";
+import { toast } from "react-toastify";
 
 const UserProfile = () => {
   const user = useSelector(selectUser);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const [resetInProgress, setResetInProgress] = useState(false);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
-  const [passwordResetInProgress, setPasswordResetInProgress] = useState(false);
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [passwordChangeInProgress, setPasswordChangeInProgress] = useState(false); // Đổi tên biến
+  const [showChangePassword, setShowChangePassword] = useState(false); // Đổi tên state
   const [showEditModal, setShowEditModal] = useState(false);
   const [passwordData, setPasswordData] = useState({
-    email: "",
-    password: "",
-    passwordConfirm: "",
+    currentPassword: "", // Đổi từ email thành currentPassword
+    newPassword: "", // Đổi từ password thành newPassword
+    newPasswordConfirm: "", // Đổi từ passwordConfirm thành newPasswordConfirm
   });
-  const [uploadProgress, setUploadProgress] = useState(0); // Upload progress
-  const [uploading, setUploading] = useState(false); // Upload status
-  const fileInputRef = useRef(null); // Ref for hidden file input
-
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null); // For image preview
+  const fileInputRef = useRef(null);
   const fetchUserData = async () => {
     if (!user || !user._id) {
       console.error("🚨 User or user._id does not exist:", user);
@@ -52,10 +53,9 @@ const UserProfile = () => {
       return;
     }
     try {
-      const { success, data, message } =
-        await quizService.getUserPreferenceByUserPreferenceId(
-          user.userPreferenceId
-        );
+      const { success, data, message } = await quizService.getUserPreferenceByUserPreferenceId(
+        user.userPreferenceId
+      );
       if (success) {
         setUserData(data);
       } else {
@@ -86,7 +86,7 @@ const UserProfile = () => {
 
   const handleReset = async () => {
     if (!user || !user.userPreferenceId) {
-      alert("No userPreferenceId found to delete!");
+      toast.error("No userPreferenceId found to delete!");
       return;
     }
     const confirmReset = window.confirm(
@@ -95,62 +95,70 @@ const UserProfile = () => {
     if (!confirmReset) return;
     try {
       setResetInProgress(true);
-      const { success, message } = await quizService.deleteUserPreference(
-        user.userPreferenceId
-      );
+      const { success, message } = await quizService.deleteUserPreference(user.userPreferenceId);
       if (success) {
-        alert("Information deleted successfully");
+        toast.success("Information deleted successfully");
         setUserData(null);
         fetchUserData();
       } else {
-        alert(`Error deleting: ${message}`);
+        toast.error(`Error deleting: ${message}`);
       }
     } catch (error) {
-      alert("An error occurred while deleting data");
+      toast.error("An error occurred while deleting data");
       console.error("🚨 Reset error:", error);
     } finally {
       setResetInProgress(false);
     }
   };
 
-  const handleResetPassword = async () => {
+  const handleChangePassword = async () => {
     if (
-      !passwordData.email ||
-      !passwordData.password ||
-      !passwordData.passwordConfirm
+      !passwordData.currentPassword ||
+      !passwordData.newPassword ||
+      !passwordData.newPasswordConfirm
     ) {
-      alert("Please fill in all information!");
+      toast.error("Please fill in all fields!");
       return;
     }
-    if (passwordData.password !== passwordData.passwordConfirm) {
-      alert("Confirmation password does not match!");
+    if (passwordData.newPassword !== passwordData.newPasswordConfirm) {
+      toast.error("New password and confirmation do not match!");
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters long!");
       return;
     }
     try {
-      setPasswordResetInProgress(true);
-      const result = await AuthService.resetPassword(
-        passwordData.email,
-        passwordData.password,
-        passwordData.passwordConfirm
-      );
+      setPasswordChangeInProgress(true);
+      const result = await AuthService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        newPasswordConfirm: passwordData.newPasswordConfirm,
+      });
       if (result.success) {
-        alert("Password changed successfully!");
-        setShowPasswordReset(false);
-        setPasswordData({ email: "", password: "", passwordConfirm: "" });
+        toast.success("Password changed successfully! Please log in again.");
+        setShowChangePassword(false);
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          newPasswordConfirm: "",
+        });
+        localStorage.removeItem("token"); // Xóa token
+        localStorage.removeItem("username"); // Xóa username nếu có
+        navigate("/signin"); // Chuyển về trang đăng nhập
       } else {
-        alert(`Error: ${result.message || "Unable to change password"}`);
+        toast.error(`Error: ${result.message || "Unable to change password"}`);
       }
     } catch (error) {
-      alert("An error occurred while changing the password!");
-      console.error("🚨 Password reset error:", error);
+      toast.error("An error occurred while changing the password!", error);
     } finally {
-      setPasswordResetInProgress(false);
+      setPasswordChangeInProgress(false);
     }
   };
 
   const handleDeleteUser = async () => {
     if (!user || !user._id) {
-      alert("No user information found to delete!");
+      toast.error("No user information found to delete!");
       return;
     }
     const confirmDelete = window.confirm(
@@ -159,18 +167,16 @@ const UserProfile = () => {
     if (!confirmDelete) return;
     try {
       setDeleteInProgress(true);
-      const { success, message } = await quizService.deleteUserByUserId(
-        user._id
-      );
+      const { success, message } = await quizService.deleteUserById(user._id);
       if (success) {
-        alert("Account deleted successfully!");
+        toast.success("Account deleted successfully!");
         localStorage.removeItem("token");
         navigate("/signin");
       } else {
-        alert(`Error deleting account: ${message}`);
+        toast.error(`Error deleting account: ${message}`);
       }
     } catch (error) {
-      alert("An error occurred while deleting the account!");
+      toast.error("An error occurred while deleting the account!");
       console.error("🚨 Delete user error:", error);
     } finally {
       setDeleteInProgress(false);
@@ -180,56 +186,66 @@ const UserProfile = () => {
   const handleUpdateProfile = (updatedData) => {
     setUserData((prev) => ({ ...prev, ...updatedData }));
   };
-  const dispatch = useDispatch();
-  // Handle avatar upload using quizService.updateUserById
-  const handleUploadAvatar = async (file) => {
-    if (!file) return;
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setPreviewImage({ file, url: imageUrl });
+    }
+  };
+
+  const handleUploadAvatar = async () => {
+    if (!previewImage?.file) {
+      toast.error("No image selected to upload!");
+      return;
+    }
+
     setUploading(true);
     try {
       const result = await uploadFile(
-        file,
+        previewImage.file,
         (percent) => setUploadProgress(percent),
         (cancel) => console.log("Upload canceled")
       );
       const avatarUrl = result.secure_url;
 
-      const updateResult = await quizService.updateUserById(user._id, {
-        avatarUrl,
-      });
-      if (updateResult.success) {
-        setUserData((prev) => ({ ...prev, avatarUrl }));
-        // Update user in Redux
-        dispatch(updateUser({ ...user, avatarUrl }));
-        alert("Avatar updated successfully!");
-      } else {
-        throw new Error(updateResult.message || "Unable to update avatar");
+      // Đảm bảo _id là string
+      const userId = typeof user._id === "object" && user._id.$oid ? user._id.$oid : user._id;
+      const userData = { _id: userId, avatarUrl }; // Only send necessary fields
+
+      const updatedUser = await dispatch(updateUser(userData));
+      if (!updatedUser) {
+        throw new Error("Failed to update user");
       }
+
+      // Update local state with the full updated user
+      setUserData((prev) => ({ ...prev, ...updatedUser }));
     } catch (error) {
       console.error("🚨 Error uploading avatar:", error);
-      alert("An error occurred while uploading the avatar: " + error.message);
+      toast.error(`An error occurred while uploading the avatar: ${error.message}`);
     } finally {
       setUploading(false);
       setUploadProgress(0);
+      setPreviewImage(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null;
+      }
     }
   };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      handleUploadAvatar(file);
-    }
+  const handleCancelPreview = () => {
+    setPreviewImage(null);
+    fileInputRef.current.value = null; // Reset input file
   };
-
   const triggerFileInput = () => {
-    fileInputRef.current.click(); // Trigger hidden file input
+    fileInputRef.current.click();
   };
 
   const calculateBMI = () => {
     if (userData) {
       const weight = parseFloat(userData.weight);
       const heightCm = parseFloat(userData.height);
-      if (!weight || !heightCm || weight <= 0 || heightCm <= 0)
-        return "No data";
+      if (!weight || !heightCm || weight <= 0 || heightCm <= 0) return "No data";
       const heightM = heightCm / 100;
       return (weight / (heightM * heightM)).toFixed(2);
     }
@@ -244,10 +260,8 @@ const UserProfile = () => {
         color: "text-gray-600",
         bg: "bg-gray-100",
       };
-    if (bmi < 18)
-      return { text: "Underweight", color: "text-blue-600", bg: "bg-blue-100" };
-    if (bmi < 30)
-      return { text: "Normal", color: "text-green-600", bg: "bg-green-100" };
+    if (bmi < 18) return { text: "Underweight", color: "text-blue-600", bg: "bg-blue-100" };
+    if (bmi < 30) return { text: "Normal", color: "text-green-600", bg: "bg-green-100" };
     if (bmi < 40)
       return {
         text: "Overweight",
@@ -309,7 +323,7 @@ const UserProfile = () => {
                 <FaEdit /> Edit Profile
               </button>
               <button
-                onClick={() => setShowPasswordReset(!showPasswordReset)}
+                onClick={() => setShowChangePassword(!showChangePassword)} // Đổi tên
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-300 shadow-md"
               >
                 <FaKey /> Change Password
@@ -339,9 +353,25 @@ const UserProfile = () => {
             <div className="bg-gradient-to-r from-indigo-600 to-blue-500 p-6 text-white">
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative">
-                  {userData?.avatarUrl ? (
+                  {/* Progress bar khi đang upload */}
+                  {uploading && (
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                      <div
+                        className="bg-indigo-600 h-2.5 rounded-full"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  )}
+                  {/* Hiển thị hình ảnh: preview nếu có, nếu không thì avatar hoặc placeholder */}
+                  {previewImage ? (
                     <img
-                      src={userData.avatarUrl}
+                      src={previewImage.url}
+                      alt="Preview"
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                    />
+                  ) : user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
                       alt="Avatar"
                       className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                     />
@@ -350,17 +380,40 @@ const UserProfile = () => {
                       {user.username ? user.username[0].toUpperCase() : "?"}
                     </div>
                   )}
-                  <button
-                    onClick={triggerFileInput}
-                    disabled={uploading}
-                    className="absolute bottom-0 right-0 bg-white text-indigo-600 p-2 rounded-full shadow-md hover:bg-indigo-100 transition-all duration-300 disabled:opacity-50"
-                  >
-                    {uploading ? (
-                      <span className="text-xs">{uploadProgress}%</span>
+                  {/* Nút "X" ở góc trên bên phải, không có background */}
+                  {previewImage && (
+                    <button
+                      onClick={handleCancelPreview}
+                      disabled={uploading}
+                      className="absolute top-0 right-[5px] text-red-600 hover:text-red-800 transition-all duration-300 disabled:opacity-50"
+                    >
+                      <span className="text-lg font-bold">X</span>
+                    </button>
+                  )}
+                  {/* Nút Upload hoặc Save */}
+                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2">
+                    {previewImage ? (
+                      <button
+                        onClick={handleUploadAvatar}
+                        disabled={uploading}
+                        className="bg-green-500 text-white px-3 py-1 rounded-full shadow-md hover:bg-green-600 transition-all duration-300 disabled:opacity-50"
+                      >
+                        <span className="text-xs">Save</span>
+                      </button>
                     ) : (
-                      <FaUpload />
+                      <button
+                        onClick={triggerFileInput}
+                        disabled={uploading}
+                        className="bg-white text-indigo-600 p-2 rounded-full shadow-md hover:bg-indigo-100 transition-all duration-300 disabled:opacity-50"
+                      >
+                        {uploading ? (
+                          <span className="text-xs">{uploadProgress}%</span>
+                        ) : (
+                          <FaUpload />
+                        )}
+                      </button>
                     )}
-                  </button>
+                  </div>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -393,8 +446,7 @@ const UserProfile = () => {
                   <div>
                     <p className="text-gray-600">Weight</p>
                     <p className="text-xl font-semibold text-blue-700">
-                      {userData?.weight || "?"}{" "}
-                      <span className="text-sm">kg</span>
+                      {userData?.weight || "?"} <span className="text-sm">kg</span>
                     </p>
                   </div>
                 </div>
@@ -403,8 +455,7 @@ const UserProfile = () => {
                   <div>
                     <p className="text-gray-600">Height</p>
                     <p className="text-xl font-semibold text-green-700">
-                      {userData?.height || "?"}{" "}
-                      <span className="text-sm">cm</span>
+                      {userData?.height || "?"} <span className="text-sm">cm</span>
                     </p>
                   </div>
                 </div>
@@ -416,11 +467,7 @@ const UserProfile = () => {
                   <FaCalculator className="text-gray-600 text-2xl" />
                   <div>
                     <p className="text-gray-600">BMI</p>
-                    <p
-                      className={`text-xl font-semibold ${
-                        getBMIStatus().color
-                      }`}
-                    >
+                    <p className={`text-xl font-semibold ${getBMIStatus().color}`}>
                       {calculateBMI()} - {getBMIStatus().text}
                     </p>
                   </div>
@@ -461,9 +508,7 @@ const UserProfile = () => {
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
-                        Nutrition Goals
-                      </h4>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">Nutrition Goals</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <InfoItem
                           label="Goal"
@@ -517,9 +562,7 @@ const UserProfile = () => {
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
-                        Health Metrics
-                      </h4>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">Health Metrics</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <InfoItem
                           label="Sleep Duration"
@@ -546,9 +589,7 @@ const UserProfile = () => {
               ) : (
                 <div className="text-center p-8 bg-gray-50 rounded-lg">
                   <FaUser className="text-4xl text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">
-                    No personal data available
-                  </p>
+                  <p className="text-gray-600 mb-4">No personal data available</p>
                   <button
                     onClick={handleEditClick}
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300"
@@ -562,35 +603,36 @@ const UserProfile = () => {
         </main>
       </div>
 
-      {/* Password Reset Modal */}
-      {showPasswordReset && (
+      {/* Change Password Modal */}
+      {showChangePassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Change Password
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Change Password</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-700 mb-1">Email</label>
+                <label className="block text-gray-700 mb-1">Current Password</label>
                 <input
-                  type="email"
-                  value={passwordData.email}
+                  type="password"
+                  value={passwordData.currentPassword}
                   onChange={(e) =>
-                    setPasswordData({ ...passwordData, email: e.target.value })
+                    setPasswordData({
+                      ...passwordData,
+                      currentPassword: e.target.value,
+                    })
                   }
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Enter email"
+                  placeholder="Enter current password"
                 />
               </div>
               <div>
                 <label className="block text-gray-700 mb-1">New Password</label>
                 <input
                   type="password"
-                  value={passwordData.password}
+                  value={passwordData.newPassword}
                   onChange={(e) =>
                     setPasswordData({
                       ...passwordData,
-                      password: e.target.value,
+                      newPassword: e.target.value,
                     })
                   }
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -598,35 +640,33 @@ const UserProfile = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-1">
-                  Confirm Password
-                </label>
+                <label className="block text-gray-700 mb-1">Confirm New Password</label>
                 <input
                   type="password"
-                  value={passwordData.passwordConfirm}
+                  value={passwordData.newPasswordConfirm}
                   onChange={(e) =>
                     setPasswordData({
                       ...passwordData,
-                      passwordConfirm: e.target.value,
+                      newPasswordConfirm: e.target.value,
                     })
                   }
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Confirm password"
+                  placeholder="Confirm new password"
                 />
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button
-                  onClick={() => setShowPasswordReset(false)}
+                  onClick={() => setShowChangePassword(false)}
                   className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleResetPassword}
-                  disabled={passwordResetInProgress}
+                  onClick={handleChangePassword}
+                  disabled={passwordChangeInProgress}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-indigo-300"
                 >
-                  {passwordResetInProgress ? "Processing..." : "Confirm"}
+                  {passwordChangeInProgress ? "Processing..." : "Confirm"}
                 </button>
               </div>
             </div>

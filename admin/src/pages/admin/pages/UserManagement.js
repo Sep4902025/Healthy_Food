@@ -3,6 +3,15 @@ import UserService from "../../../services/user.service";
 import { EditIcon, TrashIcon, SearchIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import Pagination from "../../../components/Pagination";
+import {
+  Document,
+  HeadingLevel,
+  Packer,
+  Paragraph,
+  TextRun,
+  AlignmentType,
+} from "docx";
+import { saveAs } from "file-saver";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -24,11 +33,18 @@ const UserManagement = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const userResponse = await UserService.getAllUsers(currentPage, usersPerPage);
+      const userResponse = await UserService.getAllUsers(
+        currentPage,
+        usersPerPage
+      );
       if (userResponse.success) {
-        setUsers(userResponse.users);
-        setFilteredUsers(userResponse.users);
-        setTotalItems(userResponse.total);
+        const nonAdminUsers = userResponse.users.filter(
+          (user) => user.role !== "admin"
+        );
+        setUsers(nonAdminUsers);
+        setFilteredUsers(nonAdminUsers);
+
+        setTotalItems(nonAdminUsers.length);
       } else {
         setError(userResponse.message);
       }
@@ -43,12 +59,15 @@ const UserManagement = () => {
 
   useEffect(() => {
     let result = [...users];
+    // Admin đã được lọc từ trước, không cần lọc lại ở đây
     if (searchTerm) {
       result = result.filter(
         (user) =>
           user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.userPreferenceId?.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+          user.userPreferenceId?.phoneNumber
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase())
       );
     }
     if (roleFilter !== "all") {
@@ -73,7 +92,9 @@ const UserManagement = () => {
     const result = await UserService.updateUser(editData._id, updatedUser);
     if (result.success) {
       toast.success("Cập nhật user thành công!");
-      setUsers((prev) => prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u)));
+      setUsers((prev) =>
+        prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u))
+      );
       setFilteredUsers((prev) =>
         prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u))
       );
@@ -89,16 +110,25 @@ const UserManagement = () => {
   };
 
   const handleReviewApplication = async (userId, action) => {
-    const result = await UserService.reviewNutritionistApplication({ userId, action });
+    const result = await UserService.reviewNutritionistApplication({
+      userId,
+      action,
+    });
     if (result.success) {
-      toast.success(`Application ${action}d successfully! Email notification sent to user.`);
+      toast.success(
+        `Application ${action}d successfully! Email notification sent to user.`
+      );
       setPendingNutritionists((prev) => prev.filter((u) => u._id !== userId));
       if (action === "approve") {
         setUsers((prev) =>
-          prev.map((u) => (u._id === userId ? { ...u, role: "nutritionist" } : u))
+          prev.map((u) =>
+            u._id === userId ? { ...u, role: "nutritionist" } : u
+          )
         );
         setFilteredUsers((prev) =>
-          prev.map((u) => (u._id === userId ? { ...u, role: "nutritionist" } : u))
+          prev.map((u) =>
+            u._id === userId ? { ...u, role: "nutritionist" } : u
+          )
         );
       }
     } else {
@@ -109,6 +139,147 @@ const UserManagement = () => {
 
   const handlePageClick = ({ selected }) => {
     setCurrentPage(selected + 1);
+  };
+
+  // Export to Word function
+  const exportToWord = () => {
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              text: "User Management Report",
+              heading: HeadingLevel.TITLE,
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 400 },
+            }),
+            new Paragraph({
+              text: `Generated on: ${new Date().toLocaleDateString('en-US', {
+                month: 'long',
+                day: '2-digit',
+                year: 'numeric'
+              })}`,
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 300 },
+            }),
+            new Paragraph({
+              text: "All Users",
+              heading: HeadingLevel.HEADING_1,
+              spacing: { after: 200 },
+            }),
+            ...filteredUsers.map((user, index) => {
+              return new Paragraph({
+                children: [
+                  new TextRun(
+                    `No.: ${(currentPage - 1) * usersPerPage + index + 1}`
+                  ),
+                  new TextRun({
+                    text: `\nUsername: ${user.username || "N/A"}`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nPhone: ${
+                      user.userPreferenceId?.phoneNumber || "N/A"
+                    }`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nEmail: ${user.email || "N/A"}`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nRole: ${user.role || "N/A"}`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nStatus: ${user.isBan ? "Inactive" : "Active"}`,
+                    break: 1,
+                  }),
+                ],
+                spacing: { after: 200 },
+              });
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Total Users: ${totalItems}`,
+                  bold: true,
+                }),
+              ],
+              spacing: { before: 200, after: 300 },
+            }),
+            new Paragraph({
+              text: "Pending Nutritionist Applications",
+              heading: HeadingLevel.HEADING_1,
+              spacing: { after: 200 },
+            }),
+            ...pendingNutritionists.map((user, index) => {
+              return new Paragraph({
+                children: [
+                  new TextRun(`No. ${index + 1}`),
+                  new TextRun({
+                    text: `\nUsername: ${user.username || "N/A"}`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nEmail: ${user.email || "N/A"}`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nSubmitted At: ${new Date(
+                      user.nutritionistApplication.submittedAt
+                    ).toLocaleDateString()}`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nFull Name: ${
+                      user.nutritionistApplication.personalInfo.fullName ||
+                      "N/A"
+                    }`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nPhone: ${
+                      user.nutritionistApplication.personalInfo.phoneNumber ||
+                      "N/A"
+                    }`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nAddress: ${
+                      user.nutritionistApplication.personalInfo.address || "N/A"
+                    }`,
+                    break: 1,
+                  }),
+                  new TextRun({
+                    text: `\nIntroduction: ${
+                      user.nutritionistApplication.introduction ||
+                      "No introduction provided"
+                    }`,
+                    break: 1,
+                  }),
+                ],
+                spacing: { after: 200 },
+              });
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Total Pending Applications: ${pendingNutritionists.length}`,
+                  bold: true,
+                }),
+              ],
+              spacing: { before: 200 },
+            }),
+          ],
+        },
+      ],
+    });
+
+    Packer.toBlob(doc).then((blob) => {
+      saveAs(blob, "User_Management_Report.docx");
+    });
   };
 
   if (loading)
@@ -131,6 +302,12 @@ const UserManagement = () => {
         <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
           User Management
         </h1>
+        <button
+          onClick={exportToWord}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Export to Word
+        </button>
       </div>
 
       {/* Filters */}
@@ -209,12 +386,18 @@ const UserManagement = () => {
                     <div className="col-span-1 text-gray-600 font-medium">
                       {(currentPage - 1) * usersPerPage + index + 1}
                     </div>
-                    <div className="col-span-2 text-gray-700 text-sm">{user.username}</div>
+                    <div className="col-span-2 text-gray-700 text-sm">
+                      {user.username}
+                    </div>
                     <div className="col-span-2 text-gray-700 text-sm">
                       {user.userPreferenceId?.phoneNumber || "N/A"}
                     </div>
-                    <div className="col-span-3 text-gray-700 text-sm">{user.email}</div>
-                    <div className="col-span-1 text-gray-700 text-sm">{user.role}</div>
+                    <div className="col-span-3 text-gray-700 text-sm">
+                      {user.email}
+                    </div>
+                    <div className="col-span-1 text-gray-700 text-sm">
+                      {user.role}
+                    </div>
                     <div className="col-span-1 text-center">
                       <span
                         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
@@ -245,7 +428,9 @@ const UserManagement = () => {
                   </div>
                 ))
               ) : (
-                <div className="p-6 text-center text-gray-500">No users found.</div>
+                <div className="p-6 text-center text-gray-500">
+                  No users found.
+                </div>
               )}
             </div>
 
@@ -285,11 +470,19 @@ const UserManagement = () => {
                     key={user._id}
                     className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300"
                   >
-                    <div className="col-span-1 text-gray-600 font-medium">{index + 1}</div>
-                    <div className="col-span-3 text-gray-700 text-sm">{user.username}</div>
-                    <div className="col-span-3 text-gray-700 text-sm">{user.email}</div>
+                    <div className="col-span-1 text-gray-600 font-medium">
+                      {index + 1}
+                    </div>
                     <div className="col-span-3 text-gray-700 text-sm">
-                      {new Date(user.nutritionistApplication.submittedAt).toLocaleDateString()}
+                      {user.username}
+                    </div>
+                    <div className="col-span-3 text-gray-700 text-sm">
+                      {user.email}
+                    </div>
+                    <div className="col-span-3 text-gray-700 text-sm">
+                      {new Date(
+                        user.nutritionistApplication.submittedAt
+                      ).toLocaleDateString()}
                     </div>
                     <div className="col-span-2 flex justify-center">
                       <button
@@ -302,7 +495,9 @@ const UserManagement = () => {
                   </div>
                 ))
               ) : (
-                <div className="p-6 text-center text-gray-500">No pending applications.</div>
+                <div className="p-6 text-center text-gray-500">
+                  No pending applications.
+                </div>
               )}
             </div>
           </div>
@@ -313,12 +508,16 @@ const UserManagement = () => {
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-4 text-[#40B491]">Edit User</h2>
+            <h2 className="text-2xl font-bold mb-4 text-[#40B491]">
+              Edit User
+            </h2>
             <label className="block mb-2 text-gray-700">Role:</label>
             <select
               className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, role: e.target.value })
+              }
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -329,7 +528,10 @@ const UserManagement = () => {
               className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               value={formData.isBan ? "inactive" : "active"}
               onChange={(e) =>
-                setFormData({ ...formData, isBan: e.target.value === "inactive" })
+                setFormData({
+                  ...formData,
+                  isBan: e.target.value === "inactive",
+                })
               }
             >
               <option value="active">Active</option>
@@ -365,10 +567,14 @@ const UserManagement = () => {
                 <div className="mb-4">
                   {selectedApplication.nutritionistApplication.profileImage ? (
                     <img
-                      src={selectedApplication.nutritionistApplication.profileImage}
+                      src={
+                        selectedApplication.nutritionistApplication.profileImage
+                      }
                       alt="Profile"
                       className="w-full h-64 object-cover rounded-lg shadow-md"
-                      onError={(e) => (e.target.src = "https://via.placeholder.com/150")}
+                      onError={(e) =>
+                        (e.target.src = "https://via.placeholder.com/150")
+                      }
                     />
                   ) : (
                     <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -379,23 +585,25 @@ const UserManagement = () => {
                 <div className="space-y-2 text-gray-700">
                   <p>
                     <strong>Full Name:</strong>{" "}
-                    {selectedApplication.nutritionistApplication.personalInfo.fullName ||
-                      "N/A"}
+                    {selectedApplication.nutritionistApplication.personalInfo
+                      .fullName || "N/A"}
                   </p>
                   <p>
                     <strong>Phone:</strong>{" "}
-                    {selectedApplication.nutritionistApplication.personalInfo.phoneNumber ||
-                      "N/A"}
+                    {selectedApplication.nutritionistApplication.personalInfo
+                      .phoneNumber || "N/A"}
                   </p>
                   <p>
                     <strong>Address:</strong>{" "}
-                    {selectedApplication.nutritionistApplication.personalInfo.address ||
-                      "N/A"}
+                    {selectedApplication.nutritionistApplication.personalInfo
+                      .address || "N/A"}
                   </p>
                 </div>
               </div>
               <div className="w-full md:w-2/3">
-                <h3 className="text-lg font-semibold mb-2 text-[#40B491]">Introduction</h3>
+                <h3 className="text-lg font-semibold mb-2 text-[#40B491]">
+                  Introduction
+                </h3>
                 <p className="text-gray-700 leading-relaxed">
                   {selectedApplication.nutritionistApplication.introduction ||
                     "No introduction provided."}
@@ -405,13 +613,17 @@ const UserManagement = () => {
             <div className="flex justify-end space-x-2 mt-6">
               <button
                 className="px-4 py-2 bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition"
-                onClick={() => handleReviewApplication(selectedApplication._id, "approve")}
+                onClick={() =>
+                  handleReviewApplication(selectedApplication._id, "approve")
+                }
               >
                 Approve
               </button>
               <button
                 className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                onClick={() => handleReviewApplication(selectedApplication._id, "reject")}
+                onClick={() =>
+                  handleReviewApplication(selectedApplication._id, "reject")
+                }
               >
                 Reject
               </button>

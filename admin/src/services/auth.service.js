@@ -1,5 +1,5 @@
 import axios from "axios";
-
+import api from "./api";
 const API_URL = process.env.REACT_APP_API_URL;
 
 // Tạo instance axios với config mặc định
@@ -73,9 +73,7 @@ const AuthService = {
       };
     } catch (error) {
       console.error("Lỗi đăng ký:", error.response?.data || error.message);
-      throw new Error(
-        error.response?.data?.message || "Đăng ký thất bại, vui lòng thử lại"
-      );
+      throw new Error(error.response?.data?.message || "Đăng ký thất bại, vui lòng thử lại");
     }
   },
 
@@ -97,10 +95,7 @@ const AuthService = {
       const response = await axiosInstance.post("/users/resend-otp", { email });
       return response.data;
     } catch (error) {
-      console.error(
-        "Lỗi gửi lại OTP:",
-        error.response?.data?.message || error.message
-      );
+      console.error("Lỗi gửi lại OTP:", error.response?.data?.message || error.message);
       throw error;
     }
   },
@@ -134,9 +129,7 @@ const AuthService = {
       console.error("Lỗi đăng nhập:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message ||
-          "Đăng nhập thất bại, vui lòng thử lại",
+        message: error.response?.data?.message || "Đăng nhập thất bại, vui lòng thử lại",
       };
     }
   },
@@ -158,27 +151,45 @@ const AuthService = {
     }
   },
 
-  changePassword: async ({ oldPassword, newPassword, confirmPassword }) => {
+  changePassword: async ({ currentPassword, newPassword, newPasswordConfirm }) => {
+    // Kiểm tra đầu vào
+    if (!currentPassword || !newPassword || !newPasswordConfirm) {
+      return {
+        success: false,
+        message: "All fields are required",
+      };
+    }
+
+    if (newPassword !== newPasswordConfirm) {
+      return {
+        success: false,
+        message: "New password and confirmation do not match",
+      };
+    }
+
     try {
-      console.log("Request gửi lên:", {
-        oldPassword,
+      const response = await api.post("users/change-password", {
+        // Thay PATCH thành POST để khớp BE
+        currentPassword,
         newPassword,
-        confirmPassword,
+        newPasswordConfirm,
       });
 
-      const response = await axiosInstance.post(
-        "/users/change-password",
-        { oldPassword, newPassword, confirmPassword },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
 
-      console.log("Response từ server:", response.data);
-      return response.data;
+      return {
+        success: true,
+        message: response.data.message || "Password changed successfully",
+        token: response.data.token || null, // Trả về null nếu không có token
+      };
     } catch (error) {
-      console.error("Lỗi đổi mật khẩu:", error.response?.data || error.message);
-      throw error.response?.data || error;
+      console.error("Password change error:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to change password",
+      };
     }
   },
 
@@ -215,10 +226,7 @@ const AuthService = {
         message: "Không nhận được phản hồi từ server",
       };
     } catch (error) {
-      console.error(
-        "Lỗi lấy thông tin user:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi lấy thông tin user:", error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || "Lấy thông tin user thất bại",
