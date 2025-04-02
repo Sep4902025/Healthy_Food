@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import Checkbox from "expo-checkbox"; // Updated import
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from "react-native";
+import Checkbox from "expo-checkbox";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ProgressBar from "./ProgressBar";
+import AntDesignIcon from "../../components/common/VectorIcons/AntDesignIcon"; // Import AntDesignIcon
 
 const favoriteGroups = [
   {
@@ -82,6 +83,7 @@ const favoriteGroups = [
 const Favorite = ({ navigation }) => {
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [hatedItemIds, setHatedItemIds] = useState([]);
+  const [backPressed, setBackPressed] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -118,75 +120,90 @@ const Favorite = ({ navigation }) => {
   };
 
   return (
-    <View className="flex-1 max-w-md mx-auto p-4">
-      <View className="w-full flex-row items-center justify-center mt-2">
-        <TouchableOpacity
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow"
-          onPress={() => navigation.navigate("UnderDisease")}
-        >
-          <Text className="text-xl">←</Text>
-        </TouchableOpacity>
+    <SafeAreaView className="flex-1">
+      <View className="flex-1 p-4 mt-8">
         <ProgressBar progress={94.5} />
-      </View>
-
-      <Text className="text-2xl font-bold text-center mt-4">Favorite</Text>
-      <Text className="text-center text-gray-600">Select your favorite food</Text>
-
-      <View className="flex-row items-center justify-start space-x-2 my-4">
-        <Checkbox
-          value={
-            selectedItemIds.length ===
-            favoriteGroups.flatMap((c) => c.items).filter((item) => !hatedItemIds.includes(item.id))
-              .length
-          }
-          onValueChange={(value) => (value ? selectAll() : deselectAll())}
-        />
-        <Text>Select All</Text>
-      </View>
-
-      <ScrollView>
-        {favoriteGroups.map((group, index) => (
-          <View key={index} className="mb-4">
-            <View className="flex-row items-center space-x-2">
-              <Text className="font-bold text-lg">{group.icon}</Text>
-              <Text className="font-bold text-lg">{group.name}</Text>
-            </View>
-            <View className="flex-row flex-wrap gap-2 mt-2">
-              {group.items.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  className={`p-2 rounded-lg ${
-                    selectedItemIds.includes(item.id)
-                      ? "bg-green-400"
-                      : hatedItemIds.includes(item.id)
-                      ? "bg-red-200"
-                      : "bg-gray-100"
-                  }`}
-                  onPress={() => toggleItemSelection(item.id)}
-                  disabled={hatedItemIds.includes(item.id)}
-                >
-                  <Text
-                    className={`${
-                      selectedItemIds.includes(item.id)
-                        ? "text-white"
-                        : hatedItemIds.includes(item.id)
-                        ? "text-gray-600"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            className={`p-2 rounded-full shadow-sm ${
+              backPressed ? "border-custom-green border-2" : "bg-white"
+            }`}
+            onPress={() => navigation.navigate("UnderDisease")}
+            onPressIn={() => setBackPressed(true)}
+            onPressOut={() => setBackPressed(false)}
+          >
+            <AntDesignIcon name="left" size={18} color={"#40B491"} />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text className="text-2xl font-bold text-center mt-4 text-custom-green">Favorite</Text>
+            <Text className="text-base text-gray-600 mt-1">Select your favorite food</Text>
           </View>
-        ))}
-      </ScrollView>
+          <View className="w-10" />
+        </View>
 
-      <TouchableOpacity className="w-full bg-teal-500 py-3 rounded-lg mt-5" onPress={handleNext}>
-        <Text className="text-white text-lg font-semibold text-center">Next</Text>
-      </TouchableOpacity>
-    </View>
+        <View className="flex-row items-center justify-start gap-2 my-4">
+          <Checkbox
+            value={
+              selectedItemIds.length ===
+              favoriteGroups
+                .flatMap((c) => c.items)
+                .filter((item) => !hatedItemIds.includes(item.id)).length
+            }
+            onValueChange={(value) => (value ? selectAll() : deselectAll())}
+          />
+          <Text className="text-lg">Select All</Text>
+        </View>
+
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={true}
+        >
+          {favoriteGroups.map((group, index) => (
+            <View key={index} className="mb-4">
+              <View className="flex-row items-center space-x-2">
+                <Text className="font-bold text-lg mr-1">{group.icon}</Text>
+                <Text className="font-bold text-lg">{group.name}</Text>
+              </View>
+              <View className="flex-row flex-wrap gap-2 mt-2">
+                {group.items.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    className={`p-2 rounded-lg ${
+                      selectedItemIds.includes(item.id)
+                        ? "bg-custom-green"
+                        : hatedItemIds.includes(item.id)
+                        ? "bg-red-200"
+                        : "bg-gray-100 border border-gray-300"
+                    }`}
+                    onPress={() => toggleItemSelection(item.id)}
+                    disabled={hatedItemIds.includes(item.id)}
+                  >
+                    <Text
+                      className={`${
+                        selectedItemIds.includes(item.id)
+                          ? "text-white"
+                          : hatedItemIds.includes(item.id)
+                          ? "text-gray-600"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
+          <TouchableOpacity
+            className="w-full bg-custom-green py-3 rounded-lg mt-6"
+            onPress={handleNext}
+          >
+            <Text className="text-white text-lg font-semibold text-center">Next</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 };
 

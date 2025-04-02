@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from "react-native";
-import Checkbox from "expo-checkbox"; // Updated import
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Alert } from "react-native";
+import Checkbox from "expo-checkbox";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector, useDispatch } from "react-redux";
-import { updateUserAct } from "../../redux/reducers/userReducer"; // Import action từ userSlice
+import { updateUserAct } from "../../redux/reducers/userReducer";
 import { userSelector } from "../../redux/selectors/selector";
 import ProgressBar from "./ProgressBar";
 import quizService from "../../services/quizService";
+import AntDesignIcon from "../../components/common/VectorIcons/AntDesignIcon";
 
 const hateGroups = [
   {
@@ -88,6 +89,7 @@ const Hate = ({ navigation }) => {
   const dispatch = useDispatch();
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [favoriteItemIds, setFavoriteItemIds] = useState([]);
+  const [backPressed, setBackPressed] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -193,14 +195,31 @@ const Hate = ({ navigation }) => {
       console.log("Final data to submit:", finalData);
 
       const result = await quizService.submitQuizData(finalData);
+      console.log("API result:", result); // Log để kiểm tra result
+
       if (result.success) {
-        if (result.data.user) {
-          dispatch(updateUserAct(result.data.user));
+        // Truy cập dữ liệu từ result.data.data thay vì result.data
+        const responseData = result.data.data || result.data; // Nếu không có result.data.data, dùng result.data
+        if (responseData) {
+          const updatedUser = responseData.user
+            ? {
+                ...responseData.user, // Dùng user từ API nếu có
+                userPreference: responseData.userPreference, // Thêm userPreference
+              }
+            : {
+                ...user, // Dùng user từ Redux nếu không có user trong API
+                userPreferenceId: responseData.userPreference?._id, // Kiểm tra userPreference tồn tại
+                userPreference: responseData.userPreference,
+              };
+          console.log("Updated user to dispatch:", updatedUser); // Log để kiểm tra
+          dispatch(updateUserAct(updatedUser));
           navigation.navigate("forYou");
         } else {
-          Alert.alert("Error", "Unable to retrieve updated user data.");
+          console.error("❌ Missing data in result:", result);
+          Alert.alert("Error", "Unable to retrieve user data.");
         }
       } else {
+        console.error("❌ Failed to submit quiz:", result.message);
         Alert.alert("Error", `Failed to submit quiz: ${result.message || "Unknown error."}`);
       }
     } catch (error) {
@@ -213,183 +232,91 @@ const Hate = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate("Favorite")}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
+    <SafeAreaView className="flex-1">
+      <View className="flex-1 p-4 mt-8">
         <ProgressBar progress={100} />
-      </View>
-
-      <Text style={styles.title}>Hate</Text>
-      <Text style={styles.subtitle}>Select your allergic food</Text>
-
-      <View style={styles.selectAllContainer}>
-        <Checkbox
-          value={
-            selectedItemIds.length ===
-            hateGroups.flatMap((c) => c.items).filter((item) => !favoriteItemIds.includes(item.id))
-              .length
-          }
-          onValueChange={(value) => (value ? selectAll() : deselectAll())}
-        />
-        <Text style={styles.selectAllText}>Select All</Text>
-      </View>
-
-      <ScrollView>
-        {hateGroups.map((group, index) => (
-          <View key={index} style={styles.groupContainer}>
-            <View style={styles.groupHeader}>
-              <Text style={styles.groupIcon}>{group.icon}</Text>
-              <Text style={styles.groupName}>{group.name}</Text>
-            </View>
-            <View style={styles.itemsContainer}>
-              {group.items.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[
-                    styles.item,
-                    selectedItemIds.includes(item.id)
-                      ? styles.selectedItem
-                      : favoriteItemIds.includes(item.id)
-                      ? styles.favoriteItem
-                      : styles.defaultItem,
-                  ]}
-                  onPress={() => toggleItemSelection(item.id)}
-                  disabled={favoriteItemIds.includes(item.id)}
-                >
-                  <Text
-                    style={
-                      selectedItemIds.includes(item.id)
-                        ? styles.selectedItemText
-                        : favoriteItemIds.includes(item.id)
-                        ? styles.favoriteItemText
-                        : styles.defaultItemText
-                    }
-                  >
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            className={`p-2 rounded-full shadow-sm ${
+              backPressed ? "border-custom-green border-2" : "bg-white"
+            }`}
+            onPress={() => navigation.navigate("Favorite")}
+            onPressIn={() => setBackPressed(true)}
+            onPressOut={() => setBackPressed(false)}
+          >
+            <AntDesignIcon name="left" size={18} color={"#40B491"} />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text className="text-2xl font-bold text-center mt-4 text-custom-green">Hate</Text>
+            <Text className="text-base text-gray-600 mt-1">Select your allergic food</Text>
           </View>
-        ))}
-      </ScrollView>
+          <View className="w-10" />
+        </View>
 
-      <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
-    </View>
+        <View className="flex-row items-center justify-start gap-2 my-4">
+          <Checkbox
+            value={
+              selectedItemIds.length ===
+              hateGroups
+                .flatMap((c) => c.items)
+                .filter((item) => !favoriteItemIds.includes(item.id)).length
+            }
+            onValueChange={(value) => (value ? selectAll() : deselectAll())}
+          />
+          <Text className="text-lg">Select All</Text>
+        </View>
+
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={true}
+        >
+          {hateGroups.map((group, index) => (
+            <View key={index} className="mb-4">
+              <View className="flex-row items-center space-x-2">
+                <Text className="font-bold text-lg mr-1">{group.icon}</Text>
+                <Text className="font-bold text-lg">{group.name}</Text>
+              </View>
+              <View className="flex-row flex-wrap gap-2 mt-2">
+                {group.items.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    className={`p-2 rounded-lg ${
+                      selectedItemIds.includes(item.id)
+                        ? "bg-custom-green"
+                        : favoriteItemIds.includes(item.id)
+                        ? "bg-blue-200"
+                        : "bg-gray-100 border border-gray-300"
+                    }`}
+                    onPress={() => toggleItemSelection(item.id)}
+                    disabled={favoriteItemIds.includes(item.id)}
+                  >
+                    <Text
+                      className={`${
+                        selectedItemIds.includes(item.id)
+                          ? "text-white"
+                          : favoriteItemIds.includes(item.id)
+                          ? "text-gray-600"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
+          <TouchableOpacity
+            className="w-full bg-custom-green py-3 rounded-lg mt-6"
+            onPress={handleNext}
+          >
+            <Text className="text-white text-lg font-semibold text-center">Next</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    maxWidth: 448, // max-w-md
-    marginHorizontal: "auto",
-    padding: 16,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  backButton: {
-    position: "absolute",
-    left: 80, // left-20
-    padding: 8,
-    backgroundColor: "#d1d5db",
-    borderRadius: 50,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  backIcon: {
-    fontSize: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginTop: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6b7280",
-    textAlign: "center",
-  },
-  selectAllContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    marginVertical: 16,
-    gap: 8,
-  },
-  selectAllText: {
-    fontSize: 16,
-  },
-  groupContainer: {
-    marginBottom: 16,
-  },
-  groupHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  groupIcon: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  groupName: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  itemsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
-  },
-  item: {
-    padding: 8,
-    borderRadius: 8,
-  },
-  selectedItem: {
-    backgroundColor: "#4ade80", // bg-green-400
-  },
-  favoriteItem: {
-    backgroundColor: "#bfdbfe", // bg-blue-200
-  },
-  defaultItem: {
-    backgroundColor: "#f3f4f6", // bg-gray-100
-  },
-  selectedItemText: {
-    color: "#fff",
-  },
-  favoriteItemText: {
-    color: "#4b5563", // text-gray-600
-  },
-  defaultItemText: {
-    color: "#374151", // text-gray-700
-  },
-  nextButton: {
-    width: "100%",
-    backgroundColor: "#14b8a6", // bg-teal-500
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  nextButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-});
 
 export default Hate;

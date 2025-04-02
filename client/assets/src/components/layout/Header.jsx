@@ -67,9 +67,9 @@ function Header() {
 
       {/* Avatar hoặc icon profile */}
       <TouchableOpacity onPress={checkAuth}>
-        {user?.avatar_url ? (
+        {user?.avatarUrl ? (
           <Image
-            source={{ uri: user.avatar_url }}
+            source={{ uri: user.avatarUrl }}
             resizeMode="cover"
             style={[styles.profileImage, styles.avtImage]}
           />

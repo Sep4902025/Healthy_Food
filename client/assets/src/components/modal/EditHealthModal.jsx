@@ -1,4 +1,4 @@
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,84 +8,87 @@ import {
   ScrollView,
   Dimensions,
   Modal,
-  SafeAreaView,
-  StatusBar,
-  Image,
   Platform,
 } from "react-native";
-
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
 import { useTheme } from "../../contexts/ThemeContext";
+
 const HEIGHT = Dimensions.get("window").height;
-export const EditHealthModal = ({
-  visible,
-  onClose,
-  onSave,
-  userPreference,
-}) => {
+
+export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) => {
   const { theme } = useTheme();
   const [healthData, setHealthData] = useState({
     ...userPreference,
   });
+  const [bmi, setBmi] = useState(null);
 
+  // Cập nhật healthData khi userPreference thay đổi
   useEffect(() => {
     setHealthData(userPreference);
+    calculateBMI(userPreference.weight, userPreference.height);
   }, [userPreference]);
+
+  // Hàm tính BMI
+  const calculateBMI = (weight, height) => {
+    const w = parseFloat(weight);
+    const h = parseFloat(height) / 100; // Chuyển từ cm sang m
+    if (w && h && !isNaN(w) && !isNaN(h) && h > 0) {
+      const bmiValue = (w / (h * h)).toFixed(1);
+      setBmi(bmiValue);
+      setHealthData((prev) => ({ ...prev, bmi: bmiValue }));
+    } else {
+      setBmi(null);
+      setHealthData((prev) => ({ ...prev, bmi: null }));
+    }
+  };
+
+  // Xử lý thay đổi weight hoặc height
+  const handleInputChange = (field, value) => {
+    setHealthData((prev) => {
+      const updatedData = { ...prev, [field]: value };
+      if (field === "weight" || field === "height") {
+        calculateBMI(
+          field === "weight" ? value : updatedData.weight,
+          field === "height" ? value : updatedData.height
+        );
+      }
+      return updatedData;
+    });
+  };
 
   const handleSave = () => {
     onSave(healthData);
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <EditModalHeader onCancel={onClose} />
 
-      <View
-        style={{
-          ...styles.container,
-          backgroundColor: theme.editModalbackgroundColor,
-        }}
-      >
-        {/* Header */}
-        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
-          Health Information
-        </Text>
+      <View style={{ ...styles.container, backgroundColor: theme.editModalbackgroundColor }}>
+        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>Health Information</Text>
         <ScrollView style={styles.scrollContent}>
           <View style={styles.formGrid}>
             <View style={styles.formRow}>
               <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Weight
-                </Text>
+                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Weight</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={String(healthData.weight ?? 0)}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, weight: text })
-                    }
+                    value={String(healthData.weight ?? "")}
+                    onChangeText={(text) => handleInputChange("weight", text)}
                     keyboardType="decimal-pad"
                   />
                 </View>
               </View>
 
               <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Diet
-                </Text>
+                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Diet</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.diet}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, diet: text })
-                    }
+                    value={healthData.diet ?? ""}
+                    onChangeText={(text) => handleInputChange("diet", text)}
                   />
                 </View>
               </View>
@@ -93,16 +96,13 @@ export const EditHealthModal = ({
 
             <View style={styles.formRow}>
               <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Height
-                </Text>
+                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Height</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={String(healthData.height ?? 0)}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, height: text })
-                    }
+                    value={String(healthData.height ?? "")}
+                    onChangeText={(text) => handleInputChange("height", text)}
+                    keyboardType="decimal-pad"
                   />
                 </View>
               </View>
@@ -114,12 +114,7 @@ export const EditHealthModal = ({
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.underDisease
-                      ?.map((item) => item)
-                      .join(", ")}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, underDisease: text })
-                    }
+                    value={healthData.underDisease?.map((item) => item).join(", ") ?? ""}
                     editable={false}
                   />
                 </View>
@@ -128,32 +123,23 @@ export const EditHealthModal = ({
 
             <View style={styles.formRow}>
               <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  BMI (Not updated yet)
-                </Text>
+                <Text style={{ ...styles.label, color: theme.greyTextColor }}>BMI</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.bmi}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, bmi: text })
-                    }
-                    keyboardType="decimal-pad"
+                    value={bmi ? String(bmi) : ""}
+                    editable={false} // Không cho chỉnh sửa trực tiếp
                   />
                 </View>
               </View>
 
               <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  WaterDrink
-                </Text>
+                <Text style={{ ...styles.label, color: theme.greyTextColor }}>WaterDrink</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.waterDrink}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, waterDrink: text })
-                    }
+                    value={healthData.waterDrink ?? ""}
+                    onChangeText={(text) => handleInputChange("waterDrink", text)}
                   />
                 </View>
               </View>
@@ -161,32 +147,24 @@ export const EditHealthModal = ({
 
             <View style={styles.formRow}>
               <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Age
-                </Text>
+                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Age</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.age}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, age: text })
-                    }
+                    value={healthData.age ?? ""}
+                    onChangeText={(text) => handleInputChange("age", text)}
                     keyboardType="number-pad"
                   />
                 </View>
               </View>
 
               <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  SleepTime
-                </Text>
+                <Text style={{ ...styles.label, color: theme.greyTextColor }}>SleepTime</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.sleepTime}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, sleepTime: text })
-                    }
+                    value={healthData.sleepTime ?? ""}
+                    onChangeText={(text) => handleInputChange("sleepTime", text)}
                   />
                 </View>
               </View>
@@ -194,16 +172,13 @@ export const EditHealthModal = ({
 
             <View style={styles.formRow}>
               <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  WeightGoal
-                </Text>
+                <Text style={{ ...styles.label, color: theme.greyTextColor }}>WeightGoal</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={String(healthData.weightGoal ?? 0)}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, weightGoal: text })
-                    }
+                    value={String(healthData.weightGoal ?? "")}
+                    onChangeText={(text) => handleInputChange("weightGoal", text)}
+                    keyboardType="decimal-pad"
                   />
                 </View>
               </View>
@@ -215,10 +190,7 @@ export const EditHealthModal = ({
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.eatHabit?.map((item) => item).join(", ")}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, eatHabit: text })
-                    }
+                    value={healthData.eatHabit?.map((item) => item).join(", ") ?? ""}
                     editable={false}
                   />
                 </View>
@@ -227,16 +199,12 @@ export const EditHealthModal = ({
 
             <View style={styles.formRow}>
               <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Goal
-                </Text>
+                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Goal</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    value={healthData.goal}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, goal: text })
-                    }
+                    value={healthData.goal ?? ""}
+                    onChangeText={(text) => handleInputChange("goal", text)}
                   />
                 </View>
               </View>
@@ -265,7 +233,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 10,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#f2f2f2",
@@ -310,7 +277,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e0e0",
     borderRadius: 8,
-    // paddingHorizontal: 12,
     height: 44,
   },
   input: {
@@ -321,9 +287,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e0e0e0",
-  },
-  inputIcon: {
-    marginLeft: 8,
+    paddingHorizontal: 12,
   },
   saveButton: {
     backgroundColor: "#40B491",

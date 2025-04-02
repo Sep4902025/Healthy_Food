@@ -142,11 +142,8 @@ const mealPlanService = {
   getUserMealPlan: async (userId) => {
     try {
       const response = await axiosInstance.get(`/mealPlan/user/${userId}`);
-      console.log("RESSSPS", response);
-
       return response.data;
     } catch (error) {
-      console.error("Lỗi lấy meal plan của user:", error);
       throw error;
     }
   },
@@ -248,8 +245,6 @@ const mealPlanService = {
   // 🔹 Thêm món ăn vào Meal
   addDishToMeal: async (mealPlanId, mealDayId, mealId, dish, userId) => {
     try {
-      console.log("cos USERID", userId);
-
       // 🔍 Lấy danh sách món ăn hiện tại của Meal
       const mealsResponse = await axiosInstance.get(
         `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`

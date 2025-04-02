@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import Checkbox from "expo-checkbox"; // Updated import
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from "react-native";
+import Checkbox from "expo-checkbox";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ProgressBar from "./ProgressBar";
+import AntDesignIcon from "../../components/common/VectorIcons/AntDesignIcon";
 
 const eathabitGroups = [
   { id: "lactose", label: "I am lactose intolerant", icon: "🥛" },
@@ -14,6 +15,7 @@ const eathabitGroups = [
 
 const EatHabit = ({ navigation }) => {
   const [selectedItems, setSelectedItems] = useState([]);
+  const [backPressed, setBackPressed] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -49,52 +51,65 @@ const EatHabit = ({ navigation }) => {
   };
 
   return (
-    <View className="flex-1 max-w-md mx-auto p-4">
-      <View className="w-full flex-row items-center justify-center mt-2">
-        <TouchableOpacity
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow"
-          onPress={() => navigation.navigate("LongOfPlan")}
-        >
-          <Text className="text-xl">←</Text>
-        </TouchableOpacity>
+    <SafeAreaView className="flex-1">
+      <View className="flex w-full mx-auto p-4 mt-8">
         <ProgressBar progress={78.75} />
-      </View>
-
-      <Text className="text-2xl font-bold text-center mt-4">Eat Habit</Text>
-      <Text className="text-center text-gray-600">Choose your eating habits</Text>
-
-      <ScrollView className="mt-4 space-y-3">
-        {eathabitGroups.map((eathabit) => (
+        <View className="flex-row items-center">
           <TouchableOpacity
-            key={eathabit.id}
-            className={`flex-row items-center justify-between p-3 border rounded-xl ${
-              isSelected(eathabit.id) ? "bg-yellow-50 border-yellow-400" : "bg-gray-100"
+            className={`p-2 rounded-full shadow-sm ${
+              backPressed ? "border-custom-green border-2" : "bg-white"
             }`}
-            onPress={() => toggleItemSelection(eathabit.id)}
+            onPress={() => navigation.navigate("LongOfPlan")}
+            onPressIn={() => setBackPressed(true)}
+            onPressOut={() => setBackPressed(false)}
           >
-            <View className="flex-row items-center space-x-3">
-              <Checkbox
-                value={isSelected(eathabit.id)}
-                onValueChange={() => toggleItemSelection(eathabit.id)}
-                disabled={eathabit.id !== "none" && selectedItems.includes("none")}
-              />
-              <Text
-                className={`font-medium ${
-                  isSelected(eathabit.id) ? "text-yellow-700" : "text-gray-700"
-                }`}
-              >
-                {eathabit.label}
-              </Text>
-            </View>
-            {eathabit.icon && <Text className="text-2xl">{eathabit.icon}</Text>}
+            <AntDesignIcon name="left" size={18} color={"#40B491"} />
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+          <View className="flex-1 items-center">
+            <Text className="text-2xl font-bold text-center mt-4 text-custom-green">Eat Habit</Text>
+            <Text className="text-base text-gray-600 mt-1">Choose your eating habits</Text>
+          </View>
+          <View className="w-10" />
+        </View>
 
-      <TouchableOpacity className="w-full bg-teal-500 py-3 rounded-lg mt-5" onPress={handleNext}>
-        <Text className="text-white text-lg font-semibold text-center">Next</Text>
-      </TouchableOpacity>
-    </View>
+        <ScrollView className="mt-6 space-y-5">
+          {eathabitGroups.map((eathabit) => (
+            <TouchableOpacity
+              key={eathabit.id}
+              className={`flex-row items-center justify-between p-4 rounded-xl border shadow-sm mt-1 ${
+                isSelected(eathabit.id)
+                  ? "bg-custom-green border-gray-200"
+                  : "bg-gray-100 border-gray-300"
+              }`}
+              onPress={() => toggleItemSelection(eathabit.id)}
+            >
+              <View className="flex-row items-center gap-2">
+                <Checkbox
+                  value={isSelected(eathabit.id)}
+                  onValueChange={() => toggleItemSelection(eathabit.id)}
+                  disabled={eathabit.id !== "none" && selectedItems.includes("none")}
+                />
+                <Text
+                  className={`text-lg font-semibold ${
+                    isSelected(eathabit.id) ? "text-white" : "text-black"
+                  }`}
+                >
+                  {eathabit.label}
+                </Text>
+              </View>
+              {eathabit.icon && <Text className="text-2xl">{eathabit.icon}</Text>}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <TouchableOpacity
+          className="w-full bg-custom-green py-3 rounded-lg mt-6"
+          onPress={handleNext}
+        >
+          <Text className="text-white text-lg font-semibold text-center">Next</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 

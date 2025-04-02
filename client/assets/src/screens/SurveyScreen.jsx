@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "../contexts/ThemeContext";
 
 const SurveyScreen = ({ navigation }) => {
@@ -10,52 +10,40 @@ const SurveyScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <Text style={[styles.title, { color: theme.textColor }]}>Personalize Your Experience</Text>
-      <Text style={[styles.description, { color: theme.textColor }]}>
-        Take a quick survey to help us personalize your 'For You' recommendations. It only takes a
-        few minutes!
+    <View
+      style={{ backgroundColor: theme.backgroundColor }}
+      className="flex-1 justify-center items-center px-6 gap-2"
+    >
+      {/* Tiêu đề */}
+      <Text className="text-custom-green text-2xl font-semibold text-center mb-6 leading-7">
+        Personalize Your Experience
       </Text>
+
+      {/* Phần mô tả */}
+      <View className="mb-8">
+        <Text
+          style={{ color: theme.textColor }}
+          className="text-lg font-medium text-center leading-7"
+        >
+          Take a quick survey to help us personalize your recommendations.It also helps us calculate
+          nutrition targets tailored just for you.
+        </Text>
+      </View>
+      <Text
+        style={{ color: theme.textColorSecondary || "#6B7280" }}
+        className="text-base text-center italic"
+      >
+        It only takes a few minutes to complete!
+      </Text>
+      {/* Nút Start Survey */}
       <TouchableOpacity
         onPress={handleStartSurveyScreen}
-        style={[styles.button, { backgroundColor: theme.primary }]}
+        className="bg-custom-green p-4 px-10 rounded-lg shadow-lg"
       >
-        <Text style={styles.buttonText}>Take SurveyScreen Now</Text>
+        <Text className="text-white text-lg font-bold text-center">Start Survey Now</Text>
       </TouchableOpacity>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  button: {
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-});
 
 export default SurveyScreen;

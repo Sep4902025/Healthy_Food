@@ -22,12 +22,13 @@ import { ScreensName } from "../constants/ScreensName";
 import ShowToast from "../components/common/CustomToast";
 import { deleteUser, updateUser } from "../services/authService";
 import { removeUser, updateUserAct } from "../redux/reducers/userReducer";
-import { getUserPreference, updateUserPreference } from "../services/userPreference";
+import { updateUserPreference } from "../services/userPreference";
 import { useFocusEffect } from "@react-navigation/native";
 import ConfirmDeleteAccountModal from "../components/modal/ConfirmDeleteAccountModal";
 import { toggleVisible } from "../redux/reducers/drawerReducer";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
 import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon";
+import quizService from "../services/quizService";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -58,10 +59,10 @@ function Profile({ navigation }) {
   }, []);
 
   const loadUserPreference = async () => {
-    const response = await getUserPreference(user?._id);
+    const response = await quizService.getUserPreferenceByUserPreferenceId(user?.userPreferenceId);
 
-    if (response.status === 200) {
-      setUserPreference(response.data?.data || {});
+    if (response) {
+      setUserPreference(response?.data || {});
     } else {
       ShowToast("error", "Get user preference fail");
     }
