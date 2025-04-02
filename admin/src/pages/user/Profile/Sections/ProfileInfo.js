@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect, useState, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   FaStar,
@@ -9,29 +9,63 @@ import {
   FaWeight,
   FaRuler,
   FaCalculator,
+  FaKey,
 } from "react-icons/fa";
 import quizService from "../../../../services/quizService";
 import { selectUser } from "../../../../store/selectors/authSelectors";
+import axios from "axios";
+import UserProfileUpdate from "../../UpdateUser";
+import AuthService from "../../../../services/auth.service";
+import uploadFile from "../../../../helpers/uploadFile";
+import { updateUser } from "../../../../store/actions/authActions";
+import { toast } from "react-toastify";
 
 const UserProfile = () => {
   const user = useSelector(selectUser);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
-  const [reviews, setReviews] = useState([]);
-  const [favoriteCategories, setFavoriteCategories] = useState([]);
   const [userData, setUserData] = useState(null);
   const [resetInProgress, setResetInProgress] = useState(false);
-
+  const [deleteInProgress, setDeleteInProgress] = useState(false);
+  const [passwordChangeInProgress, setPasswordChangeInProgress] = useState(false); // Đổi tên biến
+  const [showChangePassword, setShowChangePassword] = useState(false); // Đổi tên state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "", // Đổi từ email thành currentPassword
+    newPassword: "", // Đổi từ password thành newPassword
+    newPasswordConfirm: "", // Đổi từ passwordConfirm thành newPasswordConfirm
+  });
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null); // For image preview
+  const fileInputRef = useRef(null);
   const fetchUserData = async () => {
-    if (user && user._id) {
-      const { success, data, message } = await quizService.getUserPreference(
-        user._id
+    if (!user || !user._id) {
+      console.error("🚨 User or user._id does not exist:", user);
+      setLoading(false);
+      return;
+    }
+    if (!user.userPreferenceId) {
+      console.warn("🚨 userPreferenceId does not exist in user:", user);
+      setUserData(null);
+      setLoading(false);
+      return;
+    }
+    try {
+      const { success, data, message } = await quizService.getUserPreferenceByUserPreferenceId(
+        user.userPreferenceId
       );
       if (success) {
         setUserData(data);
       } else {
-        console.error(message);
+        console.error("🚨 Error fetching userPreference data:", message);
+        setUserData(null);
       }
+    } catch (error) {
+      console.error("🚨 Error in fetchUserData:", error);
+      setUserData(null);
+    } finally {
       setLoading(false);
     }
   };
@@ -43,55 +77,176 @@ const UserProfile = () => {
   useEffect(() => {
     if (!user) {
       navigate("/signin");
-      return;
     }
   }, [user, navigate]);
 
   const handleEditClick = () => {
-    navigate(`/edituser/${user._id}`, { state: { user } });
+    setShowEditModal(true);
   };
 
   const handleReset = async () => {
-    if (!user || !user._id) return;
-
+    if (!user || !user.userPreferenceId) {
+      toast.error("No userPreferenceId found to delete!");
+      return;
+    }
     const confirmReset = window.confirm(
-      "Bạn có chắc chắn muốn xóa tất cả thông tin cá nhân? Hành động này không thể hoàn tác."
+      "Are you sure you want to delete all personal information? This action cannot be undone."
     );
-
     if (!confirmReset) return;
-
     try {
       setResetInProgress(true);
-      const { success, message } = await quizService.deleteUserPreference(
-        user.userPreferenceId
-      );
+      const { success, message } = await quizService.deleteUserPreference(user.userPreferenceId);
       if (success) {
-        alert("Đã xóa thông tin thành công");
+        toast.success("Information deleted successfully");
         setUserData(null);
         fetchUserData();
       } else {
-        alert(`Lỗi khi xóa: ${message}`);
+        toast.error(`Error deleting: ${message}`);
       }
     } catch (error) {
-      alert("Đã xảy ra lỗi khi xóa dữ liệu");
-      console.error("Reset error:", error);
+      toast.error("An error occurred while deleting data");
+      console.error("🚨 Reset error:", error);
     } finally {
       setResetInProgress(false);
     }
   };
 
-  // Calculate BMI
-  const calculateBMI = () => {
-    if (userData?.data) {
-      const weight = parseFloat(userData.data.weight);
-      const heightCm = parseFloat(userData.data.height);
+  const handleChangePassword = async () => {
+    if (
+      !passwordData.currentPassword ||
+      !passwordData.newPassword ||
+      !passwordData.newPasswordConfirm
+    ) {
+      toast.error("Please fill in all fields!");
+      return;
+    }
+    if (passwordData.newPassword !== passwordData.newPasswordConfirm) {
+      toast.error("New password and confirmation do not match!");
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters long!");
+      return;
+    }
+    try {
+      setPasswordChangeInProgress(true);
+      const result = await AuthService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        newPasswordConfirm: passwordData.newPasswordConfirm,
+      });
+      if (result.success) {
+        toast.success("Password changed successfully! Please log in again.");
+        setShowChangePassword(false);
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          newPasswordConfirm: "",
+        });
+        localStorage.removeItem("token"); // Xóa token
+        localStorage.removeItem("username"); // Xóa username nếu có
+        navigate("/signin"); // Chuyển về trang đăng nhập
+      } else {
+        toast.error(`Error: ${result.message || "Unable to change password"}`);
+      }
+    } catch (error) {
+      toast.error("An error occurred while changing the password!", error);
+    } finally {
+      setPasswordChangeInProgress(false);
+    }
+  };
 
-      // Kiểm tra nếu weight hoặc height không hợp lệ (null, undefined, NaN, <= 0)
-      if (!weight || !heightCm || weight <= 0 || heightCm <= 0) {
-        return "No data";
+  const handleDeleteUser = async () => {
+    if (!user || !user._id) {
+      toast.error("No user information found to delete!");
+      return;
+    }
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this account? This action cannot be undone, and you will be logged out!"
+    );
+    if (!confirmDelete) return;
+    try {
+      setDeleteInProgress(true);
+      const { success, message } = await quizService.deleteUserById(user._id);
+      if (success) {
+        toast.success("Account deleted successfully!");
+        localStorage.removeItem("token");
+        navigate("/signin");
+      } else {
+        toast.error(`Error deleting account: ${message}`);
+      }
+    } catch (error) {
+      toast.error("An error occurred while deleting the account!");
+      console.error("🚨 Delete user error:", error);
+    } finally {
+      setDeleteInProgress(false);
+    }
+  };
+
+  const handleUpdateProfile = (updatedData) => {
+    setUserData((prev) => ({ ...prev, ...updatedData }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setPreviewImage({ file, url: imageUrl });
+    }
+  };
+
+  const handleUploadAvatar = async () => {
+    if (!previewImage?.file) {
+      toast.error("No image selected to upload!");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const result = await uploadFile(
+        previewImage.file,
+        (percent) => setUploadProgress(percent),
+        (cancel) => console.log("Upload canceled")
+      );
+      const avatarUrl = result.secure_url;
+
+      // Đảm bảo _id là string
+      const userId = typeof user._id === "object" && user._id.$oid ? user._id.$oid : user._id;
+      const userData = { _id: userId, avatarUrl }; // Only send necessary fields
+
+      const updatedUser = await dispatch(updateUser(userData));
+      if (!updatedUser) {
+        throw new Error("Failed to update user");
       }
 
-      const heightM = heightCm / 100; // Chuyển cm → m
+      // Update local state with the full updated user
+      setUserData((prev) => ({ ...prev, ...updatedUser }));
+    } catch (error) {
+      console.error("🚨 Error uploading avatar:", error);
+      toast.error(`An error occurred while uploading the avatar: ${error.message}`);
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+      setPreviewImage(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null;
+      }
+    }
+  };
+  const handleCancelPreview = () => {
+    setPreviewImage(null);
+    fileInputRef.current.value = null; // Reset input file
+  };
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
+  };
+
+  const calculateBMI = () => {
+    if (userData) {
+      const weight = parseFloat(userData.weight);
+      const heightCm = parseFloat(userData.height);
+      if (!weight || !heightCm || weight <= 0 || heightCm <= 0) return "No data";
+      const heightM = heightCm / 100;
       return (weight / (heightM * heightM)).toFixed(2);
     }
     return "No data";
@@ -99,23 +254,21 @@ const UserProfile = () => {
 
   const getBMIStatus = () => {
     const bmi = parseFloat(calculateBMI());
-
-    if (bmi < 18)
-      return { text: "Thiếu cân", color: "text-blue-600", bg: "bg-blue-100" };
-    if (bmi < 30)
+    if (isNaN(bmi))
       return {
-        text: "Bình thường",
-        color: "text-green-600",
-        bg: "bg-green-100",
+        text: "No data",
+        color: "text-gray-600",
+        bg: "bg-gray-100",
       };
+    if (bmi < 18) return { text: "Underweight", color: "text-blue-600", bg: "bg-blue-100" };
+    if (bmi < 30) return { text: "Normal", color: "text-green-600", bg: "bg-green-100" };
     if (bmi < 40)
       return {
-        text: "Thừa cân",
+        text: "Overweight",
         color: "text-yellow-600",
         bg: "bg-yellow-100",
       };
-
-    return { text: "Béo phì", color: "text-red-600", bg: "bg-red-100" };
+    return { text: "Obese", color: "text-red-600", bg: "bg-red-100" };
   };
 
   const InfoItem = ({
@@ -126,7 +279,7 @@ const UserProfile = () => {
     textClass = "text-gray-700",
   }) => (
     <div
-      className={`${colorClass} p-4 rounded-lg border border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md`}
+      className={`${colorClass} p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300`}
     >
       <div className="flex items-center mb-2">
         {icon && <span className="mr-2 text-gray-600">{icon}</span>}
@@ -137,19 +290,19 @@ const UserProfile = () => {
   );
 
   const SectionTitle = ({ title, icon }) => (
-    <div className="flex items-center space-x-2 mb-4 border-b border-gray-200 pb-2">
+    <div className="flex items-center space-x-2 mb-6 border-b border-gray-200 pb-2">
       {icon}
-      <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+      <h3 className="text-2xl font-bold text-gray-800">{title}</h3>
     </div>
   );
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="p-8 rounded-lg bg-white shadow-lg">
-          <div className="flex items-center space-x-4">
-            <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-xl text-gray-700">Đang tải dữ liệu...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="p-6 bg-white rounded-lg shadow-lg animate-pulse">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-lg font-medium text-gray-700">Loading...</p>
           </div>
         </div>
       </div>
@@ -157,282 +310,378 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 min-h-screen py-8">
-      <div className="container mx-auto px-4">
-        {/* Profile Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 inline-block px-6 py-2 bg-white rounded-full shadow-md">
-            HỒ SƠ CÁ NHÂN
-          </h1>
-        </div>
-
-        {/* Main Profile Card */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-5xl mx-auto mb-8 border border-gray-100">
-          {/* Profile Header with Avatar */}
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-8 text-white">
-            <div className="flex flex-col md:flex-row items-center md:items-start">
-              {/* Avatar Section */}
-              <div className="flex flex-col items-center mb-6 md:mb-0 md:mr-8">
-                {user.avatar_url ? (
-                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg mb-4">
-                    <img
-                      src={user.avatar_url}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center text-indigo-600 text-4xl font-bold border-4 border-white shadow-lg mb-4">
-                    <span>
-                      {user.username
-                        ? user.username.charAt(0).toUpperCase()
-                        : "?"}
-                    </span>
-                  </div>
-                )}
-                <button className="px-4 py-2 bg-white text-indigo-600 rounded-full text-sm font-bold transition-colors duration-300 flex items-center gap-2 shadow-md hover:bg-indigo-50">
-                  <FaUpload className="h-4 w-4" />
-                  Tải ảnh lên
-                </button>
-              </div>
-
-              {/* User Info Section */}
-              <div className="flex-grow text-center md:text-left">
-                <h2 className="text-3xl font-bold mb-2">
-                  {userData?.data?.name || user.username || "Người dùng"}
-                </h2>
-                <p className="text-indigo-100 mb-4">
-                  {userData?.data?.email || "No email"}
-                </p>
-                <button
-                  className="px-6 py-2 bg-white text-indigo-600 rounded-full shadow-md transition-all duration-300 font-bold hover:bg-opacity-90 transform hover:scale-105"
-                  onClick={handleEditClick}
-                >
-                  <FaEdit className="inline mr-2" />
-                  Chỉnh sửa hồ sơ
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Body Measurements Card */}
-          <div className="p-6">
-            <SectionTitle
-              title="Chỉ số cơ thể"
-              icon={<FaCalculator className="text-indigo-600 text-xl" />}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-blue-50 rounded-xl p-6 border border-blue-100 shadow-sm flex flex-col items-center md:items-start">
-                <div className="flex items-center mb-3">
-                  <FaWeight className="text-blue-500 mr-2 text-xl" />
-                  <span className="text-gray-600 font-medium">Cân nặng</span>
-                </div>
-                <div className="text-3xl font-bold text-blue-600 flex items-baseline">
-                  {userData?.data?.weight || "?"}
-                  <span className="text-sm font-normal text-gray-500 ml-1">
-                    kg
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-green-50 rounded-xl p-6 border border-green-100 shadow-sm flex flex-col items-center md:items-start">
-                <div className="flex items-center mb-3">
-                  <FaRuler className="text-green-500 mr-2 text-xl" />
-                  <span className="text-gray-600 font-medium">Chiều cao</span>
-                </div>
-                <div className="text-3xl font-bold text-green-600 flex items-baseline">
-                  {userData?.data?.height || "?"}
-                  <span className="text-sm font-normal text-gray-500 ml-1">
-                    cm
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className={`${
-                  getBMIStatus().bg
-                } rounded-xl p-6 border border-${getBMIStatus().color.replace(
-                  "text-",
-                  ""
-                )} shadow-sm flex flex-col items-center md:items-start`}
+    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+        {/* Sidebar */}
+        <aside className="lg:w-1/4 w-full">
+          <div className="bg-white p-6 rounded-xl shadow-lg sticky top-6">
+            <div className="space-y-4">
+              <button
+                onClick={handleEditClick}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 shadow-md"
               >
-                <div className="flex items-center mb-3">
-                  <FaCalculator className="text-gray-600 mr-2 text-xl" />
-                  <span className="text-gray-600 font-medium">BMI</span>
+                <FaEdit /> Edit Profile
+              </button>
+              <button
+                onClick={() => setShowChangePassword(!showChangePassword)} // Đổi tên
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-300 shadow-md"
+              >
+                <FaKey /> Change Password
+              </button>
+              <button
+                onClick={handleReset}
+                disabled={resetInProgress}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-300 shadow-md disabled:bg-red-300"
+              >
+                {resetInProgress ? "Deleting..." : "Delete Personal Data"}
+              </button>
+              <button
+                onClick={handleDeleteUser}
+                disabled={deleteInProgress}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-all duration-300 shadow-md disabled:bg-red-400"
+              >
+                {deleteInProgress ? "Deleting..." : "Delete Account"}
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="lg:w-3/4 w-full">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-600 to-blue-500 p-6 text-white">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="relative">
+                  {/* Progress bar khi đang upload */}
+                  {uploading && (
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                      <div
+                        className="bg-indigo-600 h-2.5 rounded-full"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  )}
+                  {/* Hiển thị hình ảnh: preview nếu có, nếu không thì avatar hoặc placeholder */}
+                  {previewImage ? (
+                    <img
+                      src={previewImage.url}
+                      alt="Preview"
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                    />
+                  ) : user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt="Avatar"
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-3xl font-bold text-indigo-600 border-4 border-white shadow-lg">
+                      {user.username ? user.username[0].toUpperCase() : "?"}
+                    </div>
+                  )}
+                  {/* Nút "X" ở góc trên bên phải, không có background */}
+                  {previewImage && (
+                    <button
+                      onClick={handleCancelPreview}
+                      disabled={uploading}
+                      className="absolute top-0 right-[5px] text-red-600 hover:text-red-800 transition-all duration-300 disabled:opacity-50"
+                    >
+                      <span className="text-lg font-bold">X</span>
+                    </button>
+                  )}
+                  {/* Nút Upload hoặc Save */}
+                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2">
+                    {previewImage ? (
+                      <button
+                        onClick={handleUploadAvatar}
+                        disabled={uploading}
+                        className="bg-green-500 text-white px-3 py-1 rounded-full shadow-md hover:bg-green-600 transition-all duration-300 disabled:opacity-50"
+                      >
+                        <span className="text-xs">Save</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={triggerFileInput}
+                        disabled={uploading}
+                        className="bg-white text-indigo-600 p-2 rounded-full shadow-md hover:bg-indigo-100 transition-all duration-300 disabled:opacity-50"
+                      >
+                        {uploading ? (
+                          <span className="text-xs">{uploadProgress}%</span>
+                        ) : (
+                          <FaUpload />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
                 </div>
-                <div className="flex flex-col">
-                  <div className={`text-3xl font-bold ${getBMIStatus().color}`}>
-                    {calculateBMI() || "?"}
-                  </div>
-                  <div className={`text-sm ${getBMIStatus().color}`}>
-                    {getBMIStatus().text}
-                  </div>
+                <div className="text-center sm:text-left">
+                  <h1 className="text-2xl sm:text-3xl font-bold">
+                    {userData?.name || user.username || "User"}
+                  </h1>
+                  <p className="text-indigo-100 mt-1">
+                    {userData?.email || user.email || "No email"}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Personal Details Section */}
-            {userData?.data ? (
-              <div className="mt-8">
-                <SectionTitle
-                  title="Thông tin cá nhân"
-                  icon={<FaUser className="text-indigo-600 text-xl" />}
-                />
-
-                {/* Basic Information */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-l-4 border-indigo-500 pl-3">
-                    Thông tin cơ bản
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <InfoItem
-                      label="Tuổi"
-                      value={userData?.data?.age || "Chưa có dữ liệu"}
-                      colorClass="bg-blue-50"
-                      textClass="text-blue-700"
-                    />
-                    <InfoItem
-                      label="Giới tính"
-                      value={userData?.data?.gender || "Chưa có dữ liệu"}
-                      colorClass="bg-purple-50"
-                      textClass="text-purple-700"
-                    />
-                    <InfoItem
-                      label="Số điện thoại"
-                      value={userData?.data?.phoneNumber || "Chưa có dữ liệu"}
-                      colorClass="bg-indigo-50"
-                      textClass="text-indigo-700"
-                    />
+            {/* Body */}
+            <div className="p-6">
+              {/* Body Measurements */}
+              <SectionTitle
+                title="Body Measurements"
+                icon={<FaCalculator className="text-indigo-600" />}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="bg-blue-50 p-4 rounded-lg shadow-sm flex items-center gap-3">
+                  <FaWeight className="text-blue-500 text-2xl" />
+                  <div>
+                    <p className="text-gray-600">Weight</p>
+                    <p className="text-xl font-semibold text-blue-700">
+                      {userData?.weight || "?"} <span className="text-sm">kg</span>
+                    </p>
                   </div>
                 </div>
-
-                {/* Diet Goals */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-l-4 border-green-500 pl-3">
-                    Mục tiêu dinh dưỡng
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InfoItem
-                      label="Mục tiêu"
-                      value={userData?.data?.goal || "Chưa có dữ liệu"}
-                      colorClass="bg-green-50"
-                      textClass="text-green-700"
-                    />
-                    <InfoItem
-                      label="Thời hạn kế hoạch"
-                      value={userData?.data?.longOfPlan || "Chưa có dữ liệu"}
-                      colorClass="bg-teal-50"
-                      textClass="text-teal-700"
-                    />
+                <div className="bg-green-50 p-4 rounded-lg shadow-sm flex items-center gap-3">
+                  <FaRuler className="text-green-500 text-2xl" />
+                  <div>
+                    <p className="text-gray-600">Height</p>
+                    <p className="text-xl font-semibold text-green-700">
+                      {userData?.height || "?"} <span className="text-sm">cm</span>
+                    </p>
                   </div>
                 </div>
-
-                {/* Diet Preferences */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-l-4 border-amber-500 pl-3">
-                    Sở thích ăn uống
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InfoItem
-                      label="Chế độ ăn"
-                      value={userData?.data?.diet || "Chưa có dữ liệu"}
-                      colorClass="bg-amber-50"
-                      textClass="text-amber-700"
-                    />
-                    <InfoItem
-                      label="Thói quen ăn uống"
-                      value={
-                        userData?.data?.eatHabit?.join(", ") ||
-                        "Chưa có dữ liệu"
-                      }
-                      colorClass="bg-orange-50"
-                      textClass="text-orange-700"
-                    />
-                    <InfoItem
-                      label="Thực phẩm ưa thích"
-                      value={
-                        userData?.data?.favorite?.join(", ") ||
-                        "Chưa có dữ liệu"
-                      }
-                      colorClass="bg-yellow-50"
-                      textClass="text-yellow-700"
-                    />
-                    <InfoItem
-                      label="Dị ứng thực phẩm"
-                      value={
-                        userData?.data?.hate?.join(", ") || "Chưa có dữ liệu"
-                      }
-                      colorClass="bg-red-50"
-                      textClass="text-red-700"
-                    />
-                    <InfoItem
-                      label="Số bữa ăn mỗi ngày"
-                      value={userData?.data?.mealNumber || "Chưa có dữ liệu"}
-                      colorClass="bg-amber-50"
-                      textClass="text-amber-700"
-                    />
+                <div
+                  className={`${
+                    getBMIStatus().bg
+                  } p-4 rounded-lg shadow-sm flex items-center gap-3`}
+                >
+                  <FaCalculator className="text-gray-600 text-2xl" />
+                  <div>
+                    <p className="text-gray-600">BMI</p>
+                    <p className={`text-xl font-semibold ${getBMIStatus().color}`}>
+                      {calculateBMI()} - {getBMIStatus().text}
+                    </p>
                   </div>
-                </div>
-
-                {/* Health Metrics */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-l-4 border-purple-500 pl-3">
-                    Chỉ số sức khỏe
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <InfoItem
-                      label="Thời gian ngủ"
-                      value={userData?.data?.sleepTime || "Chưa có dữ liệu"}
-                      colorClass="bg-purple-50"
-                      textClass="text-purple-700"
-                    />
-                    <InfoItem
-                      label="Lượng nước uống (L)"
-                      value={userData?.data?.waterDrink || "Chưa có dữ liệu"}
-                      colorClass="bg-blue-50"
-                      textClass="text-blue-700"
-                    />
-                    <InfoItem
-                      label="Bệnh nền"
-                      value={userData?.data?.underDisease || "Không có"}
-                      colorClass="bg-pink-50"
-                      textClass="text-pink-700"
-                    />
-                  </div>
-                </div>
-
-                {/* Reset Button */}
-                <div className="mt-8 flex justify-center">
-                  <button
-                    className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-300 shadow-md font-medium transform hover:scale-105 disabled:transform-none"
-                    onClick={handleReset}
-                    disabled={resetInProgress}
-                  >
-                    {resetInProgress ? "Đang xóa..." : "Xóa dữ liệu cá nhân"}
-                  </button>
                 </div>
               </div>
-            ) : (
-              <div className="text-center p-8 bg-gray-50 rounded-lg shadow-inner border border-gray-200 mt-8">
-                <div className="flex flex-col items-center">
-                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                    <FaUser className="text-gray-400 text-2xl" />
+
+              {/* Personal Info */}
+              {userData ? (
+                <>
+                  <SectionTitle
+                    title="Personal Information"
+                    icon={<FaUser className="text-indigo-600" />}
+                  />
+                  <div className="space-y-8">
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                        Basic Information
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <InfoItem
+                          label="Age"
+                          value={userData.age}
+                          colorClass="bg-blue-50"
+                          textClass="text-blue-700"
+                        />
+                        <InfoItem
+                          label="Gender"
+                          value={userData.gender}
+                          colorClass="bg-purple-50"
+                          textClass="text-purple-700"
+                        />
+                        <InfoItem
+                          label="Phone Number"
+                          value={userData.phoneNumber}
+                          colorClass="bg-indigo-50"
+                          textClass="text-indigo-700"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">Nutrition Goals</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <InfoItem
+                          label="Goal"
+                          value={userData.goal}
+                          colorClass="bg-green-50"
+                          textClass="text-green-700"
+                        />
+                        <InfoItem
+                          label="Plan Duration"
+                          value={userData.longOfPlan}
+                          colorClass="bg-teal-50"
+                          textClass="text-teal-700"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                        Eating Preferences
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <InfoItem
+                          label="Diet"
+                          value={userData.diet}
+                          colorClass="bg-amber-50"
+                          textClass="text-amber-700"
+                        />
+                        <InfoItem
+                          label="Eating Habits"
+                          value={userData.eatHabit?.join(", ")}
+                          colorClass="bg-orange-50"
+                          textClass="text-orange-700"
+                        />
+                        <InfoItem
+                          label="Favorite Foods"
+                          value={userData.favorite?.join(", ")}
+                          colorClass="bg-yellow-50"
+                          textClass="text-yellow-700"
+                        />
+                        <InfoItem
+                          label="Food Allergies"
+                          value={userData.hate?.join(", ")}
+                          colorClass="bg-red-50"
+                          textClass="text-red-700"
+                        />
+                        <InfoItem
+                          label="Meals per Day"
+                          value={userData.mealNumber}
+                          colorClass="bg-amber-50"
+                          textClass="text-amber-700"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">Health Metrics</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <InfoItem
+                          label="Sleep Duration"
+                          value={userData.sleepTime}
+                          colorClass="bg-purple-50"
+                          textClass="text-purple-700"
+                        />
+                        <InfoItem
+                          label="Water Intake (L)"
+                          value={userData.waterDrink}
+                          colorClass="bg-blue-50"
+                          textClass="text-blue-700"
+                        />
+                        <InfoItem
+                          label="Medical Conditions"
+                          value={userData.underDisease || "None"}
+                          colorClass="bg-pink-50"
+                          textClass="text-pink-700"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-gray-600 text-lg mb-4">
-                    Chưa có dữ liệu cá nhân
-                  </p>
+                </>
+              ) : (
+                <div className="text-center p-8 bg-gray-50 rounded-lg">
+                  <FaUser className="text-4xl text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">No personal data available</p>
                   <button
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-300 shadow-md font-medium"
                     onClick={handleEditClick}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300"
                   >
-                    Nhập thông tin ngay
+                    Enter Information Now
                   </button>
                 </div>
+              )}
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Change Password</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-1">Current Password</label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      currentPassword: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter current password"
+                />
               </div>
-            )}
+              <div>
+                <label className="block text-gray-700 mb-1">New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      newPassword: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter new password"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 mb-1">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.newPasswordConfirm}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      newPasswordConfirm: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Confirm new password"
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowChangePassword(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleChangePassword}
+                  disabled={passwordChangeInProgress}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-indigo-300"
+                >
+                  {passwordChangeInProgress ? "Processing..." : "Confirm"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <UserProfileUpdate
+          userPreferenceId={user.userPreferenceId}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={handleUpdateProfile}
+        />
+      )}
     </div>
   );
 };

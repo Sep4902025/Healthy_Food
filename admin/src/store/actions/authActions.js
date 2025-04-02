@@ -8,6 +8,7 @@ import {
   logout,
   updateUserSuccess,
 } from "../slices/authSlice";
+import UserService from "../../services/user.service";
 
 export const loginWithGoogle = (credential) => async (dispatch) => {
   try {
@@ -19,9 +20,7 @@ export const loginWithGoogle = (credential) => async (dispatch) => {
     }
 
     if (result.data.user.isBan) {
-      toast.error(
-        "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên."
-      );
+      toast.error("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
       return false;
     }
 
@@ -50,9 +49,7 @@ export const loginWithEmail = (formData) => async (dispatch) => {
 
     if (response.success) {
       if (response.user.isBan) {
-        toast.error(
-          "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên."
-        );
+        toast.error("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
         dispatch(loginFailure("Tài khoản bị khóa"));
         return false;
       }
@@ -64,7 +61,7 @@ export const loginWithEmail = (formData) => async (dispatch) => {
         })
       );
 
-      toast.success("Đăng nhập thành công!");
+      toast.success("Signin successfully!");
       return response;
     } else {
       dispatch(loginFailure(response.message));
@@ -94,17 +91,21 @@ export const logoutUser = () => (dispatch) => {
       .replace(/^ +/, "")
       .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
   });
-
-  toast.success("Đăng xuất thành công!");
 };
 
 export const updateUser = (userData) => async (dispatch) => {
   try {
-    const response = await AuthService.updateUser(userData);
+    const { _id, ...data } = userData; // Extract _id and the rest as data
+    if (!_id) {
+      toast.error("Không tìm thấy ID người dùng!");
+      return false;
+    }
+
+    const response = await UserService.updateUser(_id, data);
 
     if (response.success) {
       dispatch(updateUserSuccess(response.user)); // Cập nhật Redux state
-      toast.success("Cập nhật thông tin thành công!");
+      toast.success("Avatar update successful!");
       return response.user; // Trả về user mới
     } else {
       toast.error(response.message || "Cập nhật thất bại!");
@@ -112,7 +113,7 @@ export const updateUser = (userData) => async (dispatch) => {
     }
   } catch (error) {
     console.error("Lỗi cập nhật user:", error);
-    toast.error("Đã có lỗi xảy ra. Vui lòng thử lại!");
+    toast.error(error.message || "Đã có lỗi xảy ra. Vui lòng thử lại!");
     return false;
   }
 };

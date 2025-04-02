@@ -17,7 +17,6 @@ const MainLayout = () => {
   const handleLogout = () => {
     dispatch(logoutUser());
     navigate("/signin");
-    toast.success("Đăng xuất thành công!");
   };
 
   return (

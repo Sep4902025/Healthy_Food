@@ -1,40 +1,59 @@
 const jwt = require("jsonwebtoken");
 const TermOfUse = require("../../models/footer/Term");
 const UserModel = require("../../models/UserModel");
+const catchAsync = require("../../utils/catchAsync");
 
 // 🔹 Lấy tất cả Terms
-exports.getAllTerms = async (req, res) => {
-  try {
-    let filter = { isDeleted: false, isVisible: true };
+exports.getAllTerms = catchAsync(async (req, res, next) => {
+  // Lấy các query parameters từ request
+  const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
+  const limit = parseInt(req.query.limit) || 10; // Mặc định 10 Terms mỗi trang
+  const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
+  const sort = req.query.sort || "createdAt"; // Mặc định sắp xếp theo createdAt
+  const order = req.query.order || "desc"; // Mặc định thứ tự giảm dần
 
-    // Lấy token từ request (cookie hoặc header)
-    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
-
-    if (token) {
-      try {
-        // Giải mã token lấy user ID
-        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-        const user = await UserModel.findById(decoded.id);
-
-        if (user && (user.role === "admin" || user.role === "nutritionist")) {
-          filter = {}; // Admin/Nutritionist thấy tất cả Terms
-        }
-      } catch (error) {
-        console.error("❌ Lỗi xác thực token:", error.message);
+  // 🛠️ Kiểm tra token để phân quyền
+  let filter = { isDeleted: false, isVisible: true }; // Mặc định: Chỉ lấy Terms chưa bị xóa và hiển thị
+  const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+      const user = await UserModel.findById(decoded.id);
+      if (user && (user.role === "admin" || user.role === "nutritionist")) {
+        filter = {}; // Admin/Nutritionist thấy tất cả
       }
+    } catch (error) {
+      console.error("❌ Lỗi xác thực token:", error.message);
     }
-
-    // Lấy danh sách Terms
-    const terms = await TermOfUse.find(filter).select("_id bannerUrl content isVisible");
-
-    res.status(200).json({ success: true, data: terms });
-  } catch (error) {
-    console.error("❌ Lỗi khi lấy Terms:", error);
-    res.status(500).json({ success: false, message: "Lỗi lấy dữ liệu Terms" });
   }
-};
 
-// 🔹 Tạo mới Term
+  // Xử lý sắp xếp
+  const sortOrder = order === "desc" ? -1 : 1;
+  const sortOptions = { [sort]: sortOrder };
+
+  // Đếm tổng số Terms thỏa mãn điều kiện
+  const totalTerms = await TermOfUse.countDocuments(filter);
+
+  // Lấy danh sách Terms với phân trang và sắp xếp
+  const terms = await TermOfUse.find(filter)
+    .select("_id bannerUrl content isVisible")
+    .sort(sortOptions) // Áp dụng sắp xếp
+    .skip(skip)
+    .limit(limit);
+
+  const totalPages = Math.ceil(totalTerms / limit);
+
+  res.status(200).json({
+    success: true,
+    results: terms.length,
+    total: totalTerms,
+    totalPages: totalPages,
+    currentPage: page,
+    data: { terms },
+  });
+});
+
+// Các hàm khác giữ nguyên
 exports.createTerm = async (req, res) => {
   try {
     console.log("📤 Dữ liệu nhận từ client:", req.body);
@@ -57,7 +76,6 @@ exports.createTerm = async (req, res) => {
   }
 };
 
-// 🔹 Cập nhật Term
 exports.updateTerm = async (req, res) => {
   const { id } = req.params;
   if (!id) return res.status(400).json({ success: false, message: "ID không hợp lệ" });
@@ -65,7 +83,9 @@ exports.updateTerm = async (req, res) => {
   try {
     console.log(`📤 Cập nhật Term ID: ${id}`, req.body);
 
-    const updatedTerm = await TermOfUse.findByIdAndUpdate(id, req.body, { new: true });
+    const updatedTerm = await TermOfUse.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
 
     if (!updatedTerm) {
       return res.status(404).json({ success: false, message: "Không tìm thấy Term" });
@@ -78,7 +98,6 @@ exports.updateTerm = async (req, res) => {
   }
 };
 
-// 🔹 Xóa vĩnh viễn Term
 exports.hardDeleteTerm = async (req, res) => {
   const { id } = req.params;
   try {

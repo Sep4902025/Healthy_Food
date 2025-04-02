@@ -23,32 +23,47 @@ const EatHabit = () => {
   }, []);
 
   const toggleItemSelection = (id) => {
-    setSelectedItems((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    if (id === "none") {
+      // Nếu chọn "none", chỉ giữ "none" và xóa các lựa chọn khác
+      setSelectedItems(["none"]);
+    } else {
+      // Nếu chọn một mục khác
+      if (selectedItems.includes("none")) {
+        // Nếu "none" đã được chọn trước đó, xóa "none" và thêm lựa chọn mới
+        setSelectedItems([id]);
+      } else {
+        // Thêm hoặc xóa mục như bình thường, nhưng không cho phép "none" cùng lúc
+        setSelectedItems((prev) =>
+          prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+        );
+      }
+    }
   };
 
   const isSelected = (id) => selectedItems.includes(id);
 
   const handleNext = () => {
-    // Lấy dữ liệu hiện tại trong sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
-
-    // Ghi đè eatingHabits vào object hiện tại
     const updatedData = {
       ...currentData,
       eatHabit: selectedItems,
     };
-
-    // Lưu lại toàn bộ dữ liệu vào sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
-
-    // Điều hướng tới trang tiếp theo
     navigate("/survey/underdisease");
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) {
+      handleNext();
+    }
+  };
+
   return (
-    <div className="max-w-md mx-auto p-4">
+    <div
+      className="max-w-md mx-auto p-4"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+    >
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/longofplan")}
@@ -79,6 +94,10 @@ const EatHabit = () => {
                 checked={isSelected(eathabit.id)}
                 onChange={() => toggleItemSelection(eathabit.id)}
                 className="w-5 h-5"
+                // Vô hiệu hóa các tùy chọn khác nếu "none" được chọn
+                disabled={
+                  eathabit.id !== "none" && selectedItems.includes("none")
+                }
               />
               <span
                 className={`font-medium ${

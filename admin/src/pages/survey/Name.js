@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 const Name = () => {
   const navigate = useNavigate();
   const [selectedName, setSelectedName] = useState("");
+  const [error, setError] = useState(""); // State để hiển thị lỗi
 
   // Load dữ liệu từ sessionStorage khi mở trang
   useEffect(() => {
@@ -14,9 +15,32 @@ const Name = () => {
     }
   }, []);
 
+  // Hàm kiểm tra input
+  const validateName = (name) => {
+    // Chỉ cho phép chữ cái và dấu cách
+    const lettersOnly = /^[A-Za-z\s]+$/;
+
+    if (!name.trim()) {
+      return "Please enter your name.";
+    }
+
+    if (!lettersOnly.test(name)) {
+      return "Name must contain only letters and spaces.";
+    }
+
+    // Kiểm tra xem có ít nhất 2 từ (họ và tên)
+    const nameParts = name.trim().split(/\s+/);
+    if (nameParts.length < 2) {
+      return "Please enter both first and last name.";
+    }
+
+    return "";
+  };
+
   const handleNext = () => {
-    if (!selectedName.trim()) {
-      alert("Please enter your name.");
+    const validationError = validateName(selectedName);
+    if (validationError) {
+      setError(validationError); // Chỉ hiển thị lỗi khi nhấn Next
       return;
     }
 
@@ -26,7 +50,7 @@ const Name = () => {
     // Cập nhật dữ liệu mới
     const updatedData = {
       ...currentData,
-      name: selectedName,
+      name: selectedName.trim(),
     };
 
     // Lưu vào sessionStorage
@@ -34,6 +58,13 @@ const Name = () => {
 
     // Điều hướng sang trang tiếp theo
     navigate("/survey/phonenumber");
+  };
+
+  // Hàm xử lý khi nhấn phím
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) {
+      handleNext();
+    }
   };
 
   return (
@@ -45,17 +76,23 @@ const Name = () => {
 
       {/* Title & description */}
       <h2 className="text-2xl font-bold text-center">Name</h2>
-      <p className="text-center text-gray-600">Please enter your name</p>
+      <p className="text-center text-gray-600">Please enter your full name</p>
 
       {/* Input field */}
       <div className="mt-4">
         <input
           type="text"
           value={selectedName}
-          onChange={(e) => setSelectedName(e.target.value)}
-          placeholder="Enter your name"
-          className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
+          onChange={(e) => setSelectedName(e.target.value)} // Chỉ cập nhật giá trị, không kiểm tra lỗi
+          onKeyDown={handleKeyDown}
+          placeholder="Enter your full name"
+          className={`w-full p-4 rounded-lg shadow border ${
+            error ? "border-red-500" : "border-gray-300"
+          } focus:ring-2 focus:ring-green-400 outline-none`}
         />
+
+        {/* Hiển thị thông báo lỗi */}
+        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
         {/* Next button */}
         <button

@@ -60,11 +60,18 @@ import ForYoyPage from "../pages/user/ForYouPage";
 import AddUser from "../pages/admin/pages/AddUserManagement";
 import AdminProfile from "../pages/user/AdminProfile";
 import EditAdmin from "../pages/user/EditAdmin";
+import EditProfile from "../pages/user/UpdateUser";
+import Activity from "../pages/survey/Activity";
 import ChangePassword from "../pages/user/Profile/Sections/ChangePassword";
 import TableMedicalConditions from "../pages/nutritionist/Medical Condition Management/TableMedicalConditions";
 import AddMedicalCondition from "../pages/nutritionist/Medical Condition Management/AddMedicalCondition";
 import CreateMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/CreateMealPlanPage";
 import EditMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/EditMealPlanPage";
+import Medical from "../pages/user/Medical";
+import NutritionistApplicationForm from "../pages/user/NutritionistApplicationForm";
+import MealPlansAnalytics from "../pages/nutritionist/MealPlan Management/MealPlansAnalytics";
+import TableMealPlanAdmin from "../pages/admin/pages/TableMealPlanAdmin";
+import FinanceManagement from "../pages/admin/pages/FinanceManagement";
 
 const AppRoutes = () => {
   return (
@@ -77,10 +84,28 @@ const AppRoutes = () => {
         <Route path="forgot-password" element={<ForgetPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
         <Route index element={<Home />} />
-        <Route path="viewprofile" element={<ViewProfile />} />
 
+        {/* Route cho xem và chỉnh sửa hồ sơ user */}
+        <Route
+          path="viewprofile"
+          element={
+            <PrivateRoute>
+              <ViewProfile />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="edit-profile/:id"
+          element={
+            <PrivateRoute>
+              <EditProfile />
+            </PrivateRoute>
+          }
+        />
+        <Route path="/apply-nutritionist" element={<NutritionistApplicationForm />} />
         {/* Router recipe */}
         <Route path=":dishId/recipes/:recipeId" element={<RecipeView />} />
+
         {/* Router mealPlan */}
         <Route
           path="mealplan"
@@ -98,6 +123,7 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        <Route path="dishes/:type" element={<DishesList />} />
         <Route
           path="dishes/:dishId"
           element={
@@ -115,7 +141,6 @@ const AppRoutes = () => {
           }
         />
         <Route path="ingredients/:type" element={<IngredientList />} />
-        <Route path="dishes/:type" element={<DishesList />} />
 
         <Route
           path="/foryou"
@@ -130,7 +155,10 @@ const AppRoutes = () => {
         <Route path="contact" element={<Contact />} />
         <Route path="term" element={<Term />} />
 
-        {/* ✅ Gom các route của quiz vào đây */}
+        {/* Thêm route cho trang Medical */}
+        <Route path="medical" element={<Medical />} />
+
+        {/* Gom các route của khảo sát vào đây */}
         <Route
           path="/survey"
           element={
@@ -153,6 +181,7 @@ const AppRoutes = () => {
           <Route path="name" element={<Name />} />
           <Route path="phonenumber" element={<PhoneNumber />} />
           <Route path="sleeptime" element={<SleepTime />} />
+          <Route path="activityLevel" element={<Activity />} />
           <Route path="underdisease" element={<UnderDisease />} />
           <Route path="waterdrink" element={<WaterDrink />} />
           <Route path="weight" element={<Weight />} />
@@ -160,7 +189,7 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-      {/* Các route cần đăng nhập AdminLayout Admin*/}
+      {/* Các route cần đăng nhập AdminLayout Admin */}
       <Route
         path="/admin"
         element={
@@ -175,20 +204,24 @@ const AppRoutes = () => {
         <Route path="adduser" element={<AddUser />} />
         <Route path="aboutusmanagement" element={<AboutUsManagement />} />
         <Route path="termofusemanagement" element={<TermOfUseManagement />} />
-        <Route path="faqsManagement" element={<FAQsManagement />} />
+        <Route path="faqsmanagement" element={<FAQsManagement />} />
         <Route path="contactusmanagement" element={<ContactUsManagement />} />
-
+        {/* Quản lý user, dish, ingredient, mealplan */}
         <Route path="usermanagement" element={<UserManagement />} />
+        <Route path="financemanagement" element={<FinanceManagement />} />
         <Route path="dishmanagement" element={<DishManagement />} />
         <Route path="ingredientsmanagement" element={<IngredientsManagement />} />
         <Route path="mealplan" element={<TableMealPlan />} />
         <Route path="change-password" element={<ChangePassword />} />
+        <Route path="adminprofile/:id" element={<AdminProfile />} />
         <Route path="editadmin/:id" element={<EditAdmin />} />
         <Route path="edituser/:id" element={<EditUser />} />
         <Route path="viewprofile/:id" element={<ViewProfile />} />
+
+        <Route path="mealplan" element={<TableMealPlanAdmin />} />
       </Route>
 
-      {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist*/}
+      {/* ✅ Bảo vệ toàn bộ route NutritionistLayout Nutritionist */}
       <Route
         path="/nutritionist"
         element={
@@ -198,7 +231,9 @@ const AppRoutes = () => {
         }
       >
         <Route path="chat" element={<NutritionChat />} />
-        <Route path="mealplan" element={<TableMealPlan />} />
+        <Route path="mealPlan" element={<TableMealPlan />} />
+        <Route path="mealPlan/analytics" element={<MealPlansAnalytics />} />
+
         <Route path="mealplan/create" element={<CreateMealPlanNutritionist />} />
         <Route
           path="/nutritionist/mealplan/edit/:mealPlanId"
@@ -208,12 +243,10 @@ const AppRoutes = () => {
           <Route index element={<TableDishes />} />
           <Route path="add" element={<AddDishes />} />
         </Route>
-
         <Route path="ingredients">
           <Route index element={<TableIngredient />} />
           <Route path="add" element={<AddIngredient />} />
         </Route>
-
         <Route path="recipes">
           <Route index element={<TableRecipes />} />
         </Route>

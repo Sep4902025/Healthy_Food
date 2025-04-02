@@ -66,18 +66,10 @@ const AdminProfile = () => {
             <div className="profile-info-section">
               <div className="profile-image-container">
                 {user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt="Profile"
-                    className="profile-image"
-                  />
+                  <img src={user.avatar_url} alt="Profile" className="profile-image" />
                 ) : (
                   <div className="profile-image-placeholder">
-                    <span>
-                      {user.username
-                        ? user.username.charAt(0).toUpperCase()
-                        : ""}
-                    </span>
+                    <span>{user.username ? user.username.charAt(0).toUpperCase() : ""}</span>
                   </div>
                 )}
               </div>
@@ -89,9 +81,7 @@ const AdminProfile = () => {
                 </div>
                 <div className="info-row">
                   <div className="info-label">Email</div>
-                  <div className="info-value">
-                    {user.email || "admin@example.com"}
-                  </div>
+                  <div className="info-value">{user.email || "admin@example.com"}</div>
                 </div>
                 <div className="info-row">
                   <div className="info-label">Role</div>
@@ -109,9 +99,9 @@ const AdminProfile = () => {
                 <h3>Admin Privileges</h3>
               </div>
               <p className="section-content">
-                As an administrator, you have full access to manage users,
-                content, and system settings. Use the Management link in the
-                navigation bar to access the admin dashboard.
+                As an administrator, you have full access to manage users, content, and system
+                settings. Use the Management link in the navigation bar to access the admin
+                dashboard.
               </p>
             </div>
           </div>

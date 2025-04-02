@@ -8,12 +8,13 @@ import {
   Dumbbell,
   Wheat,
   Droplet,
-  Pencil,
-  Trash2,
+  EditIcon,
+  TrashIcon,
   Image as LucideImage,
-  ChevronLeft,
-  ChevronRight,
+  EyeOffIcon,
+  EyeIcon,
 } from "lucide-react";
+import Pagination from "../../../components/Pagination";
 
 const TYPE_OPTIONS = [
   "Meat & Seafood",
@@ -28,6 +29,10 @@ const TYPE_OPTIONS = [
 const TableIngredient = () => {
   const navigate = useNavigate();
   const [ingredients, setIngredients] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [totalItems, setTotalItems] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editData, setEditData] = useState({
     id: "",
@@ -46,19 +51,26 @@ const TableIngredient = () => {
   const [errors, setErrors] = useState({});
   const [filterType, setFilterType] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchIngredients();
-  }, []);
+  }, [currentPage, itemsPerPage, filterType, searchTerm]);
 
-  const fetchIngredients = async (callback) => {
-    const response = await ingredientService.getAllIngredients();
+  const fetchIngredients = async () => {
+    setIsLoading(true);
+    const response = await ingredientService.getAllIngredients(
+      currentPage + 1,
+      itemsPerPage,
+      filterType,
+      searchTerm
+    );
     if (response.success) {
-      setIngredients(response.data);
-      if (callback) callback(response.data);
+      setIngredients(response.data.items);
+      setTotalItems(response.data.total);
+      setTotalPages(response.data.totalPages);
     }
+    setIsLoading(false);
   };
 
   const handleEditClick = (ingredient) => {
@@ -83,10 +95,14 @@ const TableIngredient = () => {
       newErrors.customType = "Custom type is required when 'Others' is selected";
     }
     if (!editData.unit) newErrors.unit = "Unit is required";
-    if (editData.calories === "" || isNaN(editData.calories)) newErrors.calories = "Calories is required and must be a number";
-    if (editData.protein === "" || isNaN(editData.protein)) newErrors.protein = "Protein is required and must be a number";
-    if (editData.carbs === "" || isNaN(editData.carbs)) newErrors.carbs = "Carbs is required and must be a number";
-    if (editData.fat === "" || isNaN(editData.fat)) newErrors.fat = "Fat is required and must be a number";
+    if (editData.calories === "" || isNaN(editData.calories))
+      newErrors.calories = "Calories is required and must be a number";
+    if (editData.protein === "" || isNaN(editData.protein))
+      newErrors.protein = "Protein is required and must be a number";
+    if (editData.carbs === "" || isNaN(editData.carbs))
+      newErrors.carbs = "Carbs is required and must be a number";
+    if (editData.fat === "" || isNaN(editData.fat))
+      newErrors.fat = "Fat is required and must be a number";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -146,10 +162,10 @@ const TableIngredient = () => {
       const response = await ingredientService.hardDeleteIngredient(id);
       if (response.success) {
         alert("Deleted successfully!");
-        fetchIngredients(() => {
-          const totalPages = Math.ceil((ingredients.length - 1) / itemsPerPage);
-          if (currentPage > totalPages) setCurrentPage(totalPages || 1);
-        });
+        fetchIngredients();
+        if (ingredients.length === 1 && currentPage > 0) {
+          setCurrentPage(currentPage - 1);
+        }
       } else {
         alert("Failed to delete ingredient. Please try again.");
       }
@@ -159,7 +175,9 @@ const TableIngredient = () => {
   const handleToggleVisibility = async (ingredient) => {
     const updatedIngredient = { ...ingredient, isVisible: !ingredient.isVisible };
     try {
-      await ingredientService.updateIngredient(ingredient._id, { isVisible: !ingredient.isVisible });
+      await ingredientService.updateIngredient(ingredient._id, {
+        isVisible: !ingredient.isVisible,
+      });
       setIngredients((prevIngredients) =>
         prevIngredients.map((ing) => (ing._id === ingredient._id ? updatedIngredient : ing))
       );
@@ -168,19 +186,9 @@ const TableIngredient = () => {
     }
   };
 
-  const filteredIngredients = ingredients.filter((ingredient) => {
-    const matchesType = filterType === "all" || ingredient.type === filterType;
-    const matchesSearch = searchTerm
-      ? ingredient.name.toLowerCase().includes(searchTerm.toLowerCase())
-      : true;
-    return matchesType && matchesSearch;
-  });
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentIngredients = filteredIngredients.slice(indexOfFirstItem, indexOfLastItem);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const handlePageClick = ({ selected }) => {
+    setCurrentPage(selected);
+  };
 
   const closeEditModal = () => {
     setIsEditModalOpen(false);
@@ -202,229 +210,204 @@ const TableIngredient = () => {
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">List of Ingredients</h2>
+    <div className="container mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
+          List of Ingredients
+        </h2>
+        <button
+          onClick={() => navigate("/nutritionist/ingredients/add")}
+          className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
+        >
+          + Add Ingredient
+        </button>
+      </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex space-x-1">
-            {TYPE_OPTIONS.slice(0, 4).map((type) => (
-              <button
-                key={type}
-                onClick={() => {
-                  setFilterType(filterType === type ? "all" : type);
-                  setCurrentPage(1);
-                }}
-                className={`px-2 py-1 text-sm font-medium rounded-full whitespace-nowrap transition duration-200 ${
-                  filterType === type
-                    ? "bg-green-500 text-white shadow-md"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-          <div className="flex space-x-1">
-            {TYPE_OPTIONS.slice(4).map((type) => (
-              <button
-                key={type}
-                onClick={() => {
-                  setFilterType(filterType === type ? "all" : type);
-                  setCurrentPage(1);
-                }}
-                className={`px-2 py-1 text-sm font-medium rounded-full whitespace-nowrap transition duration-200 ${
-                  filterType === type
-                    ? "bg-green-500 text-white shadow-md"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
+      {/* Filters and Search */}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              setFilterType("all");
+              setCurrentPage(0);
+            }}
+            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
+              ? "bg-[#40B491] text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
+          >
+            All
+          </button>
+          {TYPE_OPTIONS.map((type) => (
             <button
+              key={type}
               onClick={() => {
-                setFilterType("all");
-                setCurrentPage(1);
+                setFilterType(filterType === type ? "all" : type);
+                setCurrentPage(0);
               }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition duration-200 ${
-                filterType === "all"
-                  ? "bg-green-500 text-white shadow-md"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
             >
-              All
+              {type}
             </button>
-          </div>
+          ))}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
           <input
             type="text"
             placeholder="Search by ingredient name"
-            className="w-80 border border-gray-300 rounded-md px-3 py-2 mr-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              setCurrentPage(1);
+              setCurrentPage(0);
             }}
           />
         </div>
       </div>
 
-      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-          {currentIngredients.length > 0 ? (
-            currentIngredients.map((ingredient) => (
-              <div
-                key={ingredient._id}
-                className="bg-white rounded-lg shadow-md overflow-hidden relative"
-              >
-                <img
-                  src={ingredient.imageUrl || "https://via.placeholder.com/300"}
-                  alt={ingredient.name}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-center">{ingredient.name}</h3>
-                  <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
-                    <span className="mr-3 flex items-center">
-                      <Clock className="w-4 h-4 mr-1" />
-                      Calories {ingredient.calories || "N/A"}
-                    </span>
-                    <span className="flex items-center">
-                      <Ruler className="w-4 h-4 mr-1" />
-                      Unit {ingredient.unit || "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex justify-center items-center text-sm text-gray-600 mt-1">
-                    <span className="mr-3 flex items-center">
-                      <Dumbbell className="w-4 h-4 mr-1" />
-                      Protein {ingredient.protein || "N/A"}
-                    </span>
-                    <span className="mr-3 flex items-center">
-                      <Wheat className="w-4 h-4 mr-1" />
-                      Carbs {ingredient.carbs || "N/A"}
-                    </span>
-                    <span className="flex items-center">
-                      <Droplet className="w-4 h-4 mr-1" />
-                      Fat {ingredient.fat || "N/A"}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
-                  <button
-                    onClick={() => handleEditClick(ingredient)}
-                    className="text-blue-500 flex items-center px-2 py-1 hover:text-blue-700"
-                  >
-                    <Pencil className="w-4 h-4 mr-1" />
-                    Edit
-                  </button>
-                  <div className="h-4 border-l border-gray-300 mx-2"></div>
-                  <button
-                    onClick={() => handleDelete(ingredient._id)}
-                    className="text-red-500 flex items-center px-2 py-1 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
-                  </button>
-                </div>
-                <button
-                  onClick={() => handleToggleVisibility(ingredient)}
-                  className={`absolute top-2 right-2 px-2 py-1 text-sm text-white rounded transition duration-200 ${
-                    ingredient.isVisible ? "bg-gray-500 hover:bg-gray-600" : "bg-green-500 hover:bg-green-600"
-                  }`}
+      {/* Ingredients Grid */}
+      {isLoading ? (
+        <div className="text-center py-4">
+          <p>Loading data...</p>
+        </div>
+      ) : (
+        <div className="min-h-[calc(100vh-200px)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {ingredients.length > 0 ? (
+              ingredients.map((ingredient) => (
+                <div
+                  key={ingredient._id}
+                  className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
                 >
-                  {ingredient.isVisible ? "Hide" : "Show"}
+                  <img
+                    src={ingredient.imageUrl || "https://via.placeholder.com/300"}
+                    alt={ingredient.name}
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold text-center">{ingredient.name}</h3>
+                    <div className="flex justify-center items-center text-sm text-gray-600 mt-2 space-x-4">
+                      <span className="flex items-center">
+                        <Clock className="w-4 h-4 mr-1" />
+                        Calories {ingredient.calories || "N/A"}
+                      </span>
+                      <span className="flex items-center">
+                        <Ruler className="w-4 h-4 mr-1" />
+                        Unit {ingredient.unit || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-center items-center text-sm text-gray-600 mt-1 space-x-4">
+                      <div className="flex flex-col items-center w-16">
+                        <div className="flex flex-col items-center">
+                          <Dumbbell className="w-4 h-4" />
+                          <span className="text-center">Protein</span>
+                        </div>
+                        <span className="text-center mt-1">{ingredient.protein || "N/A"}</span>
+                      </div>
+                      <div className="flex flex-col items-center w-16">
+                        <div className="flex flex-col items-center">
+                          <Wheat className="w-4 h-4" />
+                          <span className="text-center">Carbs</span>
+                        </div>
+                        <span className="text-center mt-1">{ingredient.carbs || "N/A"}</span>
+                      </div>
+                      <div className="flex flex-col items-center w-16">
+                        <div className="flex flex-col items-center">
+                          <Droplet className="w-4 h-4" />
+                          <span className="text-center">Fat</span>
+                        </div>
+                        <span className="text-center mt-1">{ingredient.fat || "N/A"}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
+                    <button
+                      onClick={() => handleEditClick(ingredient)}
+                      className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
+                    >
+                      <EditIcon className="w-4 h-4 mr-1" />
+                      Edit
+                    </button>
+                    <div className="h-4 border-l border-gray-300 mx-2"></div>
+                    <button
+                      onClick={() => handleDelete(ingredient._id)}
+                      className="text-red-500 flex items-center px-2 py-1 hover:text-red-600 transition"
+                    >
+                      <TrashIcon className="w-4 h-4 mr-1" />
+                      Delete
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => handleToggleVisibility(ingredient)}
+                    className={`absolute top-2 right-2 p-2 rounded-md text-white ${ingredient.isVisible
+                      ? "bg-gray-500 hover:bg-gray-600"
+                      : "bg-[#40B491] hover:bg-[#359c7a]"
+                      } transition duration-200`}
+                  >
+                    {ingredient.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+                <Wheat className="w-24 h-24 text-gray-400 mb-4" />
+                <p className="text-lg font-semibold">No ingredients</p>
+                <p className="text-sm">Looks like you haven't added any ingredients yet.</p>
+                <button
+                  onClick={() => navigate("/nutritionist/ingredients/add")}
+                  className="mt-4 px-6 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition duration-200"
+                >
+                  + Add Ingredient
                 </button>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500">
-              <Wheat className="w-24 h-24 text-gray-400 mb-4" />
-              <p className="text-lg font-semibold">No ingredients</p>
-              <p className="text-sm">Looks like you haven't added any ingredients yet.</p>
-              <button
-                onClick={() => navigate("/nutritionist/ingredients/add")}
-                className="mt-4 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
-              >
-                + Add Ingredient
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {filteredIngredients.length > 0 && (
-        <div className="p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span>Show</span>
-            <select
-              className="border rounded px-2 py-1"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="4">4 ingredients</option>
-              <option value="8">8 ingredients</option>
-              <option value="12">12 ingredients</option>
-            </select>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            {Array.from(
-              { length: Math.ceil(filteredIngredients.length / itemsPerPage) },
-              (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => paginate(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              )
             )}
-            <button
-              className="border rounded px-3 py-1 hover:bg-gray-100"
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === Math.ceil(filteredIngredients.length / itemsPerPage)}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
           </div>
         </div>
       )}
 
+      {/* Pagination */}
+      {totalItems > 0 && !isLoading && (
+        <div className="p-4 bg-gray-50">
+          <Pagination
+            limit={itemsPerPage}
+            setLimit={setItemsPerPage}
+            totalItems={totalItems}
+            handlePageClick={handlePageClick}
+            currentPage={currentPage}
+            text="Ingredients"
+          />
+        </div>
+      )}
+
+      {/* Edit Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center mb-6 py-4 px-6">
-              <label className="text-xl font-bold text-green-700">Edit Ingredient</label>
-              <div className="ml-auto flex space-x-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="flex items-center mb-6">
+              <h2 className="text-2xl font-bold text-[#40B491]">Edit Ingredient</h2>
+              <div className="ml-auto flex space-x-3">
                 <button
                   onClick={handleSaveEdit}
-                  className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+                  className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
                 >
                   Save
                 </button>
-                <button className="text-gray-500 hover:text-gray-700" onClick={closeEditModal}>
-                  ✕
+                <button
+                  onClick={closeEditModal}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-6 pb-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                   <input
                     type="text"
@@ -432,14 +415,17 @@ const TableIngredient = () => {
                     value={editData.name || ""}
                     onChange={handleChange}
                     placeholder="Enter ingredient name"
-                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Calories *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Calories *
+                    </label>
                     <div className="flex items-center">
                       <input
                         type="number"
@@ -450,11 +436,14 @@ const TableIngredient = () => {
                         placeholder="0"
                         min="0"
                         max="1000"
-                        className={`w-24 border ${errors.calories ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${errors.calories ? "border-red-500" : "border-gray-300"
+                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       <span className="ml-2 text-sm text-gray-500">kcal</span>
                     </div>
-                    {errors.calories && <p className="text-red-500 text-sm mt-1">{errors.calories}</p>}
+                    {errors.calories && (
+                      <p className="text-red-500 text-sm mt-1">{errors.calories}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
@@ -462,11 +451,14 @@ const TableIngredient = () => {
                       name="type"
                       value={editData.type || ""}
                       onChange={handleChange}
-                      className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     >
                       <option value="">Select type</option>
                       {TYPE_OPTIONS.map((type) => (
-                        <option key={type} value={type}>{type}</option>
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
                       ))}
                     </select>
                     {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
@@ -478,17 +470,22 @@ const TableIngredient = () => {
                           value={editData.customType || ""}
                           onChange={handleChange}
                           placeholder="Enter custom type"
-                          className={`w-full mt-2 border ${errors.customType ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                          className={`w-full mt-2 border ${errors.customType ? "border-red-500" : "border-gray-300"
+                            } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                         />
-                        {errors.customType && <p className="text-red-500 text-sm mt-1">{errors.customType}</p>}
+                        {errors.customType && (
+                          <p className="text-red-500 text-sm mt-1">{errors.customType}</p>
+                        )}
                       </>
                     )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Protein *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Protein *
+                    </label>
                     <div className="flex items-center">
                       <input
                         type="number"
@@ -499,11 +496,14 @@ const TableIngredient = () => {
                         placeholder="0"
                         min="0"
                         max="100"
-                        className={`w-24 border ${errors.protein ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${errors.protein ? "border-red-500" : "border-gray-300"
+                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       <span className="ml-2 text-sm text-gray-500">g</span>
                     </div>
-                    {errors.protein && <p className="text-red-500 text-sm mt-1">{errors.protein}</p>}
+                    {errors.protein && (
+                      <p className="text-red-500 text-sm mt-1">{errors.protein}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Carbs *</label>
@@ -517,7 +517,8 @@ const TableIngredient = () => {
                         placeholder="0"
                         min="0"
                         max="100"
-                        className={`w-24 border ${errors.carbs ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${errors.carbs ? "border-red-500" : "border-gray-300"
+                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       <span className="ml-2 text-sm text-gray-500">g</span>
                     </div>
@@ -535,7 +536,8 @@ const TableIngredient = () => {
                         placeholder="0"
                         min="0"
                         max="100"
-                        className={`w-24 border ${errors.fat ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                        className={`w-full border ${errors.fat ? "border-red-500" : "border-gray-300"
+                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       <span className="ml-2 text-sm text-gray-500">g</span>
                     </div>
@@ -543,13 +545,14 @@ const TableIngredient = () => {
                   </div>
                 </div>
 
-                <div className="mb-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Unit *</label>
                   <select
                     name="unit"
                     value={editData.unit || ""}
                     onChange={handleChange}
-                    className={`w-full border ${errors.unit ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${errors.unit ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   >
                     <option value="">Select unit</option>
                     <option value="g">g</option>
@@ -560,13 +563,13 @@ const TableIngredient = () => {
                   {errors.unit && <p className="text-red-500 text-sm mt-1">{errors.unit}</p>}
                 </div>
 
-                <div className="bg-gray-100 p-6 rounded-lg">
-                  <div className="flex justify-center items-center mb-2">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-center items-center mb-4">
                     {editData.imageUrl ? (
                       <img
                         src={editData.imageUrl}
                         alt="Ingredient preview"
-                        className="w-24 h-24 object-cover rounded-lg"
+                        className="w-24 h-24 object-cover rounded-lg shadow-sm"
                       />
                     ) : (
                       <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -581,34 +584,40 @@ const TableIngredient = () => {
                     />
                   </div>
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Image URL *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Image URL *
+                    </label>
                     <input
                       type="text"
                       value={editData.imageUrl || ""}
                       onChange={(e) => handleImageUpload(e.target.value)}
                       placeholder="Enter image URL"
-                      className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                      className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     />
-                    {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
+                    {errors.imageUrl && (
+                      <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="mb-4">
-                  <div className="flex border-b border-gray-200 justify-center">
-                    <label className="block text-sm font-medium text-gray-700 mb-1 text-center">Description *</label>
-                  </div>
-                </div>
-                <div className="mb-4">
+              <div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description *
+                  </label>
                   <textarea
                     name="description"
                     value={editData.description || ""}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-green-500`}
+                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
-                  {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+                  {errors.description && (
+                    <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+                  )}
                 </div>
               </div>
             </div>

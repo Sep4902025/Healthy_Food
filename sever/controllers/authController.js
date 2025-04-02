@@ -174,6 +174,7 @@ exports.login = catchAsync(async (req, res, next) => {
 
   createSendToken(user, 200, res, "Login Successful");
 });
+
 // Google Login
 exports.googleLogin = catchAsync(async (req, res, next) => {
   const { idToken } = req.body;
@@ -286,6 +287,54 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res, "Password reset successfully!");
 });
 
+exports.changePassword = catchAsync(async (req, res, next) => {
+  // 1. Lấy dữ liệu từ request body
+  const { currentPassword, newPassword, newPasswordConfirm } = req.body;
+
+  // 2. Kiểm tra các trường bắt buộc
+  if (!currentPassword || !newPassword || !newPasswordConfirm) {
+    return next(new AppError("Please provide all required fields", 400));
+  }
+
+  // 3. Kiểm tra xác thực user
+  if (!req.user || !req.user._id) {
+    return next(new AppError("Authentication required. Please log in.", 401)); // Giữ 401 vì lỗi token
+  }
+
+  // 4. Tìm user và lấy password đã băm
+  const user = await UserModel.findById(req.user._id).select("+password");
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  // 5. Kiểm tra mật khẩu hiện tại
+  const isPasswordCorrect = await user.correctPassword(currentPassword, user.password);
+  if (!isPasswordCorrect) {
+    return next(new AppError("Current password is incorrect", 400)); // Đổi từ 401 thành 400
+  }
+
+  // 6. Kiểm tra mật khẩu mới và xác nhận có khớp không
+  if (newPassword !== newPasswordConfirm) {
+    return next(new AppError("New password and confirmation do not match", 400));
+  }
+
+  // 7. Gán mật khẩu mới (middleware pre('save') sẽ tự động băm)
+  user.password = newPassword;
+  user.passwordConfirm = newPasswordConfirm;
+
+  // 8. Lưu user và xử lý lỗi validation nếu có
+  try {
+    await user.save();
+  } catch (error) {
+    if (error.name === "ValidationError") {
+      return next(new AppError("New password does not meet requirements", 400));
+    }
+    return next(new AppError("Error saving new password", 500));
+  }
+
+  // 9. Gửi response thành công
+  createSendToken(user, 200, res, "Password changed successfully!");
+});
 //
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {

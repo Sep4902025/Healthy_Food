@@ -9,6 +9,8 @@ import MealPlanAimChart from "./MealPlanAimChart";
 
 const MealPlan = () => {
   const { user } = useSelector(selectAuth);
+  console.log("USER redux", user);
+
   const [userMealPlan, setUserMealPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -130,8 +132,9 @@ const MealPlan = () => {
       </div>
       {userMealPlan ? (
         <div className="bg-white p-6 rounded-lg shadow-md mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <div className="infor">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-4">
+            {/* Phần thông tin bên trái */}
+            <div className="infor flex-1 text-left">
               <p className="text-gray-600">
                 Title: <span className="font-medium">{userMealPlan.title}</span>
               </p>
@@ -163,32 +166,40 @@ const MealPlan = () => {
                 </p>
               </div>
             </div>
-            <MealPlanAimChart
-              mealPlanId={userMealPlan._id}
-              duration={userMealPlan.duration}
-              onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
-            />
-            <div className="flex space-x-2">
-              <button
-                onClick={handleToggleMealPlanStatus}
-                disabled={processingAction}
-                className={`px-4 py-2 rounded text-white ${
-                  userMealPlan.isPause
-                    ? "bg-green-500 hover:bg-green-600"
-                    : "bg-yellow-500 hover:bg-yellow-600"
-                } ${processingAction ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                {userMealPlan.isPause ? "▶️ Continue" : "⏸️ Pause"}
-              </button>
-              <button
-                onClick={handleDeleteMealPlan}
-                disabled={processingAction}
-                className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded ${
-                  processingAction ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              >
-                🗑️ Delete
-              </button>
+
+            {/* Phần MealPlanAimChart ở giữa */}
+            <div className="flex-1 flex justify-center">
+              <MealPlanAimChart
+                mealPlanId={userMealPlan._id}
+                duration={userMealPlan.duration}
+                onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
+              />
+            </div>
+
+            {/* Phần nút bên phải */}
+            <div className="flex-1 flex justify-end">
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleToggleMealPlanStatus}
+                  disabled={processingAction}
+                  className={`px-4 py-2 rounded text-white ${
+                    userMealPlan.isPause
+                      ? "bg-green-500 hover:bg-green-600"
+                      : "bg-yellow-500 hover:bg-yellow-600"
+                  } ${processingAction ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  {userMealPlan.isPause ? "▶️ Continue" : "⏸️ Pause"}
+                </button>
+                <button
+                  onClick={handleDeleteMealPlan}
+                  disabled={processingAction}
+                  className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded ${
+                    processingAction ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  🗑️ Delete
+                </button>
+              </div>
             </div>
           </div>
           <MealDays mealPlanId={userMealPlan._id} nutritionTargets={nutritionTargets} />

@@ -8,19 +8,23 @@ const {
   forgetPassword,
   resetPassword,
   googleLogin,
+  changePassword,
 } = require("../controllers/authController");
-const { updateUserById, searchUserByEmail } = require("../controllers/userController");
-const isAuthenticated = require("../middlewares/isAuthenticated");
-const { getAllUsers, getUserById } = require("../controllers/userController");
+const {
+  updateUserById,
+  searchUserByEmail,
+  createUser,
+  getAllUsers,
+  getUserById,
+  submitNutritionistApplication,
+  getPendingNutritionists,
+  reviewNutritionistApplication,
+} = require("../controllers/userController");
+const { isAuthenticated, isAdmin } = require("../middlewares/isAuthenticated");
 
 const userRouter = express.Router();
 
-userRouter.get("/", getAllUsers);
-userRouter.get("/search", searchUserByEmail);
-userRouter.get("/:id", getUserById);
-
-userRouter.put("/:id", updateUserById);
-
+// Authentication routes (tĩnh, cụ thể)
 userRouter.post("/signup", signup);
 userRouter.post("/verify", verifyAccount);
 userRouter.post("/resend-otp", resendOTP);
@@ -29,5 +33,22 @@ userRouter.post("/login-google", googleLogin);
 userRouter.post("/logout", logout);
 userRouter.post("/forget-password", forgetPassword);
 userRouter.post("/reset-password", resetPassword);
+userRouter.post("/change-password", isAuthenticated, changePassword);
+
+// Nutritionist application routes (tĩnh, cụ thể)
+userRouter.post("/submit-nutritionist", isAuthenticated, submitNutritionistApplication);
+userRouter.post("/review-nutritionist", isAuthenticated, isAdmin, reviewNutritionistApplication);
+userRouter.get("/pending-nutritionists", isAuthenticated, isAdmin, getPendingNutritionists);
+
+// User management routes (tĩnh, cụ thể)
+userRouter.post("/", createUser);
+userRouter.get("/search", searchUserByEmail);
+
+// User management routes (có tham số động)
+userRouter.get("/:id", getUserById);
+userRouter.put("/:id", updateUserById);
+
+// Route chung (generic, đặt cuối cùng)
+userRouter.get("/", getAllUsers);
 
 module.exports = userRouter;

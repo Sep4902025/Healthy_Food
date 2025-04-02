@@ -13,8 +13,21 @@ const ReminderNotification = ({ userId }) => {
     RemindService.connectSocket(userId);
 
     RemindService.listenReminder((data) => {
-      console.log("Nhận dữ liệu nhắc nhở:", data);
-      setReminders((prevReminders) => [data, ...prevReminders]); // Thêm vào đầu mảng để hiển thị mới nhất lên đầu
+      console.log("Nhận dữ liệu nhắc nhở:", data); // Keep for debugging
+
+      setReminders((prevReminders) => {
+        // Check if a reminder with the same id already exists
+        const existsIndex = prevReminders.findIndex((r) => r.id === data.id);
+        if (existsIndex !== -1) {
+          // If it exists, replace the old reminder with the new one
+          const updatedReminders = [...prevReminders];
+          updatedReminders[existsIndex] = data;
+          return updatedReminders;
+        }
+        // If it doesn't exist, add the new reminder to the list
+        return [data, ...prevReminders];
+      });
+
       setHasNewReminders(true); // Đánh dấu có thông báo mới
     });
 
@@ -91,7 +104,7 @@ const ReminderNotification = ({ userId }) => {
             {reminders.length > 0 ? (
               <ul className="max-h-60 overflow-auto divide-y divide-gray-200">
                 {reminders.map((reminder, index) => (
-                  <li key={index} className="py-3 flex justify-between items-start">
+                  <li key={reminder.id || index} className="py-3 flex justify-between items-start">
                     <div className="flex-1 pr-2">
                       <p className="font-medium text-gray-800">{reminder.message}</p>
                       <p className="text-gray-500 text-xs mt-1">

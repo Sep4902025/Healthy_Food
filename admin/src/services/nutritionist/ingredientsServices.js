@@ -9,20 +9,37 @@ const getAuthHeaders = () => {
 };
 
 const ingredientsService = {
-  // 🔹 Lấy tất cả nguyên liệu
-  getAllIngredients: async () => {
+  // 🔹 Lấy tất cả nguyên liệu với phân trang và lọc
+  getAllIngredients: async (page = 1, limit = 10, type = "all", search = "") => {
     try {
       const response = await axios.get(`${API_URL}/ingredients`, {
         headers: getAuthHeaders(),
         withCredentials: true,
+        params: {
+          page,
+          limit,
+          type,  // Lọc theo loại nguyên liệu
+          search, // Tìm kiếm theo tên
+          sort: "createdAt", // Thêm tham số sắp xếp
+          order: "desc",     // Sắp xếp theo thứ tự giảm dần
+        },
       });
       console.log("📌 Danh sách nguyên liệu:", response.data);
-      return { success: true, data: response.data.data || [] };
+      return {
+        success: true,
+        data: {
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
+        },
+      };
     } catch (error) {
       console.error("❌ Lỗi khi lấy danh sách nguyên liệu:", error.response?.data || error.message);
       return { success: false, message: "Lỗi khi tải danh sách nguyên liệu" };
     }
   },
+  
 
   // 🔹 Lấy nguyên liệu theo ID
   getIngredientById: async (id) => {

@@ -5,18 +5,39 @@ import { useNavigate } from "react-router-dom";
 const Height = () => {
   const navigate = useNavigate();
   const [selectedHeight, setSelectedHeight] = useState("");
+  const [error, setError] = useState(""); // State để hiển thị lỗi
 
   // Load dữ liệu từ sessionStorage khi vào trang
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.height) {
-      setSelectedHeight(savedData.height); // Load chiều cao đã lưu
+      setSelectedHeight(savedData.height.toString()); // Chuyển thành chuỗi khi load
     }
   }, []);
 
+  // Hàm kiểm tra chiều cao
+  const validateHeight = (height) => {
+    if (!height.trim()) {
+      return "Please enter your height.";
+    }
+
+    const numbersOnly = /^[0-9]+$/; // Chỉ cho phép số
+    if (!numbersOnly.test(height)) {
+      return "Height must contain only numbers.";
+    }
+
+    const heightNum = Number(height);
+    if (heightNum <= 0) {
+      return "Height must be greater than 0.";
+    }
+
+    return "";
+  };
+
   const handleNext = () => {
-    if (!selectedHeight || isNaN(selectedHeight) || selectedHeight <= 0) {
-      alert("Please enter a valid height.");
+    const validationError = validateHeight(selectedHeight);
+    if (validationError) {
+      setError(validationError); // Chỉ hiển thị lỗi khi nhấn Next
       return;
     }
 
@@ -26,7 +47,7 @@ const Height = () => {
     // Cập nhật dữ liệu với chiều cao mới
     const updatedData = {
       ...currentData,
-      height: parseFloat(selectedHeight),
+      height: parseFloat(selectedHeight), // Chuyển thành số khi lưu
     };
 
     // Lưu lại quizData vào sessionStorage
@@ -34,6 +55,13 @@ const Height = () => {
 
     // Điều hướng sang trang tiếp theo
     navigate("/survey/weightgoal");
+  };
+
+  // Hàm xử lý khi nhấn phím
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) {
+      handleNext();
+    }
   };
 
   return (
@@ -55,11 +83,28 @@ const Height = () => {
         <input
           type="number"
           value={selectedHeight}
-          onChange={(e) => setSelectedHeight(e.target.value)}
+          onChange={(e) => setSelectedHeight(e.target.value)} // Giữ giá trị là chuỗi
+          onKeyDown={handleKeyDown}
           placeholder="Enter your height"
-          className="w-full p-4 rounded-lg shadow border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none"
-          min="1"
+          className={`w-full p-4 rounded-lg shadow border ${
+            error ? "border-red-500" : "border-gray-300"
+          } focus:ring-2 focus:ring-green-400 outline-none`}
+          style={{ MozAppearance: "textfield" }} // Tắt spinner cho Firefox
         />
+        {/* Tắt nút tăng giảm cho Webkit (Chrome, Safari) */}
+        <style>
+          {`
+            input[type=number]::-webkit-inner-spin-button,
+            input[type=number]::-webkit-outer-spin-button {
+              -webkit-appearance: none;
+              margin: 0;
+            }
+          `}
+        </style>
+
+        {/* Hiển thị thông báo lỗi */}
+        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
         <button
           onClick={handleNext}
           className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"

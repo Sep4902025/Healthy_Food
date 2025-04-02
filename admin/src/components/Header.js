@@ -10,8 +10,10 @@ import { RiShoppingBag4Line } from "react-icons/ri";
 import { selectUser } from "../store/selectors/authSelectors";
 import { logoutUser } from "../store/actions/authActions";
 import { DarkModeContext } from "../pages/context/DarkModeContext";
-import ReminderNotification from "./Reminder/ReminderNotifiaction";
+
 import PreviewModal from "../pages/user/MealPlan/PreviewModal";
+import HomeService from "../services/home.service";
+import ReminderNotification from "./Reminder/ReminderNotifiaction";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -30,10 +32,11 @@ const Header = () => {
   const [previewData, setPreviewData] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [activeTab, setActiveTab] = useState("mealPlan");
+  const [cartViewed, setCartViewed] = useState(false); // New state to track if cart is viewed
   const userMenuRef = useRef(null);
   const cartMenuRef = useRef(null);
 
-  // Kiểm tra query parameters để hiển thị toast
+  // Check query parameters to display toast
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const paymentStatus = query.get("paymentStatus");
@@ -45,7 +48,7 @@ const Header = () => {
       } else {
         toast.error(message);
       }
-      // Xóa query parameters sau khi hiển thị toast
+      // Remove query parameters after displaying toast
       navigate(location.pathname, { replace: true });
     }
   }, [location, navigate]);
@@ -74,7 +77,7 @@ const Header = () => {
         try {
           const response = await mealPlanService.getUnpaidMealPlanForUser(user._id);
           if (response.success) {
-            console.log("Danh sách meal plans chưa thanh toán:", response.data);
+            console.log("List of unpaid meal plans:", response.data);
             setMealPlans(response.data);
           } else {
             setMealPlans([]);
@@ -107,10 +110,21 @@ const Header = () => {
     fetchPaymentHistory();
   }, [user]);
 
+  // Handle clicking "Profile"
+  const handleProfileClick = () => {
+    if (user?.role === "admin") {
+      // If admin, redirect to admin profile page
+      navigate(`/admin/adminprofile/${user._id}`, { state: { user } });
+    } else {
+      // If not admin, redirect to regular user page
+      navigate("/user");
+    }
+  };
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await mealPlanService.getIngredientsGroupedByType();
+        const response = await HomeService.getIngredientsGroupedByType();
         if (response.status === "success") {
           setCategories(response.data.map((group) => group._id));
         }
@@ -124,7 +138,7 @@ const Header = () => {
   useEffect(() => {
     const fetchDishTypes = async () => {
       try {
-        const response = await mealPlanService.getDishesGroupedByType();
+        const response = await HomeService.getDishesGroupedByType();
         if (response.status === "success") {
           setDishTypes(response.data.map((group) => group._id));
         }
@@ -147,7 +161,6 @@ const Header = () => {
         setCartMenuOpen(false);
       }
     };
-
     document.addEventListener("click", handleClickOutside);
     return () => {
       document.removeEventListener("click", handleClickOutside);
@@ -166,13 +179,16 @@ const Header = () => {
   const toggleCartMenu = (e) => {
     e.stopPropagation();
     setCartMenuOpen(!cartMenuOpen);
+    if (!cartViewed && mealPlans.length > 0) {
+      setCartViewed(true); // Mark cart as viewed when opened
+    }
   };
 
   const handleLogout = () => {
     dispatch(logoutUser());
     setHasCompletedQuiz(false);
     navigate("/signin");
-    toast.success("Đăng xuất thành công!");
+    toast.success("Signed out successfully!");
   };
 
   const handlePayMealPlan = async (mealPlan) => {
@@ -186,11 +202,11 @@ const Header = () => {
       if (response.success && response.paymentUrl) {
         window.location.href = response.paymentUrl;
       } else {
-        toast.error(response.message || "Không thể khởi tạo thanh toán");
+        toast.error(response.message || "Unable to initiate payment");
       }
     } catch (error) {
       console.error("Error initiating payment:", error);
-      toast.error("Lỗi khi khởi tạo thanh toán");
+      toast.error("Error initiating payment");
     }
   };
 
@@ -201,11 +217,11 @@ const Header = () => {
         setPreviewData(response.data);
         setPreviewModalOpen(true);
       } else {
-        toast.error(response.message || "Không thể tải thông tin xem trước");
+        toast.error(response.message || "Unable to load preview information");
       }
     } catch (error) {
       console.error("Error fetching meal plan details:", error);
-      toast.error("Lỗi khi tải thông tin xem trước");
+      toast.error("Error loading preview information");
     }
   };
 
@@ -244,14 +260,29 @@ const Header = () => {
           )}
           {user?.role === "user" && (
             <>
-              <a
-                href="/survey/name"
-                className={`font-medium transition-colors ${
-                  isActive("/survey/name") ? "text-green-600" : "text-gray-700 hover:text-green-600"
-                }`}
-              >
-                Survey
-              </a>
+              {/* If userPreferenceId exists, show "For You" instead of "Survey" */}
+              {user?.userPreferenceId ? (
+                <a
+                  href="/foryou"
+                  className={`font-medium transition-colors ${
+                    isActive("/foryou") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                  }`}
+                >
+                  For You
+                </a>
+              ) : (
+                <a
+                  href="/survey/name"
+                  className={`font-medium transition-colors ${
+                    isActive("/survey/name")
+                      ? "text-green-600"
+                      : "text-gray-700 hover:text-green-600"
+                  }`}
+                >
+                  Survey
+                </a>
+              )}
+
               <a
                 href="/mealplan"
                 className={`font-medium transition-colors ${
@@ -281,9 +312,19 @@ const Header = () => {
             <div className="flex items-center space-x-4">
               {/* Cart Dropdown */}
               <div className="relative" ref={cartMenuRef}>
-                <RiShoppingBag4Line className="cursor-pointer" onClick={toggleCartMenu} />
+                <div className="relative inline-block">
+                  <RiShoppingBag4Line
+                    className="cursor-pointer w-[16px] h-[16px]"
+                    onClick={toggleCartMenu}
+                  />
+                  {!cartViewed && mealPlans.length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-custom-green text-white text-xs font-bold rounded-full w-[15px] h-[15px] flex items-center justify-center">
+                      {mealPlans.length}
+                    </span>
+                  )}
+                </div>
                 {cartMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white border rounded-lg shadow-lg z-10">
+                  <div className="absolute right-0 mt-2 w-60 bg-white border rounded-lg shadow-lg z-10">
                     {/* Tabs */}
                     <div className="flex border-b">
                       <button
@@ -304,7 +345,7 @@ const Header = () => {
                         }`}
                         onClick={() => setActiveTab("history")}
                       >
-                        Lịch sử thanh toán
+                        Payment History
                       </button>
                     </div>
 
@@ -315,34 +356,32 @@ const Header = () => {
                           <div className="max-h-48 overflow-y-auto">
                             {mealPlans.map((mealPlan) => (
                               <div key={mealPlan._id} className="border-b py-2 last:border-b-0">
-                                <p className="font-medium text-gray-700">Tên: {mealPlan.title}</p>
+                                <p className="font-medium text-gray-700">Name: {mealPlan.title}</p>
                                 <p className="text-sm text-gray-600">
-                                  Bắt đầu: {new Date(mealPlan.startDate).toLocaleDateString()}
+                                  Start: {new Date(mealPlan.startDate).toLocaleDateString()}
                                 </p>
                                 <p className="text-sm text-gray-600">
-                                  Giá: {(mealPlan.price || 1500000).toLocaleString()} VND
+                                  Price: {(mealPlan.price || 1500000).toLocaleString()} VND
                                 </p>
                                 <div className="mt-2 flex space-x-2">
                                   <button
                                     onClick={() => handlePayMealPlan(mealPlan)}
-                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-md text-sm font-medium"
+                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-md text-xs font-medium"
                                   >
-                                    Thanh toán ngay
+                                    Pay Now
                                   </button>
                                   <button
                                     onClick={() => handlePreviewMealPlan(mealPlan)}
-                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded-md text-sm font-medium"
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded-md text-xs font-medium"
                                   >
-                                    Xem trước
+                                    Preview
                                   </button>
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500">
-                            Không có meal plan cần thanh toán.
-                          </p>
+                          <p className="text-sm text-gray-500">No meal plans to pay.</p>
                         )
                       ) : (
                         <div>
@@ -357,13 +396,13 @@ const Header = () => {
                                     <strong>Meal Plan:</strong> {payment.mealPlanName || "N/A"}
                                   </p>
                                   <p>
-                                    <strong>Số tiền:</strong> {payment.amount.toLocaleString()} VND
+                                    <strong>Amount:</strong> {payment.amount.toLocaleString()} VND
                                   </p>
                                   <p>
-                                    <strong>Trạng thái:</strong> {payment.status}
+                                    <strong>Status:</strong> {payment.status}
                                   </p>
                                   <p>
-                                    <strong>Ngày:</strong>{" "}
+                                    <strong>Date:</strong>{" "}
                                     {new Date(payment.createdAt).toLocaleDateString()}
                                   </p>
                                 </div>
@@ -372,11 +411,11 @@ const Header = () => {
                                 onClick={() => navigate("/payment-history")}
                                 className="mt-2 w-full text-center text-blue-500 hover:underline"
                               >
-                                Xem thêm
+                                View More
                               </button>
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-500">Không có lịch sử thanh toán.</p>
+                            <p className="text-sm text-gray-500">No payment history.</p>
                           )}
                         </div>
                       )}
@@ -407,16 +446,16 @@ const Header = () => {
                     </div>
                     <div className="py-1">
                       <button
-                        onClick={() => navigate("/user")}
+                        onClick={handleProfileClick}
                         className="w-full text-left px-4 py-2 hover:bg-gray-100"
                       >
-                        Thông tin cá nhân
+                        Profile
                       </button>
                       <button
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 flex items-center"
                       >
-                        <FaSignOutAlt className="mr-2" /> Đăng xuất
+                        <FaSignOutAlt className="mr-2" /> Signout
                       </button>
                     </div>
                   </div>
@@ -482,7 +521,7 @@ const Header = () => {
                 isActive("/ingredients") ? "text-green-600" : "text-gray-700 hover:text-green-600"
               }`}
             >
-              Ingredient {activeDropdown === "ingredients" ? "▲" : "▼"}
+              Ingredients {activeDropdown === "ingredients" ? "▲" : "▼"}
             </button>
             {activeDropdown === "ingredients" && (
               <ul className="absolute left-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-10">
