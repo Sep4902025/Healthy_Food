@@ -7,10 +7,16 @@ import Modal from "react-modal";
 import { toast } from "react-toastify";
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
-import { Document, HeadingLevel, Packer, Paragraph, TextRun, AlignmentType } from "docx";
+import {
+  Document,
+  HeadingLevel,
+  Packer,
+  Paragraph,
+  TextRun,
+  AlignmentType,
+} from "docx";
 import { saveAs } from "file-saver";
 
-// Bind modal to app element for accessibility
 Modal.setAppElement("#root");
 
 const FinanceManagement = () => {
@@ -21,6 +27,8 @@ const FinanceManagement = () => {
   const [selectedNutri, setSelectedNutri] = useState(null);
   const [salaryModalOpen, setSalaryModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [salaryHistory, setSalaryHistory] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -35,8 +43,10 @@ const FinanceManagement = () => {
   const fetchFinanceData = async () => {
     setLoading(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit);
-      console.log("API Response:", response); // Debug
+      const response = await mealPlanService.getAllMealPlans2(
+        currentPage + 1,
+        limit
+      );
       if (response.success) {
         const mealPlans = response.data.mealPlans || [];
         const nutriMap = new Map();
@@ -71,25 +81,17 @@ const FinanceManagement = () => {
         setNutritionists(nutriStats);
         setTotalPages(response.totalPages || 1);
         setTotalItems(response.total || 0);
-      } else {
-        setError(response.message || "Unable to fetch meal plans");
-        setNutritionists([]);
-        setTotalPages(1);
-        setTotalItems(0);
       }
     } catch (err) {
-      console.error("Error fetching finance data:", err.response?.data || err.message);
       setError(err.response?.data?.message || "Failed to load finance data");
       setNutritionists([]);
-      setTotalPages(1);
-      setTotalItems(0);
     } finally {
       setLoading(false);
     }
   };
 
   const handlePageClick = (data) => {
-    setCurrentPage(data.selected); // ReactPaginate uses 0-based index
+    setCurrentPage(data.selected);
   };
 
   const handleViewDetails = (nutri) => {
@@ -102,21 +104,63 @@ const FinanceManagement = () => {
     setSalaryModalOpen(true);
   };
 
+  const handleViewHistory = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:8080/api/v1/payment/salary-history/all",
+        {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        }
+      );
+      const data = await response.json();
+      if (data.status === "success") {
+        setSalaryHistory(data.data);
+        setHistoryModalOpen(true);
+      } else {
+        toast.error("Failed to fetch salary history");
+      }
+    } catch (err) {
+      toast.error("Error fetching salary history: " + err.message);
+    }
+  };
+
   const handleAcceptSalary = async () => {
     if (!selectedNutri) return;
     try {
       const salary = calculateSalary(selectedNutri);
-      const result = await mealPlanService.sendSalaryEmail(selectedNutri.id);
-      if (result.success) {
-        toast.success("Lương đã được xác nhận và email gửi thành công!");
-        console.log(`Salary email sent to ${selectedNutri.name} with amount ${salary}`);
+      const emailResult = await mealPlanService.sendSalaryEmail(
+        selectedNutri.id
+      );
+      if (emailResult.success) {
+        const paymentResponse = await fetch(
+          "http://localhost:8080/api/v1/payment/vnpay/salary",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${user.token}`,
+            },
+            body: JSON.stringify({
+              nutriId: selectedNutri.id,
+              amount: salary,
+            }),
+          }
+        );
+        const paymentData = await paymentResponse.json();
+        if (paymentData.status === "success") {
+          toast.success(
+            "Salary confirmed, email sent, and payment URL generated!"
+          );
+          window.open(paymentData.paymentUrl, "_blank");
+        } else {
+          toast.error("Failed to generate payment URL: " + paymentData.message);
+        }
         setSalaryModalOpen(false);
-      } else {
-        toast.error(`Không thể gửi email: ${result.message}`);
       }
     } catch (err) {
-      toast.error("Lỗi khi gửi email lương: " + err.message);
-      console.error("Error sending salary email:", err);
+      toast.error("Error processing salary: " + err.message);
     }
   };
 
@@ -147,10 +191,10 @@ const FinanceManagement = () => {
               spacing: { after: 400 },
             }),
             new Paragraph({
-              text: `Generated on: ${new Date().toLocaleDateString('en-US', {
-                month: 'long',
-                day: '2-digit',
-                year: 'numeric'
+              text: `Generated on: ${new Date().toLocaleDateString("en-US", {
+                month: "long",
+                day: "2-digit",
+                year: "numeric",
               })}`,
               alignment: AlignmentType.CENTER,
               spacing: { after: 300 },
@@ -160,70 +204,109 @@ const FinanceManagement = () => {
               heading: HeadingLevel.HEADING_1,
               spacing: { after: 200 },
             }),
-            ...nutritionists.map((nutri, index) => {
-              const salary = calculateSalary(nutri);
-              return [
-                new Paragraph({
-                  children: [
-                    new TextRun({ text: `No. ${currentPage * limit + index + 1}`, bold: true }),
-                    new TextRun({ text: `\nNutritionist: ${nutri.name}`, break: 1 }),
-                    new TextRun({ text: `\nMeal Plans: ${nutri.mealPlanCount}`, break: 1 }),
-                    new TextRun({ text: `\nSuccess: ${nutri.successCount}`, break: 1 }),
-                    new TextRun({ text: `\nPending: ${nutri.pendingCount}`, break: 1 }),
-                    new TextRun({
-                      text: `\nBase Salary: ${formatPrice(5000000)}`,
-                      break: 1,
-                    }),
-                    new TextRun({
-                      text: `\nCommission: ${formatPrice(
-                        nutri.mealPlans
-                          .filter((mp) => !mp.isBlock)
-                          .reduce((sum, mp) => sum + (mp.price || 0) * 0.1, 0)
-                      )}`,
-                      break: 1,
-                    }),
-                    new TextRun({
-                      text: `\nTotal Salary: ${formatPrice(salary)}`,
-                      break: 1,
-                      bold: true,
-                    }),
-                  ],
-                  spacing: { after: 200, before: 400 },
-                }),
-                new Paragraph({
-                  text: `Meal Plans Details for ${nutri.name}`,
-                  heading: HeadingLevel.HEADING_2,
-                  spacing: { after: 100 },
-                }),
-                ...nutri.mealPlans.map((mp, idx) => {
-                  return new Paragraph({
+            ...nutritionists
+              .map((nutri, index) => {
+                const salary = calculateSalary(nutri);
+                return [
+                  new Paragraph({
                     children: [
-                      new TextRun(`No. ${idx + 1}`),
-                      new TextRun({ text: `\nTitle: ${mp.title || "N/A"}`, break: 1 }),
-                      new TextRun({ text: `\nPrice: ${formatPrice(mp.price)}`, break: 1 }),
                       new TextRun({
-                        text: `\nStart Date: ${new Date(mp.startDate).toLocaleDateString("en-US")}`,
-                        break: 1,
+                        text: `No. ${currentPage * limit + index + 1}`,
+                        bold: true,
                       }),
-                      new TextRun({ text: `\nDuration: ${mp.duration} days`, break: 1 }),
                       new TextRun({
-                        text: `\nStatus: ${!mp.isBlock ? "Success" : "Pending"}`,
+                        text: `\nNutritionist: ${nutri.name}`,
                         break: 1,
                       }),
                       new TextRun({
-                        text: `\nUser: ${mp.userId?.username || "Unknown"}`,
+                        text: `\nMeal Plans: ${nutri.mealPlanCount}`,
                         break: 1,
+                      }),
+                      new TextRun({
+                        text: `\nSuccess: ${nutri.successCount}`,
+                        break: 1,
+                      }),
+                      new TextRun({
+                        text: `\nPending: ${nutri.pendingCount}`,
+                        break: 1,
+                      }),
+                      new TextRun({
+                        text: `\nBase Salary: ${formatPrice(5000000)}`,
+                        break: 1,
+                      }),
+                      new TextRun({
+                        text: `\nCommission: ${formatPrice(
+                          nutri.mealPlans
+                            .filter((mp) => !mp.isBlock)
+                            .reduce((sum, mp) => sum + (mp.price || 0) * 0.1, 0)
+                        )}`,
+                        break: 1,
+                      }),
+                      new TextRun({
+                        text: `\nTotal Salary: ${formatPrice(salary)}`,
+                        break: 1,
+                        bold: true,
                       }),
                     ],
+                    spacing: { after: 200, before: 400 },
+                  }),
+                  new Paragraph({
+                    text: `Meal Plans Details for ${nutri.name}`,
+                    heading: HeadingLevel.HEADING_2,
+                    spacing: { after: 100 },
+                  }),
+                  ...nutri.mealPlans.map((mp, idx) => {
+                    return new Paragraph({
+                      children: [
+                        new TextRun(`No. ${idx + 1}`),
+                        new TextRun({
+                          text: `\nTitle: ${mp.title || "N/A"}`,
+                          break: 1,
+                        }),
+                        new TextRun({
+                          text: `\nPrice: ${formatPrice(mp.price)}`,
+                          break: 1,
+                        }),
+                        new TextRun({
+                          text: `\nStart Date: ${new Date(
+                            mp.startDate
+                          ).toLocaleDateString("en-US")}`,
+                          break: 1,
+                        }),
+                        new TextRun({
+                          text: `\nDuration: ${mp.duration} days`,
+                          break: 1,
+                        }),
+                        new TextRun({
+                          text: `\nStatus: ${
+                            !mp.isBlock ? "Success" : "Pending"
+                          }`,
+                          break: 1,
+                        }),
+                        new TextRun({
+                          text: `\nUser: ${mp.userId?.username || "Unknown"}`,
+                          break: 1,
+                        }),
+                      ],
+                      spacing: { after: 150 },
+                    });
+                  }),
+                  new Paragraph({
+                    text: `Salary Payment History for ${nutri.name}`,
+                    heading: HeadingLevel.HEADING_2,
+                    spacing: { after: 100 },
+                  }),
+                  new Paragraph({
+                    text: "Note: Payment history requires separate API call per nutritionist",
                     spacing: { after: 150 },
-                  });
-                }),
-              ];
-            }).flat(),
+                  }),
+                ];
+              })
+              .flat(),
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `Total Nutritionists: ${nutritionists.length}`, // Thay đổi ở đây
+                  text: `Total Nutritionists: ${nutritionists.length}`,
                   bold: true,
                 }),
               ],
@@ -242,7 +325,9 @@ const FinanceManagement = () => {
   if (user?.role !== "admin") {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-red-500 text-lg font-semibold">Access Denied: Admin Only</p>
+        <p className="text-red-500 text-lg font-semibold">
+          Access Denied: Admin Only
+        </p>
       </div>
     );
   }
@@ -269,12 +354,20 @@ const FinanceManagement = () => {
         <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
           Finance Management
         </h1>
-        <button
-          onClick={exportToWord}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Export to Word
-        </button>
+        <div className="space-x-4">
+          <button
+            onClick={handleViewHistory}
+            className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+          >
+            View Salary History
+          </button>
+          <button
+            onClick={exportToWord}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Export to Word
+          </button>
+        </div>
       </div>
       <Loading isLoading={loading}>
         <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
@@ -324,7 +417,7 @@ const FinanceManagement = () => {
             <Pagination
               limit={limit}
               setLimit={setLimit}
-              totalItems={nutritionists.length} // Thay đổi ở đây
+              totalItems={nutritionists.length}
               handlePageClick={handlePageClick}
               currentPage={currentPage}
               text={"Nutritionists"}
@@ -362,7 +455,9 @@ const FinanceManagement = () => {
                   <div>{idx + 1}</div>
                   <div>{mp.title}</div>
                   <div>{formatPrice(mp.price)}</div>
-                  <div>{new Date(mp.startDate).toLocaleDateString("en-US")}</div>
+                  <div>
+                    {new Date(mp.startDate).toLocaleDateString("en-US")}
+                  </div>
                   <div>{mp.duration} days</div>
                   <div>
                     <span
@@ -419,7 +514,7 @@ const FinanceManagement = () => {
                 onClick={handleAcceptSalary}
                 className="bg-[#40B491] text-white px-4 py-2 rounded hover:bg-green-600"
               >
-                Accept & Send Email
+                Accept & Process Payment
               </button>
               <button
                 onClick={() => setSalaryModalOpen(false)}
@@ -430,6 +525,65 @@ const FinanceManagement = () => {
             </div>
           </>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={historyModalOpen}
+        onRequestClose={() => setHistoryModalOpen(false)}
+        className="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto mt-20"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start"
+      >
+        <>
+          <h2 className="text-2xl font-bold text-[#40B491] mb-4">
+            Salary Payment History for Nutritionists
+          </h2>
+          <div className="overflow-x-auto">
+            <div className="grid grid-cols-6 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
+              <div>No.</div>
+              <div>Nutritionist</div>
+              <div>Amount</div>
+              <div>Status</div>
+              <div>Date</div>
+              <div>Transaction ID</div>
+            </div>
+            {salaryHistory.map((payment, idx) => (
+              <div
+                key={payment._id}
+                className="grid grid-cols-6 gap-4 p-4 border-b"
+              >
+                <div>{idx + 1}</div>
+                <div>
+                  {nutritionists.find((n) => n.id === payment.userId)?.name ||
+                    "Unknown"}
+                </div>
+                <div>{formatPrice(payment.amount)}</div>
+                <div>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      payment.status === "success"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
+                    {payment.status}
+                  </span>
+                </div>
+                <div>
+                  {payment.paymentDate
+                    ? new Date(payment.paymentDate).toLocaleDateString("en-US")
+                    : "N/A"}
+                </div>
+                <div>{payment.transactionNo || "N/A"}</div>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setHistoryModalOpen(false)}
+            className="mt-4 bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+          >
+            Close
+          </button>
+        </>
       </Modal>
     </div>
   );

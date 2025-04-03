@@ -11,7 +11,7 @@ const getAuthHeaders = () => {
 
 const mealPlanService = {
   // Lấy danh sách meal plans với phân trang
-  getAllMealPlans: async (page = 1, limit = 10) => {
+  getAllMealPlans2: async (page = 1, limit = 10) => {
     try {
       const response = await api.get(`/mealPlan`, {
         params: {

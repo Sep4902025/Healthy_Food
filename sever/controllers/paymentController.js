@@ -485,13 +485,11 @@ exports.getPaymentHistoryForNutritionist = async (req, res) => {
 
     return res.status(200).json({ success: true, data: payments });
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Lỗi khi lấy lịch sử thanh toán",
-        error: error.message,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy lịch sử thanh toán",
+      error: error.message,
+    });
   }
 };
 
@@ -616,5 +614,94 @@ exports.sendSalaryEmail = catchAsync(async (req, res, next) => {
     data: {
       salary: totalSalary,
     },
+  });
+});
+
+// New function to create salary payment URL
+exports.createSalaryPaymentUrl = catchAsync(async (req, res, next) => {
+  const { nutriId, amount } = req.body;
+
+  const nutritionist = await UserModel.findById(nutriId);
+  if (!nutritionist || nutritionist.role !== "nutritionist") {
+    return next(new AppError("Nutritionist not found or invalid role", 404));
+  }
+
+  const clientIp =
+    req.headers["x-forwarded-for"] ||
+    req.connection.remoteAddress ||
+    req.ip ||
+    "127.0.0.1";
+
+  const payment = new Payment({
+    userId: nutriId,
+    amount,
+    status: "pending",
+    paymentMethod: "vnpay_salary", // Or use "vnpay" if you prefer
+    paymentType: "salary", // Set payment type to salary
+  });
+  await payment.save();
+
+  let vnp_Params = {
+    vnp_Version: "2.1.0",
+    vnp_Command: "pay",
+    vnp_TmnCode: VNPAY_CONFIG.vnp_TmnCode || "",
+    vnp_Amount: Math.round(amount * 100).toString(),
+    vnp_CurrCode: "VND",
+    vnp_TxnRef: payment._id.toString(),
+    vnp_OrderInfo: `Thanh toan luong cho ${nutritionist.username}`,
+    vnp_OrderType: "180000",
+    vnp_Locale: "vn",
+    vnp_ReturnUrl: VNPAY_CONFIG.vnp_ReturnUrl || "",
+    vnp_IpAddr: clientIp,
+    vnp_CreateDate: moment().format("YYYYMMDDHHmmss"),
+  };
+
+  const sortedParams = Object.fromEntries(
+    Object.entries(vnp_Params)
+      .map(([key, value]) => [key, String(value || "").trim()])
+      .sort()
+  );
+
+  const signData = new URLSearchParams(sortedParams).toString();
+  const secureHash = crypto
+    .createHmac("sha512", VNPAY_CONFIG.vnp_HashSecret)
+    .update(Buffer.from(signData, "utf-8"))
+    .digest("hex");
+
+  sortedParams["vnp_SecureHash"] = secureHash;
+
+  const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(
+    sortedParams
+  ).toString()}`;
+
+  res.status(200).json({
+    status: "success",
+    paymentUrl,
+    paymentId: payment._id,
+  });
+});
+
+// New function to get salary payment history
+exports.getSalaryPaymentHistory = catchAsync(async (req, res, next) => {
+  const { nutriId } = req.params;
+
+  const payments = await Payment.find({
+    userId: nutriId,
+    paymentType: "salary",
+  }).sort({ createdAt: -1 });
+
+  res.status(200).json({
+    status: "success",
+    data: payments,
+  });
+});
+
+exports.getAllSalaryPaymentHistory = catchAsync(async (req, res, next) => {
+  const payments = await Payment.find({ paymentType: "salary" }).sort({
+    createdAt: -1,
+  });
+  res.status(200).json({
+    status: "success",
+    data: payments,
   });
 });
