@@ -9,9 +9,9 @@ import MealPlanAimChart from "./MealPlanAimChart";
 
 const MealPlan = () => {
   const { user } = useSelector(selectAuth);
-  console.log("USER redux", user);
-
   const [userMealPlan, setUserMealPlan] = useState(null);
+  console.log("UML", userMealPlan);
+
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [processingAction, setProcessingAction] = useState(false);
@@ -170,7 +170,7 @@ const MealPlan = () => {
             {/* Phần MealPlanAimChart ở giữa */}
             <div className="flex-1 flex justify-center">
               <MealPlanAimChart
-                mealPlanId={userMealPlan._id}
+                mealPlanId={userMealPlan?._id}
                 duration={userMealPlan.duration}
                 onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
               />
