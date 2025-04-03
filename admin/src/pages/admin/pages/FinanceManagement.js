@@ -16,6 +16,7 @@ import {
   AlignmentType,
 } from "docx";
 import { saveAs } from "file-saver";
+import paymentService from "../../../services/payment.service";
 
 Modal.setAppElement("#root");
 
@@ -104,63 +105,37 @@ const FinanceManagement = () => {
     setSalaryModalOpen(true);
   };
 
+  // Xem lịch sử lương
   const handleViewHistory = async () => {
-    try {
-      const response = await fetch(
-        "http://localhost:8080/api/v1/payment/salary-history/all",
-        {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        }
-      );
-      const data = await response.json();
-      if (data.status === "success") {
-        setSalaryHistory(data.data);
-        setHistoryModalOpen(true);
-      } else {
-        toast.error("Failed to fetch salary history");
-      }
-    } catch (err) {
-      toast.error("Error fetching salary history: " + err.message);
+    const result = await paymentService.getSalaryHistory();
+    if (result.success) {
+      setSalaryHistory(result.data);
+      setHistoryModalOpen(true);
+    } else {
+      toast.error(result.message);
     }
   };
 
+  // Xác nhận lương
   const handleAcceptSalary = async () => {
     if (!selectedNutri) return;
-    try {
-      const salary = calculateSalary(selectedNutri);
-      const emailResult = await mealPlanService.sendSalaryEmail(
-        selectedNutri.id
+    const salary = calculateSalary(selectedNutri);
+    // Giả sử gửi email trước (nếu cần)
+    const emailResult = await mealPlanService.sendSalaryEmail(selectedNutri.id);
+    if (emailResult.success) {
+      const paymentResult = await paymentService.acceptSalary(
+        selectedNutri.id,
+        salary
       );
-      if (emailResult.success) {
-        const paymentResponse = await fetch(
-          "http://localhost:8080/api/v1/payment/vnpay/salary",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${user.token}`,
-            },
-            body: JSON.stringify({
-              nutriId: selectedNutri.id,
-              amount: salary,
-            }),
-          }
+      if (paymentResult.success) {
+        toast.success(
+          "Salary confirmed, email sent, and payment URL generated!"
         );
-        const paymentData = await paymentResponse.json();
-        if (paymentData.status === "success") {
-          toast.success(
-            "Salary confirmed, email sent, and payment URL generated!"
-          );
-          window.open(paymentData.paymentUrl, "_blank");
-        } else {
-          toast.error("Failed to generate payment URL: " + paymentData.message);
-        }
-        setSalaryModalOpen(false);
+        window.open(paymentResult.data.paymentUrl, "_blank");
+      } else {
+        toast.error(paymentResult.message);
       }
-    } catch (err) {
-      toast.error("Error processing salary: " + err.message);
+      setSalaryModalOpen(false);
     }
   };
 

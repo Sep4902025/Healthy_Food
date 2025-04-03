@@ -11,6 +11,8 @@ const {
   createSalaryPaymentUrl,
   getSalaryPaymentHistory,
   getAllSalaryPaymentHistory,
+  vnpayAdminReturn,
+
 } = require("../controllers/paymentController");
 const { calculateSalary, sendSalaryEmail } = require("../controllers/paymentController");
 const { isAuthenticated } = require("../middlewares/isAuthenticated");
@@ -28,6 +30,7 @@ paymentRouter.get("/calculate-salary/:nutriId", isAuthenticated, calculateSalary
 paymentRouter.post("/send-salary-email", isAuthenticated, sendSalaryEmail);
 paymentRouter.post("/vnpay/salary", isAuthenticated, createSalaryPaymentUrl);
 paymentRouter.post("/vnpay/pay", createPaymentUrl);
+paymentRouter.get("/vnpay/adminReturn", vnpayAdminReturn);
 paymentRouter.get("/vnpay/return", vnpayReturn);
 paymentRouter.get("/history/nutritionist", isAuthenticated, getPaymentHistoryForNutritionist);
 paymentRouter.get("/history/:userId", isAuthenticated, getPaymentHistory);
