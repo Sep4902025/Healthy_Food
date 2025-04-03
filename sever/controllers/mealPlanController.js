@@ -13,24 +13,10 @@ const { agenda } = require("../config/agenda");
 // CRUD MealPlan operations
 exports.createMealPlan = async (req, res) => {
   try {
-    const {
-      title,
-      userId,
-      type,
-      duration,
-      startDate,
-      createdBy,
-      meals,
-      price,
-    } = req.body;
+    const { title, userId, type, duration, startDate, createdBy, meals, price } = req.body;
 
-    if (
-      type === "fixed" &&
-      (!meals || !Array.isArray(meals) || meals.length === 0)
-    ) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Danh sách bữa ăn không hợp lệ" });
+    if (type === "fixed" && (!meals || !Array.isArray(meals) || meals.length === 0)) {
+      return res.status(400).json({ success: false, message: "Danh sách bữa ăn không hợp lệ" });
     }
 
     // Xác định ngày kết thúc
@@ -113,9 +99,7 @@ exports.getMealPlan = async (req, res) => {
       } else if (role === "nutritionist") {
         filter.createdBy = _id; // Nutritionist chỉ thấy MealPlan họ tạo
       } else if (role !== "admin") {
-        return res
-          .status(403)
-          .json({ success: false, message: "Vai trò không hợp lệ" });
+        return res.status(403).json({ success: false, message: "Vai trò không hợp lệ" });
       }
       // Nếu là admin, không thêm điều kiện lọc userId hay createdBy, lấy tất cả
     }
@@ -158,9 +142,7 @@ exports.getMealPlan = async (req, res) => {
     } else {
       // Nếu không phải admin, tính dựa trên dữ liệu đã lọc
       unpaidMealPlans = mealPlans.filter((mp) => !mp.isPaid).length;
-      activeMealPlans = mealPlans.filter(
-        (mp) => mp.isPaid && !mp.isBlock
-      ).length;
+      activeMealPlans = mealPlans.filter((mp) => mp.isPaid && !mp.isBlock).length;
     }
 
     // Định dạng phản hồi
@@ -197,17 +179,13 @@ exports.getMealPlanById = async (req, res) => {
     } else if (role === "nutritionist" || role === "admin") {
       filter.$or = [{ createdBy: _id }, { userId: _id }]; // Nutritionist thấy MealPlan họ tạo hoặc của user họ tư vấn
     } else {
-      return res
-        .status(403)
-        .json({ success: false, message: "Vai trò không hợp lệ" });
+      return res.status(403).json({ success: false, message: "Vai trò không hợp lệ" });
     }
 
     const mealPlan = await MealPlan.findOne(filter).lean();
 
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Không tìm thấy MealPlan" });
+      return res.status(404).json({ success: false, message: "Không tìm thấy MealPlan" });
     }
 
     res.status(200).json({ success: true, data: mealPlan });
@@ -222,14 +200,10 @@ exports.getUserMealPlan = async (req, res) => {
     const { userId } = req.params;
 
     // Tìm UserMealPlan hiện tại của user
-    const userMealPlan = await UserMealPlan.findOne({ userId }).populate(
-      "mealPlanId"
-    );
+    const userMealPlan = await UserMealPlan.findOne({ userId }).populate("mealPlanId");
 
     if (!userMealPlan || !userMealPlan.mealPlanId) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User chưa có MealPlan nào" });
+      return res.status(404).json({ success: false, message: "User chưa có MealPlan nào" });
     }
 
     res.status(200).json({ success: true, data: userMealPlan.mealPlanId });
@@ -245,9 +219,7 @@ exports.getMealDayByMealPlan = async (req, res) => {
     // Kiểm tra MealPlan có tồn tại không
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
 
     // Tìm tất cả MealDays thuộc về MealPlan này
@@ -256,9 +228,7 @@ exports.getMealDayByMealPlan = async (req, res) => {
     res.status(200).json({ success: true, data: mealDays });
   } catch (error) {
     console.error("❌ Lỗi khi lấy MealDays:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Lỗi máy chủ khi lấy MealDays" });
+    res.status(500).json({ success: false, message: "Lỗi máy chủ khi lấy MealDays" });
   }
 };
 
@@ -370,9 +340,7 @@ exports.updateMealPlan = async (req, res) => {
     // 🔍 Tìm MealPlan
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
 
     // ✅ Kiểm tra quyền cập nhật (chỉ owner hoặc nutritionist tạo ra mới được cập nhật)
@@ -443,9 +411,7 @@ exports.deleteMealPlan = async (req, res) => {
     // 🔹 Tìm MealPlan
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
 
     // 🔹 Kiểm tra quyền
@@ -463,11 +429,7 @@ exports.deleteMealPlan = async (req, res) => {
     await deleteMealPlanData(mealPlanId);
 
     // 🔥 "Xóa" MealPlan (cập nhật isDelete thành true) để lấy history
-    await MealPlan.findByIdAndUpdate(
-      mealPlanId,
-      { isDelete: true },
-      { new: true }
-    );
+    await MealPlan.findByIdAndUpdate(mealPlanId, { isDelete: true }, { new: true });
 
     // 🔄 **Cập nhật UserMealPlan về `null` nếu đang theo dõi MealPlan này**
     await UserMealPlan.findOneAndUpdate(
@@ -502,9 +464,7 @@ exports.toggleMealPlanStatus = async (req, res) => {
 
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan not found" });
+      return res.status(404).json({ success: false, message: "MealPlan not found" });
     }
 
     if (
@@ -517,10 +477,7 @@ exports.toggleMealPlanStatus = async (req, res) => {
       });
     }
 
-    if (
-      mealPlan.isBlock &&
-      mealPlan.createdBy.toString() !== userId.toString()
-    ) {
+    if (mealPlan.isBlock && mealPlan.createdBy.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
         message: "MealPlan is locked, you cannot change its status",
@@ -559,9 +516,7 @@ exports.toggleMealPlanStatus = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `MealPlan has been ${
-        isPause ? "paused" : "resumed"
-      } successfully`,
+      message: `MealPlan has been ${isPause ? "paused" : "resumed"} successfully`,
       data: mealPlan,
     });
   } catch (error) {
@@ -573,11 +528,7 @@ exports.toggleMealPlanStatus = async (req, res) => {
 // Hàm cập nhật trạng thái tất cả reminder liên quan đến một MealPlan
 const updateRemindersForMealPlan = async (mealPlanId, isPause) => {
   try {
-    console.log(
-      `${
-        isPause ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"
-      } reminders cho MealPlan ${mealPlanId}`
-    );
+    console.log(`${isPause ? "⏸️ Tạm dừng" : "▶️ Kích hoạt"} reminders cho MealPlan ${mealPlanId}`);
 
     // Tìm tất cả reminder liên quan đến MealPlan
     const reminders = await Reminder.find({ mealPlanId });
@@ -596,23 +547,17 @@ const updateRemindersForMealPlan = async (mealPlanId, isPause) => {
       } else {
         // Kích hoạt lại job
         if (reminder.remindTime && new Date(reminder.remindTime) > new Date()) {
-          console.log(
-            `▶️ Kích hoạt lại reminder ${reminder._id} vào ${reminder.remindTime}`
-          );
+          console.log(`▶️ Kích hoạt lại reminder ${reminder._id} vào ${reminder.remindTime}`);
 
           // Hủy job cũ (nếu còn sót)
           await agenda.cancel({ "data.reminderId": reminder._id });
 
           // Tạo job mới
-          const job = await agenda.schedule(
-            reminder.remindTime,
-            "sendReminder",
-            {
-              reminderId: reminder._id,
-              userId: reminder.userId,
-              message: reminder.message,
-            }
-          );
+          const job = await agenda.schedule(reminder.remindTime, "sendReminder", {
+            reminderId: reminder._id,
+            userId: reminder.userId,
+            message: reminder.message,
+          });
 
           reminder.jobId = job.attrs._id;
           reminder.status = "scheduled";
@@ -624,9 +569,7 @@ const updateRemindersForMealPlan = async (mealPlanId, isPause) => {
       await reminder.save();
     }
 
-    console.log(
-      `✅ Hoàn tất cập nhật ${reminders.length} reminder cho MealPlan ${mealPlanId}`
-    );
+    console.log(`✅ Hoàn tất cập nhật ${reminders.length} reminder cho MealPlan ${mealPlanId}`);
     return true;
   } catch (error) {
     console.error("🔥 Lỗi khi cập nhật reminder:", error);
@@ -688,9 +631,7 @@ exports.getMealPlanReminders = async (req, res) => {
     // Tìm MealPlan
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
 
     // Kiểm tra quyền
@@ -768,16 +709,12 @@ exports.addMealToDay = async (req, res) => {
     const requestingUserId = req.user?.id;
     const userRole = req.user?.role;
     if (!requestingUserId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "You are not logged in" });
+      return res.status(401).json({ success: false, message: "You are not logged in" });
     }
     // 🔍 Check if MealPlan exists
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan does not exist" });
+      return res.status(404).json({ success: false, message: "MealPlan does not exist" });
     }
 
     // 🔍 Check permission to edit
@@ -793,19 +730,13 @@ exports.addMealToDay = async (req, res) => {
       const mealPlanUser = await UserModel.findById(mealPlan.userId);
       console.log("mealPlanUser:", mealPlanUser);
       if (mealPlanUser) {
-        console.log(
-          "mealPlanUser.nutritionistId:",
-          mealPlanUser.nutritionistId
-        );
+        console.log("mealPlanUser.nutritionistId:", mealPlanUser.nutritionistId);
         console.log(
           "Comparing nutritionistId with requestingUserId:",
           mealPlanUser.nutritionistId?.toString(),
           requestingUserId.toString()
         );
-        if (
-          mealPlanUser.nutritionistId?.toString() ===
-          requestingUserId.toString()
-        ) {
+        if (mealPlanUser.nutritionistId?.toString() === requestingUserId.toString()) {
           isNutritionistAuthorized = true;
         } else {
           console.log("Nutritionist ID does not match requesting user ID.");
@@ -818,22 +749,18 @@ exports.addMealToDay = async (req, res) => {
     }
 
     if (!isUserAuthorized && !isNutritionistAuthorized) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "You do not have permission to edit this MealPlan",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to edit this MealPlan",
+      });
     }
 
     // 🔍 Check if MealPlan is locked, but allow creator or assigned nutritionist to bypass
     if (mealPlan.isBlock && !isUserAuthorized && !isNutritionistAuthorized) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "MealPlan is locked, cannot add meal",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "MealPlan is locked, cannot add meal",
+      });
     }
 
     // 🔍 Check if MealDay exists in MealPlan
@@ -842,9 +769,7 @@ exports.addMealToDay = async (req, res) => {
       mealPlanId: new mongoose.Types.ObjectId(mealPlanId),
     });
     if (!mealDay) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealDay is invalid" });
+      return res.status(404).json({ success: false, message: "MealDay is invalid" });
     }
 
     // ✅ Create new Meal
@@ -858,9 +783,7 @@ exports.addMealToDay = async (req, res) => {
     res.status(201).json({ success: true, data: newMeal });
   } catch (error) {
     console.error("Error in addMealToDay:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error: " + error.message });
+    res.status(500).json({ success: false, message: "Server error: " + error.message });
   }
 };
 // Remove Meal From DayDay
@@ -872,9 +795,7 @@ exports.removeMealFromDay = async (req, res) => {
     const requestingUserId = req.user?.id;
     const userRole = req.user?.role; // Assume middleware attaches role to req.user
     if (!requestingUserId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "You are not logged in" });
+      return res.status(401).json({ success: false, message: "You are not logged in" });
     }
     console.log("Requesting User ID:", requestingUserId);
     console.log("User Role:", userRole);
@@ -882,9 +803,7 @@ exports.removeMealFromDay = async (req, res) => {
     // 🔍 Check if MealPlan exists
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan does not exist" });
+      return res.status(404).json({ success: false, message: "MealPlan does not exist" });
     }
     console.log("MealPlan:", mealPlan);
 
@@ -902,19 +821,13 @@ exports.removeMealFromDay = async (req, res) => {
       const mealPlanUser = await UserModel.findById(mealPlan.userId);
       console.log("mealPlanUser:", mealPlanUser);
       if (mealPlanUser) {
-        console.log(
-          "mealPlanUser.nutritionistId:",
-          mealPlanUser.nutritionistId
-        );
+        console.log("mealPlanUser.nutritionistId:", mealPlanUser.nutritionistId);
         console.log(
           "Comparing nutritionistId with requestingUserId:",
           mealPlanUser.nutritionistId?.toString(),
           requestingUserId.toString()
         );
-        if (
-          mealPlanUser.nutritionistId?.toString() ===
-          requestingUserId.toString()
-        ) {
+        if (mealPlanUser.nutritionistId?.toString() === requestingUserId.toString()) {
           isNutritionistAuthorized = true;
           console.log("Nutritionist is authorized!");
         } else {
@@ -928,22 +841,18 @@ exports.removeMealFromDay = async (req, res) => {
     }
 
     if (!isUserAuthorized && !isNutritionistAuthorized) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "You do not have permission to edit this MealPlan",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to edit this MealPlan",
+      });
     }
 
     // 🔍 Check if MealPlan is locked, but allow creator or assigned nutritionist to bypass
     if (mealPlan.isBlock && !isUserAuthorized && !isNutritionistAuthorized) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "MealPlan is locked, cannot delete meal",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "MealPlan is locked, cannot delete meal",
+      });
     }
     console.log("PASSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
 
@@ -953,9 +862,7 @@ exports.removeMealFromDay = async (req, res) => {
       mealPlanId: new mongoose.Types.ObjectId(mealPlanId),
     });
     if (!mealDay) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealDay is invalid" });
+      return res.status(404).json({ success: false, message: "MealDay is invalid" });
     }
 
     // 🔍 Check if Meal exists in MealDay
@@ -964,9 +871,7 @@ exports.removeMealFromDay = async (req, res) => {
       mealDayId: new mongoose.Types.ObjectId(mealDayId),
     });
     if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Meal does not exist" });
+      return res.status(404).json({ success: false, message: "Meal does not exist" });
     }
 
     // ✅ Delete Meal
@@ -980,9 +885,7 @@ exports.removeMealFromDay = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in removeMealFromDay:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error: " + error.message });
+    res.status(500).json({ success: false, message: "Server error: " + error.message });
   }
 };
 // Get Meals By Day
@@ -992,36 +895,28 @@ exports.getMealsByDayId = async (req, res) => {
     const userId = req.user?.id; // Lấy userId từ middleware
 
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Bạn chưa đăng nhập" });
+      return res.status(401).json({ success: false, message: "Bạn chưa đăng nhập" });
     }
 
     // Kiểm tra MealPlan tồn tại & thuộc về user
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
     if (
       mealPlan.userId.toString() !== userId.toString() &&
       mealPlan.createdBy.toString() !== userId.toString()
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Bạn không có quyền xem MealPlan này",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền xem MealPlan này",
+      });
     }
 
     // Kiểm tra MealDay tồn tại
     const mealDay = await MealDay.findOne({ _id: mealDayId, mealPlanId });
     if (!mealDay) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Ngày ăn không hợp lệ" });
+      return res.status(404).json({ success: false, message: "Ngày ăn không hợp lệ" });
     }
 
     // Lấy danh sách bữa ăn
@@ -1039,44 +934,34 @@ exports.getMealById = async (req, res) => {
     const userId = req.user?.id; // Lấy userId từ middleware isAuthenticated
     console.log("USERID", userId);
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Bạn chưa đăng nhập" });
+      return res.status(401).json({ success: false, message: "Bạn chưa đăng nhập" });
     }
 
     // Kiểm tra MealPlan tồn tại & thuộc về user
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
     if (
       mealPlan.userId.toString() !== userId.toString() &&
       mealPlan.createdBy.toString() !== userId.toString()
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Bạn không có quyền xem MealPlan này",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền xem MealPlan này",
+      });
     }
 
     // Kiểm tra MealDay tồn tại
     const mealDay = await MealDay.findOne({ _id: mealDayId, mealPlanId });
     if (!mealDay) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Ngày ăn không hợp lệ" });
+      return res.status(404).json({ success: false, message: "Ngày ăn không hợp lệ" });
     }
 
     // Lấy thông tin bữa ăn
     const meal = await Meal.findOne({ _id: mealId, mealDayId });
     if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Bữa ăn không tồn tại" });
+      return res.status(404).json({ success: false, message: "Bữa ăn không tồn tại" });
     }
 
     res.status(200).json({ success: true, data: meal });
@@ -1097,36 +982,28 @@ exports.updateMealInDay = async (req, res) => {
     // 🔍 Kiểm tra MealPlan tồn tại & thuộc về user
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
     if (
       mealPlan.userId.toString() !== userId.toString() &&
       mealPlan.createdBy.toString() !== userId.toString()
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Bạn không có quyền chỉnh sửa MealPlan này",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền chỉnh sửa MealPlan này",
+      });
     }
     if (mealPlan.isBlock) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "MealPlan bị khóa, không thể sửa bữa ăn",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "MealPlan bị khóa, không thể sửa bữa ăn",
+      });
     }
 
     // 🔍 Kiểm tra Meal có tồn tại không
     const meal = await Meal.findOne({ _id: mealId, mealDayId });
     if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Bữa ăn không tồn tại" });
+      return res.status(404).json({ success: false, message: "Bữa ăn không tồn tại" });
     }
 
     // ✅ Cập nhật Meal
@@ -1141,13 +1018,11 @@ exports.updateMealInDay = async (req, res) => {
     // ✅ Cập nhật MealTracking nếu có
     await MealTracking.updateMany({ mealId }, { mealTime });
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Cập nhật bữa ăn thành công",
-        data: meal,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật bữa ăn thành công",
+      data: meal,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -1165,36 +1040,28 @@ exports.deleteMealInDay = async (req, res) => {
     // 🔍 Kiểm tra MealPlan tồn tại & thuộc về user
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
     if (
       mealPlan.userId.toString() !== userId.toString() &&
       mealPlan.createdBy.toString() !== userId.toString()
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Bạn không có quyền chỉnh sửa MealPlan này",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền chỉnh sửa MealPlan này",
+      });
     }
     if (mealPlan.isBlock) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "MealPlan bị khóa, không thể xóa bữa ăn",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "MealPlan bị khóa, không thể xóa bữa ăn",
+      });
     }
 
     // 🔍 Kiểm tra Meal tồn tại
     const meal = await Meal.findOne({ _id: mealId, mealDayId });
     if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Bữa ăn không tồn tại" });
+      return res.status(404).json({ success: false, message: "Bữa ăn không tồn tại" });
     }
 
     // ✅ Xóa Meal
@@ -1217,14 +1084,7 @@ exports.deleteMealInDay = async (req, res) => {
 const moment = require("moment-timezone");
 const Recipe = require("../models/Recipe");
 const UserModel = require("../models/UserModel");
-const handleReminderAndJob = async (
-  userId,
-  mealPlanId,
-  mealDayId,
-  mealId,
-  meal,
-  mealDay
-) => {
+const handleReminderAndJob = async (userId, mealPlanId, mealDayId, mealId, meal, mealDay) => {
   // Không tạo Reminder nếu không có món ăn
   if (!meal || !meal.dishes || meal.dishes.length === 0) {
     console.log(`🚨 Không có món ăn, xóa tất cả reminder của meal ${mealId}`);
@@ -1249,11 +1109,7 @@ const handleReminderAndJob = async (
   }
 
   const remindTime = moment
-    .tz(
-      `${mealDay.date} ${meal.mealTime}`,
-      "YYYY-MM-DD HH:mm",
-      "Asia/Ho_Chi_Minh"
-    )
+    .tz(`${mealDay.date} ${meal.mealTime}`, "YYYY-MM-DD HH:mm", "Asia/Ho_Chi_Minh")
     .toDate();
 
   const dishNames = meal.dishes.map((dish) => dish.name).join(", ");
@@ -1317,9 +1173,7 @@ const handleReminderAndJob = async (
   });
 
   if (existingJobs.length > 0) {
-    console.log(
-      `⚠️ Phát hiện ${existingJobs.length} job dư thừa cho reminder ${reminder._id}`
-    );
+    console.log(`⚠️ Phát hiện ${existingJobs.length} job dư thừa cho reminder ${reminder._id}`);
 
     for (const job of existingJobs) {
       console.log(`🗑️ Hủy job cũ ${job.attrs._id}`);
@@ -1338,9 +1192,7 @@ const handleReminderAndJob = async (
   reminder.jobId = job.attrs._id;
   await reminder.save();
 
-  console.log(
-    `✅ Đã cập nhật reminder ${reminder._id} với jobId ${reminder.jobId}`
-  );
+  console.log(`✅ Đã cập nhật reminder ${reminder._id} với jobId ${reminder.jobId}`);
   return reminder;
 };
 
@@ -1365,15 +1217,10 @@ exports.cleanupRedundantJobs = async (req, res) => {
 
       // Nếu có nhiều hơn 1 job, giữ lại job cuối cùng và xóa các job còn lại
       if (jobs.length > 1) {
-        console.log(
-          `⚠️ Phát hiện ${jobs.length} job cho reminder ${reminder._id}`
-        );
+        console.log(`⚠️ Phát hiện ${jobs.length} job cho reminder ${reminder._id}`);
 
         // Sắp xếp job theo thời gian tạo giảm dần
-        jobs.sort(
-          (a, b) =>
-            new Date(b.attrs.lastModifiedAt) - new Date(a.attrs.lastModifiedAt)
-        );
+        jobs.sort((a, b) => new Date(b.attrs.lastModifiedAt) - new Date(a.attrs.lastModifiedAt));
 
         // Giữ lại job đầu tiên (mới nhất), xóa các job còn lại
         for (let i = 1; i < jobs.length; i++) {
@@ -1386,9 +1233,7 @@ exports.cleanupRedundantJobs = async (req, res) => {
         if (reminder.jobId.toString() !== jobs[0].attrs._id.toString()) {
           reminder.jobId = jobs[0].attrs._id;
           await reminder.save();
-          console.log(
-            `✅ Cập nhật reminder ${reminder._id} với jobId mới ${reminder.jobId}`
-          );
+          console.log(`✅ Cập nhật reminder ${reminder._id} với jobId mới ${reminder.jobId}`);
         }
       }
     }
@@ -1412,39 +1257,29 @@ exports.getDishesByMeal = async (req, res) => {
     // Kiểm tra MealPlan tồn tại & thuộc về user
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
     if (
       mealPlan.userId.toString() !== userId.toString() &&
       mealPlan.createdBy.toString() !== userId.toString()
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Bạn không có quyền xem MealPlan này",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền xem MealPlan này",
+      });
     }
 
     // Kiểm tra MealDay tồn tại
     const mealDay = await MealDay.findOne({ _id: mealDayId, mealPlanId });
     if (!mealDay) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Ngày ăn không hợp lệ" });
+      return res.status(404).json({ success: false, message: "Ngày ăn không hợp lệ" });
     }
 
     // Lấy thông tin bữa ăn & populate dishes
-    const meal = await Meal.findOne({ _id: mealId, mealDayId }).populate(
-      "dishes.dishId"
-    );
+    const meal = await Meal.findOne({ _id: mealId, mealDayId }).populate("dishes.dishId");
 
     if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Bữa ăn không tồn tại" });
+      return res.status(404).json({ success: false, message: "Bữa ăn không tồn tại" });
     }
 
     res.status(200).json({ success: true, data: meal.dishes });
@@ -1453,120 +1288,88 @@ exports.getDishesByMeal = async (req, res) => {
   }
 };
 
-// ADD Dish to Meal
+// ADD Dish to Meal with improvements using targetID
 exports.addDishesToMeal = async (req, res) => {
   try {
     const { mealPlanId, mealDayId, mealId } = req.params;
-    const { dishes, userId } = req.body;
+    const { dishes } = req.body; // No need for userId in the body anymore
 
     // ✅ Validate input
-    if (!userId)
-      return res.status(400).json({ success: false, message: "Thiếu userId" });
     if (!Array.isArray(dishes) || dishes.length === 0)
-      return res
-        .status(400)
-        .json({ success: false, message: "Danh sách món ăn không hợp lệ" });
+      return res.status(400).json({ success: false, message: "Invalid list of dishes" });
 
     // ✅ Get userId and role from token in header
     const requestingUserId = req.user?.id;
     const userRole = req.user?.role;
     if (!requestingUserId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Bạn chưa đăng nhập" });
+      return res.status(401).json({ success: false, message: "You are not logged in" });
     }
-    console.log("Requesting User ID:", requestingUserId);
-    console.log("User Role:", userRole);
-    console.log("Provided userId from body:", userId);
 
-    // 🔍 Check if MealPlan exists
+    // 🔍 Check if MealPlan exists and get target userId
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan does not exist" });
     }
-    console.log("MealPlan:", mealPlan);
+
+    // ✅ Get target userId from MealPlan
+    const targetUserId = mealPlan.userId.toString();
+    if (!targetUserId) {
+      return res.status(400).json({
+        success: false,
+        message: "MealPlan does not have a valid userId",
+      });
+    }
 
     // 🔍 Check permission to edit
     const isUserAuthorized =
-      mealPlan.userId.toString() === requestingUserId.toString() ||
+      targetUserId === requestingUserId.toString() ||
       mealPlan.createdBy.toString() === requestingUserId.toString();
-    console.log("Is User Authorized:", isUserAuthorized);
 
     let isNutritionistAuthorized = false;
     if (userRole === "nutritionist") {
-      console.log("User Role is nutritionist, checking authorization...");
-      console.log("mealPlan.userId:", mealPlan.userId);
-      console.log("requestingUserId:", requestingUserId);
-      const mealPlanUser = await UserModel.findById(mealPlan.userId);
-      console.log("mealPlanUser:", mealPlanUser);
-      if (mealPlanUser) {
-        console.log(
-          "mealPlanUser.nutritionistId:",
-          mealPlanUser.nutritionistId
-        );
-        console.log(
-          "Comparing nutritionistId with requestingUserId:",
-          mealPlanUser.nutritionistId?.toString(),
-          requestingUserId.toString()
-        );
-        if (
-          mealPlanUser.nutritionistId?.toString() ===
-          requestingUserId.toString()
-        ) {
-          isNutritionistAuthorized = true;
-          console.log("Nutritionist is authorized!");
-        } else {
-          console.log("Nutritionist ID does not match requesting user ID.");
-        }
-      } else {
-        console.log("MealPlan user not found in database.");
+      const mealPlanUser = await UserModel.findById(targetUserId);
+      if (mealPlanUser && mealPlanUser.nutritionistId?.toString() === requestingUserId.toString()) {
+        isNutritionistAuthorized = true;
       }
-    } else {
-      console.log("User Role is not nutritionist:", userRole);
     }
 
     if (!isUserAuthorized && !isNutritionistAuthorized) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Bạn không có quyền chỉnh sửa MealPlan này",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to edit this MealPlan",
+      });
     }
 
-    // 🔍 Check if MealPlan is locked, but allow creator or assigned nutritionist to bypass
+    // 🔍 Check if MealPlan is locked or paused
     if (mealPlan.isBlock && !isUserAuthorized && !isNutritionistAuthorized) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "MealPlan bị khóa, không thể thêm món ăn",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "MealPlan is locked, cannot add dishes",
+      });
     }
-    console.log("PASSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
+
+    // 🔍 Check if MealPlan is paused
+    if (mealPlan.isPause) {
+      return res.status(403).json({
+        success: false,
+        message: "MealPlan is paused, cannot add dishes",
+      });
+    }
 
     // 🔍 Check if MealDay exists in MealPlan
     const mealDay = await MealDay.findOne({ _id: mealDayId, mealPlanId });
     if (!mealDay) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Ngày ăn không hợp lệ" });
+      return res.status(404).json({ success: false, message: "Invalid meal day" });
     }
 
     // 🔍 Check if Meal exists in MealDay
     const meal = await Meal.findOne({ _id: mealId, mealDayId });
     if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Bữa ăn không hợp lệ" });
+      return res.status(404).json({ success: false, message: "Invalid meal" });
     }
 
-    // ✅ Add dishes to meal, avoiding duplicates
-    const existingDishes = new Set(
-      meal.dishes.map((dish) => JSON.stringify(dish))
-    );
+    // ✅ Add dishes to meal
+    const existingDishes = new Set(meal.dishes.map((dish) => JSON.stringify(dish)));
     dishes.forEach((dish) =>
       existingDishes.add(
         JSON.stringify({
@@ -1582,40 +1385,33 @@ exports.addDishesToMeal = async (req, res) => {
       )
     );
     meal.dishes = Array.from(existingDishes).map((dish) => JSON.parse(dish));
-
     await meal.save();
 
     // ✅ Create or update MealTracking
     let tracking = await MealTracking.findOne({
-      userId,
+      userId: targetUserId,
       mealPlanId,
       mealDayId,
       mealId,
     });
     if (!tracking) {
       tracking = await MealTracking.create({
-        userId,
+        userId: targetUserId,
         mealPlanId,
         mealDayId,
         mealId,
         isDone: false,
-        caloriesConsumed: 0, // Default value
+        caloriesConsumed: 0,
       });
     }
 
-    // Calculate new total calories
-    const totalCalories = meal.dishes.reduce(
-      (sum, dish) => sum + (dish.calories || 0),
-      0
-    );
-
-    // Update MealTracking with total calories
+    const totalCalories = meal.dishes.reduce((sum, dish) => sum + (dish.calories || 0), 0);
     tracking.caloriesConsumed = totalCalories;
     await tracking.save();
 
     // ✅ Update Reminder and Job
     await handleReminderAndJob(
-      userId,
+      targetUserId, // Use targetUserId from MealPlan
       mealPlanId,
       mealDayId,
       mealId,
@@ -1625,7 +1421,7 @@ exports.addDishesToMeal = async (req, res) => {
 
     res.status(200).json({ success: true, data: { meal, tracking } });
   } catch (error) {
-    console.error("🔥 Lỗi khi thêm món vào Meal:", error);
+    console.error("🔥 Error while adding dish to Meal:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -1639,9 +1435,7 @@ exports.deleteDishFromMeal = async (req, res) => {
     const requestingUserId = req.user?.id;
     const userRole = req.user?.role;
     if (!requestingUserId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Bạn chưa đăng nhập" });
+      return res.status(401).json({ success: false, message: "Bạn chưa đăng nhập" });
     }
     console.log("Requesting User ID:", requestingUserId);
     console.log("User Role:", userRole);
@@ -1649,9 +1443,7 @@ exports.deleteDishFromMeal = async (req, res) => {
     // 🔍 Check if MealPlan exists
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "MealPlan không tồn tại" });
+      return res.status(404).json({ success: false, message: "MealPlan không tồn tại" });
     }
     console.log("MealPlan:", mealPlan);
 
@@ -1669,19 +1461,13 @@ exports.deleteDishFromMeal = async (req, res) => {
       const mealPlanUser = await UserModel.findById(mealPlan.userId);
       console.log("mealPlanUser:", mealPlanUser);
       if (mealPlanUser) {
-        console.log(
-          "mealPlanUser.nutritionistId:",
-          mealPlanUser.nutritionistId
-        );
+        console.log("mealPlanUser.nutritionistId:", mealPlanUser.nutritionistId);
         console.log(
           "Comparing nutritionistId with requestingUserId:",
           mealPlanUser.nutritionistId?.toString(),
           requestingUserId.toString()
         );
-        if (
-          mealPlanUser.nutritionistId?.toString() ===
-          requestingUserId.toString()
-        ) {
+        if (mealPlanUser.nutritionistId?.toString() === requestingUserId.toString()) {
           isNutritionistAuthorized = true;
           console.log("Nutritionist is authorized!");
         } else {
@@ -1695,49 +1481,37 @@ exports.deleteDishFromMeal = async (req, res) => {
     }
 
     if (!isUserAuthorized && !isNutritionistAuthorized) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Bạn không có quyền chỉnh sửa MealPlan này",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền chỉnh sửa MealPlan này",
+      });
     }
 
     // 🔍 Check if MealPlan is locked, but allow creator or assigned nutritionist to bypass
     if (mealPlan.isBlock && !isUserAuthorized && !isNutritionistAuthorized) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "MealPlan bị khóa, không thể xóa món ăn",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "MealPlan bị khóa, không thể xóa món ăn",
+      });
     }
     console.log("PASSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
 
     // 🔍 Check if MealDay exists in MealPlan
     const mealDay = await MealDay.findOne({ _id: mealDayId, mealPlanId });
     if (!mealDay) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Ngày ăn không hợp lệ" });
+      return res.status(404).json({ success: false, message: "Ngày ăn không hợp lệ" });
     }
 
     // 🔍 Check if Meal exists in MealDay
     const meal = await Meal.findOne({ _id: mealId, mealDayId });
     if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Bữa ăn không hợp lệ" });
+      return res.status(404).json({ success: false, message: "Bữa ăn không hợp lệ" });
     }
 
     // ✅ Find dish by `_id`
-    const dishIndex = meal.dishes.findIndex(
-      (dish) => dish._id.toString() === dishId
-    );
+    const dishIndex = meal.dishes.findIndex((dish) => dish._id.toString() === dishId);
     if (dishIndex === -1) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Món ăn không tồn tại" });
+      return res.status(404).json({ success: false, message: "Món ăn không tồn tại" });
     }
 
     // Get calories of the dish to be deleted
@@ -1756,10 +1530,7 @@ exports.deleteDishFromMeal = async (req, res) => {
     });
 
     if (tracking) {
-      tracking.caloriesConsumed = Math.max(
-        0,
-        tracking.caloriesConsumed - deletedDishCalories
-      );
+      tracking.caloriesConsumed = Math.max(0, tracking.caloriesConsumed - deletedDishCalories);
       if (meal.dishes.length === 0) {
         // If no dishes remain, delete the MealTracking
         await MealTracking.deleteOne({
@@ -1784,14 +1555,7 @@ exports.deleteDishFromMeal = async (req, res) => {
       });
     } else {
       // If dishes remain, update Reminder & Job
-      await handleReminderAndJob(
-        requestingUserId,
-        mealPlanId,
-        mealDayId,
-        mealId,
-        meal,
-        mealDay
-      );
+      await handleReminderAndJob(requestingUserId, mealPlanId, mealDayId, mealId, meal, mealDay);
     }
 
     res.status(200).json({ success: true, data: { meal, tracking } });
@@ -1869,9 +1633,7 @@ exports.getAllMealPlanPayment = async (req, res) => {
 exports.getMealPlanHistory = async (req, res) => {
   try {
     const { userId } = req.params;
-    const history = await UserMealPlanHistory.find({ userId }).populate(
-      "mealPlanId"
-    );
+    const history = await UserMealPlanHistory.find({ userId }).populate("mealPlanId");
 
     res.status(200).json({
       success: true,
