@@ -10,42 +10,112 @@ const getAuthHeaders = () => {
 };
 
 const mealPlanService = {
-  // Lấy danh sách meal plans với phân trang
-  // Lấy danh sách meal plans với phân trang
-  getAllMealPlans: async () => {
+  // Service: Lấy tất cả MealPlan cho admin
+  getAllMealPlanAdmin: async (page = 1, limit = 10) => {
     try {
-      let allMealPlans = [];
-      let page = 1;
-      let totalPages = 1;
+      const response = await api.get("/mealPlan/admin", {
+        params: {
+          page,
+          limit,
+          sort: "createdAt",
+          order: "desc",
+        },
+      });
+      const data = response.data;
 
-      while (page <= totalPages) {
-        const response = await api.get(`/mealPlan`, {
-          params: {
-            page,
-            limit: 100,
-            sort: "createdAt", // Sắp xếp theo thời gian tạo
-            order: "desc", // Giảm dần (mới nhất trước)
+      if (data.status === "success") {
+        const mealPlans = data.data.mealPlans || [];
+        const total = data.results || 0;
+        const totalPages = data.totalPages || 1;
+
+        // Lấy summary từ backend (route admin đã cung cấp sẵn)
+        const summary = data.data.summary || {
+          totalMealPlans: total,
+          unpaidMealPlans: 0,
+          activeMealPlans: 0,
+        };
+
+        console.log("Summary from API (Admin):", summary);
+
+        return {
+          success: true,
+          data: {
+            mealPlans,
+            summary, // Bao gồm totalMealPlans, unpaidMealPlans, activeMealPlans
           },
-        });
-        const data = response.data.data;
-
-        // Gộp dữ liệu mới lên đầu danh sách
-        allMealPlans = [...data.mealPlans, ...allMealPlans]; // 🆕 Đảo ngược thứ tự khi gộp
-
-        totalPages = response.data.totalPages;
-        page++;
+          total,
+          totalPages,
+        };
+      } else {
+        return {
+          success: false,
+          message: data.message || "Không thể lấy danh sách MealPlan",
+        };
       }
-      console.log("All Meal Plans from API:", allMealPlans);
-      return { success: true, data: allMealPlans };
     } catch (error) {
-      console.error("Error fetching meal plans:", error.response?.data || error.message);
+      console.error(
+        "Lỗi khi lấy danh sách MealPlan cho admin:",
+        error.response?.data || error.message
+      );
       return {
         success: false,
-        message: error.response?.data?.message || "Unable to fetch meal plans",
+        message: error.response?.data?.message || "Không thể lấy danh sách MealPlan",
       };
     }
   },
+  // Service: Lấy MealPlan do nutritionist tạo
+  getAllMealPlanNutritionistCreatedBy: async (page = 1, limit = 10) => {
+    try {
+      const response = await api.get("/mealPlan/nutritionist", {
+        params: {
+          page,
+          limit,
+          sort: "createdAt",
+          order: "desc",
+        },
+      });
+      const data = response.data;
 
+      if (data.status === "success") {
+        const mealPlans = data.data.mealPlans || [];
+        const total = data.results || 0;
+        const totalPages = data.totalPages || 1;
+
+        // Lấy summary từ API
+        const summary = data.data.summary || {
+          totalMealPlans: total,
+          unpaidMealPlans: 0,
+          activeMealPlans: 0,
+        };
+
+        console.log("Summary from API (Nutritionist):", summary);
+
+        return {
+          success: true,
+          data: {
+            mealPlans,
+            summary, // Sử dụng summary từ API
+          },
+          total,
+          totalPages,
+        };
+      } else {
+        return {
+          success: false,
+          message: data.message || "Không thể lấy danh sách MealPlan",
+        };
+      }
+    } catch (error) {
+      console.error(
+        "Lỗi khi lấy danh sách MealPlan cho nutritionist:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: error.response?.data?.message || "Không thể lấy danh sách MealPlan",
+      };
+    }
+  },
   // Lấy chi tiết một MealPlan theo ID
   getMealPlanById: async (id) => {
     try {

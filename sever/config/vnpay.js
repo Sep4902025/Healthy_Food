@@ -3,7 +3,8 @@ const VNPAY_CONFIG = {
   vnp_HashSecret: "AAN73FT2ZNAD9T5D88HUN0OTR6NEYDTH", // Chuỗi ký bí mật
   vnp_Url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", // URL cổng thanh toán
   vnp_ReturnUrl: "http://localhost:8080/api/v1/payment/vnpay/return", // URL callback sau khi thanh toán
-  vnp_Api: "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction", // API tra cứu giao dịch
+  vnp_Api: "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction",
+  vnp_AdminReturnUrl: "http://localhost:8080/api/v1/payment/vnpay/adminReturn", 
 };
 
 module.exports = VNPAY_CONFIG;

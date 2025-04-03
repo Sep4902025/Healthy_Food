@@ -20,11 +20,19 @@ const {
   getMealPlanDetails,
   getAllMealPlanPayment,
   getMealPlanHistory,
+  getAllMealPlanNutritionistCreatedBy,
+  getAllMealPlanAdmin,
 } = require("../controllers/mealPlanController");
-const { isAuthenticated } = require("../middlewares/isAuthenticated");
+const { isAuthenticated, isAdmin, isNutritionist } = require("../middlewares/isAuthenticated");
 
 // 📌 Get list of MealPlans
-mealPlanRouter.get("/", isAuthenticated, getMealPlan);
+mealPlanRouter.get(
+  "/nutritionist",
+  isAuthenticated,
+  isNutritionist,
+  getAllMealPlanNutritionistCreatedBy
+); // Danh sách MealPlan do nutritionist tạo
+mealPlanRouter.get("/admin", isAuthenticated, isAdmin, getAllMealPlanAdmin); // Danh sách tất cả MealPlan cho admin
 mealPlanRouter.get("/user/:userId", isAuthenticated, getUserMealPlan);
 mealPlanRouter.get("/user/:userId/unpaid", isAuthenticated, getUnpaidMealPlanForUser);
 mealPlanRouter.get("/details/:mealPlanId", isAuthenticated, getMealPlanDetails);

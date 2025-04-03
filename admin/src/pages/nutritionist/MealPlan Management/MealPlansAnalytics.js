@@ -38,13 +38,33 @@ const MealPlansAnalytics = () => {
     try {
       setLoading(true);
       setError(null);
-  
-      const mealPlansResponse = await mealPlanService.getAllMealPlans();
-      if (!mealPlansResponse.success) {
-        throw new Error(`Unable to fetch Meal Plans list: ${mealPlansResponse.message}`);
+
+      // Fetch all meal plans with pagination
+      let allMealPlans = [];
+      let page = 1;
+      const limit = 100; // Set a high limit to fetch more data per request
+      let hasMore = true;
+
+      while (hasMore) {
+        const mealPlansResponse = await mealPlanService.getAllMealPlanNutritionistCreatedBy(
+          page,
+          limit
+        );
+        if (!mealPlansResponse.success) {
+          throw new Error(`Unable to fetch Meal Plans list: ${mealPlansResponse.message}`);
+        }
+
+        const mealPlans = mealPlansResponse.data.mealPlans || [];
+        allMealPlans = [...allMealPlans, ...mealPlans];
+
+        // Check if there are more pages
+        const totalItems = mealPlansResponse.total || mealPlans.length;
+        const totalPages = mealPlansResponse.totalPages || Math.ceil(totalItems / limit);
+        hasMore = page < totalPages;
+        page += 1;
       }
-      const mealPlans = mealPlansResponse.data;
-  
+
+      // Fetch payment history
       let allPayments = [];
       try {
         const paymentResponse = await mealPlanService.getPaymentHistoryForNutritionist();
@@ -56,8 +76,8 @@ const MealPlansAnalytics = () => {
       } catch (paymentError) {
         throw new Error(`Error calling payment history API: ${paymentError.message}`);
       }
-  
-      // Process payment data
+
+      // Process payment data for monthly revenue
       const monthlyRevenueMap = {};
       allPayments.forEach((payment, index) => {
         if (payment.status === "success" && payment.paymentDate && payment.amount) {
@@ -72,7 +92,7 @@ const MealPlansAnalytics = () => {
           monthlyRevenueMap[year][month] += Number(payment.amount);
         }
       });
-  
+
       const monthlyRevenue = {};
       Object.keys(monthlyRevenueMap).forEach((year) => {
         monthlyRevenue[year] = Array(12)
@@ -82,7 +102,7 @@ const MealPlansAnalytics = () => {
             revenue: monthlyRevenueMap[year][index + 1] || 0,
           }));
       });
-  
+
       const currentYear = new Date().getFullYear().toString();
       if (!monthlyRevenue[currentYear]) {
         monthlyRevenue[currentYear] = Array(12)
@@ -92,19 +112,29 @@ const MealPlansAnalytics = () => {
             revenue: 0,
           }));
       }
-  
+
+      // Calculate analytics data
+      const currentDate = new Date();
       setAnalyticsData({
-        totalFixed: mealPlans.filter((plan) => plan.type === "fixed").length,
-        totalCustom: mealPlans.filter((plan) => plan.type === "custom").length,
-        paidMealPlans: mealPlans.filter((plan) => plan.paymentId !== null).length,
-        unpaidMealPlans: mealPlans.filter((plan) => plan.paymentId === null).length,
+        totalFixed: allMealPlans.filter((plan) => plan.type === "fixed").length,
+        totalCustom: allMealPlans.filter((plan) => plan.type === "custom").length,
+        paidMealPlans: allMealPlans.filter((plan) => plan.paymentId !== null).length,
+        unpaidMealPlans: allMealPlans.filter((plan) => plan.paymentId === null).length,
         monthlyRevenue,
-        totalMealPlans: mealPlans.length,
-        expiredMealPlans: mealPlans.filter((plan) => new Date(plan.endDate) < new Date()).length,
-        pausedMealPlans: mealPlans.filter((plan) => plan.isPause === true).length,
-        activeMealPlans: mealPlans.filter(
-          (plan) => new Date(plan.endDate) >= new Date() && !plan.isPause
-        ).length,
+        totalMealPlans: allMealPlans.length,
+        expiredMealPlans: allMealPlans.filter((plan) => {
+          const startDate = new Date(plan.startDate);
+          const endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + plan.duration);
+          return endDate < currentDate;
+        }).length,
+        pausedMealPlans: allMealPlans.filter((plan) => plan.isPause === true).length,
+        activeMealPlans: allMealPlans.filter((plan) => {
+          const startDate = new Date(plan.startDate);
+          const endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + plan.duration);
+          return endDate >= currentDate && !plan.isPause && !plan.isBlock;
+        }).length,
       });
     } catch (err) {
       setError(`Unable to load analytics data: ${err.message}`);
@@ -112,7 +142,7 @@ const MealPlansAnalytics = () => {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchAnalyticsData();
     const intervalId = setInterval(() => {
@@ -138,18 +168,21 @@ const MealPlansAnalytics = () => {
     { name: "Active", value: analyticsData.activeMealPlans },
   ];
 
-  // Data for Line chart, ensuring default values are always available
-  const revenueData = analyticsData.monthlyRevenue[yearFilter] || Array(12)
-    .fill(null)
-    .map((_, index) => ({
-      month: `M${String(index + 1).padStart(2, "0")}`,
-      revenue: 0,
-    }));
+  // Data for Line chart
+  const revenueData =
+    analyticsData.monthlyRevenue[yearFilter] ||
+    Array(12)
+      .fill(null)
+      .map((_, index) => ({
+        month: `M${String(index + 1).padStart(2, "0")}`,
+        revenue: 0,
+      }));
 
   // Get list of available years
-  const availableYears = Object.keys(analyticsData.monthlyRevenue).length > 0
-    ? Object.keys(analyticsData.monthlyRevenue).sort((a, b) => b - a)
-    : [new Date().getFullYear().toString()];
+  const availableYears =
+    Object.keys(analyticsData.monthlyRevenue).length > 0
+      ? Object.keys(analyticsData.monthlyRevenue).sort((a, b) => b - a)
+      : [new Date().getFullYear().toString()];
 
   if (loading) {
     return (

@@ -28,7 +28,7 @@ const TableMealPlanAdmin = () => {
   const fetchMealPlans = async () => {
     setIsTransitioning(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(
+      const response = await mealPlanService.getAllMealPlans2(
         currentPage + 1,
         limit
       );

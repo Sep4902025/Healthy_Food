@@ -83,69 +83,109 @@ exports.createMealPlan = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
-// ✅ Lấy danh sách MealPlan dựa trên userId từ token middleware
-exports.getMealPlan = async (req, res) => {
+// Hàm chung cho phân trang và sắp xếp
+const applyPaginationAndSort = async (query, page, limit, sort, order) => {
+  const skip = (page - 1) * limit;
+  const sortOrder = order === "desc" ? -1 : 1;
+  return query
+    .sort({ [sort]: sortOrder })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+};
+// Controller: Lấy MealPlan cho nutritionist
+exports.getAllMealPlanNutritionistCreatedBy = async (req, res) => {
   try {
-    const { _id, role } = req.user || {}; // Lấy từ middleware authentication, có thể không có nếu không yêu cầu auth
-
-    // Xây dựng bộ lọc
-    let filter = { isDelete: false }; // Chỉ lấy các MealPlan chưa bị xóa
-
-    // Nếu có role, áp dụng phân quyền (cho user hoặc nutritionist)
-    if (_id && role) {
-      if (role === "user") {
-        filter.userId = _id; // User chỉ thấy MealPlan của chính mình
-      } else if (role === "nutritionist") {
-        filter.createdBy = _id; // Nutritionist chỉ thấy MealPlan họ tạo
-      } else if (role !== "admin") {
-        return res.status(403).json({ success: false, message: "Vai trò không hợp lệ" });
-      }
-      // Nếu là admin, không thêm điều kiện lọc userId hay createdBy, lấy tất cả
-    }
-
-    // Lấy query parameters cho phân trang
+    const { _id } = req.user;
+    const filter = { isDelete: false, createdBy: _id };
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    // Sắp xếp
     const { sort = "createdAt", order = "desc" } = req.query;
-    const sortOrder = order === "desc" ? -1 : 1;
-    const sortOptions = { [sort]: sortOrder };
 
-    // Lấy tổng số MealPlan
+    // Tổng số meal plans
     const totalMealPlans = await MealPlan.countDocuments(filter);
 
-    // Lấy danh sách MealPlan với phân trang
-    const mealPlans = await MealPlan.find(filter)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit)
-      .populate("userId", "email avatarUrl username")
-      .populate("createdBy", "username email avatarUrl")
-      .lean();
+    // Lấy danh sách meal plans với phân trang và populate userId
+    const mealPlans = await applyPaginationAndSort(
+      MealPlan.find(filter).populate({
+        path: "userId",
+        select: "email avatarUrl username",
+        // Xử lý trường hợp userId không tồn tại
+        options: { lean: true },
+      }),
+      page,
+      limit,
+      sort,
+      order
+    );
 
-    // Tính toán các số liệu cho dashboard (chỉ dành cho admin hoặc không giới hạn role)
-    let unpaidMealPlans = 0;
-    let activeMealPlans = 0;
-    if (!role || role === "admin") {
-      unpaidMealPlans = await MealPlan.countDocuments({
-        ...filter,
-        isPaid: false,
-      });
-      activeMealPlans = await MealPlan.countDocuments({
-        ...filter,
-        isPaid: true,
-        isBlock: false,
-      });
-    } else {
-      // Nếu không phải admin, tính dựa trên dữ liệu đã lọc
-      unpaidMealPlans = mealPlans.filter((mp) => !mp.isPaid).length;
-      activeMealPlans = mealPlans.filter((mp) => mp.isPaid && !mp.isBlock).length;
-    }
+    // Tính toán summary
+    const allMealPlans = await MealPlan.find(filter); // Lấy toàn bộ meal plans để tính summary
+    const unpaidMealPlans = allMealPlans.filter((mp) => !mp.paymentId).length;
+    const activeMealPlans = allMealPlans.filter(
+      (mp) => mp.paymentId && !mp.isBlock && !mp.isPause
+    ).length;
 
-    // Định dạng phản hồi
+    const summary = {
+      totalMealPlans,
+      unpaidMealPlans,
+      activeMealPlans,
+    };
+
+    // Đảm bảo mealPlans trả về có userId hợp lệ
+    const formattedMealPlans = mealPlans.map((mealPlan) => {
+      if (!mealPlan.userId) {
+        mealPlan.userId = {
+          email: "Unknown",
+          avatarUrl: "https://i.pinimg.com/736x/81/ec/02/81ec02c841e7aa13d0f099b5df02b25c.jpg",
+          username: "Unknown",
+        };
+      }
+      return mealPlan;
+    });
+
+    res.status(200).json({
+      status: "success",
+      results: totalMealPlans,
+      page,
+      totalPages: Math.ceil(totalMealPlans / limit),
+      data: {
+        mealPlans: formattedMealPlans,
+        summary, // Trả về summary trong response
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách MealPlan cho nutritionist:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Controller: Lấy tất cả MealPlan cho admin
+exports.getAllMealPlanAdmin = async (req, res) => {
+  try {
+    const filter = { isDelete: false };
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const { sort = "createdAt", order = "desc" } = req.query;
+
+    const totalMealPlans = await MealPlan.countDocuments(filter);
+    const mealPlans = await applyPaginationAndSort(
+      MealPlan.find(filter)
+        .populate("userId", "email avatarUrl username")
+        .populate("createdBy", "username email avatarUrl"),
+      page,
+      limit,
+      sort,
+      order
+    );
+
+    const unpaidMealPlans = await MealPlan.countDocuments({ ...filter, isPaid: false });
+    const activeMealPlans = await MealPlan.countDocuments({
+      ...filter,
+      isPaid: true,
+      isBlock: false,
+    });
+
     res.status(200).json({
       status: "success",
       results: totalMealPlans,
@@ -153,15 +193,11 @@ exports.getMealPlan = async (req, res) => {
       totalPages: Math.ceil(totalMealPlans / limit),
       data: {
         mealPlans,
-        summary: {
-          totalMealPlans,
-          unpaidMealPlans,
-          activeMealPlans,
-        },
+        summary: { totalMealPlans, unpaidMealPlans, activeMealPlans },
       },
     });
   } catch (error) {
-    console.error("Lỗi khi lấy danh sách MealPlan:", error);
+    console.error("Lỗi khi lấy danh sách MealPlan cho admin:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

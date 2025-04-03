@@ -11,31 +11,49 @@ const TableMealPlan = () => {
   const { user } = useSelector(selectAuth);
   const navigate = useNavigate();
   const [mealPlans, setMealPlans] = useState([]);
+  const [filteredMealPlans, setFilteredMealPlans] = useState([]);
+  const [summary, setSummary] = useState({
+    totalMealPlans: 0,
+    unpaidMealPlans: 0,
+    activeMealPlans: 0,
+  });
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(0); // 0-based for ReactPaginate
   const [totalPages, setTotalPages] = useState(1);
   const [limit, setLimit] = useState(10); // Items per page
   const [totalItems, setTotalItems] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [activeTab, setActiveTab] = useState("All"); // Tab hiện tại
 
   // Fetch meal plans
   const fetchMealPlans = async (callback) => {
     setIsTransitioning(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // 1-based for API
-      console.log("API Response:", response); // Debug API response
+      const response = await mealPlanService.getAllMealPlanNutritionistCreatedBy(
+        currentPage + 1,
+        limit
+      ); // 1-based for API
+      console.log("API Response:", response);
 
       if (response.success) {
-        const mealPlanData = Array.isArray(response.data) ? response.data : [];
+        const mealPlanData = response.data.mealPlans || [];
+        const summaryData = response.data.summary || {
+          totalMealPlans: response.total || mealPlanData.length,
+          unpaidMealPlans: 0,
+          activeMealPlans: 0,
+        };
         setMealPlans(mealPlanData);
-        setTotalItems(response.total || mealPlanData.length); // Fallback to array length if total is missing
+        setSummary(summaryData);
+        setTotalItems(response.total || mealPlanData.length);
         setTotalPages(
           response.totalPages || Math.ceil((response.total || mealPlanData.length) / limit)
         );
+        console.log("Meal Plans Set:", mealPlanData); // Log để kiểm tra dữ liệu
         if (callback) callback(response);
       } else {
         setError(response.message || "Failed to fetch meal plans");
         setMealPlans([]);
+        setSummary({ totalMealPlans: 0, unpaidMealPlans: 0, activeMealPlans: 0 });
         setTotalPages(1);
         setTotalItems(0);
       }
@@ -43,6 +61,7 @@ const TableMealPlan = () => {
       console.error("Fetch error:", err);
       setError("An unexpected error occurred while loading meal plans");
       setMealPlans([]);
+      setSummary({ totalMealPlans: 0, unpaidMealPlans: 0, activeMealPlans: 0 });
       setTotalPages(1);
       setTotalItems(0);
     } finally {
@@ -53,6 +72,39 @@ const TableMealPlan = () => {
   useEffect(() => {
     fetchMealPlans();
   }, [currentPage, limit]);
+
+  // Filter meal plans based on active tab
+  useEffect(() => {
+    const currentDate = new Date();
+    const filtered = mealPlans.filter((mealPlan) => {
+      const startDate = new Date(mealPlan.startDate);
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + mealPlan.duration);
+
+      const isUnpaid = !mealPlan.paymentId;
+      const isExpired = currentDate > endDate;
+      const isPaused = mealPlan.isPause;
+      const isBlocked = mealPlan.isBlock;
+      const isActive = mealPlan.paymentId && !isExpired && !isPaused && !isBlocked;
+
+      switch (activeTab) {
+        case "All":
+          return true;
+        case "Unpaid":
+          return isUnpaid;
+        case "Active":
+          return isActive;
+        case "Expired":
+          return isExpired;
+        case "Paused":
+          return isPaused;
+        default:
+          return true;
+      }
+    });
+    setFilteredMealPlans(filtered);
+    console.log("Filtered Meal Plans:", filtered); // Log để kiểm tra dữ liệu lọc
+  }, [mealPlans, activeTab]);
 
   // Handle page change
   const handlePageClick = ({ selected }) => {
@@ -71,9 +123,9 @@ const TableMealPlan = () => {
         const response = await mealPlanService.deleteMealPlan(id);
         if (response.success) {
           fetchMealPlans((result) => {
-            const totalItemsAfterDelete = result.total || result.data.length;
+            const totalItemsAfterDelete = result.total || result.data.mealPlans.length;
             const newTotalPages = Math.ceil(totalItemsAfterDelete / limit) || 1;
-            if (result.data.length === 0 && currentPage > 0) {
+            if (result.data.mealPlans.length === 0 && currentPage > 0) {
               setCurrentPage(currentPage - 1);
             } else if (currentPage >= newTotalPages) {
               setCurrentPage(newTotalPages - 1);
@@ -97,12 +149,25 @@ const TableMealPlan = () => {
     });
   };
 
-  // Check if meal plan is expired
-  const isExpired = (startDate, duration) => {
-    const start = new Date(startDate);
-    const end = new Date(start);
-    end.setDate(start.getDate() + duration);
-    return new Date() > end;
+  // Determine status
+  const getStatus = (mealPlan) => {
+    const startDate = new Date(mealPlan.startDate);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + mealPlan.duration);
+    const currentDate = new Date();
+
+    if (mealPlan.isPause) return { label: "Paused", className: "bg-yellow-100 text-yellow-800" };
+    if (currentDate > endDate) return { label: "Expired", className: "bg-red-100 text-red-800" };
+    if (mealPlan.paymentId && !mealPlan.isBlock && !mealPlan.isPause)
+      return { label: "Active", className: "bg-[#40B491] text-white" };
+    return { label: "Unpaid", className: "bg-gray-100 text-gray-800" };
+  };
+
+  // Determine payment status
+  const getPaymentStatus = (mealPlan) => {
+    return mealPlan.paymentId
+      ? { label: "Paid", className: "bg-green-100 text-green-800" }
+      : { label: "Unpaid", className: "bg-yellow-100 text-yellow-800" };
   };
 
   if (isTransitioning) {
@@ -134,106 +199,163 @@ const TableMealPlan = () => {
         </button>
       </div>
 
+      {/* Summary Section */}
+      <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="bg-[#40B491] text-white p-4 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold">Total Meal Plans</h3>
+          <p className="text-2xl">{summary.totalMealPlans}</p>
+        </div>
+        <div className="bg-yellow-500 text-white p-4 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold">Unpaid Meal Plans</h3>
+          <p className="text-2xl">{summary.unpaidMealPlans}</p>
+        </div>
+        <div className="bg-green-500 text-white p-4 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold">Active Meal Plans</h3>
+          <p className="text-2xl">{summary.activeMealPlans}</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-4 flex space-x-2">
+        {["All", "Unpaid", "Active", "Expired", "Paused"].map((tab) => (
+          <button
+            key={tab}
+            className={`px-4 py-2 rounded-md font-medium ${
+              activeTab === tab
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            } transition duration-200`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       {/* Data Container */}
       <Loading isLoading={isTransitioning}>
-        <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
-          {/* Table Header */}
-          <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
-            <div className="col-span-1">No.</div>
-            <div className="col-span-2">Title</div>
-            <div className="col-span-1">Start Date</div>
-            <div className="col-span-1">Duration</div>
-            <div className="col-span-1">Type</div>
-            <div className="col-span-1">Price</div>
-            <div className="col-span-2">Created For</div>
-            <div className="col-span-1 text-center">Status</div>
-            <div className="col-span-2 text-center">Actions</div>
-          </div>
+        <div className="bg-white shadow-2xl rounded-2xl overflow-x-auto">
+          {/* Table */}
+          <table className="min-w-full divide-y divide-gray-200 table-fixed">
+            {/* Table Header */}
+            <thead className="bg-[#40B491] text-white">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-[5%]">No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-[5%]">Title</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-[12%]">Start Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-[8%]">Duration</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-[8%]">Type</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-[10%]">Price</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold w-[10%]">Created For</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold w-[10%]">
+                  Payment Status
+                </th>
+                <th className="px-4 py-3 text-center text-sm font-semibold w-[8%]">Status</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold w-[10%]">Actions</th>
+              </tr>
+            </thead>
 
-          {/* Table Body */}
-          <div className="divide-y divide-gray-200">
-            {mealPlans.length > 0 ? (
-              mealPlans.map((mealPlan, index) => {
-                const expired = isExpired(mealPlan.startDate, mealPlan.duration);
-                return (
-                  <div
-                    key={mealPlan._id}
-                    className={`grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300 ${
-                      isTransitioning ? "opacity-0" : "opacity-100"
-                    }`}
-                  >
-                    <div className="col-span-1 text-gray-600 font-medium">
-                      {currentPage * limit + index + 1}
-                    </div>
-                    <div className="col-span-2 text-gray-700 text-sm line-clamp-2">
-                      {mealPlan.title}
-                    </div>
-                    <div className="col-span-1 text-gray-700 text-sm">
-                      {formatDate(mealPlan.startDate)}
-                    </div>
-                    <div className="col-span-1 text-gray-700 text-sm">{mealPlan.duration} days</div>
-                    <div className="col-span-1 text-gray-700 text-sm">
-                      {mealPlan.type === "fixed" ? "Fixed" : "Custom"}
-                    </div>
-                    <div className="col-span-1 text-gray-700 text-sm">
-                      {mealPlan.price ? `$${mealPlan.price}` : "N/A"}
-                    </div>
-                    <div className="col-span-2 text-gray-700 text-sm flex items-center">
-                      <img
-                        src={
-                          mealPlan.userId?.avatarUrl ||
-                          "https://i.pinimg.com/736x/81/ec/02/81ec02c841e7aa13d0f099b5df02b25c.jpg"
-                        }
-                        alt="Avatar"
-                        className="w-8 h-8 rounded-full mr-2"
-                      />
-                      <span className="line-clamp-1">{mealPlan.userId?.email || "Unknown"}</span>
-                    </div>
-                    <div className="col-span-1 text-center">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          expired
-                            ? "bg-red-100 text-red-800"
-                            : mealPlan.isPause
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-[#40B491] text-white"
-                        }`}
-                      >
-                        {expired ? "Expired" : mealPlan.isPause ? "Paused" : "Active"}
-                      </span>
-                    </div>
-                    <div className="col-span-2 flex justify-center space-x-3">
-                      <button
-                        className="p-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
-                        onClick={() => handleEdit(mealPlan._id)}
-                        title="Edit"
-                      >
-                        <EditIcon size={16} />
-                      </button>
-                      <button
-                        className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-                        onClick={() => handleDelete(mealPlan._id)}
-                        title="Delete"
-                      >
-                        <TrashIcon size={16} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="p-6 text-center text-gray-500">
-                No meal plans found.{" "}
-                <button
-                  onClick={() => navigate("/nutritionist/mealplan/create")}
-                  className="text-[#40B491] hover:text-[#359c7a] underline"
-                >
-                  Create a new meal plan
-                </button>
-                .
-              </div>
-            )}
-          </div>
+            {/* Table Body */}
+            <tbody className="divide-y divide-gray-200">
+              {filteredMealPlans.length > 0 ? (
+                filteredMealPlans.map((mealPlan, index) => {
+                  const paymentStatus = getPaymentStatus(mealPlan);
+                  const status = getStatus(mealPlan);
+                  return (
+                    <tr
+                      key={mealPlan._id}
+                      className={`hover:bg-gray-50 transition-opacity duration-300 ${
+                        isTransitioning ? "opacity-0" : "opacity-100"
+                      }`}
+                    >
+                      <td className="px-4 py-3 text-gray-600 text-sm font-medium w-[5%]">
+                        {currentPage * limit + index + 1}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 w-[5%]">
+                        <p className="text-sm truncate"> {mealPlan.title}</p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 text-sm whitespace-nowrap w-[12%]">
+                        {formatDate(mealPlan.startDate)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 text-sm w-[8%]">
+                        {mealPlan.duration} days
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 text-sm w-[8%]">
+                        {mealPlan.type === "fixed" ? "Fixed" : "Custom"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 text-sm w-[10%]">
+                        {mealPlan.price ? `$${mealPlan.price.toLocaleString()}` : "N/A"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 text-sm w-[10%] h-full">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={
+                              mealPlan.userId?.avatarUrl ||
+                              "https://i.pinimg.com/736x/81/ec/02/81ec02c841e7aa13d0f099b5df02b25c.jpg"
+                            }
+                            alt="Avatar"
+                            className="w-8 h-8 rounded-full mr-2 flex-shrink-0 object-cover"
+                            onError={(e) => {
+                              e.target.src =
+                                "https://i.pinimg.com/736x/81/ec/02/81ec02c841e7aa13d0f099b5df02b25c.jpg";
+                            }}
+                          />
+                          <p className="truncate">
+                            {mealPlan.userId?.username || mealPlan.userId?.email || "Unknown User"}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center w-[10%]">
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${paymentStatus.className}`}
+                        >
+                          {paymentStatus.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center w-[8%]">
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${status.className}`}
+                        >
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center w-[10%]">
+                        <div className="flex justify-center space-x-3">
+                          <button
+                            className="p-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                            onClick={() => handleEdit(mealPlan._id)}
+                            title="Edit"
+                          >
+                            <EditIcon size={16} />
+                          </button>
+                          <button
+                            className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                            onClick={() => handleDelete(mealPlan._id)}
+                            title="Delete"
+                          >
+                            <TrashIcon size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="10" className="p-6 text-center text-gray-500">
+                    No meal plans found for this status.{" "}
+                    <button
+                      onClick={() => navigate("/nutritionist/mealplan/create")}
+                      className="text-[#40B491] hover:text-[#359c7a] underline"
+                    >
+                      Create a new meal plan
+                    </button>
+                    .
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
 
           {/* Pagination */}
           {totalItems > 0 && (

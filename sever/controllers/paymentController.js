@@ -571,3 +571,167 @@ exports.sendSalaryEmail = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+// New function to create salary payment URL
+exports.createSalaryPaymentUrl = catchAsync(async (req, res, next) => {
+  const { nutriId, amount } = req.body;
+
+  const nutritionist = await UserModel.findById(nutriId);
+  if (!nutritionist || nutritionist.role !== "nutritionist") {
+    return next(new AppError("Nutritionist not found or invalid role", 404));
+  }
+
+  const clientIp =
+    req.headers["x-forwarded-for"] ||
+    req.connection.remoteAddress ||
+    req.ip ||
+    "127.0.0.1";
+
+  const payment = new Payment({
+    userId: nutriId,
+    amount,
+    status: "pending",
+    paymentMethod: "vnpay",
+    paymentType: "salary", // Đánh dấu đây là thanh toán lương
+  });
+  await payment.save();
+
+  let vnp_Params = {
+    vnp_Version: "2.1.0",
+    vnp_Command: "pay",
+    vnp_TmnCode: VNPAY_CONFIG.vnp_TmnCode || "",
+    vnp_Amount: Math.round(amount * 100).toString(), // VNPAY yêu cầu nhân 100
+    vnp_CurrCode: "VND",
+    vnp_TxnRef: payment._id.toString(),
+    vnp_OrderInfo: `Thanh toan luong cho ${nutritionist.username}`,
+    vnp_OrderType: "180000", // Loại đơn hàng (có thể tùy chỉnh)
+    vnp_Locale: "vn",
+    vnp_ReturnUrl: "http://localhost:8080/api/v1/payment/vnpay/adminReturn", // Đồng bộ với vnpayAdminReturn
+    vnp_IpAddr: clientIp,
+    vnp_CreateDate: moment().format("YYYYMMDDHHmmss"),
+  };
+
+  const sortedParams = Object.fromEntries(
+    Object.entries(vnp_Params)
+      .map(([key, value]) => [key, String(value || "").trim()])
+      .sort()
+  );
+
+  const signData = new URLSearchParams(sortedParams).toString();
+  const secureHash = crypto
+    .createHmac("sha512", VNPAY_CONFIG.vnp_HashSecret)
+    .update(Buffer.from(signData, "utf-8"))
+    .digest("hex");
+
+  sortedParams["vnp_SecureHash"] = secureHash;
+
+  const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(
+    sortedParams
+  ).toString()}`;
+
+  res.status(200).json({
+    status: "success",
+    paymentUrl,
+    paymentId: payment._id,
+  });
+});
+
+exports.vnpayAdminReturn = async (req, res) => {
+  try {
+    const vnp_Params = { ...req.query };
+    const secureHash = vnp_Params["vnp_SecureHash"];
+    delete vnp_Params["vnp_SecureHash"];
+    delete vnp_Params["vnp_SecureHashType"];
+
+    const sortedParams = Object.fromEntries(
+      Object.entries(vnp_Params)
+        .map(([key, value]) => [key, String(value || "").trim()])
+      .sort()
+    );
+
+    const signData = new URLSearchParams(sortedParams).toString();
+    const signed = crypto
+      .createHmac("sha512", VNPAY_CONFIG.vnp_HashSecret)
+      .update(Buffer.from(signData, "utf-8"))
+      .digest("hex");
+
+    const baseUrl = process.env.ADMIN_WEB_URL;
+
+    if (secureHash !== signed) {
+      return res
+        .status(400)
+        .redirect(
+          `${baseUrl}/admin/financemanagement?status=error&message=Invalid+signature`
+        );
+    }
+
+    const transactionNo = vnp_Params["vnp_TransactionNo"];
+    const paymentId = vnp_Params["vnp_TxnRef"];
+    const responseCode = vnp_Params["vnp_ResponseCode"];
+    const status = responseCode === "00" ? "success" : "failed";
+
+    const payment = await Payment.findByIdAndUpdate(
+      paymentId,
+      {
+        transactionNo,
+        status,
+        paymentDate: new Date(),
+        paymentDetails: vnp_Params,
+      },
+      { new: true }
+    );
+
+    if (!payment) {
+      return res
+        .status(404)
+        .redirect(
+          `${baseUrl}/admin/financemanagement?status=error&message=Payment+not+found`
+        );
+    }
+
+    if (status === "success" && payment.paymentType === "salary") {
+      // Xóa các thanh toán lương pending khác của nutritionist này (nếu cần)
+      await Payment.deleteMany({
+        _id: { $ne: payment._id },
+        userId: payment.userId,
+        paymentType: "salary",
+        status: "pending",
+      });
+    }
+
+    const redirectUrl = `${baseUrl}/admin/financemanagement?status=${status}&message=${
+      status === "success" ? "Thanh+toán+lương+thành+công" : "Thanh+toán+lương+thất+bại"
+    }`;
+    res.redirect(redirectUrl);
+  } catch (error) {
+    const baseUrl = process.env.ADMIN_WEB_URL;
+    res.redirect(
+      `${baseUrl}/admin/financemanagement?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`
+    );
+  }
+};
+
+// New function to get salary payment history
+exports.getSalaryPaymentHistory = catchAsync(async (req, res, next) => {
+  const { nutriId } = req.params;
+
+  const payments = await Payment.find({
+    userId: nutriId,
+    paymentType: "salary",
+  }).sort({ createdAt: -1 });
+
+  res.status(200).json({
+    status: "success",
+    data: payments,
+  });
+});
+
+exports.getAllSalaryPaymentHistory = catchAsync(async (req, res, next) => {
+  const payments = await Payment.find({ paymentType: "salary" }).sort({
+    createdAt: -1,
+  });
+  res.status(200).json({
+    status: "success",
+    data: payments,
+  });
+});
