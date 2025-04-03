@@ -2,13 +2,13 @@ import React, { useRef, useContext } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { Heart, ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight} from "lucide-react";
 import { DarkModeContext } from "../context/DarkModeContext";
 
 const ForYoyPage = () => {
   const sliderRef = useRef(null);
 
-  const { darkMode, toggleDarkMode } = useContext(DarkModeContext);
+  useContext(DarkModeContext);
   const categories = [
     {
       id: 1,

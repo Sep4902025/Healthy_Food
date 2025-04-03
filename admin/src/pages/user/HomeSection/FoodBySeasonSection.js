@@ -4,6 +4,7 @@ import useFoodData from "../../../helpers/useFoodData";
 import HomeService from "../../../services/home.service";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import DefaultImg from "../../../assets/images/default.jpg";
 
 const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
   const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, dishes);
@@ -49,7 +50,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
 
   return (
     <div className="py-6">
-      <h2 className="text-4xl font-bold font-['Syne'] text-white bg-[#40b491] py-4 px-6 rounded-lg text-left mb-6">
+      <h2 className="text-4xl font-bold font-['Syne'] text-white bg-[#40b491] py-4 px-6 rounded-lg text-left mb-6 dark:bg-[#1edc61]">
         {selectedSeason} Recipes
       </h2>
 
@@ -57,10 +58,10 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
         {displayedDishes.map((dish) => (
           <div
             key={dish._id}
-            className="relative bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition"
+            className="relative bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition dark:bg-[#67f598]"
             onClick={() => navigate(`/${dish._id}/recipes/${dish.recipeId}`)}
           >
-            <span className="absolute top-2 right-2 bg-[#40b491] text-white text-xs font-semibold uppercase px-2 py-1 rounded">
+            <span className="absolute top-2 right-2 bg-[#40b491] text-white text-xs font-semibold uppercase px-2 py-1 rounded dark:bg-[#1edc61] dark:text-gray-300">
               {dish.season}
             </span>
 
@@ -69,6 +70,10 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
                 src={dish.imageUrl}
                 alt={dish.name}
                 className="w-48 h-48 rounded-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null; // Prevent infinite loop
+                  e.target.src = DefaultImg; // Fallback image
+                }}
               />
             </div>
 
@@ -92,7 +97,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
             </div>
 
             <div
-              className="absolute bottom-0 right-0 bg-[#40b491] rounded-tl-[40px] p-4"
+              className="absolute bottom-0 right-0 bg-[#40b491] rounded-tl-[40px] p-4 dark:bg-[#1edc61]"
               onClick={(e) => {
                 e.stopPropagation();
                 handleLike(dish._id);

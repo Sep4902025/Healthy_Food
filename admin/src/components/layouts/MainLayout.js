@@ -1,31 +1,30 @@
-import React from "react";
+import React, {useContext } from "react";
 import { Outlet } from "react-router-dom";
-
 import { selectUser } from "../../store/selectors/authSelectors";
 import UserChatButton from "../Chat/UserChatButton";
-
 import Footer from "../../pages/user/footer/Footer";
-
 import Header from "../Header";
 import { useSelector } from "react-redux";
+import { DarkModeContext } from './../../pages/context/DarkModeContext';
 
 const MainLayout = () => {
   const user = useSelector(selectUser);
+  const { darkMode } = useContext(DarkModeContext);
   return (
-    <div className="flex flex-col bg-gray-50 min-h-screen">
+    <div className="flex flex-col bg-gray-50 min-h-screen dark:bg-gray-400 ">
       {/* Header */}
-      <Header />
+      <Header darkMode={darkMode} />
 
       {/* Main Content */}
       <main className="flex flex-col">
-        <Outlet />
+        <Outlet context={{ darkMode }} />
       </main>
 
       {/* Footer */}
-      <Footer />
+      <Footer  darkMode={darkMode}/>
 
       {/* Chat button (chỉ hiển thị nếu là customer) */}
-      {user?.role === "user" && <UserChatButton />}
+      {user?.role === "user" && <UserChatButton darkMode={darkMode} />}
     </div>
   );
 };

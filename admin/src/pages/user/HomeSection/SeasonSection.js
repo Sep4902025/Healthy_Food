@@ -16,12 +16,12 @@ const categories = [
 
 const SeasonSection = ({onSelectSeason }) => {
   return (
-    <div className="w-full bg-white py-8">
+    <div className="w-full bg-white py-8 dark:bg-[#bbbbae] ">
       <div className="max-w-6xl mx-auto flex flex-col items-center">
         {/* Danh mục món ăn cùng logo */}
         <div className="flex justify-start w-full">
           <div className="flex flex-col items-center">
-            <img src={Logo} alt="Explore" className="w-40 h-28" />
+            <img src={Logo} alt="Explore" className="w-40 h-28 dark:brightness-125 dark:contrast-150 dark:saturate-200" />
             <p className="text-gray-700 font-medium mt-2">Let's explore with us</p>
           </div>
           <div className="flex justify-end gap-8 flex-wrap flex-1">
