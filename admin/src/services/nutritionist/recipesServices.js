@@ -130,7 +130,7 @@ const recipesService = {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-      return { success: true, message: response.data.message || "Công thức đã được xóa" };
+      return { success: true, message: response.data.message || "Recipe has been deleted" };
     } catch (error) {
       console.error("❌ Lỗi khi xóa công thức:", error.response?.data || error.message);
       return { success: false, message: error.response?.data?.message || "Xóa thất bại!" };

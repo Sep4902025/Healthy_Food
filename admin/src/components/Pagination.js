@@ -3,21 +3,11 @@ import ReactPaginate from "react-paginate";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
 
 const Pagination = ({ limit, setLimit, totalItems, handlePageClick, currentPage, text }) => {
-  // Fallback to 0 if totalItems is undefined
   const safeTotalItems = typeof totalItems === "number" ? totalItems : 0;
-
-  // Tính số trang dựa trên totalItems và limit
   const pageCount = Math.ceil(safeTotalItems / limit);
-
-  // Xử lý khi thay đổi trang
-  const onPageChange = (selectedItem) => {
-    const newPage = selectedItem.selected;
-    handlePageClick({ selected: newPage });
-  };
 
   return (
     <div className="flex items-center justify-between">
-      {/* Show items per page */}
       <div className="flex items-center gap-2.5">
         <p className="text-sm">Show</p>
         <div className="relative">
@@ -30,7 +20,7 @@ const Pagination = ({ limit, setLimit, totalItems, handlePageClick, currentPage,
             <option value="7">7</option>
             <option value="8">8</option>
             <option value="9">9</option>
-            <option value="10">10</option> {/* Thêm tùy chọn 10 để đồng bộ */}
+            <option value="10">10</option>
           </select>
           <span className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
             <svg
@@ -40,12 +30,7 @@ const Pagination = ({ limit, setLimit, totalItems, handlePageClick, currentPage,
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M19 9l-7 7-7-7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </span>
         </div>
@@ -54,7 +39,6 @@ const Pagination = ({ limit, setLimit, totalItems, handlePageClick, currentPage,
         </p>
       </div>
 
-      {/* Pagination */}
       <ReactPaginate
         previousLabel={<MdNavigateBefore />}
         nextLabel={<MdNavigateNext />}
@@ -73,9 +57,9 @@ const Pagination = ({ limit, setLimit, totalItems, handlePageClick, currentPage,
         containerClassName="flex items-center gap-[5px]"
         activeClassName="bg-custom-green text-white"
         activeLinkClassName="bg-custom-green text-white border-custom-green"
-        onPageChange={onPageChange}
+        onPageChange={handlePageClick} // Pass handlePageClick directly
         disabledClassName="opacity-40 cursor-not-allowed"
-        forcePage={currentPage} // Đồng bộ với currentPage từ parent
+        forcePage={currentPage}
       />
     </div>
   );

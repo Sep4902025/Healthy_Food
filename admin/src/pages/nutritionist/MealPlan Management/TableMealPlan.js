@@ -12,9 +12,8 @@ const TableMealPlan = () => {
   const navigate = useNavigate();
   const [mealPlans, setMealPlans] = useState([]);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(0); // Bắt đầu từ 0 để đồng bộ với ReactPaginate
-  const [totalPages, setTotalPages] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [currentPage, setCurrentPage] = useState(0); // 0-based for ReactPaginate
+  const [limit, setLimit] = useState(6); // Default limit
   const [totalItems, setTotalItems] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -22,36 +21,51 @@ const TableMealPlan = () => {
   const fetchMealPlans = async (callback) => {
     setIsTransitioning(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // +1 vì API có thể dùng 1-based
+      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // +1 for 1-based API
+      console.log("Fetch Meal Plans Response:", response);
       if (response.success) {
-        setMealPlans(response.data || []);
-        setTotalPages(response.totalPages || 1);
-        setTotalItems(response.total || 0);
+        const data = response.data || [];
+        // Fallback: Use data.length if total is 0 or missing
+        const total = response.total || response.data?.total || data.length;
+        console.log("Extracted Data:", data, "Total:", total);
+
+        // Manually slice the data to enforce pagination
+        const startIndex = currentPage * limit;
+        const paginatedData = data.slice(startIndex, startIndex + limit);
+
+        setMealPlans(paginatedData);
+        setTotalItems(total);
         if (callback) callback(response);
       } else {
-        setError(response.message);
+        setError(response.message || "Failed to fetch meal plans");
         setMealPlans([]);
-        setTotalPages(1);
         setTotalItems(0);
       }
     } catch (err) {
       setError("Lỗi không xác định khi tải dữ liệu");
       setMealPlans([]);
-      setTotalPages(1);
       setTotalItems(0);
+      console.error("❌ Fetch Error:", err);
     } finally {
       setIsTransitioning(false);
     }
   };
 
   useEffect(() => {
-    fetchMealPlans();
+    console.log("Fetching meal plans with page:", currentPage, "limit:", limit);
+    fetchMealPlans((result) => {
+      const newTotalPages = Math.ceil(totalItems / limit) || 1;
+      console.log("New Total Pages:", newTotalPages);
+      if (currentPage >= newTotalPages) {
+        setCurrentPage(newTotalPages - 1 >= 0 ? newTotalPages - 1 : 0);
+      }
+    });
   }, [currentPage, limit]);
 
-  // Handle page change for Pagination component
-  const handlePageClick = (data) => {
-    const selectedPage = data.selected; // ReactPaginate trả về 0-based index
-    setCurrentPage(selectedPage);
+  // Handle page change
+  const handlePageClick = ({ selected }) => {
+    console.log("Changing to page:", selected);
+    setCurrentPage(selected);
   };
 
   // Handle edit
@@ -66,19 +80,21 @@ const TableMealPlan = () => {
         const response = await mealPlanService.deleteMealPlan(id);
         if (response.success) {
           fetchMealPlans((result) => {
-            const totalItems = result.total;
+            const totalItems = result.total || result.data?.total || result.data.length;
             const newTotalPages = Math.ceil(totalItems / limit) || 1;
+            console.log("After Delete - Total Items:", totalItems, "New Total Pages:", newTotalPages);
             if (result.data.length === 0 && currentPage > 0) {
               setCurrentPage(currentPage - 1);
             } else if (currentPage >= newTotalPages) {
-              setCurrentPage(newTotalPages - 1);
+              setCurrentPage(newTotalPages - 1 >= 0 ? newTotalPages - 1 : 0);
             }
           });
         } else {
-          alert("Failed to delete meal plan");
+          alert("Failed to delete meal plan: " + response.message);
         }
       } catch (error) {
         alert("Error deleting meal plan");
+        console.error("❌ Delete Error:", error);
       }
     }
   };
@@ -100,18 +116,24 @@ const TableMealPlan = () => {
     return new Date() > end;
   };
 
-  if (isTransitioning)
+  if (isTransitioning) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-[#40B491] text-lg font-semibold">Loading...</p>
       </div>
     );
-  if (error)
+  }
+
+  if (error) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-red-500 text-lg font-semibold">Error: {error}</p>
       </div>
     );
+  }
+
+  console.log("Current Page in Render:", currentPage, "Total Items:", totalItems, "Limit:", limit);
+  console.log("Calculated Page Count:", Math.ceil(totalItems / limit));
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -150,12 +172,10 @@ const TableMealPlan = () => {
                 return (
                   <div
                     key={mealPlan._id}
-                    className={`grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300 ${
-                      isTransitioning ? "opacity-0" : "opacity-100"
-                    }`}
+                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300"
                   >
                     <div className="col-span-1 text-gray-600 font-medium">
-                      {currentPage * limit + index + 1} {/* Điều chỉnh số thứ tự */}
+                      {currentPage * limit + index + 1}
                     </div>
                     <div className="col-span-2 text-gray-700 text-sm line-clamp-2">
                       {mealPlan.title}
@@ -228,16 +248,22 @@ const TableMealPlan = () => {
           </div>
 
           {/* Pagination */}
-          <div className="p-4 bg-gray-50">
-            <Pagination
-              limit={limit}
-              setLimit={setLimit}
-              totalItems={totalItems}
-              handlePageClick={handlePageClick}
-              currentPage={currentPage} // Truyền currentPage
-              text={"Meal Plans"}
-            />
-          </div>
+          {totalItems > 0 && (
+            <div className="p-4 bg-gray-50">
+              <Pagination
+                key={`${currentPage}-${totalItems}`} // Force re-render when currentPage or totalItems changes
+                limit={limit}
+                setLimit={(newLimit) => {
+                  setLimit(newLimit);
+                  setCurrentPage(0); // Reset to first page when limit changes
+                }}
+                totalItems={totalItems}
+                handlePageClick={handlePageClick}
+                currentPage={currentPage}
+                text="Meal Plans"
+              />
+            </div>
+          )}
         </div>
       </Loading>
     </div>

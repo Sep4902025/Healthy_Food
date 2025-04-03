@@ -39,7 +39,6 @@ code {
 }
 
 /* Custome Homepage */
-
 .center-con {
   display: flex;
   justify-content: center;
@@ -68,7 +67,6 @@ code {
   margin-left: 46px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
-  /* Số dòng tối đa */
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -106,7 +104,6 @@ code {
 .user-container {
   width: 100%;
   height: 100%;
-
   display: flex;
   justify-content: start;
   align-items: start;
@@ -121,9 +118,7 @@ code {
 }
 
 .user-item.selected a {
-
   color: green;
-  /* Chữ trắng */
 }
 
 .nav-container {
@@ -131,10 +126,8 @@ code {
   height: 110px;
   padding: 0 20px;
   margin-top: 50px;
-
   background-color: #1e2875;
   border-radius: 8px;
-  /* Dùng giá trị hợp lý thay vì 'lg' */
   border: 1px solid white;
   display: flex;
   justify-content: flex-start;
@@ -159,7 +152,6 @@ code {
 }
 
 .content-container {
-
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -190,7 +182,6 @@ code {
 .user-img {
   background-color: #ffa78d;
   border: none;
-
 }
 
 .user-content-img-btn {
@@ -225,8 +216,6 @@ table {
   color: rgba(31, 31, 31, 0.7);
   text-align: left;
   font-size: 20px;
-
-
 }
 
 .infor-table tr {
@@ -237,14 +226,13 @@ table {
 .table-edit-btn {
   width: 192px;
   height: 61px;
-  background-color: #CB87CB;
+  background-color: #cb87cb;
   color: #ffffff;
   border-radius: 25px;
 }
 
 .goal-container {
   border: 0.5px solid gray;
-
   margin: 20px;
 }
 
@@ -263,13 +251,13 @@ table {
 }
 
 .g-link {
-  color: #CB87CB;
+  color: #cb87cb;
   text-transform: uppercase;
   font-size: 20px;
 }
 
 .goal-content {
-  color: #49454F;
+  color: #49454f;
   font-size: 16px;
   margin: 20px;
 }
@@ -331,7 +319,7 @@ table {
   justify-content: space-between;
   align-items: center;
   margin: 20px;
-  color: #49454F;
+  color: #49454f;
 }
 
 .kind-fa-title {
@@ -345,25 +333,18 @@ table {
 .kind-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  /* Chia thành 2 cột */
   gap: 10px;
-  /* Khoảng cách giữa các mục */
   padding: 20px;
   list-style: none;
-  /* Bỏ dấu chấm mặc định */
   counter-reset: kind-counter;
-  /* Đặt bộ đếm */
 }
 
 .kind-item {
-  background-color: #FFF;
-  /* Màu nền */
+  background-color: #fff;
   padding: 5px 15px;
   border-radius: 25px;
-  /* Bo góc */
   font-size: 16px;
   border: 0.5px solid gray;
-
   display: flex;
   align-items: center;
   gap: 8px;
@@ -372,11 +353,8 @@ table {
 
 .kind-item::before {
   counter-increment: kind-counter;
-  /* Tăng bộ đếm */
   content: "•";
-  /* Dấu chấm tròn */
   color: green;
-  /* Màu xanh */
   font-size: 28px;
   font-weight: 900;
   margin-right: 10px;
@@ -404,15 +382,13 @@ table {
 }
 
 .food-review-star {
-
   gap: 5px;
   font-size: 40px;
-  /* Tăng kích thước ngôi sao */
 }
 
 .food-review-content {
   font-size: 16px;
-  color: #49454F;
+  color: #49454f;
   opacity: 0.7;
   margin: 20px;
   text-align: center;
@@ -420,7 +396,6 @@ table {
 
 .cus-review-link {
   color: #ff6868;
-
   margin: 20px;
   font-size: 24px;
   font-weight: bold;
@@ -429,15 +404,10 @@ table {
 
 .food-i-container img {
   width: 300px;
-  /* Kích thước cố định */
   height: 220px;
   border-radius: 50%;
-  /* Làm tròn ảnh */
   object-fit: cover;
-  /* Đảm bảo ảnh không méo */
 }
-
-
 
 .user-item {
   cursor: pointer;
@@ -455,4 +425,56 @@ table {
   color: rgb(22, 197, 121);
   font-weight: bold;
   border-radius: 5px;
+}
+
+/* CSS cho hiệu ứng loading */
+.loader {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  animation: rotate 1.5s linear infinite;
+}
+
+.loader::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 6px solid #40b491;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 1s ease-in-out infinite;
+}
+
+.loader::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  border: 4px solid #359c7a;
+  border-radius: 50%;
+  border-left-color: transparent;
+  animation: spin 0.8s ease-in-out infinite reverse;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
