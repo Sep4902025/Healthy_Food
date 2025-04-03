@@ -12,9 +12,9 @@ const TableMealPlan = () => {
   const navigate = useNavigate();
   const [mealPlans, setMealPlans] = useState([]);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(0); // 0-based để đồng bộ với ReactPaginate
+  const [currentPage, setCurrentPage] = useState(0); // 0-based for ReactPaginate
   const [totalPages, setTotalPages] = useState(1);
-  const [limit, setLimit] = useState(10); // Giá trị mặc định đồng bộ với tùy chọn
+  const [limit, setLimit] = useState(10); // Items per page
   const [totalItems, setTotalItems] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -22,20 +22,26 @@ const TableMealPlan = () => {
   const fetchMealPlans = async (callback) => {
     setIsTransitioning(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // API dùng 1-based
+      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // 1-based for API
+      console.log("API Response:", response); // Debug API response
+
       if (response.success) {
-        setMealPlans(response.data || []);
-        setTotalPages(response.totalPages || 1);
-        setTotalItems(response.total || 0);
+        const mealPlanData = Array.isArray(response.data) ? response.data : [];
+        setMealPlans(mealPlanData);
+        setTotalItems(response.total || mealPlanData.length); // Fallback to array length if total is missing
+        setTotalPages(
+          response.totalPages || Math.ceil((response.total || mealPlanData.length) / limit)
+        );
         if (callback) callback(response);
       } else {
-        setError(response.message);
+        setError(response.message || "Failed to fetch meal plans");
         setMealPlans([]);
         setTotalPages(1);
         setTotalItems(0);
       }
     } catch (err) {
-      setError("Lỗi không xác định khi tải dữ liệu");
+      console.error("Fetch error:", err);
+      setError("An unexpected error occurred while loading meal plans");
       setMealPlans([]);
       setTotalPages(1);
       setTotalItems(0);
@@ -48,9 +54,9 @@ const TableMealPlan = () => {
     fetchMealPlans();
   }, [currentPage, limit]);
 
-  // Handle page change for Pagination component
+  // Handle page change
   const handlePageClick = ({ selected }) => {
-    setCurrentPage(selected); // selected là 0-based từ ReactPaginate
+    setCurrentPage(selected); // 0-based from ReactPaginate
   };
 
   // Handle edit
@@ -65,7 +71,7 @@ const TableMealPlan = () => {
         const response = await mealPlanService.deleteMealPlan(id);
         if (response.success) {
           fetchMealPlans((result) => {
-            const totalItemsAfterDelete = result.total;
+            const totalItemsAfterDelete = result.total || result.data.length;
             const newTotalPages = Math.ceil(totalItemsAfterDelete / limit) || 1;
             if (result.data.length === 0 && currentPage > 0) {
               setCurrentPage(currentPage - 1);
@@ -99,18 +105,21 @@ const TableMealPlan = () => {
     return new Date() > end;
   };
 
-  if (isTransitioning)
+  if (isTransitioning) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-[#40B491] text-lg font-semibold">Loading...</p>
       </div>
     );
-  if (error)
+  }
+
+  if (error) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-red-500 text-lg font-semibold">Error: {error}</p>
       </div>
     );
+  }
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -227,16 +236,18 @@ const TableMealPlan = () => {
           </div>
 
           {/* Pagination */}
-          <div className="p-4 bg-gray-50">
-            <Pagination
-              limit={limit}
-              setLimit={setLimit}
-              totalItems={totalItems}
-              handlePageClick={handlePageClick}
-              currentPage={currentPage}
-              text="Meal Plans"
-            />
-          </div>
+          {totalItems > 0 && (
+            <div className="p-4 bg-gray-50">
+              <Pagination
+                limit={limit}
+                setLimit={setLimit}
+                totalItems={totalItems}
+                handlePageClick={handlePageClick}
+                currentPage={currentPage}
+                text="Meal Plans"
+              />
+            </div>
+          )}
         </div>
       </Loading>
     </div>
