@@ -41,12 +41,61 @@ axiosInstance.interceptors.response.use(
 );
 
 const UserService = {
+  // Lấy danh sách món ăn đề xuất cho người dùng dựa trên userId
+  getForyou: async (userId) => {
+    try {
+      if (!userId) {
+        return {
+          success: false,
+          message: "userId là bắt buộc!",
+        };
+      }
+
+      const response = await axiosInstance.get(`/foryou/${userId}`);
+      const { success, message, data } = response.data;
+
+      if (success) {
+        return {
+          success: true,
+          message: message || "Danh sách món ăn được lấy thành công",
+          dishes: data, // Danh sách món ăn từ backend
+        };
+      } else {
+        return {
+          success: false,
+          message: message || "Không thể lấy danh sách món ăn",
+        };
+      }
+    } catch (error) {
+      console.error("Lỗi lấy danh sách món ăn đề xuất:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Lỗi khi lấy danh sách món ăn",
+      };
+    }
+  },
+
+  getDishById: async (dishId) => {
+    try {
+      const response = await axios.get(`${API_URL}/dishes/${dishId}`);
+      console.log("Fetched Dish:", response.data); // Debug API response
+      return {
+        success: true,
+        data: response.data.data || {}, // Đảm bảo data luôn là object
+      };
+    } catch (error) {
+      console.error("Error fetching dish:", error);
+      return {
+        success: false,
+        message: error.response?.data?.error || "Lỗi khi tải món ăn",
+      };
+    }
+  },
+
   // Lấy tất cả người dùng (Admin only)
   getAllUsers: async (page = 1, limit = 10) => {
     try {
-      const response = await axiosInstance.get(
-        `/users?page=${page}&limit=${limit}`
-      );
+      const response = await axiosInstance.get(`/users?page=${page}&limit=${limit}`);
       return {
         success: true,
         users: response.data.data.users,
@@ -115,6 +164,14 @@ const UserService = {
 
   // 🔹 Cập nhật thông tin người dùng từ FE
   updateUser: async (id, data) => {
+    if (!id || !data) {
+      console.error("❌ Thiếu id hoặc dữ liệu để cập nhật user");
+      return {
+        success: false,
+        message: "Thiếu id hoặc dữ liệu để cập nhật user",
+      };
+    }
+
     try {
       console.log(`📤 Cập nhật user ID: ${id}`, data);
 
@@ -132,7 +189,7 @@ const UserService = {
       console.error("❌ Lỗi khi cập nhật user:", error.response?.data || error.message);
       return {
         success: false,
-        message: error.response?.data?.message || "Cập nhật thông tin thất bại!",
+        message: error.response?.data?.message || `Cập nhật thông tin thất bại: ${error.message}`,
       };
     }
   },
@@ -190,32 +247,35 @@ const UserService = {
     }
   },
 
-  // Thay đổi mật khẩu
-  changePassword: async (currentPassword, newPassword, passwordConfirm) => {
-    try {
-      const response = await axiosInstance.patch("/users/update-password", {
-        passwordCurrent: currentPassword,
-        password: newPassword,
-        passwordConfirm,
-      });
+  // // Thay đổi mật khẩu
+  // changePassword: async (currentPassword, newPassword, passwordConfirm) => {
+  //   try {
+  //     const response = await axiosInstance.patch("/users/update-password", {
+  //       passwordCurrent: currentPassword,
+  //       password: newPassword,
+  //       passwordConfirm,
+  //     });
 
-      if (response.data.token) {
-        localStorage.setItem("token", response.data.token);
-      }
+  //     if (response.data.token) {
+  //       localStorage.setItem("token", response.data.token);
+  //     }
 
-      return {
-        success: true,
-        message: "Thay đổi mật khẩu thành công",
-        token: response.data.token,
-      };
-    } catch (error) {
-      console.error("Lỗi thay đổi mật khẩu:", error.response?.data || error.message);
-      return {
-        success: false,
-        message: error.response?.data?.message || "Thay đổi mật khẩu thất bại",
-      };
-    }
-  },
+  //     return {
+  //       success: true,
+  //       message: "Thay đổi mật khẩu thành công",
+  //       token: response.data.token,
+  //     };
+  //   } catch (error) {
+  //     console.error(
+  //       "Lỗi thay đổi mật khẩu:",
+  //       error.response?.data || error.message
+  //     );
+  //     return {
+  //       success: false,
+  //       message: error.response?.data?.message || "Thay đổi mật khẩu thất bại",
+  //     };
+  //   }
+  // },
 
   // Xóa tài khoản (deactivate)
   deactivateAccount: async () => {
@@ -361,14 +421,10 @@ const UserService = {
         application: response.data.data.application,
       };
     } catch (error) {
-      console.error(
-        "Lỗi gửi đơn xin Nutritionist:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi gửi đơn xin Nutritionist:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể gửi đơn xin Nutritionist",
+        message: error.response?.data?.message || "Không thể gửi đơn xin Nutritionist",
       };
     }
   },
@@ -382,14 +438,10 @@ const UserService = {
         users: response.data.data.users,
       };
     } catch (error) {
-      console.error(
-        "Lỗi lấy danh sách chờ phê duyệt:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi lấy danh sách chờ phê duyệt:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể lấy danh sách chờ phê duyệt",
+        message: error.response?.data?.message || "Không thể lấy danh sách chờ phê duyệt",
       };
     }
   },
@@ -404,14 +456,10 @@ const UserService = {
         user: response.data.data.user,
       };
     } catch (error) {
-      console.error(
-        "Lỗi xử lý đơn xin Nutritionist:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi xử lý đơn xin Nutritionist:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể xử lý đơn xin Nutritionist",
+        message: error.response?.data?.message || "Không thể xử lý đơn xin Nutritionist",
       };
     }
   },

@@ -10,6 +10,7 @@ import {
   BarChartIcon,
   HelpCircleIcon,
   SettingsIcon,
+  DollarSignIcon, // Added for Finance Management
 } from "lucide-react";
 
 const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
@@ -39,6 +40,7 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
     "FAQs Management": "/admin/faqsManagement",
     "Term of Use Management": "/admin/termofusemanagement",
     "User Interface": "/admin/userinterface",
+    "Finance Management": "/admin/financemanagement", // Added route
   };
 
   const handleMenuClick = (menu) => {
@@ -57,18 +59,12 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
 
   const menuItems = [
     { icon: <HomeIcon size={20} />, name: "Dashboard" },
-    // { icon: <ShoppingCartIcon size={20} />, name: "Order Management" },
     { icon: <BookOpenIcon size={20} />, name: "Meal Plan" },
     {
       icon: <UserIcon size={20} />,
       name: "User Management",
     },
-    // {
-    //   icon: <BarChartIcon size={20} />,
-    //   name: "Analytics",
-    // },
-    // { icon: <HelpCircleIcon size={20} />, name: "Quiz Management" },
-    // { icon: <BookOpenIcon size={20} />, name: "Dish Preferences" },
+    { icon: <DollarSignIcon size={20} />, name: "Finance Management" }, 
     {
       icon: <HelpCircleIcon size={20} />,
       name: "Footer Management",
@@ -79,7 +75,7 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
         "Term of Use Management",
       ],
     },
-    // { icon: <SettingsIcon size={20} />, name: "User Interface" },
+    
   ];
 
   const toggleSubmenu = (menuName) => {

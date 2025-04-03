@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import HomeService from "../../services/home.service";
 import FoodSlider from "./HomeSection/FoodSlider";
 import SeasonSection from "./HomeSection/SeasonSection";

@@ -200,7 +200,7 @@ const Header = () => {
     dispatch(logoutUser());
     setHasCompletedQuiz(false);
     navigate("/signin");
-    toast.success("Logged out successfully!");
+    toast.success("Signed out successfully!");
   };
 
   const handlePayMealPlan = async (mealPlan) => {
@@ -275,16 +275,29 @@ const Header = () => {
           )}
           {user?.role === "user" && (
             <>
-              <a
-                href="/survey/name"
-                className={`font-medium transition-colors ${
-                  isActive("/survey/name")
-                    ? "text-green-600"
-                    : "text-gray-700 hover:text-green-600"
-                }`}
-              >
-                Survey
-              </a>
+              {/* If userPreferenceId exists, show "For You" instead of "Survey" */}
+              {user?.userPreferenceId ? (
+                <a
+                  href="/foryou"
+                  className={`font-medium transition-colors ${
+                    isActive("/foryou") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                  }`}
+                >
+                  For You
+                </a>
+              ) : (
+                <a
+                  href="/survey/name"
+                  className={`font-medium transition-colors ${
+                    isActive("/survey/name")
+                      ? "text-green-600"
+                      : "text-gray-700 hover:text-green-600"
+                  }`}
+                >
+                  Survey
+                </a>
+              )}
+
               <a
                 href="/mealplan"
                 className={`font-medium transition-colors ${
@@ -470,7 +483,7 @@ const Header = () => {
                     </div>
                     <div className="py-1">
                       <button
-                        onClick={() => navigate("/user")}
+                        onClick={handleProfileClick}
                         className="w-full text-left px-4 py-2 hover:bg-gray-100"
                       >
                         Profile
@@ -486,7 +499,7 @@ const Header = () => {
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 flex items-center"
                       >
-                        <FaSignOutAlt className="mr-2" /> Logout
+                        <FaSignOutAlt className="mr-2" /> Signout
                       </button>
                     </div>
                   </div>

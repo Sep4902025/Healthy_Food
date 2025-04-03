@@ -46,6 +46,12 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
     }
   };
 
+  const handleFoodClick = (dish) => {
+    if (dish.recipeId) {
+      navigate(`/${dish._id}/recipes/${dish.recipeId}`);
+    }
+  };
+
   const displayedDishes = showAll ? dishes : dishes.slice(0, 6);
 
   return (
@@ -59,7 +65,8 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
           <div
             key={dish._id}
             className="relative bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition dark:bg-[#67f598]"
-            onClick={() => navigate(`/${dish._id}/recipes/${dish.recipeId}`)}
+            onClick={() => handleFoodClick(dish)}
+            onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.2)")}
           >
             <span className="absolute top-2 right-2 bg-[#40b491] text-white text-xs font-semibold uppercase px-2 py-1 rounded dark:bg-[#1edc61] dark:text-gray-300">
               {dish.season}
@@ -94,6 +101,12 @@ const FoodBySeasonSection = ({ userId, selectedSeason, dishes }) => {
                   <span className="text-gray-500">No ratings yet</span>
                 )}
               </div>
+
+              {!dish.recipeId && (
+                  <p className="mt-2 text-sm text-red-500">
+                    No recipe available
+                  </p>
+                )}
             </div>
 
             <div

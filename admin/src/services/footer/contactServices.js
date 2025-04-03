@@ -44,7 +44,12 @@ const contactServices = {
       const response = await axios.get(`${API_URL}/footer/contact`, {
         headers: getAuthHeaders(),
         withCredentials: true,
-        params: { page, limit }, // Truyền page và limit vào query params
+        params: {
+          page,
+          limit,
+          sort: "createdAt", // Thêm tham số sắp xếp
+          order: "desc", // Thứ tự giảm dần
+        }, // Truyền page, limit, sort, và order vào query params
       });
       return { success: true, data: response.data || {} };
     } catch (error) {

@@ -12,7 +12,7 @@ const Footer = () => {
   const showApplyButton = isLoggedIn && !isAdminOrNutritionist;
 
   return (
-    <footer className="bg-white py-8 px-12 flex flex-col md:flex-row justify-between items-center mt-auto w-full border-t">
+    <footer className="bg-white py-8 px-12 flex flex-col md:flex-row justify-between items-center mt-auto w-full border-t dark:bg-[#bbbbae] dark:shadow-lg dark:shadow-gray-500">
       {/* Phần bên trái */}
       <p className="text-sm mb-4 md:mb-0">Copyright © 2025 HFINC | All rights reserved</p>
 

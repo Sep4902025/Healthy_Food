@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import dishesService from "../../../services/nutritionist/dishesServices";
 import UploadComponent from "../../../components/UploadComponent";
+import uploadFile from "../../../helpers/uploadFile";
+import imageCompression from "browser-image-compression";
 
 const FLAVOR_OPTIONS = ["Sweet", "Sour", "Salty", "Bitter", "Fatty"];
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
@@ -10,6 +12,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    imageFile: null,
     imageUrl: "",
     videoUrl: "",
     cookingTime: "",
@@ -19,13 +22,18 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
     season: "",
   });
   const [errors, setErrors] = useState({});
+  const [imagePreview, setImagePreview] = useState("");
+  const [isValidImageUrl, setIsValidImageUrl] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.description.trim()) newErrors.description = "Description is required";
-    if (!formData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required";
+    if (!formData.imageFile && !formData.imageUrl.trim())
+      newErrors.imageUrl = "Image (file or URL) is required";
+    else if (formData.imageUrl && !isValidImageUrl)
+      newErrors.imageUrl = "Invalid image URL. Please provide a valid image link.";
     if (!formData.cookingTime) newErrors.cookingTime = "Cooking time is required";
     if (formData.flavor.length === 0) newErrors.flavor = "At least one flavor is required";
     if (!formData.type) newErrors.type = "Type is required";
@@ -60,9 +68,45 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
     setErrors({ ...errors, flavor: "" });
   };
 
-  const handleImageUpload = (imageUrl) => {
-    setFormData({ ...formData, imageUrl });
+  const handleFileSelect = (file) => {
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      setIsValidImageUrl(true);
+      setFormData({ ...formData, imageFile: file, imageUrl: "" });
+    } else {
+      setImagePreview("");
+      setIsValidImageUrl(false);
+      setFormData({ ...formData, imageFile: null });
+    }
     setErrors({ ...errors, imageUrl: "" });
+  };
+
+  const handleImageUrlChange = (e) => {
+    const url = e.target.value;
+    setFormData({ ...formData, imageUrl: url, imageFile: null });
+    setErrors({ ...errors, imageUrl: "" });
+
+    if (url) {
+      checkImageUrl(url);
+    } else {
+      setImagePreview("");
+      setIsValidImageUrl(false);
+    }
+  };
+
+  const checkImageUrl = (url) => {
+    const img = new Image();
+    img.onload = () => {
+      setImagePreview(url);
+      setIsValidImageUrl(true);
+    };
+    img.onerror = () => {
+      setImagePreview("");
+      setIsValidImageUrl(false);
+      setErrors({ ...errors, imageUrl: "Invalid image URL. Please provide a valid image link." });
+    };
+    img.src = url;
   };
 
   const handleCookingTimeChange = (e) => {
@@ -77,6 +121,21 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
     setErrors({ ...errors, cookingTime: "" });
   };
 
+  const compressImage = async (file) => {
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1024,
+      useWebWorker: true,
+    };
+    try {
+      const compressedFile = await imageCompression(file, options);
+      return compressedFile;
+    } catch (error) {
+      console.error("Image compression error:", error);
+      return file;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -84,8 +143,24 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
       return;
     }
 
+    let imageUrl = formData.imageUrl;
+    if (formData.imageFile) {
+      try {
+        const compressedFile = await compressImage(formData.imageFile);
+        const uploadedImage = await uploadFile(compressedFile, (percentComplete) => {
+          console.log(`Upload progress: ${percentComplete}%`);
+        });
+        imageUrl = uploadedImage.secure_url;
+      } catch (error) {
+        alert("Image upload failed!");
+        console.error("Upload error:", error);
+        return;
+      }
+    }
+
     const response = await dishesService.createDish({
       ...formData,
+      imageUrl,
       flavor: formData.flavor.join(", "),
     });
 
@@ -94,6 +169,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
       setFormData({
         name: "",
         description: "",
+        imageFile: null,
         imageUrl: "",
         videoUrl: "",
         cookingTime: "",
@@ -103,11 +179,21 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
         season: "",
       });
       setErrors({});
+      setImagePreview("");
+      setIsValidImageUrl(false);
       onDishAdded();
     } else {
       alert(response.message);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -153,7 +239,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                 value={formData.cookingTime}
                 onChange={handleCookingTimeChange}
                 onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
-                placeholder="Time for cooking"
+                placeholder="Cooking time"
                 min="1"
                 max="1440"
                 className={`w-full border ${
@@ -174,7 +260,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                   errors.type ? "border-red-500" : "border-gray-300"
                 } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               >
-                <option value="">Select Type</option>
+                <option value="">Select type</option>
                 {TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
                     {type}
@@ -210,7 +296,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                 errors.season ? "border-red-500" : "border-gray-300"
               } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             >
-              <option value="">Select Season</option>
+              <option value="">Select season</option>
               {SEASON_OPTIONS.map((season) => (
                 <option key={season} value={season}>
                   {season}
@@ -240,43 +326,19 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
           </div>
 
           <div className="bg-gray-50 p-6 rounded-lg">
-            <div className="flex justify-center items-center mb-2">
-              {formData.imageUrl ? (
-                <img
-                  src={formData.imageUrl}
-                  alt="Dish preview"
-                  className="w-24 h-24 object-cover rounded-lg"
-                />
-              ) : (
-                <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-              )}
-            </div>
-            <div className="text-center">
+            <div className="text-center mb-4">
               <UploadComponent
-                onUploadSuccess={handleImageUpload}
-                reset={formData.imageUrl === ""}
+                onFileSelect={handleFileSelect}
+                reset={formData.imageFile === null && !formData.imageUrl}
               />
             </div>
-            <div className="mt-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Image URL *</label>
               <input
                 type="text"
+                name="imageUrl"
                 value={formData.imageUrl}
-                onChange={(e) => handleImageUpload(e.target.value)}
+                onChange={handleImageUrlChange}
                 placeholder="Enter image URL"
                 className={`w-full border ${
                   errors.imageUrl ? "border-red-500" : "border-gray-300"
@@ -284,6 +346,15 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
               />
               {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
             </div>
+            {imagePreview && (
+              <div className="mt-2 flex justify-center">
+                <img
+                  src={imagePreview}
+                  alt="Image Preview"
+                  className="w-32 h-32 object-cover rounded border"
+                />
+              </div>
+            )}
           </div>
         </div>
 

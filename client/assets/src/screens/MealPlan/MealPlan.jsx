@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, SafeAreaView, Alert } from "react-native";
-import { AntDesign, Entypo, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { AntDesign, Entypo, MaterialIcons } from "@expo/vector-icons";
 import MainLayoutWrapper from "../../components/layout/MainLayoutWrapper";
 import { userSelector } from "../../redux/selectors/selector";
 import mealPlanService from "../../services/mealPlanService";
@@ -8,10 +8,14 @@ import MealDays from "./MealDays";
 import CreateMealPlanForm from "./CreateMealPlanForm";
 import MealPlanAimChart from "./MealPlanAimChart";
 import { useSelector } from "react-redux";
+import { ScreensName } from "../../constants/ScreensName";
+import { useTheme } from "../../contexts/ThemeContext";
+import ShowToast from "../../components/common/CustomToast";
 
-const MealPlan = () => {
+const MealPlan = ({ navigation }) => {
   const user = useSelector(userSelector);
-  console.log("USSSERRR", user);
+  console.log("USER", user);
+  const { theme } = useTheme();
 
   const [userMealPlan, setUserMealPlan] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,13 +30,16 @@ const MealPlan = () => {
       console.log("User Meal Plan Response:", response);
       if (response.success && response.data) {
         setUserMealPlan(response.data);
-        console.log("Set userMealPlan:", response.data);
+        setShowCreateForm(false); // Hide form if MealPlan exists
       } else {
         setUserMealPlan(null);
+        setShowCreateForm(true); // Show form if no MealPlan
       }
     } catch (error) {
-      console.error("❌ Error fetching MealPlan:", error);
+      // Log error instead of showing toast, including 404
+      console.log("❌ No MealPlan found or error occurred:", error.message);
       setUserMealPlan(null);
+      setShowCreateForm(true); // Show form on error (including 404)
     } finally {
       setLoading(false);
     }
@@ -47,6 +54,7 @@ const MealPlan = () => {
   const handleCreateSuccess = () => {
     fetchUserMealPlan();
     setShowCreateForm(false);
+    ShowToast("success", "🔔 MealPlan created successfully!");
   };
 
   const handleToggleMealPlanStatus = async () => {
@@ -60,18 +68,18 @@ const MealPlan = () => {
       const response = await mealPlanService.toggleMealPlanStatus(userMealPlan._id, newIsPause);
 
       if (response.success) {
-        Alert.alert(
-          "Success",
+        ShowToast(
+          "success",
           `🔔 MealPlan has been ${newIsPause ? "paused" : "resumed"} successfully!`
         );
         await fetchUserMealPlan();
       } else {
         setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
-        Alert.alert("Error", `❌ Error: ${response.message}`);
+        ShowToast("error", `❌ Error: ${response.message}`);
       }
     } catch (error) {
       setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
-      Alert.alert("Error", "❌ An unexpected error occurred while changing the MealPlan status");
+      ShowToast("error", "❌ An unexpected error occurred while toggling MealPlan status");
     } finally {
       setProcessingAction(false);
     }
@@ -82,7 +90,7 @@ const MealPlan = () => {
 
     const confirmed = await new Promise((resolve) => {
       Alert.alert(
-        "Confirm Delete",
+        "Confirm Deletion",
         "Are you sure you want to delete this MealPlan? This action cannot be undone.",
         [
           { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
@@ -98,22 +106,18 @@ const MealPlan = () => {
       const response = await mealPlanService.deleteMealPlan(userMealPlan._id);
 
       if (response.success) {
-        Alert.alert("Success", "🗑️ MealPlan has been deleted successfully!");
         setUserMealPlan(null);
-        setShowCreateForm(true);
+        setShowCreateForm(true); // Show form immediately after deletion
+        await fetchUserMealPlan(); // Refresh data
+        ShowToast("success", "🗑️ MealPlan deleted successfully!");
       } else {
-        Alert.alert("Error", `❌ Error: ${response.message}`);
+        ShowToast("error", `❌ Error: ${response.message}`);
       }
     } catch (error) {
-      Alert.alert("Error", "❌ An error occurred while deleting the MealPlan");
+      ShowToast("error", "❌ An error occurred while deleting the MealPlan");
     } finally {
       setProcessingAction(false);
     }
-  };
-
-  const handleTakeSurvey = () => {
-    console.log("Take Survey pressed");
-    setShowCreateForm(true);
   };
 
   const handleNutritionTargetsCalculated = (targets) => {
@@ -121,11 +125,15 @@ const MealPlan = () => {
     console.log("Nutrition Targets Calculated:", targets);
   };
 
+  const handleTakeSurvey = () => {
+    navigation.navigate(ScreensName.survey); // Navigate to Survey screen
+  };
+
   if (loading) {
     return (
       <MainLayoutWrapper>
         <SafeAreaView className="flex-1 justify-center items-center bg-white">
-          <ActivityIndicator size="large" color="#16a34a" />
+          <ActivityIndicator size="large" color={theme.primaryColor || "#16a34a"} />
           <Text className="mt-2 text-base text-green-600">Loading...</Text>
         </SafeAreaView>
       </MainLayoutWrapper>
@@ -214,12 +222,29 @@ const MealPlan = () => {
                 {/* Chart Section */}
                 {userMealPlan._id && (
                   <View className="mb-4 border-t border-gray-200 pt-4">
-                    <MealPlanAimChart
-                      mealPlanId={userMealPlan._id}
-                      userId={user._id}
-                      duration={userMealPlan.duration || 7}
-                      onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
-                    />
+                    {user.userPreferenceId ? (
+                      <MealPlanAimChart
+                        mealPlanId={userMealPlan._id}
+                        userId={user.userPreferenceId}
+                        duration={userMealPlan.duration || 7}
+                        onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
+                      />
+                    ) : (
+                      <View className="p-4 bg-gray-50 rounded-lg">
+                        <Text className="text-base text-gray-600 mb-4">
+                          You can to complete the survey so we can calculate nutrition targets
+                          tailored for you.
+                        </Text>
+                        <TouchableOpacity
+                          onPress={handleTakeSurvey}
+                          className="bg-custom-green py-3 px-6 rounded-lg"
+                        >
+                          <Text className="text-white text-base font-bold text-center">
+                            Take survey now?
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 )}
 
@@ -230,28 +255,10 @@ const MealPlan = () => {
               </View>
             </View>
           ) : (
-            <View className="flex-1 justify-center items-center bg-white p-6 rounded-lg shadow-md">
-              {!showCreateForm ? (
-                <View className="items-center">
-                  <Text className="text-lg font-medium text-gray-800 mb-4">No Meal Plan Found</Text>
-                  <Text className="text-gray-600 text-center mb-6">
-                    Complete the survey to calculate your nutrition targets and create a meal plan.
-                  </Text>
-                  <TouchableOpacity
-                    onPress={handleTakeSurvey}
-                    className="bg-blue-600 px-6 py-3 rounded-lg"
-                  >
-                    <Text className="text-white text-base font-semibold">Take Survey</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
+            <View className="flex-1 bg-white p-6 rounded-lg shadow-md">
+              {showCreateForm && (
                 <View className="w-full">
-                  <View className="flex-row justify-between items-center mb-4">
-                    <Text className="text-xl font-bold text-gray-800">Create New Meal Plan</Text>
-                    <TouchableOpacity onPress={() => setShowCreateForm(false)}>
-                      <Ionicons name="close" size={24} color="#6b7280" />
-                    </TouchableOpacity>
-                  </View>
+                  <Text className="text-xl font-bold text-gray-800 mb-4">Create New Meal Plan</Text>
                   <CreateMealPlanForm
                     userId={user._id}
                     userRole={user.role}

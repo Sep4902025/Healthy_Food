@@ -30,7 +30,7 @@ const TableIngredient = () => {
   const navigate = useNavigate();
   const [ingredients, setIngredients] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [totalItems, setTotalItems] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -60,7 +60,7 @@ const TableIngredient = () => {
   const fetchIngredients = async () => {
     setIsLoading(true);
     const response = await ingredientService.getAllIngredients(
-      currentPage,
+      currentPage + 1,
       itemsPerPage,
       filterType,
       searchTerm
@@ -163,7 +163,7 @@ const TableIngredient = () => {
       if (response.success) {
         alert("Deleted successfully!");
         fetchIngredients();
-        if (ingredients.length === 1 && currentPage > 1) {
+        if (ingredients.length === 1 && currentPage > 0) {
           setCurrentPage(currentPage - 1);
         }
       } else {
@@ -186,11 +186,8 @@ const TableIngredient = () => {
     }
   };
 
-  const handlePageClick = (data) => {
-    const selectedPage = data.selected + 1;
-    if (selectedPage >= 1 && selectedPage <= totalPages) {
-      setCurrentPage(selectedPage);
-    }
+  const handlePageClick = ({ selected }) => {
+    setCurrentPage(selected);
   };
 
   const closeEditModal = () => {
@@ -233,13 +230,12 @@ const TableIngredient = () => {
           <button
             onClick={() => {
               setFilterType("all");
-              setCurrentPage(1);
+              setCurrentPage(0);
             }}
-            className={`px-4 py-2 rounded-md font-semibold ${
-              filterType === "all"
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            } transition duration-200`}
+            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
+              ? "bg-[#40B491] text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
           >
             All
           </button>
@@ -248,13 +244,12 @@ const TableIngredient = () => {
               key={type}
               onClick={() => {
                 setFilterType(filterType === type ? "all" : type);
-                setCurrentPage(1);
+                setCurrentPage(0);
               }}
-              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
-                filterType === type
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
             >
               {type}
             </button>
@@ -268,7 +263,7 @@ const TableIngredient = () => {
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              setCurrentPage(1);
+              setCurrentPage(0);
             }}
           />
         </div>
@@ -294,32 +289,41 @@ const TableIngredient = () => {
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-4">
-<h3 className="text-lg font-semibold text-center">{ingredient.name}</h3>
-<div className="flex justify-center items-center text-sm text-gray-600 mt-2">
-  <span className="mr-3 flex items-center">
-    <Clock className="w-4 h-4 mr-1" />
-    Calories {ingredient.calories || "N/A"}
-  </span>
-  <span className="flex items-center">
-    <Ruler className="w-4 h-4 mr-1" />
-    Unit {ingredient.unit || "N/A"}
-  </span>
-</div>
-<div className="flex justify-center items-center text-sm text-gray-600 mt-1">
-  <span className="mr-3 flex items-center">
-    <Dumbbell className="w-4 h-4 mr-1" />
-    Protein {ingredient.protein || "N/A"}
-  </span>
-  <span className="mr-3 flex items-center">
-    <Wheat className="w-4 h-4 mr-1" />
-    Carbs {ingredient.carbs || "N/A"}
-  </span>
-  <span className="flex items-center">
-    <Droplet className="w-4 h-4 mr-1" />
-    Fat {ingredient.fat || "N/A"}
-  </span>
-</div>
-</div>
+                    <h3 className="text-lg font-semibold text-center">{ingredient.name}</h3>
+                    <div className="flex justify-center items-center text-sm text-gray-600 mt-2 space-x-4">
+                      <span className="flex items-center">
+                        <Clock className="w-4 h-4 mr-1" />
+                        Calories {ingredient.calories || "N/A"}
+                      </span>
+                      <span className="flex items-center">
+                        <Ruler className="w-4 h-4 mr-1" />
+                        Unit {ingredient.unit || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-center items-center text-sm text-gray-600 mt-1 space-x-4">
+                      <div className="flex flex-col items-center w-16">
+                        <div className="flex flex-col items-center">
+                          <Dumbbell className="w-4 h-4" />
+                          <span className="text-center">Protein</span>
+                        </div>
+                        <span className="text-center mt-1">{ingredient.protein || "N/A"}</span>
+                      </div>
+                      <div className="flex flex-col items-center w-16">
+                        <div className="flex flex-col items-center">
+                          <Wheat className="w-4 h-4" />
+                          <span className="text-center">Carbs</span>
+                        </div>
+                        <span className="text-center mt-1">{ingredient.carbs || "N/A"}</span>
+                      </div>
+                      <div className="flex flex-col items-center w-16">
+                        <div className="flex flex-col items-center">
+                          <Droplet className="w-4 h-4" />
+                          <span className="text-center">Fat</span>
+                        </div>
+                        <span className="text-center mt-1">{ingredient.fat || "N/A"}</span>
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
                     <button
                       onClick={() => handleEditClick(ingredient)}
@@ -339,11 +343,10 @@ const TableIngredient = () => {
                   </div>
                   <button
                     onClick={() => handleToggleVisibility(ingredient)}
-                    className={`absolute top-2 right-2 p-2 rounded-md text-white ${
-                      ingredient.isVisible
-                        ? "bg-gray-500 hover:bg-gray-600"
-                        : "bg-[#40B491] hover:bg-[#359c7a]"
-                    } transition duration-200`}
+                    className={`absolute top-2 right-2 p-2 rounded-md text-white ${ingredient.isVisible
+                      ? "bg-gray-500 hover:bg-gray-600"
+                      : "bg-[#40B491] hover:bg-[#359c7a]"
+                      } transition duration-200`}
                   >
                     {ingredient.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
                   </button>
@@ -374,7 +377,8 @@ const TableIngredient = () => {
             setLimit={setItemsPerPage}
             totalItems={totalItems}
             handlePageClick={handlePageClick}
-            text={"Ingredients"}
+            currentPage={currentPage}
+            text="Ingredients"
           />
         </div>
       )}
@@ -404,18 +408,15 @@ const TableIngredient = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                   <input
                     type="text"
                     name="name"
                     value={editData.name || ""}
                     onChange={handleChange}
                     placeholder="Enter ingredient name"
-                    className={`w-full border ${
-                      errors.name ? "border-red-500" : "border-gray-300"
-                    } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
@@ -435,9 +436,8 @@ const TableIngredient = () => {
                         placeholder="0"
                         min="0"
                         max="1000"
-                        className={`w-full border ${
-                          errors.calories ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${errors.calories ? "border-red-500" : "border-gray-300"
+                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       <span className="ml-2 text-sm text-gray-500">kcal</span>
                     </div>
@@ -446,16 +446,13 @@ const TableIngredient = () => {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Type *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
                     <select
                       name="type"
                       value={editData.type || ""}
                       onChange={handleChange}
-                      className={`w-full border ${
-                        errors.type ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     >
                       <option value="">Select type</option>
                       {TYPE_OPTIONS.map((type) => (
@@ -473,9 +470,8 @@ const TableIngredient = () => {
                           value={editData.customType || ""}
                           onChange={handleChange}
                           placeholder="Enter custom type"
-                          className={`w-full mt-2 border ${
-                            errors.customType ? "border-red-500" : "border-gray-300"
-                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                          className={`w-full mt-2 border ${errors.customType ? "border-red-500" : "border-gray-300"
+                            } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                         />
                         {errors.customType && (
                           <p className="text-red-500 text-sm mt-1">{errors.customType}</p>
@@ -500,9 +496,8 @@ const TableIngredient = () => {
                         placeholder="0"
                         min="0"
                         max="100"
-                        className={`w-full border ${
-                          errors.protein ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${errors.protein ? "border-red-500" : "border-gray-300"
+                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       <span className="ml-2 text-sm text-gray-500">g</span>
                     </div>
@@ -511,9 +506,7 @@ const TableIngredient = () => {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Carbs *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Carbs *</label>
                     <div className="flex items-center">
                       <input
                         type="number"
@@ -524,18 +517,15 @@ const TableIngredient = () => {
                         placeholder="0"
                         min="0"
                         max="100"
-                        className={`w-full border ${
-                          errors.carbs ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${errors.carbs ? "border-red-500" : "border-gray-300"
+                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       <span className="ml-2 text-sm text-gray-500">g</span>
                     </div>
                     {errors.carbs && <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fat *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fat *</label>
                     <div className="flex items-center">
                       <input
                         type="number"
@@ -546,9 +536,8 @@ const TableIngredient = () => {
                         placeholder="0"
                         min="0"
                         max="100"
-                        className={`w-full border ${
-                          errors.fat ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${errors.fat ? "border-red-500" : "border-gray-300"
+                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       <span className="ml-2 text-sm text-gray-500">g</span>
                     </div>
@@ -557,16 +546,13 @@ const TableIngredient = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unit *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit *</label>
                   <select
                     name="unit"
                     value={editData.unit || ""}
                     onChange={handleChange}
-                    className={`w-full border ${
-                      errors.unit ? "border-red-500" : "border-gray-300"
-                    } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${errors.unit ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   >
                     <option value="">Select unit</option>
                     <option value="g">g</option>
@@ -606,9 +592,8 @@ const TableIngredient = () => {
                       value={editData.imageUrl || ""}
                       onChange={(e) => handleImageUpload(e.target.value)}
                       placeholder="Enter image URL"
-                      className={`w-full border ${
-                        errors.imageUrl ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     />
                     {errors.imageUrl && (
                       <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>
@@ -627,9 +612,8 @@ const TableIngredient = () => {
                     value={editData.description || ""}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${
-                      errors.description ? "border-red-500" : "border-gray-300"
-                    } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">{errors.description}</p>

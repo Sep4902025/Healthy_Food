@@ -1,88 +1,101 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
   TextInput,
-  Modal,
-  ActivityIndicator,
   Image,
-  Alert,
+  FlatList,
+  ActivityIndicator,
+  Modal,
   ScrollView,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import { Ionicons } from "@expo/vector-icons";
 import mealPlanService from "../../services/mealPlanService";
-import homeService from "../../services/HomeService";
+import HomeService from "../../services/HomeService";
 
 const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, userId }) => {
   const [dishes, setDishes] = useState([]);
   const [selectedDish, setSelectedDish] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState({ initial: true, more: false });
   const [error, setError] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [existingDishes, setExistingDishes] = useState([]);
   const [favoriteDishes, setFavoriteDishes] = useState([]);
-  console.log("FAVORITE_DISHES", favoriteDishes);
-
   const [activeFilter, setActiveFilter] = useState("all");
-  const [dishTypes, setDishTypes] = useState([]);
   const [selectedType, setSelectedType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const limit = 10;
+
+  // Định nghĩa sẵn các tag
+  const orderedTags = [
+    { label: "ALL", type: "all" },
+    { label: "Favorites", type: "favorites" },
+    { label: "Heavy Meals", type: "Heavy Meals" },
+    { label: "Light Meals", type: "Light Meals" },
+    { label: "Dessert", type: "Dessert" },
+  ];
 
   useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        setLoading(true);
+    loadInitialDishes();
+  }, [searchQuery, selectedType]);
 
-        // Fetch all data in parallel
-        const [dishesResponse, mealResponse, favoritesResponse] = await Promise.all([
-          mealPlanService.getAllDishes(),
-          mealPlanService.getMealByMealId(mealPlanId, mealDayId, mealId),
-          homeService.getFavoriteDishes(userId),
-        ]);
+  const loadInitialDishes = async () => {
+    setLoading((prev) => ({ ...prev, initial: true }));
+    setPage(1);
+    setHasMore(true);
+    await loadDishes(1, true);
+    setLoading((prev) => ({ ...prev, initial: false }));
+  };
 
-        // Process dishes
-        if (dishesResponse.success) {
-          setDishes(dishesResponse.data);
+  const loadMoreDishes = async () => {
+    if (!hasMore || loading.more) return;
+    setLoading((prev) => ({ ...prev, more: true }));
+    await loadDishes(page + 1);
+    setLoading((prev) => ({ ...prev, more: false }));
+  };
 
-          // Extract unique dish types
-          const types = [
-            ...new Set(dishesResponse.data.filter((dish) => dish.type).map((dish) => dish.type)),
-          ];
+  const loadDishes = async (pageNum, isRefresh = false) => {
+    try {
+      const [dishesResponse, mealResponse, favoritesResponse] = await Promise.all([
+        mealPlanService.getAllDishes(
+          pageNum,
+          limit,
+          searchQuery,
+          selectedType !== "all" ? selectedType : undefined
+        ),
+        mealPlanService.getMealByMealId(mealPlanId, mealDayId, mealId),
+        HomeService.getFavoriteDishes(userId),
+      ]);
 
-          setDishTypes(types);
-        } else {
-          setError(dishesResponse.message || "Could not fetch dishes");
-        }
-
-        // Process meal data
-        if (mealResponse.success && mealResponse.data && mealResponse.data.dishes) {
-          setExistingDishes(mealResponse.data.dishes);
-        }
-        console.log("FAVORITES_RESPONSE", favoritesResponse);
-        // Process favorites
-        if (Array.isArray(favoritesResponse)) {
-          const dishIds = favoritesResponse.map((dish) => dish.dishId);
-          console.log("Mapped Dish IDs:", dishIds);
-          setFavoriteDishes(dishIds);
-        }
-      } catch (error) {
-        console.error("❌ Error fetching data:", error);
-        setError("Could not fetch dishes data");
-      } finally {
-        setLoading(false);
+      if (dishesResponse.success) {
+        const newDishes = dishesResponse.data.items || [];
+        setDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+        setPage(pageNum);
+        setHasMore(pageNum < dishesResponse.data.totalPages);
+      } else {
+        setError(dishesResponse.message || "Could not fetch dishes");
+        setHasMore(false);
       }
-    };
 
-    fetchAllData();
-  }, [mealPlanId, mealDayId, mealId, userId]);
+      if (mealResponse.success && mealResponse.data && mealResponse.data.dishes) {
+        setExistingDishes(mealResponse.data.dishes);
+      }
 
-  // Check if dish is already added to the meal
+      if (Array.isArray(favoritesResponse)) {
+        const dishIds = favoritesResponse.map((dish) => dish.dishId);
+        setFavoriteDishes(dishIds);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching data:", error);
+      setError("Could not fetch dishes data");
+      setHasMore(false);
+    }
+  };
+
   const isDishAlreadyAdded = (dish) => {
     if (!existingDishes || existingDishes.length === 0) return false;
-
     return existingDishes.some(
       (existingDish) =>
         (existingDish.dishId && existingDish.dishId === dish._id) ||
@@ -91,20 +104,16 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     );
   };
 
-  // Check if dish is in favorites
-  const isFavorite = (dishId) => {
-    return favoriteDishes.includes(dishId);
-  };
+  const isFavorite = (dishId) => favoriteDishes.includes(dishId);
 
   const handleAddDish = async () => {
     if (!selectedDish) {
-      Alert.alert("Error", "Please select a dish!");
+      alert("Please select a dish!");
       return;
     }
 
-    // Check if the dish is already added
     if (isDishAlreadyAdded(selectedDish)) {
-      Alert.alert("Error", "This dish has already been added to the meal!");
+      alert("This dish has already been added to the meal!");
       return;
     }
 
@@ -142,57 +151,132 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     }
   };
 
-  // Filter dishes based on active filter, selected type, and search query
   const filteredDishes = dishes.filter((dish) => {
-    // Filter by favorite status
-    if (activeFilter === "favorites" && !isFavorite(dish._id)) {
-      return false;
-    }
-
-    // Filter by dish type
-    if (selectedType !== "all" && dish.type !== selectedType) {
-      return false;
-    }
-
-    // Filter by search query
-    if (searchQuery && !dish.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-
+    if (activeFilter === "favorites" && !isFavorite(dish._id)) return false;
+    if (selectedType !== "all" && dish.type !== selectedType) return false;
     return true;
   });
 
-  // If loading, show a spinner
-  if (loading) {
+  const renderDishItem = ({ item: dish }) => {
+    const isAlreadyAdded = isDishAlreadyAdded(dish);
+    const dishFavorite = isFavorite(dish._id);
+    const isSelected = selectedDish?._id === dish._id;
+
     return (
-      <Modal visible={true} transparent animationType="fade">
-        <View className="flex-1 items-center justify-center bg-black/50">
-          <View className="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-4xl">
-            <View className="flex justify-center items-center h-64">
-              <ActivityIndicator size="large" color="#3b82f6" />
-              <Text className="ml-4 text-gray-700">Loading dishes...</Text>
+      <TouchableOpacity
+        className={`border rounded-lg overflow-hidden relative w-[48%] mb-4 ${
+          isSelected ? "border-green-500 border-2" : "border-gray-200"
+        } ${isAlreadyAdded ? "opacity-50" : ""}`}
+        onPress={() => !isAdding && !isAlreadyAdded && setSelectedDish(dish)}
+        disabled={isAdding || isAlreadyAdded}
+      >
+        <View className="relative">
+          <View className="h-32 bg-gray-200">
+            {dish.imageUrl ? (
+              <Image source={{ uri: dish.imageUrl }} className="w-full h-full object-cover" />
+            ) : (
+              <View className="w-full h-full flex items-center justify-center bg-gray-200">
+                <Text className="text-gray-400">No image</Text>
+              </View>
+            )}
+            {dishFavorite && (
+              <Text className="absolute top-2 right-2 text-yellow-500 text-xl">⭐</Text>
+            )}
+            {isAlreadyAdded && (
+              <View className="absolute inset-0 flex items-center justify-center">
+                <Text className="text-white font-bold">Added</Text>
+              </View>
+            )}
+            {isSelected && !isAlreadyAdded && (
+              <View className="absolute inset-0 flex items-center justify-center">
+                <View className="bg-green-500 rounded-full px-3 py-1 flex-row items-center">
+                  <Text className="text-white text-xs mr-1">✓</Text>
+                  <Text className="text-white text-xs">Choice</Text>
+                </View>
+              </View>
+            )}
+          </View>
+          <View className="p-2">
+            <View className="flex-row justify-between items-start">
+              <Text className="font-medium text-gray-800 text-sm">{dish.name}</Text>
+              <Text className="text-xs font-bold text-blue-600">{dish.calories} kcal</Text>
+            </View>
+            <View className="mt-1 flex-col space-y-1">
+              <View className="flex-row items-center">
+                <Text className="text-[10px] text-gray-600 mr-2">Protein:</Text>
+                <Text className="bg-red-100 rounded-full px-1 py-0.5 text-[10px]">
+                  {dish.protein || 0}g
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text className="text-[10px] text-gray-600 mr-2">Carbs:</Text>
+                <Text className="bg-green-100 rounded-full px-1 py-0.5 text-[10px]">
+                  {dish.carbs || 0}g
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text className="text-[10px] text-gray-600 mr-2">Fat:</Text>
+                <Text className="bg-yellow-100 rounded-full px-1 py-0.5 text-[10px]">
+                  {dish.fat || 0}g
+                </Text>
+              </View>
             </View>
           </View>
         </View>
-      </Modal>
+      </TouchableOpacity>
     );
-  }
+  };
 
-  // If there's an error, show the error message
+  const getTagStyle = (type, isSelected) => {
+    const baseStyle = "px-3 py-1 rounded-lg text-sm mr-2";
+    const selectedStyle = isSelected ? "bg-opacity-20" : "bg-transparent";
+
+    switch (type) {
+      case "all":
+        return `${baseStyle} border border-gray-300 ${selectedStyle} ${
+          isSelected ? "bg-gray-300 text-gray-300" : "text-gray-800"
+        }`;
+      case "favorites":
+        return `${baseStyle} border border-gray-300 ${selectedStyle} ${
+          isSelected ? "bg-gray-300 text-gray-300" : "text-gray-800"
+        }`;
+      case "Heavy Meals":
+        return `${baseStyle} border border-red-500 ${selectedStyle} ${
+          isSelected ? "bg-red-500 text-red-500" : "text-gray-800"
+        }`;
+      case "Light Meals":
+        return `${baseStyle} border border-green-300 ${selectedStyle} ${
+          isSelected ? "bg-green-300 text-green-300" : "text-gray-800"
+        }`;
+      case "Dessert":
+        return `${baseStyle} border border-pink-300 ${selectedStyle} ${
+          isSelected ? "bg-pink-300 text-pink-300" : "text-gray-800"
+        }`;
+      default:
+        return `${baseStyle} border border-gray-300 ${selectedStyle} ${
+          isSelected ? "bg-gray-300 text-gray-300" : "text-gray-800"
+        }`;
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!loading.more && hasMore) {
+      loadMoreDishes();
+    }
+  };
+
   if (error) {
     return (
-      <Modal visible={true} transparent animationType="fade">
-        <View className="flex-1 items-center justify-center bg-black/50">
-          <View className="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-4xl">
+      <Modal visible={true} transparent={true}>
+        <View className="flex-1 items-center justify-center bg-black bg-opacity-50">
+          <View className="bg-white rounded-lg p-6 w-11/12 max-w-md">
             <Text className="text-red-500 text-center mb-4">{error}</Text>
-            <View className="flex justify-center">
-              <TouchableOpacity
-                onPress={onClose}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
-              >
-                <Text className="text-gray-800">Close</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg self-center"
+              onPress={onClose}
+            >
+              <Text>Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -200,203 +284,116 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   }
 
   return (
-    <Modal visible={true} transparent animationType="fade">
-      <View className="flex-1 items-center justify-center bg-black/50">
-        <View className="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-5xl max-h-[90vh] flex flex-col">
+    <Modal visible={true} transparent={true} animationType="slide">
+      <View className="flex-1 items-center justify-center bg-black bg-opacity-50">
+        <View className="bg-white rounded-lg p-4 w-11/12 max-h-[90vh] flex-1">
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-xl font-semibold">Select a Dish</Text>
+            <Text className="text-lg font-semibold">Select a Dish</Text>
             <TouchableOpacity onPress={onClose}>
-              <Text className="text-gray-500 text-xl">✕</Text>
+              <Text className="text-gray-500 text-lg">✕</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Filter and Search Controls */}
-          <View className="mb-4 flex flex-col space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-4">
-            {/* Search bar */}
-            <View className="relative flex-grow">
+          <View className="mb-4 flex-col space-y-2">
+            <View className="relative">
               <TextInput
                 placeholder="Search for a dish..."
                 value={searchQuery}
-                onChangeText={setSearchQuery}
-                className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full"
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                }}
+                className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full text-sm"
               />
-              <Text className="absolute left-3 top-2.5">🔍</Text>
+              <Text className="absolute left-3 top-3">🔍</Text>
             </View>
 
-            {/* Filter buttons */}
-            <View className="flex-row items-center gap-2 mt-1">
-              <TouchableOpacity
-                onPress={() => setActiveFilter("all")}
-                className={`px-3 py-1.5 rounded-lg ${
-                  activeFilter === "all" ? "bg-blue-600" : "bg-gray-200"
-                }`}
-              >
-                <Text
-                  className={`text-sm ${activeFilter === "all" ? "text-white" : "text-gray-800"}`}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {orderedTags.map(({ label, type }) => (
+                <TouchableOpacity
+                  key={type}
+                  onPress={() => {
+                    if (type === "all") {
+                      setActiveFilter("all");
+                      setSelectedType("all");
+                    } else if (type === "favorites") {
+                      setActiveFilter("favorites");
+                      setSelectedType("all");
+                    } else {
+                      setSelectedType(type);
+                      setActiveFilter("all");
+                    }
+                  }}
+                  className={getTagStyle(
+                    type,
+                    (type === "all" && activeFilter === "all" && selectedType === "all") ||
+                      (type === "favorites" && activeFilter === "favorites") ||
+                      (selectedType === type && activeFilter !== "favorites")
+                  )}
                 >
-                  All
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveFilter("favorites")}
-                className={`px-3 py-1.5 rounded-lg flex-row items-center ${
-                  activeFilter === "favorites" ? "bg-blue-600" : "bg-gray-200"
-                }`}
-              >
-                <Text className="mr-1">⭐</Text>
-                <Text
-                  className={`text-sm ${
-                    activeFilter === "favorites" ? "text-white" : "text-gray-800"
-                  }`}
-                >
-                  Favorites
-                </Text>
-              </TouchableOpacity>
-
-              {/* Type selection dropdown */}
-              <View
-                className="border border-gray-300 rounded-lg bg-white"
-                style={{ height: 35, width: 120, justifyContent: "center" }}
-              >
-                <Picker
-                  selectedValue={selectedType}
-                  onValueChange={(itemValue) => setSelectedType(itemValue)}
-                  mode="dropdown"
-                >
-                  <Picker.Item label="Type" value="all" />
-                  {dishTypes.map((type) => (
-                    <Picker.Item key={type} label={type} value={type} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
+                  <View className="flex-row items-center">
+                    {type === "favorites" && <Text className="mr-1">⭐</Text>}
+                    <Text>{label}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
 
-          {/* Dishes display */}
           <FlatList
             data={filteredDishes}
+            renderItem={renderDishItem}
             keyExtractor={(item) => item._id}
             numColumns={2}
             columnWrapperStyle={{ justifyContent: "space-between" }}
-            contentContainerStyle={{ paddingBottom: 16 }}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
             ListEmptyComponent={
-              <View className="flex-col items-center justify-center h-64">
-                <Ionicons name="sad-outline" size={64} color="#9ca3af" />
-                <Text className="text-gray-500 mt-4">No dishes match your search criteria</Text>
-              </View>
+              loading.initial ? (
+                <View className="flex-col items-center justify-center h-64">
+                  <ActivityIndicator size="large" color="#0000ff" />
+                  <Text className="text-gray-500 mt-4">Loading dishes...</Text>
+                </View>
+              ) : (
+                <View className="flex-col items-center justify-center h-64">
+                  <Text className="text-gray-500 mt-4">
+                    {selectedType !== "all"
+                      ? `No more ${selectedType} dishes available`
+                      : "No dishes match your criteria"}
+                  </Text>
+                </View>
+              )
             }
-            renderItem={({ item: dish }) => {
-              const isAlreadyAdded = isDishAlreadyAdded(dish);
-              const dishFavorite = isFavorite(dish._id);
-
-              return (
-                <TouchableOpacity
-                  className={`flex-1 m-2 border rounded-lg overflow-hidden shadow-sm ${
-                    selectedDish?._id === dish._id ? "border-2 border-blue-500" : ""
-                  } ${isAlreadyAdded ? "opacity-50" : ""}`}
-                  onPress={() => !isAdding && !isAlreadyAdded && setSelectedDish(dish)}
-                  disabled={isAdding || isAlreadyAdded}
-                >
-                  {/* 🔽 Giảm chiều cao ảnh từ 160px xuống 120px */}
-                  <View className="relative h-32 bg-gray-200">
-                    {dish.imageUrl ? (
-                      <Image
-                        source={{ uri: dish.imageUrl }}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <View className="w-full h-full flex items-center justify-center bg-gray-200">
-                        <Text className="text-gray-400">No image</Text>
-                      </View>
-                    )}
-                    {dishFavorite && (
-                      <Text className="absolute top-2 right-2 text-yellow-500 text-xl">⭐</Text>
-                    )}
-                    {isAlreadyAdded && (
-                      <View className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <Text className="text-white font-semibold">Added</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* 🔽 Điều chỉnh padding để hiển thị thông tin tốt hơn */}
-                  <View className="p-2">
-                    <View className="flex-row justify-between items-center">
-                      <Text className="font-medium text-gray-800 text-sm">{dish.name}</Text>
-                      <Text className="text-sm font-bold text-blue-600">{dish.calories} kcal</Text>
-                    </View>
-
-                    {/* 🔽 Hiển thị các chỉ số dinh dưỡng trên cùng 1 hàng */}
-                    <View className="mt-1 flex-row flex-wrap gap-1">
-                      <Text className="bg-red-100 rounded-full px-2 py-1 text-xs">
-                        Pro: {dish.protein || 0}g
-                      </Text>
-                      <Text className="bg-green-100 rounded-full px-2 py-1 text-xs">
-                        Carbs: {dish.carbs || 0}g
-                      </Text>
-                      <Text className="bg-yellow-100 rounded-full px-2 py-1 text-xs">
-                        Fat: {dish.fat || 0}g
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
+            ListFooterComponent={
+              loading.more && filteredDishes.length > 0 ? (
+                <View className="py-4 flex-row justify-center">
+                  <ActivityIndicator size="small" color="#0000ff" />
+                  <Text className="ml-2">Loading more...</Text>
+                </View>
+              ) : null
+            }
+            className="flex-1"
           />
 
-          {/* Selected dish information */}
-          {selectedDish && (
-            <View className="mt-4 p-4 bg-blue-50 rounded-lg">
-              <Text className="font-medium text-blue-800">Selected Dish</Text>
-              <View className="flex-row items-center mt-2">
-                <View className="w-16 h-16 bg-gray-200 rounded-md overflow-hidden">
-                  {selectedDish.imageUrl ? (
-                    <Image
-                      source={{ uri: selectedDish.imageUrl }}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <View className="w-full h-full flex items-center justify-center text-gray-400">
-                      <Text className="text-gray-400">No img</Text>
-                    </View>
-                  )}
-                </View>
-                <View className="ml-4">
-                  <Text className="font-medium">{selectedDish.name}</Text>
-                  <View className="flex-row space-x-3 text-sm mt-1">
-                    <Text className="text-blue-600 font-semibold">
-                      {selectedDish.calories} kcal
-                    </Text>
-                    <Text>Pro: {selectedDish.protein || 0}g</Text>
-                    <Text>Carbs: {selectedDish.carbs || 0}g</Text>
-                    <Text>Fat: {selectedDish.fat || 0}g</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Action buttons */}
-          <View className="mt-4 flex-row justify-between">
+          <View className="mt-4 flex-row justify-end gap-2">
             <TouchableOpacity
               onPress={handleAddDish}
               className={`${
                 isAdding || !selectedDish || (selectedDish && isDishAlreadyAdded(selectedDish))
                   ? "bg-gray-400"
-                  : "bg-green-600"
-              } text-white px-4 py-2 rounded-lg`}
+                  : "bg-green-500"
+              } px-4 py-2 rounded-lg`}
               disabled={
                 isAdding || !selectedDish || (selectedDish && isDishAlreadyAdded(selectedDish))
               }
             >
-              <Text className="text-white">{isAdding ? "Adding..." : "Add Dish"}</Text>
+              <Text className="text-white text-sm">{isAdding ? "Adding..." : "Add Dish"}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onClose}
-              className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
+              className="bg-gray-300 px-4 py-2 rounded-lg"
               disabled={isAdding}
             >
-              <Text className="text-gray-800">Cancel</Text>
+              <Text className="text-gray-800 text-sm">Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

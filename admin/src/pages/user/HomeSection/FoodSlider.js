@@ -10,14 +10,15 @@ import { useNavigate } from "react-router-dom";
 import useFoodData from "../../../helpers/useFoodData";
 import DefaultImg from "../../../assets/images/default.jpg";
 
-
 const FoodSlider = ({ userId, dishes = [] }) => {
   const swiperRef = useRef(null);
   const navigate = useNavigate();
   const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, dishes);
 
   const handleFoodClick = (dishId, recipeId) => {
-    navigate(`/${dishId}/recipes/${recipeId}`);
+    if (recipeId) {
+      navigate(`/${dishId}/recipes/${recipeId}`);
+    }
   };
 
   const handleLike = async (dishId) => {
@@ -157,7 +158,14 @@ const FoodSlider = ({ userId, dishes = [] }) => {
                       ? food.rating.toFixed(1) + "⭐"
                       : "No ratings yet"}
                   </p>
+
+                  {/* Thông báo nếu không có công thức */}
                 </div>
+                {!food.recipeId && (
+                  <p className="mt-2 text-sm text-red-500">
+                    No recipe available
+                  </p>
+                )}
               </div>
             </SwiperSlide>
           ))}

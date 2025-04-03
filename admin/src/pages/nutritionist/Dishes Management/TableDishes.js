@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
+import uploadFile from "../../../helpers/uploadFile";
+import imageCompression from "browser-image-compression";
 
 const FLAVOR_OPTIONS = ["Sweet", "Sour", "Salty", "Bitter", "Fatty"];
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
@@ -24,7 +26,7 @@ const TableDishes = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [totalItems, setTotalItems] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -37,7 +39,8 @@ const TableDishes = () => {
     flavor: [],
     type: "",
     season: "",
-    imageUrl: "",
+    imageFile: null,
+    imageUrl: "", // This will be empty unless the user enters a URL
   });
   const [errors, setErrors] = useState({});
   const [filterType, setFilterType] = useState("all");
@@ -45,6 +48,8 @@ const TableDishes = () => {
   const [ingredientCounts, setIngredientCounts] = useState({});
   const [loadingIngredients, setLoadingIngredients] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState("");
+  const [isValidImageUrl, setIsValidImageUrl] = useState(false);
 
   useEffect(() => {
     fetchDishes();
@@ -53,7 +58,7 @@ const TableDishes = () => {
   const fetchDishes = async () => {
     setIsLoading(true);
     try {
-      const response = await dishesService.getAllDishes(currentPage, itemsPerPage, searchTerm);
+      const response = await dishesService.getAllDishes(currentPage + 1, itemsPerPage, searchTerm);
       if (response.success) {
         const filteredByType =
           filterType === "all"
@@ -114,7 +119,11 @@ const TableDishes = () => {
   const handleEditClick = (dish) => {
     let flavorArray = [];
     if (Array.isArray(dish.flavor)) {
-      if (dish.flavor.length > 0 && typeof dish.flavor[0] === "string" && dish.flavor[0].includes(",")) {
+      if (
+        dish.flavor.length > 0 &&
+        typeof dish.flavor[0] === "string" &&
+        dish.flavor[0].includes(",")
+      ) {
         flavorArray = dish.flavor[0].split(",").map((f) => f.trim());
       } else {
         flavorArray = dish.flavor;
@@ -122,13 +131,18 @@ const TableDishes = () => {
     } else if (typeof dish.flavor === "string" && dish.flavor) {
       flavorArray = dish.flavor.split(",").map((f) => f.trim());
     }
-
+  
     const validFlavors = flavorArray.filter((flavor) => FLAVOR_OPTIONS.includes(flavor));
+  
     setEditData({
       ...dish,
       id: dish._id,
       flavor: validFlavors,
+      imageFile: null,
+      imageUrl: "", // Keep this empty unless the user enters a URL
     });
+    setImagePreview(dish.imageUrl || ""); // Show the existing image in the preview
+    setIsValidImageUrl(!!dish.imageUrl);
     setErrors({});
     setIsEditModalOpen(true);
   };
@@ -137,13 +151,18 @@ const TableDishes = () => {
     const newErrors = {};
     if (!editData.name.trim()) newErrors.name = "Name is required";
     if (!editData.description.trim()) newErrors.description = "Description is required";
-    if (!editData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required";
+    if (!editData.imageFile && !editData.imageUrl.trim() && !imagePreview) {
+      newErrors.imageUrl = "Image (file or URL) is required";
+    } else if (editData.imageUrl && !isValidImageUrl) {
+      newErrors.imageUrl = "Invalid image URL. Please provide a valid image link.";
+    }
     if (!editData.cookingTime) newErrors.cookingTime = "Cooking time is required";
     if (editData.flavor.length === 0) newErrors.flavor = "At least one flavor is required";
     if (!editData.type) newErrors.type = "Type is required";
     if (!editData.season) newErrors.season = "Season is required";
     if (editData.videoUrl) {
-      const youtubeEmbedRegex = /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
+      const youtubeEmbedRegex =
+        /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
       if (!youtubeEmbedRegex.test(editData.videoUrl)) {
         newErrors.videoUrl = "Video URL must be a valid YouTube embed link";
       }
@@ -158,8 +177,24 @@ const TableDishes = () => {
       return;
     }
 
+    let imageUrl = editData.imageUrl || imagePreview; // Use existing imagePreview if no new file or URL
+    if (editData.imageFile) {
+      try {
+        const compressedFile = await compressImage(editData.imageFile);
+        const uploadedImage = await uploadFile(compressedFile, (percentComplete) => {
+          console.log(`Upload progress: ${percentComplete}%`);
+        });
+        imageUrl = uploadedImage.secure_url;
+      } catch (error) {
+        alert("Image upload failed!");
+        console.error("Upload error:", error);
+        return;
+      }
+    }
+
     const updatedData = {
       ...editData,
+      imageUrl,
       flavor: editData.flavor.join(", "),
     };
     const response = await dishesService.updateDish(editData.id, updatedData);
@@ -179,7 +214,7 @@ const TableDishes = () => {
       if (response.success) {
         alert("Deleted successfully!");
         fetchDishes();
-        if (dishes.length === 1 && currentPage > 1) {
+        if (dishes.length === 1 && currentPage > 0) {
           setCurrentPage(currentPage - 1);
         }
       } else {
@@ -192,9 +227,7 @@ const TableDishes = () => {
     const updatedDish = { ...dish, isVisible: !dish.isVisible };
     try {
       await dishesService.updateDish(dish._id, { isVisible: !dish.isVisible });
-      setDishes((prevDishes) =>
-        prevDishes.map((d) => (d._id === dish._id ? updatedDish : d))
-      );
+      setDishes((prevDishes) => prevDishes.map((d) => (d._id === dish._id ? updatedDish : d)));
     } catch (error) {
       alert("Failed to update visibility. Please try again.");
     }
@@ -218,9 +251,59 @@ const TableDishes = () => {
     setErrors({ ...errors, flavor: "" });
   };
 
-  const handleImageUpload = (imageUrl) => {
-    setEditData({ ...editData, imageUrl });
-    setErrors({ ...errors, imageUrl: "" });
+const handleFileSelect = (file) => {
+  if (file) {
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+    setIsValidImageUrl(true);
+    setEditData({ ...editData, imageFile: file, imageUrl: "" });
+  } else {
+    setImagePreview(editData.imageUrl || ""); // Revert to the original imageUrl if no file is selected
+    setIsValidImageUrl(!!editData.imageUrl);
+    setEditData({ ...editData, imageFile: null });
+  }
+  setErrors({ ...errors, imageUrl: "" });
+};
+const handleImageUrlChange = (e) => {
+  const url = e.target.value;
+  setEditData({ ...editData, imageUrl: url, imageFile: null });
+  setErrors({ ...errors, imageUrl: "" });
+
+  if (url) {
+    checkImageUrl(url);
+  } else {
+    setImagePreview("");
+    setIsValidImageUrl(false);
+  }
+};
+
+  const checkImageUrl = (url) => {
+    const img = new Image();
+    img.onload = () => {
+      setImagePreview(url);
+      setIsValidImageUrl(true);
+    };
+    img.onerror = () => {
+      setImagePreview("");
+      setIsValidImageUrl(false);
+      setErrors({ ...errors, imageUrl: "Invalid image URL. Please provide a valid image link." });
+    };
+    img.src = url;
+  };
+
+  const compressImage = async (file) => {
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1024,
+      useWebWorker: true,
+    };
+    try {
+      const compressedFile = await imageCompression(file, options);
+      return compressedFile;
+    } catch (error) {
+      console.error("Image compression error:", error);
+      return file;
+    }
   };
 
   const handleCookingTimeChange = (e) => {
@@ -233,11 +316,8 @@ const TableDishes = () => {
     setErrors({ ...errors, cookingTime: "" });
   };
 
-  const handlePageClick = (data) => {
-    const selectedPage = data.selected + 1;
-    if (selectedPage >= 1 && selectedPage <= totalPages) {
-      setCurrentPage(selectedPage);
-    }
+  const handlePageClick = ({ selected }) => {
+    setCurrentPage(selected);
   };
 
   const closeEditModal = () => {
@@ -251,18 +331,27 @@ const TableDishes = () => {
       flavor: [],
       type: "",
       season: "",
+      imageFile: null,
       imageUrl: "",
     });
     setErrors({});
+    setImagePreview("");
+    setIsValidImageUrl(false);
   };
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   return (
     <div className="container mx-auto px-6 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
-          List of Dishes
-        </h2>
+        <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">List of Dishes</h2>
         <button
           onClick={() => navigate("/nutritionist/dishes/add")}
           className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
@@ -277,7 +366,7 @@ const TableDishes = () => {
           <button
             onClick={() => {
               setFilterType("all");
-              setCurrentPage(1);
+              setCurrentPage(0);
             }}
             className={`px-4 py-2 rounded-md font-semibold ${
               filterType === "all"
@@ -292,7 +381,7 @@ const TableDishes = () => {
               key={type}
               onClick={() => {
                 setFilterType(filterType === type ? "all" : type);
-                setCurrentPage(1);
+                setCurrentPage(0);
               }}
               className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
                 filterType === type
@@ -312,7 +401,7 @@ const TableDishes = () => {
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              setCurrentPage(1);
+              setCurrentPage(0);
             }}
           />
         </div>
@@ -334,9 +423,7 @@ const TableDishes = () => {
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center text-gray-800">
-                      {dish.name}
-                    </h3>
+                    <h3 className="text-lg font-semibold text-center text-gray-800">{dish.name}</h3>
                     <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
                       <span className="mr-3 flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
@@ -410,7 +497,8 @@ const TableDishes = () => {
             setLimit={setItemsPerPage}
             totalItems={totalItems}
             handlePageClick={handlePageClick}
-            text={"Dishes"}
+            currentPage={currentPage}
+            text="Dishes"
           />
         </div>
       )}
@@ -440,9 +528,7 @@ const TableDishes = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                   <input
                     type="text"
                     name="name"
@@ -482,9 +568,7 @@ const TableDishes = () => {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Type *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
                     <select
                       name="type"
                       value={editData.type || ""}
@@ -505,9 +589,7 @@ const TableDishes = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Video URL
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
                   <input
                     type="text"
                     name="videoUrl"
@@ -524,9 +606,7 @@ const TableDishes = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Season *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Season *</label>
                   <select
                     name="season"
                     value={editData.season || ""}
@@ -546,16 +626,16 @@ const TableDishes = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Flavor *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Flavor *</label>
                   <div className="flex flex-wrap gap-4">
                     {FLAVOR_OPTIONS.map((flavor) => (
                       <label key={flavor} className="inline-flex items-center">
                         <input
                           type="checkbox"
                           value={flavor}
-                          checked={Array.isArray(editData.flavor) && editData.flavor.includes(flavor)}
+                          checked={
+                            Array.isArray(editData.flavor) && editData.flavor.includes(flavor)
+                          }
                           onChange={handleFlavorChange}
                           className="mr-2 h-4 w-4 text-[#40B491] focus:ring-[#40B491] rounded"
                         />
@@ -567,33 +647,20 @@ const TableDishes = () => {
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-center items-center mb-4">
-                    {editData.imageUrl ? (
-                      <img
-                        src={editData.imageUrl}
-                        alt="Dish preview"
-                        className="w-24 h-24 object-cover rounded-lg shadow-sm"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <Image className="w-8 h-8 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-center">
+                  <div className="text-center mb-4">
                     <UploadComponent
-                      onUploadSuccess={handleImageUpload}
-                      reset={editData.imageUrl === ""}
+                      onFileSelect={handleFileSelect}
+                      reset={editData.imageFile === null && !editData.imageUrl && !imagePreview}
                     />
                   </div>
-                  <div className="mt-4">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Image URL *
                     </label>
                     <input
                       type="text"
                       value={editData.imageUrl || ""}
-                      onChange={(e) => handleImageUpload(e.target.value)}
+                      onChange={handleImageUrlChange}
                       placeholder="Enter image URL"
                       className={`w-full border ${
                         errors.imageUrl ? "border-red-500" : "border-gray-300"
@@ -603,6 +670,15 @@ const TableDishes = () => {
                       <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>
                     )}
                   </div>
+                  {imagePreview && (
+                    <div className="mt-4 flex justify-center">
+                      <img
+                        src={imagePreview}
+                        alt="Image Preview"
+                        className="w-32 h-32 object-cover rounded border"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

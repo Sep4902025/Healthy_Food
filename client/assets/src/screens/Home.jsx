@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
-  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import SearchBar from "../components/common/SearchBar";
@@ -29,16 +29,20 @@ function Home({ navigation }) {
   const [seasonalDishes, setSeasonalDishes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState({ loadDishes: true });
+  const [loading, setLoading] = useState({ initial: true, more: false });
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const limit = 10; // Số lượng món ăn mỗi trang
+
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
+  console.log("USEREDUC", user);
 
   const dispatch = useDispatch();
-
-  const season = useCurrentSeason() || "spring"; // Default to "spring" if null
+  const season = useCurrentSeason() || "spring";
 
   useEffect(() => {
-    loadDishes();
+    loadInitialDishes();
   }, []);
 
   useEffect(() => {
@@ -51,35 +55,51 @@ function Home({ navigation }) {
     }
   };
 
+  const loadInitialDishes = async () => {
+    setLoading((prev) => ({ ...prev, initial: true }));
+    await loadDishes(1, true);
+    setLoading((prev) => ({ ...prev, initial: false }));
+  };
+
+  const loadMoreDishes = async () => {
+    if (!hasMore || loading.more) return;
+    setLoading((prev) => ({ ...prev, more: true }));
+    await loadDishes(page + 1);
+    setLoading((prev) => ({ ...prev, more: false }));
+  };
+
+  const loadDishes = async (pageNum, isRefresh = false) => {
+    try {
+      const response = await HomeService.getAllDishes(pageNum, limit);
+      if (response?.success) {
+        const newDishes = response.data.items.filter(
+          (dish) => dish.season && typeof dish.season === "string"
+        );
+
+        setSeasonalDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+
+        setPage(pageNum);
+        setHasMore(pageNum < response.data.totalPages);
+      } else {
+        console.error("Failed to load dishes:", response?.message);
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error loading dishes:", error.message);
+      setHasMore(false);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadDishes();
+    setPage(1);
+    setHasMore(true);
+    await loadDishes(1, true);
     await loadFavoritesData();
     setRefreshing(false);
   };
 
-  const loadDishes = async () => {
-    setLoading((prev) => ({ ...prev, loadDishes: true }));
-    try {
-      const response = await HomeService.getAllDishes();
-      if (response?.status === "success") {
-        console.log("Dishes data:", response.data); // Debug log
-        setSeasonalDishes(
-          (response.data || []).filter((dish) => dish.season && typeof dish.season === "string")
-        );
-      } else {
-        console.error("Failed to load dishes:", response?.message || "Unknown error");
-        setSeasonalDishes([]);
-      }
-    } catch (error) {
-      console.error("Error loading dishes:", error.message || error);
-      setSeasonalDishes([]);
-    } finally {
-      setLoading((prev) => ({ ...prev, loadDishes: false }));
-    }
-  };
-
-  const handleSearch = async (searchString) => {
+  const handleSearch = (searchString) => {
     navigation.navigate(ScreensName.search, { searchQuery: searchString });
   };
 
@@ -91,11 +111,24 @@ function Home({ navigation }) {
     navigation.navigate(ScreensName.list);
   };
 
+  const handleScroll = useCallback(
+    ({ nativeEvent }) => {
+      const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+      const paddingToBottom = 20;
+      if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+        loadMoreDishes();
+      }
+    },
+    [hasMore, loading.more, page]
+  );
+
   return (
     <MainLayoutWrapper>
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <SearchBar
@@ -119,10 +152,7 @@ function Home({ navigation }) {
             {Object.values(DishType).map((category, key) => (
               <CategoryCard
                 key={key}
-                category={{
-                  id: key,
-                  ...category,
-                }}
+                category={{ id: key, ...category }}
                 onPress={() => navigation.navigate(ScreensName.search, { category })}
                 cardWidth={"20%"}
                 style={{ marginRight: "4%" }}
@@ -134,16 +164,16 @@ function Home({ navigation }) {
         <View style={styles.seasonalSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Seasonal Dishes</Text>
-            <TouchableOpacity onPress={() => handleViewAll()}>
+            <TouchableOpacity onPress={handleViewAll}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
 
-          {loading.loadDishes ? (
+          {loading.initial ? (
             <SpinnerLoading />
           ) : seasonalDishes.length > 0 ? (
             seasonalDishes
-              .filter((item) => item?.season?.toLowerCase()?.includes(season?.toLowerCase() || ""))
+              .filter((item) => item?.season?.toLowerCase()?.includes(season?.toLowerCase()))
               .map((dish) => (
                 <DishedV1
                   dish={dish}
@@ -153,6 +183,10 @@ function Home({ navigation }) {
               ))
           ) : (
             <Text style={styles.noResultsText}>No seasonal dishes found</Text>
+          )}
+
+          {loading.more && (
+            <ActivityIndicator size="large" color="#38B2AC" style={styles.loadingMore} />
           )}
         </View>
       </ScrollView>
@@ -194,6 +228,9 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: 16,
     textAlign: "center",
+  },
+  loadingMore: {
+    marginVertical: 20,
   },
 });
 

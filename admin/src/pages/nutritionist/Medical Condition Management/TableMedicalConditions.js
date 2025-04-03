@@ -6,20 +6,22 @@ import {
   HeartPulse,
   Pencil,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Flame,
   Dumbbell,
   Wheat,
   Droplet,
   Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import FoodSelectionModal from "./FoodSelectionModal";
+import Pagination from "../../../components/Pagination";
 
 const TableMedicalConditions = () => {
   const [conditions, setConditions] = useState([]);
   const [dishes, setDishes] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editData, setEditData] = useState({
@@ -32,14 +34,13 @@ const TableMedicalConditions = () => {
   });
   const [viewData, setViewData] = useState(null);
   const [isFoodModalOpen, setIsFoodModalOpen] = useState(false);
-  const [foodModalType, setFoodModalType] = useState("");
+  const [foodModalType, setFoodModalType] = useState(""); // Fixed: Added foodModalType state
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch medical conditions and dishes with nutritional data
   useEffect(() => {
     fetchData();
   }, [currentPage, itemsPerPage, searchTerm]);
@@ -59,44 +60,61 @@ const TableMedicalConditions = () => {
       ]);
 
       if (conditionsResponse?.success) {
-        setConditions(conditionsResponse.data.items || []);
+        const formattedConditions = conditionsResponse.data.items.map((condition) => ({
+          ...condition,
+          restrictedFoods: condition.restrictedFoods.map((food) =>
+            typeof food === "object" && food._id ? food._id : food.toString()
+          ),
+          recommendedFoods: condition.recommendedFoods.map((food) =>
+            typeof food === "object" && food._id ? food._id : food.toString()
+          ),
+        }));
+        setConditions(formattedConditions || []);
+        setTotalItems(conditionsResponse.data.total || 0);
         setTotalPages(conditionsResponse.data.totalPages || 1);
       } else {
         setConditions([]);
+        setTotalItems(0);
         console.error("❌ Failed to fetch conditions:", conditionsResponse?.message);
+        alert("Failed to fetch medical conditions: " + conditionsResponse?.message);
       }
 
-      const dishesData =
-        dishesResponse?.success && Array.isArray(dishesResponse.data.items)
+      if (dishesResponse?.success) {
+        const dishesData = Array.isArray(dishesResponse.data.items)
           ? dishesResponse.data.items
           : [];
-
-      const enrichedDishes = await Promise.all(
-        dishesData.map(async (dish) => {
-          if (dish.recipeId) {
-            try {
-              const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
-              if (recipeResponse.success && recipeResponse.data?.status === "success") {
-                const recipe = recipeResponse.data.data;
-                const nutritions = calculateNutritionFromRecipe(recipe);
-                return { ...dish, nutritions };
+        const enrichedDishes = await Promise.all(
+          dishesData.map(async (dish) => {
+            if (dish.recipeId) {
+              try {
+                const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
+                if (recipeResponse.success && recipeResponse.data?.status === "success") {
+                  const recipe = recipeResponse.data.data;
+                  const nutritions = calculateNutritionFromRecipe(recipe);
+                  return { ...dish, nutritions };
+                }
+              } catch (error) {
+                console.error(`Error fetching recipe for dish ${dish._id}:`, error);
               }
-            } catch (error) {
-              console.error(`Error fetching recipe for dish ${dish._id}:`, error);
             }
-          }
-          return {
-            ...dish,
-            nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" },
-          };
-        })
-      );
-
-      setDishes(enrichedDishes);
+            return {
+              ...dish,
+              nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" },
+            };
+          })
+        );
+        setDishes(enrichedDishes);
+      } else {
+        setDishes([]);
+        console.error("❌ Failed to fetch dishes:", dishesResponse?.message);
+        alert("Failed to fetch dishes: " + dishesResponse?.message);
+      }
     } catch (error) {
       setConditions([]);
       setDishes([]);
+      setTotalItems(0);
       console.error("Error fetching data:", error);
+      alert("Error fetching data: " + error.message);
     }
     setIsLoading(false);
   };
@@ -137,20 +155,24 @@ const TableMedicalConditions = () => {
     };
   };
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // Open edit modal
   const handleEditClick = (condition) => {
+    const normalizedRestrictedFoods = condition.restrictedFoods.map((food) =>
+      typeof food === "object" && food._id ? food._id : food.toString()
+    );
+    const normalizedRecommendedFoods = condition.recommendedFoods.map((food) =>
+      typeof food === "object" && food._id ? food._id : food.toString()
+    );
+
     setEditData({
       id: condition._id,
       name: condition.name || "",
       description: condition.description || "",
-      restrictedFoods: condition.restrictedFoods || [],
-      recommendedFoods: condition.recommendedFoods || [],
+      restrictedFoods: normalizedRestrictedFoods || [],
+      recommendedFoods: normalizedRecommendedFoods || [],
       nutritionalConstraints: {
         carbs: condition.nutritionalConstraints?.carbs || "",
         fat: condition.nutritionalConstraints?.fat || "",
-        protein: condition.nutritionalConstraints?.protein || "",
+        protein: condition.nutritionalConstraints?.protein || "", // Sửa từ 'proteindealer' thành 'protein'
         calories: condition.nutritionalConstraints?.calories || "",
       },
     });
@@ -158,13 +180,22 @@ const TableMedicalConditions = () => {
     setIsEditModalOpen(true);
   };
 
-  // Open view modal
   const handleViewClick = (condition) => {
-    setViewData(condition);
+    const normalizedRestrictedFoods = condition.restrictedFoods.map((food) =>
+      typeof food === "object" && food._id ? food._id : food.toString()
+    );
+    const normalizedRecommendedFoods = condition.recommendedFoods.map((food) =>
+      typeof food === "object" && food._id ? food._id : food.toString()
+    );
+
+    setViewData({
+      ...condition,
+      restrictedFoods: normalizedRestrictedFoods,
+      recommendedFoods: normalizedRecommendedFoods,
+    });
     setIsViewModalOpen(true);
   };
 
-  // Handle delete
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this medical condition?")) {
       const response = await medicalConditionService.deleteMedicalCondition(id);
@@ -180,15 +211,20 @@ const TableMedicalConditions = () => {
     }
   };
 
-  // Handle form changes for edit
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // Nếu là trường trong nutritionalConstraints, giới hạn giá trị tối đa là 1000
     if (name in editData.nutritionalConstraints) {
+      let constrainedValue = value;
+      if (value !== "" && !isNaN(value)) {
+        constrainedValue = Math.min(Number(value), 10000).toString(); // Giới hạn tối đa 1000
+      }
       setEditData({
         ...editData,
         nutritionalConstraints: {
           ...editData.nutritionalConstraints,
-          [name]: value,
+          [name]: constrainedValue,
         },
       });
     } else {
@@ -197,7 +233,6 @@ const TableMedicalConditions = () => {
     setErrors({ ...errors, [name]: "" });
   };
 
-  // Validate form for edit
   const validateForm = () => {
     const newErrors = {};
     if (!editData.name.trim()) newErrors.name = "Name is required";
@@ -217,7 +252,6 @@ const TableMedicalConditions = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Save edits
   const handleSaveEdit = async () => {
     if (!validateForm()) {
       alert("Please fill in all required fields correctly!");
@@ -254,13 +288,11 @@ const TableMedicalConditions = () => {
     }
   };
 
-  // Open food selection modal
   const handleOpenFoodModal = (type) => {
     setFoodModalType(type);
     setIsFoodModalOpen(true);
   };
 
-  // Handle food selection
   const handleFoodSelect = (selectedDishes) => {
     if (foodModalType === "restricted") {
       setEditData({ ...editData, restrictedFoods: selectedDishes });
@@ -270,7 +302,6 @@ const TableMedicalConditions = () => {
     setIsFoodModalOpen(false);
   };
 
-  // Close edit modal
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setEditData({
@@ -284,10 +315,22 @@ const TableMedicalConditions = () => {
     setErrors({});
   };
 
-  // Close view modal
   const closeViewModal = () => {
     setIsViewModalOpen(false);
     setViewData(null);
+  };
+
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1;
+    if (selectedPage >= 1 && selectedPage <= totalPages) {
+      setCurrentPage(selectedPage);
+    }
+  };
+
+  const paginate = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
   };
 
   return (
@@ -320,7 +363,7 @@ const TableMedicalConditions = () => {
                   key={condition._id}
                   className="bg-white rounded-lg shadow-md overflow-hidden relative"
                 >
-                  <div className="p-4">
+                  <div className="p-4 h-[110px] flex flex-col justify-between">
                     <h3 className="text-lg font-semibold text-center">{condition.name}</h3>
                     <p className="text-sm text-gray-600 mt-2 text-center line-clamp-2">
                       {condition.description}
@@ -367,7 +410,7 @@ const TableMedicalConditions = () => {
       {conditions.length > 0 && !isLoading && (
         <div className="p-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <span>Show</span>
+            ，三 <span>Show</span>
             <select
               className="border rounded px-2 py-1"
               value={itemsPerPage}
@@ -494,7 +537,27 @@ const TableMedicalConditions = () => {
                             ✕
                           </button>
                         </div>
-                      ) : null;
+                      ) : (
+                        <div
+                          key={foodId}
+                          className="bg-red-100 text-red-700 rounded-full px-3 py-1 text-sm flex items-center"
+                        >
+                          [Dish not found: {foodId}]
+                          <button
+                            onClick={() =>
+                              setEditData({
+                                ...editData,
+                                restrictedFoods: editData.restrictedFoods.filter(
+                                  (id) => id !== foodId
+                                ),
+                              })
+                            }
+                            className="ml-2 text-red-500 hover:text-red-700"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
                     })}
                   </div>
                   <button
@@ -532,7 +595,27 @@ const TableMedicalConditions = () => {
                             ✕
                           </button>
                         </div>
-                      ) : null;
+                      ) : (
+                        <div
+                          key={foodId}
+                          className="bg-red-100 text-red-700 rounded-full px-3 py-1 text-sm flex items-center"
+                        >
+                          [Dish not found: {foodId}]
+                          <button
+                            onClick={() =>
+                              setEditData({
+                                ...editData,
+                                recommendedFoods: editData.recommendedFoods.filter(
+                                  (id) => id !== foodId
+                                ),
+                              })
+                            }
+                            className="ml-2 text-red-500 hover:text-red-700"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
                     })}
                   </div>
                   <button
@@ -653,14 +736,23 @@ const TableMedicalConditions = () => {
                     Restricted Foods
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {viewData.restrictedFoods.map((foodId) => {
-                      const dish = dishes.find((d) => d._id === foodId);
-                      return dish ? (
-                        <span key={foodId} className="bg-gray-200 rounded-full px-3 py-1 text-sm">
-                          {dish.name}
-                        </span>
-                      ) : null;
-                    })}
+                    {viewData.restrictedFoods.length > 0 ? (
+                      viewData.restrictedFoods.map((foodId) => {
+                        const dish = dishes.find((d) => d._id === foodId);
+                        return (
+                          <span
+                            key={foodId}
+                            className={`rounded-full px-3 py-1 text-sm ${
+                              dish ? "bg-gray-200" : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {dish ? dish.name : `[Dish not found: ${foodId}]`}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-gray-500 text-sm">No restricted foods.</span>
+                    )}
                   </div>
                 </div>
                 <div className="mb-4">
@@ -668,14 +760,23 @@ const TableMedicalConditions = () => {
                     Recommended Foods
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {viewData.recommendedFoods.map((foodId) => {
-                      const dish = dishes.find((d) => d._id === foodId);
-                      return dish ? (
-                        <span key={foodId} className="bg-gray-200 rounded-full px-3 py-1 text-sm">
-                          {dish.name}
-                        </span>
-                      ) : null;
-                    })}
+                    {viewData.recommendedFoods.length > 0 ? (
+                      viewData.recommendedFoods.map((foodId) => {
+                        const dish = dishes.find((d) => d._id === foodId);
+                        return (
+                          <span
+                            key={foodId}
+                            className={`rounded-full px-3 py-1 text-sm ${
+                              dish ? "bg-gray-200" : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {dish ? dish.name : `[Dish not found: ${foodId}]`}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-gray-500 text-sm">No recommended foods.</span>
+                    )}
                   </div>
                 </div>
                 <div className="mb-4">

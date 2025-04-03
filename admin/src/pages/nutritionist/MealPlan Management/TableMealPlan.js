@@ -5,14 +5,14 @@ import { useSelector } from "react-redux";
 import { selectAuth } from "../../../store/selectors/authSelectors";
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
-import { EditIcon, TrashIcon } from "lucide-react"; // Thêm icon để đồng bộ
+import { EditIcon, TrashIcon } from "lucide-react";
 
 const TableMealPlan = () => {
   const { user } = useSelector(selectAuth);
   const navigate = useNavigate();
   const [mealPlans, setMealPlans] = useState([]);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0); // Bắt đầu từ 0 để đồng bộ với ReactPaginate
   const [totalPages, setTotalPages] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
@@ -22,7 +22,7 @@ const TableMealPlan = () => {
   const fetchMealPlans = async (callback) => {
     setIsTransitioning(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(currentPage, limit);
+      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // +1 vì API có thể dùng 1-based
       if (response.success) {
         setMealPlans(response.data || []);
         setTotalPages(response.totalPages || 1);
@@ -50,10 +50,8 @@ const TableMealPlan = () => {
 
   // Handle page change for Pagination component
   const handlePageClick = (data) => {
-    const selectedPage = data.selected + 1; // ReactPaginate uses 0-based index
-    if (selectedPage >= 1 && selectedPage <= totalPages) {
-      setCurrentPage(selectedPage);
-    }
+    const selectedPage = data.selected; // ReactPaginate trả về 0-based index
+    setCurrentPage(selectedPage);
   };
 
   // Handle edit
@@ -70,10 +68,10 @@ const TableMealPlan = () => {
           fetchMealPlans((result) => {
             const totalItems = result.total;
             const newTotalPages = Math.ceil(totalItems / limit) || 1;
-            if (result.data.length === 0 && currentPage > 1) {
+            if (result.data.length === 0 && currentPage > 0) {
               setCurrentPage(currentPage - 1);
-            } else if (currentPage > newTotalPages) {
-              setCurrentPage(newTotalPages);
+            } else if (currentPage >= newTotalPages) {
+              setCurrentPage(newTotalPages - 1);
             }
           });
         } else {
@@ -119,9 +117,7 @@ const TableMealPlan = () => {
     <div className="container mx-auto px-6 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
-          Meal Plans
-        </h1>
+        <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">Meal Plans</h1>
         <button
           className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
           onClick={() => navigate("/nutritionist/mealplan/create")}
@@ -159,7 +155,7 @@ const TableMealPlan = () => {
                     }`}
                   >
                     <div className="col-span-1 text-gray-600 font-medium">
-                      {(currentPage - 1) * limit + index + 1}
+                      {currentPage * limit + index + 1} {/* Điều chỉnh số thứ tự */}
                     </div>
                     <div className="col-span-2 text-gray-700 text-sm line-clamp-2">
                       {mealPlan.title}
@@ -167,9 +163,7 @@ const TableMealPlan = () => {
                     <div className="col-span-1 text-gray-700 text-sm">
                       {formatDate(mealPlan.startDate)}
                     </div>
-                    <div className="col-span-1 text-gray-700 text-sm">
-                      {mealPlan.duration} days
-                    </div>
+                    <div className="col-span-1 text-gray-700 text-sm">{mealPlan.duration} days</div>
                     <div className="col-span-1 text-gray-700 text-sm">
                       {mealPlan.type === "fixed" ? "Fixed" : "Custom"}
                     </div>
@@ -185,9 +179,7 @@ const TableMealPlan = () => {
                         alt="Avatar"
                         className="w-8 h-8 rounded-full mr-2"
                       />
-                      <span className="line-clamp-1">
-                        {mealPlan.userId?.email || "Unknown"}
-                      </span>
+                      <span className="line-clamp-1">{mealPlan.userId?.email || "Unknown"}</span>
                     </div>
                     <div className="col-span-1 text-center">
                       <span
@@ -242,6 +234,7 @@ const TableMealPlan = () => {
               setLimit={setLimit}
               totalItems={totalItems}
               handlePageClick={handlePageClick}
+              currentPage={currentPage} // Truyền currentPage
               text={"Meal Plans"}
             />
           </div>

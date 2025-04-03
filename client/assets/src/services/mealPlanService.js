@@ -25,7 +25,6 @@ const mealPlanService = {
   getMealPlanById: async (id) => {
     try {
       const response = await axiosInstance.get(`/mealPlan/${id}`);
-      console.log("🔍 Chi tiết MealPlan:", response.data);
       return { success: true, data: response.data.data };
     } catch (error) {
       console.error("❌ Lỗi khi lấy MealPlan:", error.response?.data || error.message);
@@ -145,7 +144,6 @@ const mealPlanService = {
       const response = await axiosInstance.get(`/mealPlan/user/${userId}`);
       return response.data;
     } catch (error) {
-      console.error("Lỗi lấy meal plan của user:", error);
       throw error;
     }
   },
@@ -154,7 +152,6 @@ const mealPlanService = {
   getMealDaysByMealPlan: async (mealPlanId) => {
     try {
       const response = await axiosInstance.get(`/mealPlan/${mealPlanId}/mealDay`);
-      console.log("🔍 Danh sách MealDays:", response.data);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
       console.error("❌ Lỗi khi lấy MealDays:", error.response?.data || error.message);
@@ -248,8 +245,6 @@ const mealPlanService = {
   // 🔹 Thêm món ăn vào Meal
   addDishToMeal: async (mealPlanId, mealDayId, mealId, dish, userId) => {
     try {
-      console.log("cos USERID", userId);
-
       // 🔍 Lấy danh sách món ăn hiện tại của Meal
       const mealsResponse = await axiosInstance.get(
         `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`
@@ -287,16 +282,29 @@ const mealPlanService = {
     }
   },
 
-  getAllDishes: async () => {
+  // 🔹 Lấy tất cả món ăn với phân trang
+  getAllDishes: async (page, limit, search = "") => {
     try {
-      console.log(`📤 Gửi request GET /dishes`);
-      const response = await axiosInstance.get(`/dishes`);
-
-      console.log("📥 Danh sách món ăn từ axiosInstance:", response.data);
-      return { success: true, data: response.data.data || [] };
+      const response = await axiosInstance.get("/dishes", {
+        params: {
+          page,
+          limit,
+          search, // Thêm tham số tìm kiếm
+        },
+      });
+      console.log("🔍 Danh sách món ăn từ API:", response.data);
+      return {
+        success: true,
+        data: {
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
+        },
+      };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy danh sách món ăn:", error.response?.data || error.message);
-      return { success: false, message: "Không thể lấy danh sách món ăn!" };
+      console.error("❌ Lỗi khi lấy món ăn:", error.response?.data || error.message);
+      return { success: false, message: "Lỗi khi tải danh sách món ăn" };
     }
   },
 

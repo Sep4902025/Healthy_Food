@@ -6,7 +6,76 @@ const Payment = require("../models/Payment");
 const { MealPlan, UserMealPlan, MealDay, Meal, MealTracking } = require("../models/MealPlan");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
+const UserModel = require("../models/UserModel");
+const PaymentModel = require("../models/Payment"); // Giả sử bạn có model này
+const sendEmail = require("../utils/email");
+const catchAsync = require("../utils/catchAsync");
+const AppError = require("../utils/appError");
 
+// API lấy danh sách tất cả các payment
+exports.getAllPayments = async (req, res) => {
+  try {
+    const moment = require("moment");
+
+    const payments = await Payment.find();
+
+    const revenueByMonth = {};
+
+    // Tính tổng doanh thu
+    const totalRevenue = payments.reduce((acc, payment) => {
+      return payment.status === "success" ? acc + payment.amount : acc;
+    }, 0);
+
+    // Thống kê trạng thái thanh toán
+    const paymentStats = payments.reduce(
+      (acc, payment) => {
+        if (payment.status === "success") {
+          acc.paid += 1;
+        } else {
+          acc.unpaid += 1;
+        }
+        return acc;
+      },
+      { paid: 0, unpaid: 0 }
+    );
+
+    payments.forEach((payment) => {
+      if (payment.status === "success") {
+        const year = moment(payment.paymentDate).format("YYYY");
+        const month = moment(payment.paymentDate).format("MM");
+
+        if (!revenueByMonth[year]) {
+          revenueByMonth[year] = {};
+        }
+
+        if (!revenueByMonth[year][month]) {
+          revenueByMonth[year][month] = 0;
+        }
+
+        revenueByMonth[year][month] += payment.amount;
+      }
+    });
+
+    // Doanh thu theo năm
+    const revenueByYear = payments.reduce((acc, payment) => {
+      const year = new Date(payment.paymentDate).getFullYear();
+      acc[year] = (acc[year] || 0) + payment.amount;
+      return acc;
+    }, {});
+
+    res.status(200).json({
+      totalRevenue,
+      paymentStats,
+      revenueByYear,
+      revenueByMonth,
+    });
+  } catch (error) {
+    console.error("Lỗi lấy dữ liệu Payment:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+};
+
+// Tạo URL thanh toán VNPay
 exports.createPaymentUrl = async (req, res) => {
   try {
     const { userId, mealPlanId, amount } = req.body;
@@ -22,13 +91,11 @@ exports.createPaymentUrl = async (req, res) => {
       return res.status(400).json({ status: "error", message: "Amount phải là số dương" });
     }
 
-    // Kiểm tra MealPlan có tồn tại không
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
       return res.status(400).json({ status: "error", message: "MealPlan không tồn tại" });
     }
 
-    // Kiểm tra nếu MealPlan đã thanh toán thành công
     const successPayment = await Payment.findOne({
       mealPlanId,
       status: "success",
@@ -37,17 +104,14 @@ exports.createPaymentUrl = async (req, res) => {
       return res.status(400).json({ status: "error", message: "MealPlan này đã được thanh toán" });
     }
 
-    // Tìm payment đang pending cho mealPlanId và userId này
     let payment = await Payment.findOne({
       mealPlanId,
       userId,
       status: "pending",
-      createdAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Trong vòng 24 giờ
+      createdAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
     });
 
-    // Nếu có payment pending gần đây, sử dụng lại thay vì tạo mới
     if (!payment) {
-      // Không tìm thấy hoặc payment cũ quá 24h, tạo mới
       payment = new Payment({
         userId,
         mealPlanId,
@@ -57,9 +121,7 @@ exports.createPaymentUrl = async (req, res) => {
       });
       await payment.save();
     } else {
-      // Cập nhật thời gian và thông tin nếu cần
       payment.updatedAt = new Date();
-      // Cập nhật amount nếu có thay đổi
       if (payment.amount !== amount) {
         payment.amount = amount;
         await payment.save();
@@ -73,7 +135,7 @@ exports.createPaymentUrl = async (req, res) => {
       vnp_Version: "2.1.0",
       vnp_Command: "pay",
       vnp_TmnCode: VNPAY_CONFIG.vnp_TmnCode || "",
-      vnp_Amount: Math.round(amount * 100).toString(), // Quy đổi về đơn vị VNĐ
+      vnp_Amount: Math.round(amount * 100).toString(),
       vnp_CurrCode: "VND",
       vnp_TxnRef: payment._id.toString(),
       vnp_OrderInfo: `Thanh toán MealPlan: ${mealPlanId}`,
@@ -84,58 +146,40 @@ exports.createPaymentUrl = async (req, res) => {
       vnp_CreateDate: moment().format("YYYYMMDDHHmmss"),
     };
 
-    // ✅ Log dữ liệu trước khi ký
-    console.log("VNPay Params:", vnp_Params);
-
-    // ✅ Kiểm tra giá trị nào bị `undefined`
     Object.entries(vnp_Params).forEach(([key, value]) => {
       if (value === undefined) {
-        console.warn(`⚠️ Cảnh báo: Tham số ${key} bị undefined!`);
+        // Console warning removed
       }
     });
 
-    // ✅ Ép kiểu tất cả giá trị thành string để tránh lỗi `.trim()`
     const sortedParams = Object.fromEntries(
       Object.entries(vnp_Params)
         .map(([key, value]) => [key, String(value || "").trim()])
         .sort()
     );
 
-    console.log("🔹 Tham số sau khi sắp xếp:", sortedParams);
-
-    // ✅ Tạo chuỗi signData đúng chuẩn
     const signData = new URLSearchParams(sortedParams).toString();
 
-    console.log("🔹 Chuỗi signData trước khi ký:", signData);
-
-    // ✅ Kiểm tra giá trị HashSecret
     if (!VNPAY_CONFIG.vnp_HashSecret) {
       throw new Error("vnp_HashSecret không tồn tại hoặc rỗng!");
     }
 
-    // ✅ Tạo HMAC SHA512
     const secureHash = crypto
       .createHmac("sha512", VNPAY_CONFIG.vnp_HashSecret)
       .update(Buffer.from(signData, "utf-8"))
       .digest("hex");
 
-    console.log("🔹 Chữ ký tạo ra:", secureHash);
-
     sortedParams["vnp_SecureHash"] = secureHash;
 
-    // ✅ Tạo URL thanh toán
     const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(sortedParams).toString()}`;
-
-    console.log("🔹 URL thanh toán gửi đi:", paymentUrl);
 
     return res.json({ status: "success", paymentUrl, paymentId: payment._id });
   } catch (error) {
-    console.error("❌ Lỗi tạo URL thanh toán:", error);
     return res.status(500).json({ status: "error", message: "Lỗi tạo URL thanh toán" });
   }
 };
 
-
+// Xử lý phản hồi từ VNPay
 exports.vnpayReturn = async (req, res) => {
   try {
     const vnp_Params = { ...req.query };
@@ -155,9 +199,6 @@ exports.vnpayReturn = async (req, res) => {
       .update(Buffer.from(signData, "utf-8"))
       .digest("hex");
 
-    console.log("Secure Hash from VNPay:", secureHash);
-    console.log("Secure Hash re-signed:", signed);
-    // Determine the base URL based on client type
     const clientType = req.query.clientType || "web";
     const baseUrl =
       clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
@@ -187,7 +228,6 @@ exports.vnpayReturn = async (req, res) => {
     }
 
     if (status === "success") {
-      // Update the MealPlan with the paymentId and set isBlock to false
       const updatedMealPlan = await MealPlan.findByIdAndUpdate(
         payment.mealPlanId,
         { paymentId: payment._id, isBlock: false },
@@ -195,36 +235,27 @@ exports.vnpayReturn = async (req, res) => {
       );
 
       if (!updatedMealPlan) {
-        console.error(`❌ Không tìm thấy MealPlan với ID: ${payment.mealPlanId}`);
         return res
           .status(404)
           .redirect(`${baseUrl}/mealplan?status=error&message=MealPlan+not+found`);
       }
 
-      console.log(`✅ Đã cập nhật MealPlan ${payment.mealPlanId} với paymentId: ${payment._id}`);
-
-      // 🔹 Tìm MealPlan trước đó của user (nếu có)
-      const oldUserMealPlan = await UserMealPlan.findOne({ userId: payment.userId });
+      const oldUserMealPlan = await UserMealPlan.findOne({
+        userId: payment.userId,
+      });
 
       if (oldUserMealPlan) {
-        console.log(`🗑 Deleting old MealPlan data for user: ${payment.userId}`);
-
         const oldMealPlanId = oldUserMealPlan.mealPlanId;
-
-        // 🔹 Get list of MealDays before deletion
         const mealDays = await MealDay.find({ mealPlanId: oldMealPlanId });
         const mealDayIds = mealDays.map((mealDay) => mealDay._id);
-
-        // 🔹 Get list of Reminders before deletion
         const reminders = await Reminder.find({ mealPlanId: oldMealPlanId });
         const reminderIds = reminders.map((reminder) => reminder._id);
 
-        // Cập nhật UserMealPlan với Meal Plan mới
-        userMealPlan.mealPlanId = payment.mealPlanId;
-        userMealPlan.startDate = new Date();
-        await userMealPlan.save();
+        // Cập nhật UserMealPlan hiện có với Meal Plan mới
+        oldUserMealPlan.mealPlanId = payment.mealPlanId;
+        oldUserMealPlan.startDate = new Date();
+        await oldUserMealPlan.save(); // Lưu instance đã cập nhật
       } else {
-        // Nếu chưa có UserMealPlan, tạo mới
         await UserMealPlan.create({
           userId: payment.userId,
           mealPlanId: payment.mealPlanId,
@@ -233,7 +264,6 @@ exports.vnpayReturn = async (req, res) => {
       }
 
       console.log(`✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`);
-      console.log(`✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`);
 
       // Dọn dẹp các payment pending khác
       const cleanupResult = await Payment.deleteMany({
@@ -241,40 +271,34 @@ exports.vnpayReturn = async (req, res) => {
         mealPlanId: payment.mealPlanId,
         status: "pending",
       });
-      if (cleanupResult.deletedCount > 0) {
-        console.log(`🧹 Deleted ${cleanupResult.deletedCount} redundant pending payments`);
-      }
     }
 
-    // Chuyển hướng với query parameters
     const redirectUrl = `${baseUrl}/mealplan?status=${status}&message=${
       status === "success" ? "Thanh+toán+thành+công" : "Thanh+toán+thất+bại"
     }`;
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error("❌ Lỗi xử lý VNPay:", error);
     const clientType = req.query.clientType || "web";
     const baseUrl =
       clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
     res.redirect(`${baseUrl}/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`);
   }
 };
+
 // Lấy lịch sử thanh toán của user
 exports.getPaymentHistory = async (req, res) => {
   try {
     const { userId } = req.params;
-    const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
-    const limit = parseInt(req.query.limit) || 10; // Mặc định 10 giao dịch mỗi trang
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Tìm các giao dịch của user
     const payments = await Payment.find({ userId })
-      .sort({ createdAt: -1 }) // Sắp xếp theo thời gian tạo, mới nhất trước
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean(); // Chuyển thành plain JavaScript object để dễ xử lý
+      .lean();
 
-    // Nếu không có giao dịch nào
     if (!payments || payments.length === 0) {
       return res.status(404).json({
         status: "error",
@@ -282,7 +306,6 @@ exports.getPaymentHistory = async (req, res) => {
       });
     }
 
-    // Lấy thông tin meal plan cho từng giao dịch
     const paymentDetails = await Promise.all(
       payments.map(async (payment) => {
         const mealPlan = await MealPlan.findById(payment.mealPlanId).select("title").lean();
@@ -292,12 +315,12 @@ exports.getPaymentHistory = async (req, res) => {
           amount: payment.amount,
           status: payment.status,
           createdAt: payment.createdAt,
-          vnpayTransactionId: payment.vnpayTransactionId || "N/A",
+          paymentDate: payment.paymentDate,
+          vnpayTransactionId: payment.transactionNo || "N/A",
         };
       })
     );
 
-    // Đếm tổng số giao dịch để hỗ trợ phân trang
     const totalPayments = await Payment.countDocuments({ userId });
 
     return res.json({
@@ -311,7 +334,6 @@ exports.getPaymentHistory = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching payment history:", error);
     return res.status(500).json({
       status: "error",
       message: "Lỗi khi lấy lịch sử thanh toán",
@@ -319,6 +341,7 @@ exports.getPaymentHistory = async (req, res) => {
   }
 };
 
+// Kiểm tra trạng thái thanh toán
 exports.checkPaymentStatus = async (req, res) => {
   try {
     const { paymentId } = req.params;
@@ -337,22 +360,20 @@ exports.checkPaymentStatus = async (req, res) => {
         mealPlanId: payment.mealPlanId,
         mealPlanName: payment.mealPlanName,
         createdAt: payment.createdAt,
+        paymentDate: payment.paymentDate,
       },
     });
   } catch (error) {
-    console.error("Error checking payment status:", error);
     return res.status(500).json({ status: "error", message: "Error checking payment status" });
   }
 };
 
-// Retrieve detailed information of a Payment by paymentId
-// Retrieve detailed information of a Payment by paymentId
+// Lấy thông tin chi tiết của một Payment theo paymentId
 exports.getPaymentById = async (req, res) => {
   try {
     const { paymentId } = req.params;
-    const { _id: userId } = req.user; // Retrieved from authentication middleware
+    const { _id: userId } = req.user;
 
-    // Find Payment by paymentId
     const payment = await Payment.findById(paymentId).lean();
     if (!payment) {
       return res.status(404).json({
@@ -361,7 +382,6 @@ exports.getPaymentById = async (req, res) => {
       });
     }
 
-    // Find the related MealPlan to check the creator
     const mealPlan = await MealPlan.findById(payment.mealPlanId).lean();
     if (!mealPlan) {
       return res.status(404).json({
@@ -370,20 +390,18 @@ exports.getPaymentById = async (req, res) => {
       });
     }
 
-    // Check if the requesting user is the creator of the MealPlan
     if (mealPlan.createdBy.toString() !== userId.toString()) {
       return res.status(403).json({
         status: "error",
-        message: "You do not have permission to view this payment information. Only the creator of the MealPlan can access this.",
+        message:
+          "You do not have permission to view this payment information. Only the creator of the MealPlan can access this.",
       });
     }
 
-    // Retrieve related MealPlan information for response
     const mealPlanDetails = await MealPlan.findById(payment.mealPlanId)
       .select("title price startDate endDate")
       .lean();
 
-    // Format the response data
     const paymentDetails = {
       _id: payment._id,
       userId: payment.userId,
@@ -396,7 +414,7 @@ exports.getPaymentById = async (req, res) => {
       paymentDate: payment.paymentDate || null,
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
-      paymentDetails: payment.paymentDetails || {}, // Detailed information from VNPay (if available)
+      paymentDetails: payment.paymentDetails || {},
       mealPlanInfo: mealPlanDetails
         ? {
             title: mealPlanDetails.title,
@@ -412,10 +430,144 @@ exports.getPaymentById = async (req, res) => {
       data: paymentDetails,
     });
   } catch (error) {
-    console.error("🔥 Error retrieving Payment information by ID:", error);
     return res.status(500).json({
       status: "error",
       message: "Server error while retrieving payment information",
     });
   }
 };
+
+// Lấy lịch sử thanh toán cho nutritionist (tất cả thanh toán thành công)
+exports.getPaymentHistoryForNutritionist = async (req, res) => {
+  try {
+    const mealPlans = await MealPlan.find().lean();
+
+    if (!mealPlans || mealPlans.length === 0) {
+      return res.status(200).json({ success: true, data: [], message: "Không có meal plans nào" });
+    }
+
+    const payments = await Payment.find().lean();
+
+    return res.status(200).json({ success: true, data: payments });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy lịch sử thanh toán",
+      error: error.message,
+    });
+  }
+};
+
+exports.calculateSalary = catchAsync(async (req, res, next) => {
+  const { nutriId } = req.params;
+
+  // Tìm nutritionist
+  const nutritionist = await UserModel.findById(nutriId);
+  if (!nutritionist || nutritionist.role !== "nutritionist") {
+    return next(new AppError("Nutritionist not found or invalid role", 404));
+  }
+
+  // Lấy tất cả meal plans của nutritionist
+  const mealPlans = await MealPlan.find({ createdBy: nutriId }).populate("userId", "username");
+
+  // Lấy tất cả payments liên quan đến meal plans này
+  const mealPlanIds = mealPlans.map((mp) => mp._id);
+  const payments = await PaymentModel.find({
+    mealPlanId: { $in: mealPlanIds },
+  });
+
+  // Tính lương
+  const baseSalary = 5000000; // 5,000,000 VND
+  const commission = payments
+    .filter((payment) => payment.status === "success")
+    .reduce((sum, payment) => {
+      const mealPlan = mealPlans.find((mp) => mp._id.toString() === payment.mealPlanId.toString());
+      return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
+    }, 0);
+
+  const totalSalary = baseSalary + commission;
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      nutritionist: {
+        id: nutritionist._id,
+        name: nutritionist.username,
+      },
+      salary: {
+        baseSalary,
+        commission,
+        totalSalary,
+      },
+    },
+  });
+});
+
+exports.sendSalaryEmail = catchAsync(async (req, res, next) => {
+  const { nutriId } = req.body;
+
+  // Tính lương trước
+  const nutritionist = await UserModel.findById(nutriId);
+  if (!nutritionist || nutritionist.role !== "nutritionist") {
+    return next(new AppError("Nutritionist not found or invalid role", 404));
+  }
+
+  const mealPlans = await MealPlan.find({ createdBy: nutriId });
+  const mealPlanIds = mealPlans.map((mp) => mp._id);
+  const payments = await PaymentModel.find({
+    mealPlanId: { $in: mealPlanIds },
+  });
+
+  const baseSalary = 5000000;
+  const commission = payments
+    .filter((payment) => payment.status === "success")
+    .reduce((sum, payment) => {
+      const mealPlan = mealPlans.find((mp) => mp._id.toString() === payment.mealPlanId.toString());
+      return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
+    }, 0);
+  const totalSalary = baseSalary + commission;
+
+  // Định dạng số tiền
+  const formattedSalary = totalSalary.toLocaleString("vi-VN") + " VND";
+  const formattedCommission = commission.toLocaleString("vi-VN") + " VND";
+  const formattedBaseSalary = baseSalary.toLocaleString("vi-VN") + " VND";
+
+  // Nội dung email
+  const emailSubject = "Thông báo lương tháng từ Healthy Food";
+  const emailHtml = `
+    <h2>Xin chào ${nutritionist.username},</h2>
+    <p>Chúng tôi xin thông báo lương tháng của bạn như sau:</p>
+    <ul>
+      <li><strong>Lương cơ bản:</strong> ${formattedBaseSalary}</li>
+      <li><strong>Thưởng (10% doanh thu):</strong> ${formattedCommission}</li>
+      <li><strong>Tổng lương:</strong> ${formattedSalary}</li>
+    </ul>
+    <p>Cảm ơn bạn đã đồng hành cùng Healthy Food!</p>
+    <p>Trân trọng,<br/>Đội ngũ Healthy Food</p>
+  `;
+
+  // Gửi email
+  try {
+    await sendEmail({
+      email: nutritionist.email,
+      subject: emailSubject,
+      html: emailHtml,
+    });
+    console.log(`Email lương gửi đến ${nutritionist.email}`);
+  } catch (emailError) {
+    console.error(`Không gửi được email đến ${nutritionist.email}:`, emailError);
+    return res.status(200).json({
+      status: "success",
+      message: "Lương đã được xác nhận, nhưng email gửi thất bại",
+      emailError: emailError.message,
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Lương đã được xác nhận và email gửi thành công",
+    data: {
+      salary: totalSalary,
+    },
+  });
+});

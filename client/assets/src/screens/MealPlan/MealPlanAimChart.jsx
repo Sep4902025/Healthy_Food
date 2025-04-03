@@ -35,7 +35,7 @@ const MealPlanAimChart = ({
         }
         setMealPlan(mealPlanData.data);
 
-        const userData = await quizService.getUserPreference(userId);
+        const userData = await quizService.getUserPreferenceByUserPreferenceId(userId);
         if (!isMounted) return;
 
         if (!userData.success || !userData.data) {
@@ -180,7 +180,7 @@ const MealPlanAimChart = ({
             : "Unable to calculate nutrition targets due to missing information. Please complete the survey."}
         </Text>
         <Link to={{ screen: "Survey" }}>
-          <TouchableOpacity className="px-4 py-2 bg-blue-500 rounded">
+          <TouchableOpacity className="h-full px-4 py-2 bg-blue-500 rounded">
             <Text className="text-white">Take the Survey Now</Text>
           </TouchableOpacity>
         </Link>

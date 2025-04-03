@@ -13,7 +13,7 @@ const MainLayout = () => {
   return (
     <div className="flex flex-col bg-gray-50 min-h-screen dark:bg-gray-400 ">
       {/* Header */}
-      <Header darkMode={darkMode} />
+      <Header />
 
       {/* Main Content */}
       <main className="flex flex-col">
@@ -21,7 +21,7 @@ const MainLayout = () => {
       </main>
 
       {/* Footer */}
-      <Footer  darkMode={darkMode}/>
+      <Footer/>
 
       {/* Chat button (chỉ hiển thị nếu là customer) */}
       {user?.role === "user" && <UserChatButton darkMode={darkMode} />}

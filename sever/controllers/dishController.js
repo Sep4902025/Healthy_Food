@@ -38,7 +38,7 @@ exports.createManyDishes = async (req, res) => {
 // Read all Dishes with Pagination
 exports.getAllDishes = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "" } = req.query;
+    const { page = 1, limit = 10, search = "", sort = "createdAt", order = "desc" } = req.query;
     let filter = { isDelete: false, isVisible: true };
 
     // Xử lý token và phân quyền
@@ -48,26 +48,34 @@ exports.getAllDishes = async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
         const user = await UserModel.findById(decoded.id);
         if (user && (user.role === "admin" || user.role === "nutritionist")) {
-          filter = {};
+          filter = {}; // Admin/Nutritionist có thể thấy tất cả
         }
       } catch (error) {
         console.error("Invalid token:", error.message);
       }
     }
 
-    // Thêm điều kiện tìm kiếm theo tên nếu có
+    // Tìm kiếm theo tên món ăn
     if (search) {
       filter.name = { $regex: search, $options: "i" };
     }
 
-    // Tính toán phân trang
+    // Xử lý phân trang
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
     const skip = (pageNum - 1) * limitNum;
 
-    // Lấy tổng số tài liệu và danh sách món ăn
+    // Xử lý sắp xếp
+    const sortOrder = order === "desc" ? -1 : 1;
+    const sortOptions = { [sort]: sortOrder };
+
+    // Lấy dữ liệu từ MongoDB
     const totalItems = await Dish.countDocuments(filter);
-    const dishes = await Dish.find(filter).skip(skip).limit(limitNum).lean();
+    const dishes = await Dish.find(filter)
+      .sort(sortOptions)  // Thêm chức năng sắp xếp
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
 
     res.status(200).json({
       status: "success",
@@ -82,6 +90,7 @@ exports.getAllDishes = async (req, res) => {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
+
 
 // Read Dish by ID
 exports.getDishById = async (req, res) => {
@@ -215,7 +224,7 @@ exports.createManyIngredients = async (req, res) => {
 // Get all Ingredients with Pagination
 exports.getAllIngredients = async (req, res) => {
   try {
-    const { page = 1, limit = 10, type = "all", search = "" } = req.query;
+    const { page = 1, limit = 10, type = "all", search = "", sort = "createdAt", order = "desc" } = req.query;
     let filter = { isDelete: false, isVisible: true };
 
     // Xử lý token và phân quyền
@@ -225,25 +234,35 @@ exports.getAllIngredients = async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
         const user = await UserModel.findById(decoded.id);
         if (user && (user.role === "admin" || user.role === "nutritionist")) {
-          filter = {};
+          filter = {}; // Admin/Nutritionist có thể thấy tất cả nguyên liệu
         }
       } catch (error) {
         console.error("Invalid token:", error.message);
       }
     }
 
-    // Thêm bộ lọc type và search
+    // Lọc theo loại nguyên liệu
     if (type !== "all") filter.type = type;
+
+    // Tìm kiếm theo tên nguyên liệu
     if (search) filter.name = { $regex: search, $options: "i" };
 
-    // Tính toán phân trang
+    // Xử lý phân trang
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
     const skip = (pageNum - 1) * limitNum;
 
-    // Lấy tổng số tài liệu và danh sách nguyên liệu
+    // Xử lý sắp xếp
+    const sortOrder = order === "desc" ? -1 : 1;
+    const sortOptions = { [sort]: sortOrder };
+
+    // Lấy dữ liệu từ MongoDB
     const totalItems = await Ingredients.countDocuments(filter);
-    const ingredients = await Ingredients.find(filter).skip(skip).limit(limitNum).lean();
+    const ingredients = await Ingredients.find(filter)
+      .sort(sortOptions)  // Thêm chức năng sắp xếp
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
 
     res.status(200).json({
       status: "success",
@@ -258,6 +277,7 @@ exports.getAllIngredients = async (req, res) => {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
+
 
 // Read Ingredient by ID
 exports.getIngredientById = async (req, res) => {
