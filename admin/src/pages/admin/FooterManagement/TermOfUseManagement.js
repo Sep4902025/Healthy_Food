@@ -5,6 +5,7 @@ import uploadFile from "../../../helpers/uploadFile";
 import imageCompression from "browser-image-compression";
 import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
 import Pagination from "../../../components/Pagination";
+import { toast } from "react-toastify";
 
 const TermOfUseManagement = () => {
   const [terms, setTerms] = useState([]);
@@ -15,9 +16,11 @@ const TermOfUseManagement = () => {
   const [formData, setFormData] = useState({ bannerUrl: "", content: "" });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [formErrors, setFormErrors] = useState({ banner: "", content: "" });
   const [currentPage, setCurrentPage] = useState(0);
   const [termsPerPage, setTermsPerPage] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
+  const [isSaving, setIsSaving] = useState(false); // Thêm state isSaving
 
   useEffect(() => {
     fetchTerms();
@@ -32,10 +35,12 @@ const TermOfUseManagement = () => {
         setTotalItems(result.data.total || 0);
       } else {
         setError(result.message);
+        toast.error(result.message || "Failed to fetch Terms");
         setTerms([]);
       }
     } catch (err) {
       setError("Lỗi không xác định khi tải Terms");
+      toast.error("Failed to fetch Terms");
       setTerms([]);
       console.error("❌ Lỗi trong fetchTerms:", err);
     } finally {
@@ -46,15 +51,25 @@ const TermOfUseManagement = () => {
   const handleToggleVisibility = async (term) => {
     const updatedTerm = { ...term, isVisible: !term.isVisible, isDeleted: term.isDeleted || false };
     const response = await termService.updateTerm(term._id, updatedTerm);
-    if (response.success) fetchTerms();
-    else console.error("Error updating display status:", response.message);
+    if (response.success) {
+      toast.success(`Term ${updatedTerm.isVisible ? "shown" : "hidden"} successfully!`);
+      fetchTerms();
+    } else {
+      toast.error("Failed to update Term visibility");
+      console.error("Error updating display status:", response.message);
+    }
   };
 
   const handleHardDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this term?")) {
       const response = await termService.hardDeleteTerm(id);
-      if (response.success) fetchTerms();
-      else console.error("Error while deleting:", response.message);
+      if (response.success) {
+        toast.success("Term deleted successfully!");
+        fetchTerms();
+      } else {
+        toast.error("Failed to delete Term");
+        console.error("Error while deleting:", response.message);
+      }
     }
   };
 
@@ -63,13 +78,14 @@ const TermOfUseManagement = () => {
       setEditData(item);
       setFormData({ bannerUrl: item.bannerUrl, content: item.content });
       setImagePreview(item.bannerUrl);
-      setImageFile(null); // Reset imageFile khi edit
+      setImageFile(null);
     } else {
       setEditData(null);
       setFormData({ bannerUrl: "", content: "" });
       setImageFile(null);
       setImagePreview("");
     }
+    setFormErrors({ banner: "", content: "" });
     setModalOpen(true);
   };
 
@@ -93,9 +109,11 @@ const TermOfUseManagement = () => {
       setImageFile(file);
       setImagePreview(previewUrl);
       setFormData({ ...formData, bannerUrl: "" });
+      setFormErrors({ ...formErrors, banner: "" });
     } else {
       setImageFile(null);
       setImagePreview("");
+      setFormErrors({ ...formErrors, banner: "" });
     }
   };
 
@@ -104,17 +122,37 @@ const TermOfUseManagement = () => {
     setFormData({ ...formData, bannerUrl: url });
     setImageFile(null);
     setImagePreview(url);
+    setFormErrors({ ...formErrors, banner: "" });
+  };
+
+  const handleContentChange = (e)   => {
+  setFormData({ ...formData, content: e.target.value });
+    setFormErrors({ ...formErrors, content: "" });
+  };
+
+  const validateForm = () => {
+    let errors = { banner: "", content: "" };
+    let isValid = true;
+
+    if (!formData.bannerUrl.trim() && !imageFile) {
+      errors.banner = "Banner cannot be empty!";
+      isValid = false;
+    }
+    if (!formData.content.trim()) {
+      errors.content = "Content cannot be empty!";
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
   };
 
   const handleSave = async () => {
-    if (!formData.bannerUrl.trim() && !imageFile) {
-      alert("Banner cannot be empty!");
+    if (!validateForm()) {
       return;
     }
-    if (!formData.content.trim()) {
-      alert("Content cannot be empty!");
-      return;
-    }
+
+    setIsSaving(true); // Bật trạng thái loading
 
     let finalBannerUrl = formData.bannerUrl;
     if (imageFile) {
@@ -125,7 +163,8 @@ const TermOfUseManagement = () => {
         );
         finalBannerUrl = uploadedImage.secure_url;
       } catch (error) {
-        alert("Image upload failed!");
+        setIsSaving(false); // Tắt trạng thái loading nếu có lỗi
+        toast.error("Image upload failed!");
         console.error("Upload error:", error);
         return;
       }
@@ -136,7 +175,9 @@ const TermOfUseManagement = () => {
       ? await termService.updateTerm(editData._id, dataToSave)
       : await termService.createTerm(dataToSave);
 
+    setIsSaving(false); // Tắt trạng thái loading sau khi lưu xong
     if (response.success) {
+      toast.success(editData ? "Term updated successfully!" : "Term created successfully!");
       setModalOpen(false);
       setEditData(null);
       setFormData({ bannerUrl: "", content: "" });
@@ -144,17 +185,21 @@ const TermOfUseManagement = () => {
       setImagePreview("");
       fetchTerms();
     } else {
+      toast.error(response.message || "Failed to save Term");
       console.error("Error:", response.message);
-      alert(response.message);
     }
   };
 
-  const handlePageClick = ({ selected }) => setCurrentPage(selected);
+  const handlePageClick = ({ selected }) => {
+    console.log("Selected Page:", selected);
+    setCurrentPage(selected);
+  };
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-64">
-        <p className="text-[#40B491] text-lg font-semibold">Loading...</p>
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
+        <div className="loader border-t-4 border-[#40B491] rounded-full w-8 h-8 animate-spin"></div>
+        <p className="mt-4 text-white text-lg">Loading...</p>
       </div>
     );
   if (error)
@@ -163,6 +208,8 @@ const TermOfUseManagement = () => {
         <p className="text-red-500 text-lg font-semibold">Error: {error}</p>
       </div>
     );
+
+  console.log("Current Page in Render:", currentPage);
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -254,6 +301,7 @@ const TermOfUseManagement = () => {
 
         <div className="p-4 bg-gray-50">
           <Pagination
+            key={currentPage}
             limit={termsPerPage}
             setLimit={(value) => {
               setTermsPerPage(value);
@@ -262,12 +310,20 @@ const TermOfUseManagement = () => {
             totalItems={totalItems}
             handlePageClick={handlePageClick}
             text="Terms"
+            currentPage={currentPage}
           />
         </div>
       </div>
 
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+          {isSaving && (
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
+              <div className="loader border-t-4 border-[#40B491] rounded-full w-8 h-8 animate-spin"></div>
+              <p className="mt-4 text-white text-lg">Saving...</p>
+            </div>
+          )}
+
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
             <h2 className="text-2xl font-bold mb-4 text-[#40B491]">
               {editData ? "Edit" : "Add New"} Term
@@ -277,6 +333,7 @@ const TermOfUseManagement = () => {
             <UploadComponent
               onFileSelect={handleFileSelect}
               reset={!imageFile && !formData.bannerUrl}
+              disabled={isSaving} // Vô hiệu hóa khi đang lưu
             />
             {!editData && (
               <input
@@ -285,7 +342,11 @@ const TermOfUseManagement = () => {
                 onChange={handleImageUrlChange}
                 placeholder="Or enter banner URL"
                 className="w-full border p-2 mt-2 mb-2 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+                disabled={isSaving} // Vô hiệu hóa khi đang lưu
               />
+            )}
+            {formErrors.banner && (
+              <p className="text-red-500 text-sm mt-1">{formErrors.banner}</p>
             )}
             {imagePreview && (
               <div className="mt-2 flex justify-center">
@@ -299,24 +360,32 @@ const TermOfUseManagement = () => {
 
             <label className="block mb-2 mt-4 text-gray-700">Content:</label>
             <textarea
-              className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+              className="w-full border p-2 mb-2 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               rows="4"
               value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              onChange={handleContentChange}
+              disabled={isSaving} // Vô hiệu hóa khi đang lưu
             ></textarea>
+            {formErrors.content && (
+              <p className="text-red-500 text-sm mb-2">{formErrors.content}</p>
+            )}
 
             <div className="flex justify-end space-x-2">
               <button
                 className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
                 onClick={() => setModalOpen(false)}
+                disabled={isSaving} // Vô hiệu hóa khi đang lưu
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition"
+                className={`px-4 py-2 bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition ${
+                  isSaving ? "opacity-50 cursor-not-allowed" : ""
+                }`}
                 onClick={handleSave}
+                disabled={isSaving} // Vô hiệu hóa khi đang lưu
               >
-                Save
+                {isSaving ? "Saving..." : "Save"}
               </button>
             </div>
           </div>
