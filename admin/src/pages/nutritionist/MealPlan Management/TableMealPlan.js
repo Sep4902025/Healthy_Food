@@ -12,9 +12,9 @@ const TableMealPlan = () => {
   const navigate = useNavigate();
   const [mealPlans, setMealPlans] = useState([]);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(0); // Bắt đầu từ 0 để đồng bộ với ReactPaginate
+  const [currentPage, setCurrentPage] = useState(0); // 0-based để đồng bộ với ReactPaginate
   const [totalPages, setTotalPages] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(10); // Giá trị mặc định đồng bộ với tùy chọn
   const [totalItems, setTotalItems] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -22,7 +22,7 @@ const TableMealPlan = () => {
   const fetchMealPlans = async (callback) => {
     setIsTransitioning(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // +1 vì API có thể dùng 1-based
+      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // API dùng 1-based
       if (response.success) {
         setMealPlans(response.data || []);
         setTotalPages(response.totalPages || 1);
@@ -49,9 +49,8 @@ const TableMealPlan = () => {
   }, [currentPage, limit]);
 
   // Handle page change for Pagination component
-  const handlePageClick = (data) => {
-    const selectedPage = data.selected; // ReactPaginate trả về 0-based index
-    setCurrentPage(selectedPage);
+  const handlePageClick = ({ selected }) => {
+    setCurrentPage(selected); // selected là 0-based từ ReactPaginate
   };
 
   // Handle edit
@@ -66,8 +65,8 @@ const TableMealPlan = () => {
         const response = await mealPlanService.deleteMealPlan(id);
         if (response.success) {
           fetchMealPlans((result) => {
-            const totalItems = result.total;
-            const newTotalPages = Math.ceil(totalItems / limit) || 1;
+            const totalItemsAfterDelete = result.total;
+            const newTotalPages = Math.ceil(totalItemsAfterDelete / limit) || 1;
             if (result.data.length === 0 && currentPage > 0) {
               setCurrentPage(currentPage - 1);
             } else if (currentPage >= newTotalPages) {
@@ -155,7 +154,7 @@ const TableMealPlan = () => {
                     }`}
                   >
                     <div className="col-span-1 text-gray-600 font-medium">
-                      {currentPage * limit + index + 1} {/* Điều chỉnh số thứ tự */}
+                      {currentPage * limit + index + 1}
                     </div>
                     <div className="col-span-2 text-gray-700 text-sm line-clamp-2">
                       {mealPlan.title}
@@ -234,8 +233,8 @@ const TableMealPlan = () => {
               setLimit={setLimit}
               totalItems={totalItems}
               handlePageClick={handlePageClick}
-              currentPage={currentPage} // Truyền currentPage
-              text={"Meal Plans"}
+              currentPage={currentPage}
+              text="Meal Plans"
             />
           </div>
         </div>

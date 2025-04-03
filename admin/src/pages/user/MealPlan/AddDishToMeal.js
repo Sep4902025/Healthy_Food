@@ -15,7 +15,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const [dishTypes, setDishTypes] = useState([]);
   const [selectedType, setSelectedType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(0); // Đổi từ 1 thành 0
+  const [currentPage, setCurrentPage] = useState(0); // Start from 0
   const [limit, setLimit] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -24,7 +24,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
       try {
         setLoading(true);
         const [dishesResponse, mealResponse, favoritesResponse] = await Promise.all([
-          mealPlanService.getAllDishes(currentPage + 1, limit, searchQuery), // +1 vì API dùng từ 1
+          mealPlanService.getAllDishes(currentPage + 1, limit, searchQuery), // +1 because API uses 1-based indexing
           mealPlanService.getMealByMealId(mealPlanId, mealDayId, mealId),
           homeService.getFavoriteDishes(userId),
         ]);
@@ -88,8 +88,8 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
 
     try {
       setIsAdding(true);
-      // Tính lại giá trị dinh dưỡng cho 1 phần ăn nếu totalServing > 1
-      const servingSize = selectedDish.totalServing || 1; // Mặc định là 1 nếu không có totalServing
+      // Recalculate nutritional values for 1 serving if totalServing > 1
+      const servingSize = selectedDish.totalServing || 1; // Default to 1 if totalServing is not provided
       const newDish = {
         dishId: selectedDish._id,
         recipeId: selectedDish?.recipeId,
@@ -99,26 +99,21 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
         protein: (selectedDish?.protein || 0) / servingSize,
         carbs: (selectedDish?.carbs || 0) / servingSize,
         fat: (selectedDish?.fat || 0) / servingSize,
-        totalServing: servingSize, // Lưu totalServing để biết giá trị gốc
+        totalServing: servingSize, // Store totalServing to know the original value
       };
 
-      const response = await mealPlanService.addDishToMeal(
-        mealPlanId,
-        mealDayId,
-        mealId,
-        newDish,
-        userId
-      );
+      const response = await mealPlanService.addDishToMeal(mealPlanId, mealDayId, mealId, newDish);
       if (response.success) {
         onDishAdded();
         onClose();
       } else {
-        setError(response.message || "Failed to add dish");
+        // Use the specific error message returned from the backend
+        setError(response.message);
         setIsAdding(false);
       }
     } catch (error) {
       console.error("❌ Error adding dish:", error);
-      setError("Could not add dish");
+      setError("Failed to add dish");
       setIsAdding(false);
     }
   };
@@ -134,7 +129,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   });
 
   const handlePageClick = ({ selected }) => {
-    setCurrentPage(selected); // Sử dụng selected (từ 0)
+    setCurrentPage(selected); // Use selected (starts from 0)
   };
 
   if (loading) {
@@ -187,7 +182,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setCurrentPage(0); // Reset về 0 khi tìm kiếm
+                setCurrentPage(0); // Reset to 0 when searching
               }}
               className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full"
             />
@@ -198,7 +193,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
             <button
               onClick={() => {
                 setActiveFilter("all");
-                setCurrentPage(0); // Reset về 0
+                setCurrentPage(0); // Reset to 0
               }}
               className={`px-3 py-1.5 rounded-lg text-sm ${
                 activeFilter === "all"
@@ -211,7 +206,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
             <button
               onClick={() => {
                 setActiveFilter("favorites");
-                setCurrentPage(0); // Reset về 0
+                setCurrentPage(0); // Reset to 0
               }}
               className={`px-3 py-1.5 rounded-lg text-sm flex items-center ${
                 activeFilter === "favorites"
@@ -227,7 +222,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               value={selectedType}
               onChange={(e) => {
                 setSelectedType(e.target.value);
-                setCurrentPage(0); // Reset về 0
+                setCurrentPage(0); // Reset to 0
               }}
               className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white"
             >
@@ -339,7 +334,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
               setLimit={setLimit}
               totalItems={totalItems}
               handlePageClick={handlePageClick}
-              currentPage={currentPage} // Thêm currentPage
+              currentPage={currentPage} // Add currentPage
               text="dishes"
             />
           </div>

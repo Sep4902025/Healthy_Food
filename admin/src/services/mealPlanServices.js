@@ -297,10 +297,9 @@ const mealPlanService = {
     }
   },
 
-  // Thêm món ăn vào Meal
-  addDishToMeal: async (mealPlanId, mealDayId, mealId, dish, userId) => {
+  // Add dish to Meal
+  addDishToMeal: async (mealPlanId, mealDayId, mealId, dish) => {
     try {
-      console.log("cos USERID", userId);
       const mealsResponse = await api.get(
         `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`
       );
@@ -309,26 +308,27 @@ const mealPlanService = {
         (existingDish) => existingDish.dishId === dish.dishId
       );
       if (isAlreadyAdded) {
-        console.warn("⚠️ Món ăn đã tồn tại trong bữa ăn!");
+        console.warn("⚠️ Dish already exists in the meal!");
         return {
           success: false,
-          message: "Món ăn này đã được thêm vào bữa ăn!",
+          message: "This dish has already been added to the meal!",
         };
       }
       const dishData = {
-        userId: userId,
         dishes: [dish],
       };
-      console.log(`📤 Gửi request POST với dữ liệu:`, dishData);
+      console.log(`📤 Sending POST request with data:`, dishData);
       const response = await api.post(
         `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}/dishes`,
         dishData
       );
-      console.log("✅ Món ăn đã được thêm:", response.data);
+      console.log("✅ Dish added successfully:", response.data);
       return { success: true, data: response.data };
     } catch (error) {
-      console.error("❌ Lỗi khi thêm món ăn vào Meal:", error.response?.data || error.message);
-      return { success: false, message: "Không thể thêm món ăn!" };
+      console.error("❌ Error adding dish to Meal:", error.response?.data || error.message);
+      // Return the specific error message from the backend if available
+      const errorMessage = error.response?.data?.message || "Failed to add dish!";
+      return { success: false, message: errorMessage };
     }
   },
 
