@@ -246,7 +246,11 @@ const Header = () => {
           className="flex items-center cursor-pointer"
           onClick={() => navigate("/")}
         >
-          <img src={logo} alt="Healthy Food" className="h-12 dark:brightness-125 dark:contrast-150 dark:saturate-200" />
+          <img
+            src={logo}
+            alt="Healthy Food"
+            className="h-12 dark:brightness-125 dark:contrast-150 dark:saturate-200"
+          />
         </div>
 
         {/* Primary Navigation - Center */}
@@ -280,7 +284,9 @@ const Header = () => {
                 <a
                   href="/foryou"
                   className={`font-medium transition-colors ${
-                    isActive("/foryou") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                    isActive("/foryou")
+                      ? "text-green-600"
+                      : "text-gray-700 hover:text-green-600"
                   }`}
                 >
                   For You
@@ -490,12 +496,6 @@ const Header = () => {
                       </button>
 
                       <button
-                        onClick={toggleDarkMode}
-                        className="w-full text-left px-4 py-2 flex items-center hover:bg-gray-100"
-                      >
-                        {darkMode ? <>🌙 Dark Mode</> : <>☀️ Light Mode</>}
-                      </button>
-                      <button
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 flex items-center"
                       >
@@ -526,87 +526,110 @@ const Header = () => {
 
       {/* Secondary Navigation - Categories */}
       <div className="border-t mt-2 pt-2">
-        <div className="flex px-4 space-x-6">
-          <div className="relative dropdown-container">
-            <button
-              onClick={() => toggleDropdown("dishes")}
+        <div className="flex px-4 items-center w-full">
+          {/* Nhóm bên trái: Dropdowns + Medical */}
+          <div className="flex space-x-6">
+            {/* Dropdown Dishes */}
+            <div className="relative dropdown-container">
+              <button
+                onClick={() => toggleDropdown("dishes")}
+                className={`font-medium transition-colors ${
+                  isActive("/dishes")
+                    ? "text-green-600"
+                    : "text-gray-700 hover:text-green-600"
+                }`}
+              >
+                Dishes {activeDropdown === "dishes" ? "▲" : "▼"}
+              </button>
+              {activeDropdown === "dishes" && (
+                <ul className="absolute left-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-10">
+                  {dishTypes.length > 0 ? (
+                    dishTypes.map((type, index) => (
+                      <li
+                        key={index}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          navigate(`/dishes/${type}`);
+                          setActiveDropdown(null);
+                        }}
+                      >
+                        {type}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-4 py-2 text-gray-500">
+                      No dish types available
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+
+            {/* Dropdown Ingredients */}
+            <div className="relative dropdown-container">
+              <button
+                onClick={() => toggleDropdown("ingredients")}
+                className={`font-medium transition-colors ${
+                  isActive("/ingredients")
+                    ? "text-green-600"
+                    : "text-gray-700 hover:text-green-600"
+                }`}
+              >
+                Ingredients {activeDropdown === "ingredients" ? "▲" : "▼"}
+              </button>
+              {activeDropdown === "ingredients" && (
+                <ul className="absolute left-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-10">
+                  {categories.length > 0 ? (
+                    categories.map((category, index) => (
+                      <li
+                        key={index}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          navigate(`/ingredients/${category}`);
+                          setActiveDropdown(null);
+                        }}
+                      >
+                        {category}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-4 py-2 text-gray-500">
+                      No categories available
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+
+            {/* Medical Link */}
+            <a
+              href="/medical"
               className={`font-medium transition-colors ${
-                isActive("/dishes")
+                isActive("/medical")
                   ? "text-green-600"
                   : "text-gray-700 hover:text-green-600"
               }`}
             >
-              Dishes {activeDropdown === "dishes" ? "▲" : "▼"}
-            </button>
-            {activeDropdown === "dishes" && (
-              <ul className="absolute left-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-10">
-                {dishTypes.length > 0 ? (
-                  dishTypes.map((type, index) => (
-                    <li
-                      key={index}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => {
-                        navigate(`/dishes/${type}`);
-                        setActiveDropdown(null);
-                      }}
-                    >
-                      {type}
-                    </li>
-                  ))
-                ) : (
-                  <li className="px-4 py-2 text-gray-500">
-                    No dish types available
-                  </li>
-                )}
-              </ul>
-            )}
+              Medical
+            </a>
           </div>
 
-          <div className="relative dropdown-container">
-            <button
-              onClick={() => toggleDropdown("ingredients")}
-              className={`font-medium transition-colors ${
-                isActive("/ingredients")
-                  ? "text-green-600"
-                  : "text-gray-700 hover:text-green-600"
-              }`}
-            >
-              Ingredients {activeDropdown === "ingredients" ? "▲" : "▼"}
-            </button>
-            {activeDropdown === "ingredients" && (
-              <ul className="absolute left-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-10">
-                {categories.length > 0 ? (
-                  categories.map((category, index) => (
-                    <li
-                      key={index}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => {
-                        navigate(`/ingredients/${category}`);
-                        setActiveDropdown(null);
-                      }}
-                    >
-                      {category}
-                    </li>
-                  ))
-                ) : (
-                  <li className="px-4 py-2 text-gray-500">
-                    No categories available
-                  </li>
-                )}
-              </ul>
-            )}
-          </div>
-
-          <a
-            href="/medical"
-            className={`font-medium transition-colors ${
-              isActive("/medical")
+          <button
+            onClick={toggleDarkMode}
+            className={`font-medium transition-colors ml-auto ${
+              isActive("/darkmode")
                 ? "text-green-600"
                 : "text-gray-700 hover:text-green-600"
             }`}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+            }}
           >
-            Medical
-          </a>
+            {darkMode ? <>🌙 Dark Mode</> : <>☀️ Light Mode</>}
+          </button>
         </div>
       </div>
     </div>
