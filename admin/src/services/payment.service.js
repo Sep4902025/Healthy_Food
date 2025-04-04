@@ -11,76 +11,61 @@ const getAuthHeaders = () => {
 
 const paymentService = {
   // Lấy lịch sử lương
-  getSalaryHistory: async () => {
+  getSalaryHistoryByMonthYear: async (month, year, page = 1, limit = 10) => {
     try {
-      const response = await api.get("/payment/salary-history/all", {
-        headers: getAuthHeaders(),
+      const response = await api.get("/payment/salary-history-by-month-year", {
+        params: { month, year, page, limit },
       });
       const data = response.data;
 
       if (data.status === "success") {
         return {
           success: true,
-          data: data.data, // Danh sách lịch sử lương
+          data: data.data || [],
+          pagination: data.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 },
         };
       } else {
         return {
           success: false,
-          message: data.message || "Failed to fetch salary history",
+          message: data.message || "Không thể lấy lịch sử lương",
         };
       }
     } catch (error) {
-      console.error(
-        "Error fetching salary history:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi khi lấy lịch sử lương:", error.response?.data || error.message);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Error fetching salary history",
+        message: error.response?.data?.message || "Lỗi server: Không thể lấy lịch sử lương",
       };
     }
   },
 
   // Xác nhận lương và tạo URL thanh toán
-  acceptSalary: async (nutriId, amount) => {
+  acceptSalary: async (userId, amount, month, year) => {
     try {
-      const response = await api.post(
-        "/payment/vnpay/salary",
-        {
-          nutriId,
-          amount,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...getAuthHeaders(),
-          },
-        }
-      );
+      const response = await api.post("/payment/accept-salary", {
+        userId,
+        amount,
+        month,
+        year,
+      });
       const data = response.data;
 
       if (data.status === "success") {
         return {
           success: true,
-          data: {
-            paymentUrl: data.paymentUrl, // URL thanh toán
-          },
+          data: data.data || {},
         };
       } else {
         return {
           success: false,
-          message: data.message || "Failed to generate payment URL",
+          message: data.message || "Không thể xử lý thanh toán",
         };
       }
     } catch (error) {
-      console.error(
-        "Error processing salary:",
-        error.response?.data || error.message
-      );
+      console.error("Lỗi khi xử lý thanh toán:", error.response?.data || error.message);
       return {
         success: false,
-        message: error.response?.data?.message || "Error processing salary",
+        message: error.response?.data?.message || "Lỗi server: Không thể xử lý thanh toán",
       };
     }
   },

@@ -407,12 +407,6 @@ const Header = () => {
                                   </p>
                                 </div>
                               ))}
-                              <button
-                                onClick={() => navigate("/payment-history")}
-                                className="mt-2 w-full text-center text-blue-500 hover:underline"
-                              >
-                                View More
-                              </button>
                             </div>
                           ) : (
                             <p className="text-sm text-gray-500">No payment history.</p>

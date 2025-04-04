@@ -6,6 +6,9 @@ const {
   UserMealPlan,
   UserMealPlanHistory,
 } = require("../models/MealPlan");
+const moment = require("moment-timezone");
+const Recipe = require("../models/Recipe");
+const UserModel = require("../models/UserModel");
 const mongoose = require("mongoose");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
@@ -159,7 +162,76 @@ exports.getAllMealPlanNutritionistCreatedBy = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// Controller: Lấy danh sách tất cả nutritionist và meal plan của họ
+exports.getAllNutritionistsWithMealPlans = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const { sort = "username", order = "asc", month, year } = req.query;
 
+    // Lấy danh sách user có role là nutritionist
+    const filter = { role: "nutritionist", isDelete: false };
+    const totalNutritionists = await UserModel.countDocuments(filter);
+
+    const nutritionists = await applyPaginationAndSort(
+      UserModel.find(filter).select("username email avatarUrl"),
+      page,
+      limit,
+      sort,
+      order
+    );
+
+    // Với mỗi nutritionist, lấy danh sách meal plan và tính toán thông tin tổng quan
+    const nutritionistsWithMealPlans = await Promise.all(
+      nutritionists.map(async (nutri) => {
+        // Lọc meal plan theo tháng/năm nếu có
+        const mealPlanFilter = {
+          createdBy: nutri._id,
+          isDelete: false,
+        };
+
+        if (month && year) {
+          const startOfMonth = new Date(year, month - 1, 1);
+          const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+          mealPlanFilter.startDate = {
+            $gte: startOfMonth,
+            $lte: endOfMonth,
+          };
+        }
+
+        const mealPlans = await MealPlan.find(mealPlanFilter)
+          .populate("userId", "email avatarUrl username")
+          .populate("createdBy", "username email avatarUrl");
+
+        const mealPlanCount = mealPlans.length;
+        const successCount = mealPlans.filter((mp) => !mp.isBlock).length;
+        const pendingCount = mealPlans.filter((mp) => mp.isBlock).length;
+
+        return {
+          id: nutri._id,
+          name: nutri.username,
+          mealPlans,
+          mealPlanCount,
+          successCount,
+          pendingCount,
+        };
+      })
+    );
+
+    res.status(200).json({
+      status: "success",
+      results: totalNutritionists,
+      page,
+      totalPages: Math.ceil(totalNutritionists / limit),
+      data: {
+        nutritionists: nutritionistsWithMealPlans,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách nutritionist và meal plan:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 // Controller: Lấy tất cả MealPlan cho admin
 exports.getAllMealPlanAdmin = async (req, res) => {
   try {
@@ -1117,9 +1189,7 @@ exports.deleteMealInDay = async (req, res) => {
 };
 
 // CRUD Dish to Meal
-const moment = require("moment-timezone");
-const Recipe = require("../models/Recipe");
-const UserModel = require("../models/UserModel");
+
 const handleReminderAndJob = async (userId, mealPlanId, mealDayId, mealId, meal, mealDay) => {
   // Không tạo Reminder nếu không có món ăn
   if (!meal || !meal.dishes || meal.dishes.length === 0) {

@@ -7,10 +7,11 @@ const { MealPlan, UserMealPlan, MealDay, Meal, MealTracking } = require("../mode
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
 const UserModel = require("../models/UserModel");
-const PaymentModel = require("../models/Payment"); // Giả sử bạn có model này
+const PaymentModel = require("../models/Payment");
 const sendEmail = require("../utils/email");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
+const SalaryPayment = require("../models/SalaryPayment");
 
 // API lấy danh sách tất cả các payment
 exports.getAllPayments = async (req, res) => {
@@ -437,6 +438,7 @@ exports.getPaymentById = async (req, res) => {
   }
 };
 
+// ================ ADMIN =============================
 // Lấy lịch sử thanh toán cho nutritionist (tất cả thanh toán thành công)
 exports.getPaymentHistoryForNutritionist = async (req, res) => {
   try {
@@ -457,7 +459,6 @@ exports.getPaymentHistoryForNutritionist = async (req, res) => {
     });
   }
 };
-
 exports.calculateSalary = catchAsync(async (req, res, next) => {
   const { nutriId } = req.params;
 
@@ -503,110 +504,158 @@ exports.calculateSalary = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.sendSalaryEmail = catchAsync(async (req, res, next) => {
-  const { nutriId } = req.body;
+// New function to get salary payment history
+exports.getSalaryPaymentHistory = catchAsync(async (req, res, next) => {
+  const { nutriId } = req.params;
 
-  // Tính lương trước
-  const nutritionist = await UserModel.findById(nutriId);
-  if (!nutritionist || nutritionist.role !== "nutritionist") {
-    return next(new AppError("Nutritionist not found or invalid role", 404));
-  }
-
-  const mealPlans = await MealPlan.find({ createdBy: nutriId });
-  const mealPlanIds = mealPlans.map((mp) => mp._id);
-  const payments = await PaymentModel.find({
-    mealPlanId: { $in: mealPlanIds },
-  });
-
-  const baseSalary = 5000000;
-  const commission = payments
-    .filter((payment) => payment.status === "success")
-    .reduce((sum, payment) => {
-      const mealPlan = mealPlans.find((mp) => mp._id.toString() === payment.mealPlanId.toString());
-      return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
-    }, 0);
-  const totalSalary = baseSalary + commission;
-
-  // Định dạng số tiền
-  const formattedSalary = totalSalary.toLocaleString("vi-VN") + " VND";
-  const formattedCommission = commission.toLocaleString("vi-VN") + " VND";
-  const formattedBaseSalary = baseSalary.toLocaleString("vi-VN") + " VND";
-
-  // Nội dung email
-  const emailSubject = "Thông báo lương tháng từ Healthy Food";
-  const emailHtml = `
-    <h2>Xin chào ${nutritionist.username},</h2>
-    <p>Chúng tôi xin thông báo lương tháng của bạn như sau:</p>
-    <ul>
-      <li><strong>Lương cơ bản:</strong> ${formattedBaseSalary}</li>
-      <li><strong>Thưởng (10% doanh thu):</strong> ${formattedCommission}</li>
-      <li><strong>Tổng lương:</strong> ${formattedSalary}</li>
-    </ul>
-    <p>Cảm ơn bạn đã đồng hành cùng Healthy Food!</p>
-    <p>Trân trọng,<br/>Đội ngũ Healthy Food</p>
-  `;
-
-  // Gửi email
-  try {
-    await sendEmail({
-      email: nutritionist.email,
-      subject: emailSubject,
-      html: emailHtml,
-    });
-    console.log(`Email lương gửi đến ${nutritionist.email}`);
-  } catch (emailError) {
-    console.error(`Không gửi được email đến ${nutritionist.email}:`, emailError);
-    return res.status(200).json({
-      status: "success",
-      message: "Lương đã được xác nhận, nhưng email gửi thất bại",
-      emailError: emailError.message,
-    });
-  }
+  const payments = await Payment.find({
+    userId: nutriId,
+    paymentType: "salary",
+  }).sort({ createdAt: -1 });
 
   res.status(200).json({
     status: "success",
-    message: "Lương đã được xác nhận và email gửi thành công",
-    data: {
-      salary: totalSalary,
-    },
+    data: payments,
   });
 });
 
-// New function to create salary payment URL
-exports.createSalaryPaymentUrl = catchAsync(async (req, res, next) => {
-  const { nutriId, amount } = req.body;
+exports.getSalaryHistoryByMonthYear = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-  const nutritionist = await UserModel.findById(nutriId);
+    // Validate month and year
+    if (!month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "Month and year are required",
+      });
+    }
+
+    const monthNum = parseInt(month);
+    const yearNum = parseInt(year);
+
+    if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid month. Must be between 1 and 12",
+      });
+    }
+
+    if (isNaN(yearNum) || yearNum < 2000 || yearNum > new Date().getFullYear() + 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid year",
+      });
+    }
+
+    // Query salary payments for the specified month and year
+    const query = { month: monthNum, year: yearNum };
+    const salaryHistory = await SalaryPayment.find(query)
+      .populate("userId", "username")
+      .sort({ paymentDate: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const totalPayments = await SalaryPayment.countDocuments(query);
+
+    res.status(200).json({
+      status: "success",
+      data: salaryHistory,
+      pagination: {
+        total: totalPayments,
+        page,
+        limit,
+        totalPages: Math.ceil(totalPayments / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching salary history by month and year:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+// Thanh toán lương cho nutritionist Admin
+exports.acceptSalary = catchAsync(async (req, res, next) => {
+  const { userId, amount, month, year } = req.body;
+
+  // Kiểm tra nutritionist
+  const nutritionist = await UserModel.findById(userId);
   if (!nutritionist || nutritionist.role !== "nutritionist") {
     return next(new AppError("Nutritionist not found or invalid role", 404));
   }
 
-  const clientIp =
-    req.headers["x-forwarded-for"] ||
-    req.connection.remoteAddress ||
-    req.ip ||
-    "127.0.0.1";
+  // Kiểm tra xem đã thanh toán cho tháng này chưa
+  const existingPayment = await SalaryPayment.findOne({
+    userId,
+    month,
+    year,
+    status: "success",
+  });
+  if (existingPayment) {
+    return next(new AppError(`Salary for ${month}/${year} has already been paid`, 400));
+  }
 
-  const payment = new Payment({
-    userId: nutriId,
-    amount,
+  // Tính lương cho tháng được chọn
+  const startOfMonth = new Date(year, month - 1, 1);
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+  const mealPlans = await MealPlan.find({
+    createdBy: userId,
+    startDate: { $gte: startOfMonth, $lte: endOfMonth },
+    isDelete: false,
+  });
+
+  const mealPlanIds = mealPlans.map((mp) => mp._id);
+  const payments = await PaymentModel.find({
+    mealPlanId: { $in: mealPlanIds },
+    status: "success",
+  });
+
+  const baseSalary = 5000000;
+  const commission = payments.reduce((sum, payment) => {
+    const mealPlan = mealPlans.find((mp) => mp._id.toString() === payment.mealPlanId.toString());
+    return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
+  }, 0);
+  const totalSalary = baseSalary + commission;
+
+  if (Math.round(totalSalary) !== Math.round(amount)) {
+    return next(
+      new AppError(
+        `Calculated salary (${totalSalary}) does not match provided amount (${amount})`,
+        400
+      )
+    );
+  }
+
+  // Tạo bản ghi thanh toán
+  const payment = new SalaryPayment({
+    userId,
+    amount: totalSalary,
     status: "pending",
     paymentMethod: "vnpay",
-    paymentType: "salary", // Đánh dấu đây là thanh toán lương
+    paymentType: "salary",
+    month,
+    year,
   });
   await payment.save();
+
+  // Tạo URL thanh toán VNPay
+  const clientIp =
+    req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.ip || "127.0.0.1";
 
   let vnp_Params = {
     vnp_Version: "2.1.0",
     vnp_Command: "pay",
     vnp_TmnCode: VNPAY_CONFIG.vnp_TmnCode || "",
-    vnp_Amount: Math.round(amount * 100).toString(), // VNPAY yêu cầu nhân 100
+    vnp_Amount: Math.round(totalSalary * 100).toString(),
     vnp_CurrCode: "VND",
     vnp_TxnRef: payment._id.toString(),
-    vnp_OrderInfo: `Thanh toan luong cho ${nutritionist.username}`,
-    vnp_OrderType: "180000", // Loại đơn hàng (có thể tùy chỉnh)
+    vnp_OrderInfo: `Thanh toan luong thang ${month}/${year} cho ${nutritionist.username}`,
+    vnp_OrderType: "180000",
     vnp_Locale: "vn",
-    vnp_ReturnUrl: "http://localhost:8080/api/v1/payment/vnpay/adminReturn", // Đồng bộ với vnpayAdminReturn
+    vnp_ReturnUrl: "http://localhost:8080/api/v1/payment/vnpay/adminReturn",
     vnp_IpAddr: clientIp,
     vnp_CreateDate: moment().format("YYYYMMDDHHmmss"),
   };
@@ -625,113 +674,132 @@ exports.createSalaryPaymentUrl = catchAsync(async (req, res, next) => {
 
   sortedParams["vnp_SecureHash"] = secureHash;
 
-  const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(
-    sortedParams
-  ).toString()}`;
+  const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(sortedParams).toString()}`;
 
   res.status(200).json({
     status: "success",
-    paymentUrl,
-    paymentId: payment._id,
+    data: {
+      paymentUrl,
+      paymentId: payment._id,
+      calculatedSalary: totalSalary, // Trả về lương tính toán để frontend sử dụng
+    },
   });
 });
 
-exports.vnpayAdminReturn = async (req, res) => {
-  try {
-    const vnp_Params = { ...req.query };
-    const secureHash = vnp_Params["vnp_SecureHash"];
-    delete vnp_Params["vnp_SecureHash"];
-    delete vnp_Params["vnp_SecureHashType"];
+// API callback từ VNPay để xác nhận thanh toán
+exports.vnpayAdminReturn = catchAsync(async (req, res, next) => {
+  let vnp_Params = req.query;
+  const secureHash = vnp_Params["vnp_SecureHash"];
+  delete vnp_Params["vnp_SecureHash"];
+  delete vnp_Params["vnp_SecureHashType"];
 
-    const sortedParams = Object.fromEntries(
-      Object.entries(vnp_Params)
-        .map(([key, value]) => [key, String(value || "").trim()])
+  const sortedParams = Object.fromEntries(
+    Object.entries(vnp_Params)
+      .map(([key, value]) => [key, String(value || "").trim()])
       .sort()
-    );
+  );
 
-    const signData = new URLSearchParams(sortedParams).toString();
-    const signed = crypto
-      .createHmac("sha512", VNPAY_CONFIG.vnp_HashSecret)
-      .update(Buffer.from(signData, "utf-8"))
-      .digest("hex");
+  const signData = new URLSearchParams(sortedParams).toString();
+  const checkSum = crypto
+    .createHmac("sha512", VNPAY_CONFIG.vnp_HashSecret)
+    .update(Buffer.from(signData, "utf-8"))
+    .digest("hex");
 
-    const baseUrl = process.env.ADMIN_WEB_URL;
+  // Use a dynamic base URL for the frontend
+  const baseUrl = process.env.ADMIN_WEB_URL || "http://localhost:3000"; // Default to localhost:3000 if not set
 
-    if (secureHash !== signed) {
-      return res
-        .status(400)
-        .redirect(
-          `${baseUrl}/admin/financemanagement?status=error&message=Invalid+signature`
-        );
-    }
-
-    const transactionNo = vnp_Params["vnp_TransactionNo"];
-    const paymentId = vnp_Params["vnp_TxnRef"];
-    const responseCode = vnp_Params["vnp_ResponseCode"];
-    const status = responseCode === "00" ? "success" : "failed";
-
-    const payment = await Payment.findByIdAndUpdate(
-      paymentId,
-      {
-        transactionNo,
-        status,
-        paymentDate: new Date(),
-        paymentDetails: vnp_Params,
-      },
-      { new: true }
-    );
-
-    if (!payment) {
-      return res
-        .status(404)
-        .redirect(
-          `${baseUrl}/admin/financemanagement?status=error&message=Payment+not+found`
-        );
-    }
-
-    if (status === "success" && payment.paymentType === "salary") {
-      // Xóa các thanh toán lương pending khác của nutritionist này (nếu cần)
-      await Payment.deleteMany({
-        _id: { $ne: payment._id },
-        userId: payment.userId,
-        paymentType: "salary",
-        status: "pending",
-      });
-    }
-
-    const redirectUrl = `${baseUrl}/admin/financemanagement?status=${status}&message=${
-      status === "success" ? "Thanh+toán+lương+thành+công" : "Thanh+toán+lương+thất+bại"
-    }`;
-    res.redirect(redirectUrl);
-  } catch (error) {
-    const baseUrl = process.env.ADMIN_WEB_URL;
-    res.redirect(
-      `${baseUrl}/admin/financemanagement?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`
+  if (secureHash !== checkSum) {
+    return res.redirect(
+      `${baseUrl}/admin/financemanagement?status=error&message=Invalid+signature`
     );
   }
-};
 
-// New function to get salary payment history
-exports.getSalaryPaymentHistory = catchAsync(async (req, res, next) => {
-  const { nutriId } = req.params;
+  const paymentId = vnp_Params["vnp_TxnRef"];
+  const payment = await SalaryPayment.findById(paymentId);
+  if (!payment) {
+    return res.redirect(
+      `${baseUrl}/admin/financemanagement?status=error&message=Payment+not+found`
+    );
+  }
 
-  const payments = await Payment.find({
-    userId: nutriId,
-    paymentType: "salary",
-  }).sort({ createdAt: -1 });
+  const responseCode = vnp_Params["vnp_ResponseCode"];
+  const transactionNo = vnp_Params["vnp_TransactionNo"];
 
-  res.status(200).json({
-    status: "success",
-    data: payments,
-  });
-});
+  if (responseCode === "00") {
+    // Update payment status to success
+    payment.status = "success";
+    payment.paymentDate = new Date();
+    payment.transactionNo = transactionNo;
+    await payment.save();
 
-exports.getAllSalaryPaymentHistory = catchAsync(async (req, res, next) => {
-  const payments = await Payment.find({ paymentType: "salary" }).sort({
-    createdAt: -1,
-  });
-  res.status(200).json({
-    status: "success",
-    data: payments,
-  });
+    // Send email notification
+    const nutritionist = await UserModel.findById(payment.userId);
+    const mealPlans = await MealPlan.find({
+      createdBy: payment.userId,
+      startDate: {
+        $gte: new Date(payment.year, payment.month - 1, 1),
+        $lte: new Date(payment.year, payment.month, 0, 23, 59, 59, 999),
+      },
+    });
+
+    const mealPlanIds = mealPlans.map((mp) => mp._id);
+    const payments = await PaymentModel.find({
+      mealPlanId: { $in: mealPlanIds },
+      status: "success",
+    });
+
+    const baseSalary = 5000000;
+    const commission = payments.reduce((sum, payment) => {
+      const mealPlan = mealPlans.find((mp) => mp._id.toString() === payment.mealPlanId.toString());
+      return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
+    }, 0);
+    const totalSalary = baseSalary + commission;
+
+    const formattedSalary = totalSalary.toLocaleString("en-US") + " VND";
+    const formattedCommission = commission.toLocaleString("en-US") + " VND";
+    const formattedBaseSalary = baseSalary.toLocaleString("en-US") + " VND";
+
+    const emailSubject = `Salary Notification for ${payment.month}/${payment.year} from Healthy Food`;
+    const emailHtml = `
+      <h2>Hello ${nutritionist.username},</h2>
+      <p>We are pleased to inform you about your salary for ${payment.month}/${
+      payment.year
+    } as follows:</p>
+      <ul>
+        <li><strong>Base Salary:</strong> ${formattedBaseSalary}</li>
+        <li><strong>Commission (10% of revenue):</strong> ${formattedCommission}</li>
+        <li><strong>Total Salary:</strong> ${formattedSalary}</li>
+      </ul>
+      <p>The payment was successfully processed on ${new Date(
+        payment.paymentDate
+      ).toLocaleDateString("en-US")}.</p>
+      <p>Transaction ID: ${payment.transactionNo}</p>
+      <p>Thank you for your collaboration with Healthy Food!</p>
+      <p>Best regards,<br/>The Healthy Food Team</p>
+    `;
+
+    try {
+      await sendEmail({
+        email: nutritionist.email,
+        subject: emailSubject,
+        html: emailHtml,
+      });
+      console.log(`Salary email sent to ${nutritionist.email}`);
+    } catch (emailError) {
+      console.error(`Failed to send email to ${nutritionist.email}:`, emailError);
+    }
+
+    // Redirect to the frontend with success message
+    res.redirect(
+      `${baseUrl}/admin/financemanagement?status=success&message=Salary+payment+successful`
+    );
+  } else {
+    // Update payment status to failed
+    payment.status = "failed";
+    payment.transactionNo = transactionNo;
+    await payment.save();
+
+    // Redirect to the frontend with error message
+    res.redirect(`${baseUrl}/admin/financemanagement?status=error&message=Salary+payment+failed`);
+  }
 });

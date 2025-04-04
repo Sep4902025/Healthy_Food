@@ -63,10 +63,57 @@ const mealPlanService = {
       };
     }
   },
+  // Lấy danh sách tất cả nutritionist và meal plan của họ
+  getAllNutritionistsWithMealPlans: async (page = 1, limit = 10, month, year) => {
+    try {
+      const response = await api.get("/mealPlan/nutritionists", {
+        params: {
+          page,
+          limit,
+          sort: "username",
+          order: "asc",
+          month,
+          year,
+        },
+      });
+      const data = response.data;
+
+      if (data.status === "success") {
+        const nutritionists = data.data.nutritionists || [];
+        const total = data.results || 0;
+        const totalPages = data.totalPages || 1;
+
+        return {
+          success: true,
+          data: {
+            nutritionists,
+          },
+          total,
+          totalPages,
+        };
+      } else {
+        console.warn("API returned non-success status:", data);
+        return {
+          success: false,
+          message: data.message || "Không thể lấy danh sách nutritionist",
+        };
+      }
+    } catch (error) {
+      console.error(
+        "Lỗi khi lấy danh sách nutritionist và meal plan:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || "Lỗi server: Không thể lấy danh sách nutritionist",
+      };
+    }
+  },
   // Service: Lấy MealPlan do nutritionist tạo
   getAllMealPlanNutritionistCreatedBy: async (page = 1, limit = 10) => {
     try {
-      const response = await api.get("/mealPlan/nutritionist", {
+      const response = await api.get("/mealPlan/nutritionistCreatedBy", {
         params: {
           page,
           limit,
