@@ -120,7 +120,6 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
     try {
       console.log("Fetching meal days for mealPlanId:", mealPlanId);
       const data = await mealPlanService.getMealDaysByMealPlan(mealPlanId);
-      console.log("API Response:", data); // Debug API response
 
       if (data.success) {
         // Ensure data.data is an array

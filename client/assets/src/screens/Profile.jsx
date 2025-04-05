@@ -23,7 +23,7 @@ import ShowToast from "../components/common/CustomToast";
 import { deleteUser, updateUser } from "../services/authService";
 import { removeUser, updateUserAct } from "../redux/reducers/userReducer";
 import {
-  getUserPreference,
+  resetUserPreference,
   updateUserPreference,
 } from "../services/userPreference";
 import { useFocusEffect } from "@react-navigation/native";
@@ -31,6 +31,7 @@ import ConfirmDeleteAccountModal from "../components/modal/ConfirmDeleteAccountM
 import { toggleVisible } from "../redux/reducers/drawerReducer";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
 import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon";
+import quizService from "../services/quizService";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -61,10 +62,12 @@ function Profile({ navigation }) {
   }, []);
 
   const loadUserPreference = async () => {
-    const response = await getUserPreference(user?._id);
+    const response = await quizService.getUserPreferenceByUserPreferenceId(
+      user?.userPreferenceId
+    );
 
-    if (response.status === 200) {
-      setUserPreference(response.data?.data || {});
+    if (response) {
+      setUserPreference(response?.data || {});
     } else {
       ShowToast("error", "Get user preference fail");
     }
@@ -75,14 +78,15 @@ function Profile({ navigation }) {
   };
 
   const handleEditHealth = async (data) => {
-    const response = await updateUserPreference(data);
+    const response = await resetUserPreference(user?.userPreferenceId);
 
     if (response.status === 200) {
-      ShowToast("success", "Update edit health successfull");
+      ShowToast("success", "Reset edit health successfull");
+      await loadUserPreference();
+      navigation.navigate(ScreensName.survey);
     } else {
-      ShowToast("error", "Update edit health fail");
+      ShowToast("error", "Reset edit health fail");
     }
-    // updateUserPreference
 
     setModalVisible({
       ...modalVisible,
@@ -92,11 +96,10 @@ function Profile({ navigation }) {
 
   const handleEditProfile = async (data) => {
     const response = await updateUser(data);
-    console.log(data);
 
     if (response.status === 200) {
       ShowToast("success", "Update user profile successfull");
-      dispatch(updateUserAct(response.data?.data?.user || {})); // Cập nhật thông tin user())
+      dispatch(updateUserAct(response.data?.data?.user || {})); 
     } else {
       ShowToast("error", "Update user profile fail");
     }
@@ -135,10 +138,10 @@ function Profile({ navigation }) {
 
   return (
     <NonBottomTabWrapper headerHidden={true}>
-      {/* Phần header với ảnh nền */}
+      
       <View style={styles.header}>
         <TouchableOpacity
-          // onPress={() => navigation.goBack()}
+        
           onPress={() => {
             dispatch(toggleVisible());
           }}
@@ -356,7 +359,7 @@ const styles = StyleSheet.create({
     width: WIDTH * 0.25,
     height: WIDTH * 0.25,
     borderRadius: WIDTH,
-    backgroundColor: "#ddd", // Placeholder color
+    backgroundColor: "#ddd",
   },
   profileInfoContainer: {
     alignItems: "flex-start",

@@ -119,7 +119,6 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
       };
       const response = await mealPlanService.createMealPlan(mealPlanData);
       if (response.success) {
-        Alert.alert("Success", "Meal Plan created successfully!");
         onSuccess();
       } else {
         Alert.alert("Error", response.message);

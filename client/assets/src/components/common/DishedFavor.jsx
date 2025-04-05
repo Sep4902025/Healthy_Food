@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   deleteButton: {
-    // position: "absolute",
+ 
     bottom: 8,
     alignSelf: "center",
   },

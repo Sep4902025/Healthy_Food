@@ -32,10 +32,12 @@ function Home({ navigation }) {
   const [loading, setLoading] = useState({ initial: true, more: false });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const limit = 10; // Số lượng món ăn mỗi trang
+  const limit = 10; 
 
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
+  console.log("USEREDUC", user);
+
   const dispatch = useDispatch();
   const season = useCurrentSeason() || "spring";
 
@@ -73,7 +75,6 @@ function Home({ navigation }) {
         const newDishes = response.data.items.filter(
           (dish) => dish.season && typeof dish.season === "string"
         );
-        console.log(response?.data);
 
         setSeasonalDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
 

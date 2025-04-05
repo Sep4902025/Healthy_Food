@@ -15,36 +15,25 @@ import dishesService from "../services/dishService";
 
 const List = () => {
   const [dishes, setDishes] = useState([]);
-  const [sortType, setSortType] = useState(""); // Sorting state
+  const [sortType, setSortType] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState({ initial: true, more: false });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const limit = 10; // Số lượng món ăn mỗi trang
+  const limit = 10;
 
-  useEffect(() => {
-    loadInitialDishes();
-  }, []);
-
-  const loadInitialDishes = async () => {
-    setLoading((prev) => ({ ...prev, initial: true }));
-    await loadDishes(1, true);
-    setLoading((prev) => ({ ...prev, initial: false }));
-  };
-
-  const loadMoreDishes = async () => {
-    if (!hasMore || loading.more) return;
-    setLoading((prev) => ({ ...prev, more: true }));
-    await loadDishes(page + 1);
-    setLoading((prev) => ({ ...prev, more: false }));
-  };
-
-  const loadDishes = async (pageNum, isRefresh = false) => {
+  const loadDishes = useCallback(async (pageNum, isRefresh = false) => {
     try {
-      const response = await dishesService.getAllDishes(pageNum, limit); // Gọi API từ dishesService
+      const response = await dishesService.getAllDishes(pageNum, limit);
       if (response.success) {
         const newDishes = response.data.items || [];
-        setDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+      
+        setDishes((prev) => {
+          const existingIds = isRefresh ? new Set() : new Set(prev.map((dish) => dish._id));
+          const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));
+          const updatedDishes = isRefresh ? newDishes : [...prev, ...filteredNewDishes];
+          return updatedDishes;
+        });
         setPage(pageNum);
         setHasMore(pageNum < response.data.totalPages);
       } else {
@@ -55,30 +44,41 @@ const List = () => {
       console.error("Error loading dishes:", error.message);
       setHasMore(false);
     }
-  };
+  }, []);
 
-  const onRefresh = async () => {
+  useEffect(() => {
+    loadDishes(1, true).then(() => {
+      setLoading((prev) => ({ ...prev, initial: false }));
+    });
+  }, [loadDishes]);
+
+  const loadMoreDishes = useCallback(async () => {
+    if (!hasMore || loading.more) return;
+    setLoading((prev) => ({ ...prev, more: true }));
+    await loadDishes(page + 1);
+    setLoading((prev) => ({ ...prev, more: false }));
+  }, [hasMore, loading.more, page, loadDishes]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
     await loadDishes(1, true);
     setRefreshing(false);
-  };
+  }, [loadDishes]);
 
-  const toggleSort = () => {
-    setSortType((prev) => (prev !== "asc" ? "asc" : "desc"));
-  };
+  const toggleSort = useCallback(() => {
+    setSortType((prev) => (prev === "asc" ? "desc" : "asc"));
+  }, []);
 
-  const filterDishes = useMemo(() => {
-    const filteredDishes = [...dishes];
-
+  const sortedDishes = useMemo(() => {
+    const sorted = [...dishes];
     if (sortType === "asc") {
-      filteredDishes.sort((a, b) => a.name.localeCompare(b.name));
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortType === "desc") {
-      filteredDishes.sort((a, b) => b.name.localeCompare(a.name));
+      return sorted.sort((a, b) => b.name.localeCompare(a.name));
     }
-
-    return filteredDishes;
+    return sorted;
   }, [dishes, sortType]);
 
   const handleScroll = useCallback(
@@ -89,7 +89,7 @@ const List = () => {
         loadMoreDishes();
       }
     },
-    [hasMore, loading.more, page]
+    [loadMoreDishes]
   );
 
   return (
@@ -109,14 +109,16 @@ const List = () => {
           </View>
         ) : (
           <ScrollView
-            style={{ paddingHorizontal: 2 }}
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           >
-            {filterDishes.length > 0 ? (
-              filterDishes.map((dish) => <DishedV1 dish={dish} key={dish._id} />)
+            {sortedDishes.length > 0 ? (
+              sortedDishes.map((dish, index) => (
+                <DishedV1 dish={dish} key={`${dish._id}-${index}`} />
+              ))
             ) : (
               <Text style={styles.noResultsText}>No dishes found</Text>
             )}
@@ -136,6 +138,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     overflow: "visible",
   },
+  scrollView: {
+    paddingHorizontal: 2,
+  },
   sortHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -154,10 +159,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "white",
     shadowColor: "#343C41",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,

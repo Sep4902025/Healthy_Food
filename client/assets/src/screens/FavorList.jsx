@@ -25,7 +25,7 @@ function FavorList() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const limit = 10; // Số lượng món ăn mỗi trang
+  const limit = 10; 
   const favor = useSelector(favorSelector);
   const { theme } = useTheme();
 

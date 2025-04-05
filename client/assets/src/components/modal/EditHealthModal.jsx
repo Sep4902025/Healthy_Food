@@ -1,4 +1,4 @@
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,16 +8,14 @@ import {
   ScrollView,
   Dimensions,
   Modal,
-  SafeAreaView,
-  StatusBar,
-  Image,
   Platform,
 } from "react-native";
-
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
 import { useTheme } from "../../contexts/ThemeContext";
+
 const HEIGHT = Dimensions.get("window").height;
+
 export const EditHealthModal = ({
   visible,
   onClose,
@@ -28,13 +26,190 @@ export const EditHealthModal = ({
   const [healthData, setHealthData] = useState({
     ...userPreference,
   });
+  const [bmi, setBmi] = useState(null);
 
+ 
   useEffect(() => {
     setHealthData(userPreference);
+    calculateBMI(userPreference.weight, userPreference.height);
   }, [userPreference]);
+
+
+  const calculateBMI = (weight, height) => {
+    const w = parseFloat(weight);
+    const h = parseFloat(height) / 100; 
+    if (w && h && !isNaN(w) && !isNaN(h) && h > 0) {
+      const bmiValue = (w / (h * h)).toFixed(1);
+      setBmi(bmiValue);
+      setHealthData((prev) => ({ ...prev, bmi: bmiValue }));
+    } else {
+      setBmi(null);
+      setHealthData((prev) => ({ ...prev, bmi: null }));
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setHealthData((prev) => {
+      const updatedData = { ...prev, [field]: value };
+      if (field === "weight" || field === "height") {
+        calculateBMI(
+          field === "weight" ? value : updatedData.weight,
+          field === "height" ? value : updatedData.height
+        );
+      }
+      return updatedData;
+    });
+  };
 
   const handleSave = () => {
     onSave(healthData);
+  };
+
+  const formData = [
+    [
+      {
+        label: "BMI",
+        field: "bmi",
+        value: bmi ? String(bmi) : "",
+        keyboardType: "default",
+        editable: false,
+      },
+      {
+        label: "WaterDrink",
+        field: "waterDrink",
+        value: healthData.waterDrink ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+    [
+      {
+        label: "Age",
+        field: "age",
+        value: healthData.age ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+      {
+        label: "SleepTime",
+        field: "sleepTime",
+        value: healthData.sleepTime,
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+    [
+      {
+        label: "Goal",
+        field: "goal",
+        value: healthData.goal ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+      {
+        label: "LongOfPlan",
+        field: "longOfPlan",
+        value: healthData.longOfPlan ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+    [
+      {
+        label: "Diet",
+        field: "diet", 
+        value: healthData.diet ?? "",
+        keyboardType: "default", 
+        editable: false,
+      },
+      {
+        label: "MealNumber",
+        field: "mealNumber", 
+        value: healthData.mealNumber ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+    [
+      {
+        label: "UnderDisease",
+        field: "underDisease", 
+        value: "",
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+  ];
+
+  const viewForm = [
+    {
+      label: "EatHabit",
+      field: "eatHabit",
+      value: healthData.eatHabit || [], 
+      keyboardType: "default",
+      editable: false,
+    },
+    {
+      label: "RecommendedFoods",
+      field: "recommendedFoods",
+      value: healthData.recommendedFoods || [], 
+      keyboardType: "default",
+      editable: false,
+    },
+    {
+      label: "Hate",
+      field: "hate",
+      value: healthData.hate || [], 
+      keyboardType: "default",
+      editable: false,
+    },
+  ];
+
+ 
+  const renderInputField = (fieldConfig) => {
+    if (!fieldConfig) return <View style={styles.formItem} />;
+
+    const { label, field, value, keyboardType, editable } = fieldConfig;
+    return (
+      <View style={styles.formItem}>
+        <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+          {label}
+        </Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={String(value)}
+            onChangeText={(text) => handleInputChange(field, String(value))}
+            keyboardType={keyboardType}
+            editable={editable}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  const renderViewField = (fieldConfig) => {
+    if (!fieldConfig) return <View style={styles.formItem} />;
+
+    const { label, field, value, keyboardType, editable } = fieldConfig;
+
+ 
+    const items = Array.isArray(value) ? value : [];
+
+    return (
+      <View style={styles.formItemFull}>
+        <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+          {label}
+        </Text>
+        <View style={styles.tagsContainer}>
+          {items.map((item, index) => (
+            <View key={`${field}-${index}`} style={styles.tagItem}>
+              <Text style={styles.tagText}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -52,200 +227,33 @@ export const EditHealthModal = ({
           backgroundColor: theme.editModalbackgroundColor,
         }}
       >
-        {/* Header */}
         <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
           Health Information
         </Text>
         <ScrollView style={styles.scrollContent}>
           <View style={styles.formGrid}>
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Weight
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={String(healthData.weight ?? 0)}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, weight: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
+            {formData.map((row, rowIndex) => (
+              <View key={`row-${rowIndex}`} style={styles.formRow}>
+                {renderInputField(row[0])}
+                {row[1] ? (
+                  renderInputField(row[1])
+                ) : (
+                  <View style={styles.formItem} />
+                )}
               </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Diet
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.diet}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, diet: text })
-                    }
-                  />
-                </View>
+            ))}
+          </View>
+          <View style={styles.formGrid}>
+            {viewForm.map((fieldConfig, index) => (
+              <View key={`view-field-${index}`}>
+                {renderViewField(fieldConfig)}
               </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Height
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={String(healthData.height ?? 0)}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, height: text })
-                    }
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  UnderDisease (disable)
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.underDisease
-                      ?.map((item) => item)
-                      .join(", ")}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, underDisease: text })
-                    }
-                    editable={false}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  BMI (Not updated yet)
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.bmi}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, bmi: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  WaterDrink
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.waterDrink}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, waterDrink: text })
-                    }
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Age
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.age}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, age: text })
-                    }
-                    keyboardType="number-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  SleepTime
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.sleepTime}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, sleepTime: text })
-                    }
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  WeightGoal
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={String(healthData.weightGoal ?? 0)}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, weightGoal: text })
-                    }
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  EatHabit (disable)
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.eatHabit?.map((item) => item).join(", ")}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, eatHabit: text })
-                    }
-                    editable={false}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  Goal
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.goal}
-                    onChangeText={(text) =>
-                      setHealthData({ ...healthData, goal: text })
-                    }
-                  />
-                </View>
-              </View>
-            </View>
+            ))}
           </View>
         </ScrollView>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save</Text>
+          <Text style={styles.saveButtonText}>Reset</Text>
         </TouchableOpacity>
       </View>
     </Modal>
@@ -265,7 +273,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 10,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#f2f2f2",
@@ -310,7 +317,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e0e0",
     borderRadius: 8,
-    // paddingHorizontal: 12,
     height: 44,
   },
   input: {
@@ -321,9 +327,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e0e0e0",
+    paddingHorizontal: 12,
   },
-  inputIcon: {
-    marginLeft: 8,
+  formItemFull: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+  },
+  tagItem: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    margin: 4,
+    minWidth: "45%",
+  },
+  tagText: {
+    color: "#666",
+    fontSize: 14,
+    textAlign: "center",
   },
   saveButton: {
     backgroundColor: "#40B491",

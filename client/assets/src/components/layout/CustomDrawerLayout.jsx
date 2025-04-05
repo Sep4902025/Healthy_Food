@@ -28,10 +28,11 @@ import {
   updateVisible,
 } from "../../redux/reducers/drawerReducer";
 
-const { width } = Dimensions.get("window");
+const HEIGHT = Dimensions.get("window").height;
+const WIDTH = Dimensions.get("window").width;
 
 const CustomDrawerLayout = forwardRef(
-  ({ children, drawerWidth = width * 0.7, theme }, ref) => {
+  ({ children, drawerWidth = WIDTH * 0.7, theme }, ref) => {
     const navigation = useNavigation();
     const drawerVisible = useSelector(drawerSelector);
     const drawerRef = useRef(null);
@@ -60,7 +61,11 @@ const CustomDrawerLayout = forwardRef(
 
     const notificationNav = () => {
       if (user) {
-        navigation.navigate(ScreensName.notification);
+        if (user.userPreferenceId === null) {
+          navigation.navigate(ScreensName.survey);
+        } else {
+          navigation.navigate(ScreensName.forYou);
+        }
       } else {
         navigation.navigate(ScreensName.signin);
       }
@@ -102,7 +107,6 @@ const CustomDrawerLayout = forwardRef(
             closeDrawer();
           },
         },
-        // Add more drawer items as needed
       ];
 
       return (
@@ -132,7 +136,7 @@ const CustomDrawerLayout = forwardRef(
                 { color: theme.backButtonColor },
               ]}
             >
-              {user?.name || "Guest"}
+              {user?.username || "Guest"}
             </Text>
           </View>
 
@@ -157,7 +161,7 @@ const CustomDrawerLayout = forwardRef(
       );
     };
 
-    // Expose drawer methods to parent component
+   
     useImperativeHandle(ref, () => ({
       openDrawer: () => drawerRef.current?.openDrawer(),
       closeDrawer: () => drawerRef.current?.closeDrawer(),
@@ -209,6 +213,11 @@ const styles = StyleSheet.create({
   drawerItemText: {
     marginLeft: 15,
     fontSize: 16,
+  },
+  avtImage: {
+    width: WIDTH * 0.1,
+    height: WIDTH * 0.1,
+    borderRadius: 50
   },
 });
 

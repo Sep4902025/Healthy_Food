@@ -5,8 +5,6 @@ import DateTimePicker from "@react-native-community/datetimepicker"; // Import D
 import mealPlanService from "../../services/mealPlanService";
 
 const AddMealModal = ({ mealPlanId, mealDayId, userId, onClose, onMealAdded }) => {
-  console.log("USERID", userId);
-
   const [newMealData, setNewMealData] = useState({
     mealName: "",
     mealTime: "",

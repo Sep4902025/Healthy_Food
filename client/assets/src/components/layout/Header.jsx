@@ -1,4 +1,4 @@
-import React, { useEffect } from "react"; // Thêm useEffect
+import React, { useEffect } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
@@ -14,25 +14,23 @@ import RemindService from "../../services/reminderService";
 function Header() {
   const navigation = useNavigation();
   const user = useSelector(userSelector);
-  console.log("USERRR", user);
-
   const dispatch = useDispatch();
   const { theme } = useTheme();
 
-  // Giả sử token được lưu trong user.token
-  const token = user?.accessToken; // Lấy token từ Redux store
+  
+  const token = user?.accessToken; 
 
-  // Kết nối socket khi user và token có sẵn
+  
   useEffect(() => {
     if (user?._id && token) {
       RemindService.connectSocket(user._id);
     }
 
-    // Ngắt kết nối socket khi component unmount
+
     return () => {
       RemindService.disconnect();
     };
-  }, [user, token]); // Chạy lại khi user hoặc token thay đổi
+  }, [user, token]); 
 
   const checkAuth = () => {
     if (user) {
@@ -53,40 +51,30 @@ function Header() {
         backgroundColor: theme.headerBackgroundColor,
       }}
     >
-      {/* Nút Drawer */}
+   
       <TouchableOpacity style={styles.backIcon} onPress={onDrawerPress}>
-        <Ionicons
-          name="reorder-three"
-          size={32}
-          color={theme.backButtonColor}
-        />
+        <Ionicons name="reorder-three" size={32} color={theme.backButtonColor} />
       </TouchableOpacity>
 
-      {/* Tích hợp ReminderNotification */}
+      
       {user ? (
-        <ReminderNotification userId={user?._id} /> // Truyền userId từ user
+        <ReminderNotification userId={user?._id} /> 
       ) : (
-        <TouchableOpacity
-          onPress={() => navigation.navigate(ScreensName.signin)}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate(ScreensName.signin)}>
           <Text style={{ fontSize: 32, color: theme.backButtonColor }}>🔔</Text>
         </TouchableOpacity>
       )}
 
       {/* Avatar hoặc icon profile */}
       <TouchableOpacity onPress={checkAuth}>
-        {user?.avatar_url ? (
+        {user?.avatarUrl ? (
           <Image
-            source={{ uri: user.avatar_url }}
+            source={{ uri: user.avatarUrl }}
             resizeMode="cover"
             style={[styles.profileImage, styles.avtImage]}
           />
         ) : (
-          <MaterialIcons
-            name="account-circle"
-            size={40}
-            color={theme.backButtonColor}
-          />
+          <MaterialIcons name="account-circle" size={40} color={theme.backButtonColor} />
         )}
       </TouchableOpacity>
     </View>

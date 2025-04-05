@@ -1,51 +1,46 @@
-// Import các thư viện cần thiết từ React và React Native
+
 import React, { use, useCallback, useState } from "react";
 import {
-  Text, // Component hiển thị text
-  View, // Component container
-  StyleSheet, // API để tạo styles
-  Image, // Component hiển thị hình ảnh
-  TextInput, // Component nhập liệu
-  Dimensions, // API lấy kích thước màn hình
+  Text, 
+  View, 
+  StyleSheet, 
+  Image, 
+  TextInput, 
+  Dimensions, 
   Platform,
-  KeyboardAvoidingView, // API kiểm tra nền tảng
+  KeyboardAvoidingView, 
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native"; // Hook xử lý focus màn hình
+import { useFocusEffect } from "@react-navigation/native"; 
 
-// Import các components tùy chỉnh
-import SafeAreaWrapper from "../components/layout/SafeAreaWrapper"; // Component wrapper an toàn
-import RippleButton from "../components/common/RippleButton"; // Button có hiệu ứng gợn sóng
-import { ScreensName } from "../constants/ScreensName"; // Constants chứa tên màn hình
+import SafeAreaWrapper from "../components/layout/SafeAreaWrapper";
+import RippleButton from "../components/common/RippleButton"; 
+import { ScreensName } from "../constants/ScreensName";
 
-// Import hình ảnh
-import sadCactusIcon from "../../assets/image/sad_cactus.png"; // Icon xương rồng buồn
-import happyCactusIcon from "../../assets/image/happy_cactus.png"; // Icon xương rồng vui
-import { forgetPassword, verifyOtp } from "../services/authService"; // Services xử lý quên mật khẩu
-import OTPInput from "../components/common/OtpInput"; // Component nhập OTP
+import sadCactusIcon from "../../assets/image/sad_cactus.png"; 
+import happyCactusIcon from "../../assets/image/happy_cactus.png"; 
+import { forgetPassword, verifyOtp } from "../services/authService"; 
+import OTPInput from "../components/common/OtpInput"; 
 import { useTheme } from "../contexts/ThemeContext";
 
-// Lấy kích thước màn hình
+
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
 
 function VerifyEmail({ navigation }) {
-  // Khởi tạo các state
-  const [email, setEmail] = useState(""); // State lưu email
-  const [verificationCode, setVerificationCode] = useState(""); // State lưu mã OTP
-  const [otpAmount] = useState(4); // Số lượng ký tự OTP
-  const [isCodeSent, setIsCodeSent] = useState(false); // Trạng thái đã gửi mã
+  
+  const [email, setEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState(""); 
+  const [otpAmount] = useState(4); 
+  const [isCodeSent, setIsCodeSent] = useState(false); 
   const { theme } = useTheme();
 
-  // Reset trạng thái khi focus màn hình
-  // useFocusEffect sẽ chạy mỗi khi focus vào màn hình,
-  // useCallback sẽ lưu lại các phương thức bên trong hạn chế việc tải lại mỗi khi gọi hàm
+  
   useFocusEffect(
     React.useCallback(() => {
       setIsCodeSent(false);
     }, [])
   );
 
-  // Xử lý gửi email
   const handleSubmitEmail = async () => {
     const response = await forgetPassword({ email: email.trim() });
     if (response.status === 200) {
@@ -55,7 +50,7 @@ function VerifyEmail({ navigation }) {
     }
   };
 
-  // Xử lý xác thực mã OTP
+ 
   const handleVerifyCode = async (value) => {
     const response = await verifyOtp({
       email: email.trim(),
@@ -68,18 +63,18 @@ function VerifyEmail({ navigation }) {
     }
   };
 
-  // Xử lý gửi lại mã
+
   const handleResendCode = async () => {
     await handleSubmitEmail();
   };
 
-  // Xử lý quay lại nhập email
+
   const handleBackToEmail = () => {
     setIsCodeSent(false);
     setVerificationCode("");
   };
 
-  // Xử lý khi nhập mã OTP
+
   const handleCodeChange = (value) => {
     setVerificationCode(value);
     if (value.length === otpAmount) {

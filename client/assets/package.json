@@ -22,6 +22,7 @@
     "d3-selection": "^2.0.0",
     "expo": "~52.0.23",
     "expo-auth-session": "~6.0.3",
+    "expo-checkbox": "^4.0.1",
     "expo-constants": "^17.0.7",
     "expo-font": "~13.0.3",
     "expo-image-picker": "^16.0.6",

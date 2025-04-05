@@ -1,7 +1,7 @@
-import axiosInstance from "./axiosInstance"; // Import axiosInstance
+import axiosInstance from "./axiosInstance"; 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Hàm lấy token từ AsyncStorage
+
 const getAuthHeaders = async () => {
   try {
     const token = await AsyncStorage.getItem("token");
@@ -13,14 +13,14 @@ const getAuthHeaders = async () => {
 };
 
 const dishesService = {
-  // 🔹 Lấy tất cả món ăn với phân trang
+
   getAllDishes: async (page, limit, search = "") => {
     try {
       const response = await axiosInstance.get("/dishes", {
         params: {
           page,
           limit,
-          search, // Thêm tham số tìm kiếm
+          search, 
         },
       });
       console.log("🔍 Danh sách món ăn từ API:", response.data);
@@ -38,7 +38,7 @@ const dishesService = {
       return { success: false, message: "Lỗi khi tải danh sách món ăn" };
     }
   },
-  // 🔹 Thêm món ăn mới
+
   createDish: async (data) => {
     try {
       const headers = await getAuthHeaders();
@@ -51,7 +51,6 @@ const dishesService = {
     }
   },
 
-  // 🔹 Cập nhật món ăn
   updateDish: async (id, data) => {
     try {
       console.log(`📤 Cập nhật món ăn ID: ${id}`, data);
@@ -64,7 +63,7 @@ const dishesService = {
     }
   },
 
-  // 🔹 Xóa vĩnh viễn món ăn
+
   hardDeleteDish: async (id) => {
     try {
       console.log(`🗑️ Xóa vĩnh viễn món ăn ID: ${id}`);
@@ -77,18 +76,17 @@ const dishesService = {
     }
   },
 
-  // Recipes
-  // Lấy công thức theo dishId và recipeId
+
   getRecipeByRecipeId: async (dishId, recipeId) => {
     try {
       const headers = await getAuthHeaders();
       const response = await axiosInstance.get(`/dishes/${dishId}/recipes/${recipeId}`, {
         headers,
       });
-      console.log("Fetched Recipes nè :", response.data.data); // Debug API response
+      console.log("Fetched Recipes nè :", response.data.data);
       return {
         success: true,
-        data: response.data?.data || {}, // Đảm bảo luôn có object
+        data: response.data?.data || {}, 
       };
     } catch (error) {
       console.error("Error fetching recipe:", error);
@@ -99,14 +97,14 @@ const dishesService = {
     }
   },
 
-  // Dishes
+
   getDishById: async (dishId) => {
     try {
       const headers = await getAuthHeaders();
       const response = await axiosInstance.get(`/dishes/${dishId}`, { headers });
       return {
         success: true,
-        data: response.data.data || {}, // Đảm bảo data luôn là object
+        data: response.data.data || {}, 
       };
     } catch (error) {
       console.error("Error fetching dish:", error);
