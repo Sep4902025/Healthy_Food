@@ -17,8 +17,9 @@ const Term = () => {
         console.log("Processed API Response:", result);
 
         if (result.success) {
-          setTerms(result.data.items || []);
-          setTotalPages(result.data.totalPages || 1);
+          // Dữ liệu terms nằm trong result.data.data.terms, không phải result.data.terms
+          setTerms(result.data.data.terms || []);
+          setTotalPages(result.data.totalPages || 1); // Lấy totalPages từ result.data
         } else {
           setError(result.message || "No Terms data available.");
           setTerms([]);

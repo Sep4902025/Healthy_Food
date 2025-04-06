@@ -225,7 +225,10 @@ const ChatWindow = ({ conversation, setCurrentConversation }) => {
     <div className="flex flex-col h-full w-full">
       {renderHeader()}
       {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
-      <div ref={chatContainerRef} className="flex h-[310px] overflow-y-auto overflow-x-hidden p-3">
+      <div
+        ref={chatContainerRef}
+        className="flex-1 min-h-[200px] overflow-y-auto overflow-x-hidden p-3"
+      >
         <MessageList messages={messages} currentUserId={user._id} />
       </div>
       <div className="border-t border-gray-200">

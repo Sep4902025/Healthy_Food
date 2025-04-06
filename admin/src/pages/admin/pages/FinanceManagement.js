@@ -34,14 +34,56 @@ const FinanceManagement = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
+  // Gộp fetchSalaryHistory và fetchFinanceData vào một hàm để tránh gọi API trùng lặp
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      const [historyResult, financeResult] = await Promise.all([
+        paymentService.getSalaryHistoryByMonthYear(selectedMonth, selectedYear, 1, 1000),
+        mealPlanService.getAllNutritionistsWithMealPlans(
+          currentPage + 1,
+          limit,
+          selectedMonth,
+          selectedYear
+        ),
+      ]);
+
+      // Xử lý dữ liệu từ fetchSalaryHistory
+      if (historyResult.success) {
+        console.log("Updated Salary History:", historyResult.data);
+        setSalaryHistory(historyResult.data || []);
+      } else {
+        toast.error(historyResult.message || "Failed to fetch salary history");
+      }
+
+      // Xử lý dữ liệu từ fetchFinanceData
+      if (financeResult.success) {
+        console.log("Updated Nutritionists:", financeResult.data.nutritionists);
+        setNutritionists(financeResult.data.nutritionists || []);
+        setTotalItems(financeResult.total || 0);
+        setTotalPages(financeResult.totalPages || 1);
+      } else {
+        setError(financeResult.message || "Failed to load finance data");
+        setNutritionists([]);
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      toast.error("Error fetching data");
+      setError("Failed to load data");
+      setNutritionists([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch dữ liệu khi các dependency thay đổi
   useEffect(() => {
     if (user?.role === "admin") {
-      fetchFinanceData();
-      fetchSalaryHistory();
+      fetchAllData();
     }
   }, [user, currentPage, limit, selectedMonth, selectedYear]);
 
-  // Handle redirect from VNPay
+  // Xử lý redirect từ VNPay
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const status = query.get("status");
@@ -49,55 +91,13 @@ const FinanceManagement = () => {
     if (status && message) {
       if (status === "success") {
         toast.success(message.replace(/\+/g, " "));
-        fetchSalaryHistory();
-        fetchFinanceData();
+        fetchAllData(); // Gọi lại dữ liệu để cập nhật UI
       } else {
         toast.error(message.replace(/\+/g, " "));
       }
       navigate("/admin/financemanagement", { replace: true });
     }
   }, [location, navigate]);
-
-  const fetchFinanceData = async () => {
-    setLoading(true);
-    try {
-      const response = await mealPlanService.getAllNutritionistsWithMealPlans(
-        currentPage + 1,
-        limit,
-        selectedMonth,
-        selectedYear
-      );
-      if (response.success) {
-        setNutritionists(response.data.nutritionists || []);
-        setTotalItems(response.total || 0);
-        setTotalPages(response.totalPages || 1);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load finance data");
-      setNutritionists([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSalaryHistory = async () => {
-    try {
-      const result = await paymentService.getSalaryHistoryByMonthYear(
-        selectedMonth,
-        selectedYear,
-        1, // Fetch only the first page for the table
-        1000 // Use a large limit to ensure we get all relevant records for the table
-      );
-      if (result.success) {
-        setSalaryHistory(result.data || []);
-      } else {
-        toast.error(result.message || "Failed to fetch salary history");
-      }
-    } catch (err) {
-      toast.error("Error fetching salary history");
-      console.error(err);
-    }
-  };
 
   const fetchSalaryHistoryForModal = async (page = historyPage, limit = historyLimit) => {
     try {
@@ -143,12 +143,21 @@ const FinanceManagement = () => {
 
   const handleViewHistory = () => {
     setHistoryModalOpen(true);
-    fetchSalaryHistoryForModal(1, historyLimit); // Fetch the first page when opening the modal
+    fetchSalaryHistoryForModal(1, historyLimit);
   };
 
   const handleAcceptSalary = async () => {
-    if (!selectedNutri) return;
+    console.log("AccEPT");
+    console.log("Selected Nutritionist:", selectedNutri);
+
+    if (!selectedNutri) {
+      toast.error("No nutritionist selected");
+      return;
+    }
+
     const salary = calculateSalary(selectedNutri);
+    console.log("Salary:", salary);
+
     try {
       const paymentResult = await paymentService.acceptSalary(
         selectedNutri.id,
@@ -156,17 +165,26 @@ const FinanceManagement = () => {
         selectedMonth,
         selectedYear
       );
-      if (paymentResult.status === "success") {
-        toast.success("Redirecting to payment gateway...");
-        window.open(paymentResult.data.paymentUrl, "_blank");
+      console.log("Payment Result:", paymentResult);
+
+      if (paymentResult.success) {
+        const paymentUrl = paymentResult.data.paymentUrl;
+        console.log("Payment URL:", paymentUrl);
+
+        if (paymentUrl) {
+          toast.success("Redirecting to payment gateway...");
+          window.location.href = paymentUrl; // Chuyển hướng trong cùng tab
+        } else {
+          toast.error("Payment URL not provided by the server");
+        }
       } else {
-        toast.error(paymentResult.message);
+        console.log("Payment failed:", paymentResult.message);
+        toast.error(paymentResult.message || "Failed to process payment");
       }
     } catch (err) {
+      console.error("Error in handleAcceptSalary:", err);
       toast.error(err.message || "Failed to process payment");
     } finally {
-      await fetchSalaryHistory();
-      await fetchFinanceData();
       setSalaryModalOpen(false);
     }
   };
@@ -204,7 +222,40 @@ const FinanceManagement = () => {
   };
 
   const exportToWord = () => {
-    // Keep your existing exportToWord logic
+    // Giữ nguyên logic exportToWord của bạn
+    // Ví dụ:
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              text: `Finance Management Report - Month ${selectedMonth}/${selectedYear}`,
+              heading: HeadingLevel.HEADING_1,
+              alignment: AlignmentType.CENTER,
+            }),
+            ...nutritionists.map(
+              (nutri, index) =>
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `${index + 1}. ${nutri.name} - Meal Plans: ${
+                        nutri.mealPlanCount
+                      }, Success: ${nutri.successCount}, Pending: ${
+                        nutri.pendingCount
+                      }, Status: ${getPaymentStatus(nutri.id)}`,
+                    }),
+                  ],
+                })
+            ),
+          ],
+        },
+      ],
+    });
+
+    Packer.toBlob(doc).then((blob) => {
+      saveAs(blob, `Finance_Report_${selectedMonth}_${selectedYear}.docx`);
+    });
   };
 
   if (user?.role !== "admin") {

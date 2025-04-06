@@ -41,6 +41,8 @@ const paymentService = {
 
   // Xác nhận lương và tạo URL thanh toán
   acceptSalary: async (userId, amount, month, year) => {
+    console.log("cos chay");
+
     try {
       const response = await api.post("/payment/accept-salary", {
         userId,

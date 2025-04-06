@@ -150,68 +150,76 @@ const NutritionChat = () => {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar for conversation list */}
-      <div className="w-64 border-r">
-        <div className="flex border-b">
-          <button
-            className={`flex-1 p-2 text-sm ${
-              activeTab === "pending" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab("pending")}
-          >
-            Pending
-          </button>
-          <button
-            className={`flex-1 p-2 text-sm ${
-              activeTab === "checked" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab("checked")}
-          >
-            Seen
-          </button>
-          <button
-            className={`flex-1 p-2 text-sm ${
-              activeTab === "active" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab("active")}
-          >
-            Messages
-          </button>
+      {/* Container for sidebar and chat window */}
+      <div className="flex flex-1">
+        {/* Sidebar for conversation list */}
+        <div className="w-64 border-r flex flex-col">
+          <div className="flex border-b">
+            <button
+              className={`flex-1 p-2 text-sm ${
+                activeTab === "pending"
+                  ? "border-b-2 border-blue-500 text-blue-500"
+                  : "text-gray-600"
+              }`}
+              onClick={() => setActiveTab("pending")}
+            >
+              Pending
+            </button>
+            <button
+              className={`flex-1 p-2 text-sm ${
+                activeTab === "checked"
+                  ? "border-b-2 border-blue-500 text-blue-500"
+                  : "text-gray-600"
+              }`}
+              onClick={() => setActiveTab("checked")}
+            >
+              Seen
+            </button>
+            <button
+              className={`flex-1 p-2 text-sm ${
+                activeTab === "active"
+                  ? "border-b-2 border-blue-500 text-blue-500"
+                  : "text-gray-600"
+              }`}
+              onClick={() => setActiveTab("active")}
+            >
+              Messages
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="p-3 text-center text-gray-500 text-sm">Loading...</div>
+            ) : conversations.length === 0 ? (
+              <div className="p-3 text-center text-gray-500 text-sm">No conversations</div>
+            ) : (
+              conversations.map((conv) => (
+                <ConversationItem
+                  key={conv._id}
+                  conversation={conv}
+                  onAccept={handleAcceptChat}
+                  onCheck={handleMarkAsChecked}
+                  onClick={handleSelectConversation}
+                />
+              ))
+            )}
+          </div>
         </div>
 
-        <div className="overflow-y-auto h-[calc(100%-3rem)]">
-          {loading ? (
-            <div className="p-3 text-center text-gray-500 text-sm">Loading...</div>
-          ) : conversations.length === 0 ? (
-            <div className="p-3 text-center text-gray-500 text-sm">No conversations</div>
-          ) : (
-            conversations.map((conv) => (
-              <ConversationItem
-                key={conv._id}
-                conversation={conv}
-                onAccept={handleAcceptChat}
-                onCheck={handleMarkAsChecked}
-                onClick={handleSelectConversation}
+        {/* Chat window */}
+        <div className="flex-1 flex flex-col bg-white overflow-x-hidden">
+          {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+            {selectedConversation ? (
+              <ChatWindow
+                conversation={selectedConversation}
+                setCurrentConversation={handleUpdateConversation}
               />
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Chat window */}
-      <div className="flex-1 flex flex-col bg-white overflow-x-hidden">
-        {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
-          {selectedConversation ? (
-            <ChatWindow
-              conversation={selectedConversation}
-              setCurrentConversation={handleUpdateConversation}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-              Select a conversation to start
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                Select a conversation to start
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
