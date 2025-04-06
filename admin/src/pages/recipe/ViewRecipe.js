@@ -20,6 +20,8 @@ import recipesService from "../../services/nutritionist/recipesServices";
 const RecipeApp = () => {
   const { dishId, recipeId } = useParams();
   const [recipe, setRecipe] = useState(null);
+  console.log("RC", recipe);
+
   const [dish, setDish] = useState(null);
   const [ingredients, setIngredients] = useState([]);
 
@@ -108,21 +110,33 @@ const RecipeApp = () => {
       {/* Cooking Instructions Card */}
       <Card className="mt-6 max-w-3xl w-full bg-white p-6 rounded-xl shadow-md">
         <h3 className="text-2xl font-bold mb-4">📖 Cooking Instructions</h3>
-        <ol className="list-decimal pl-5 text-gray-700">
-          {recipe.instruction?.map((step) => (
-            <li key={step._id} className="mb-2 flex items-start">
-              <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" /> {step.description}
-            </li>
+        <div className="text-gray-700">
+          {recipe.instruction?.map((step, index) => (
+            <p key={step._id} className="mb-2 flex items-start">
+              <span className="font-semibold mr-2">Step {step.step}:</span> {step.description}
+            </p>
           ))}
-        </ol>
+        </div>
+
+        {/* Embed YouTube Video if videoUrl exists */}
+        {dish.videoUrl && (
+          <div className="mt-6">
+            <h4 className="text-xl font-semibold mb-2">Instruction Video</h4>
+            <div className="relative" style={{ paddingBottom: "56.25%" /* 16:9 aspect ratio */ }}>
+              <iframe
+                src={dish.videoUrl}
+                title="Recipe Instruction Video"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="absolute top-0 left-0 w-full h-full rounded-lg shadow-md"
+              />
+            </div>
+          </div>
+        )}
       </Card>
 
-      {/* Rating Section */}
-      {/* <RatingSection dishId={dishId} recipeId={recipeId} /> */}
-
-      {/* Comment Section */}
-      {/* <CommentSection dishId={dishId} /> */}
-
+      {/* Review Section */}
       <ReviewSection dishId={dishId} recipeId={recipeId} />
     </div>
   );

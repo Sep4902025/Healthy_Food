@@ -41,8 +41,7 @@ axiosInstance.interceptors.response.use(
 );
 
 const UserService = {
-  // Lấy danh sách món ăn đề xuất cho người dùng dựa trên userId
-  getForyou: async (userId) => {
+  getForyou: async (userId, { page = 1, limit = 10, type = "" } = {}) => {
     try {
       if (!userId) {
         return {
@@ -51,14 +50,41 @@ const UserService = {
         };
       }
 
-      const response = await axiosInstance.get(`/foryou/${userId}`);
+      const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+      if (!objectIdRegex.test(userId)) {
+        return {
+          success: false,
+          message: "userId không hợp lệ (phải là ObjectId)!",
+        };
+      }
+
+      const response = await axiosInstance.get(`/foryou/${userId}`, {
+        params: {
+          page,
+          limit,
+          type, // Không chuẩn hóa type
+        },
+      });
+
       const { success, message, data } = response.data;
 
       if (success) {
+        console.log("getForyou Response:", {
+          dishes: data.items,
+          totalItems: data.totalItems,
+          currentPage: data.currentPage,
+          totalPages: data.totalPages,
+          itemsPerPage: data.itemsPerPage,
+        });
+
         return {
           success: true,
           message: message || "Danh sách món ăn được lấy thành công",
-          dishes: data, // Danh sách món ăn từ backend
+          dishes: data.items || [],
+          totalItems: data.totalItems || 0,
+          currentPage: data.currentPage || page,
+          totalPages: data.totalPages || 0,
+          itemsPerPage: data.itemsPerPage || limit,
         };
       } else {
         return {
@@ -71,10 +97,40 @@ const UserService = {
       return {
         success: false,
         message: error.response?.data?.message || "Lỗi khi lấy danh sách món ăn",
+        error: error.response?.status || 500,
       };
     }
   },
 
+  getForYouDishType: async () => {
+    try {
+      const response = await axiosInstance.get("/foryou/dish-types");
+
+      const { success, message, data } = response.data;
+
+      if (success) {
+        console.log("getForYouDishType Response:", data);
+
+        return {
+          success: true,
+          message: message || "Danh sách loại món ăn được lấy thành công",
+          data: data || [],
+        };
+      } else {
+        return {
+          success: false,
+          message: message || "Không thể lấy danh sách loại món ăn",
+        };
+      }
+    } catch (error) {
+      console.error("Lỗi lấy danh sách loại món ăn:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Lỗi khi lấy danh sách loại món ăn",
+        error: error.response?.status || 500,
+      };
+    }
+  },
   getDishById: async (dishId) => {
     try {
       const response = await axios.get(`${API_URL}/dishes/${dishId}`);

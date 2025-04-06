@@ -22,7 +22,7 @@ exports.getCommentsByDish = async (dishId) => {
     throw Object.assign(new Error("Dish ID is required"), { status: 400 });
   }
 
-  const comments = await CommentDish.find({ dishId });
+  const comments = await CommentDish.find({ dishId }).populate("userId", "name email");
   if (!comments.length) {
     throw Object.assign(new Error("No comments found for this dish"), { status: 404 });
   }

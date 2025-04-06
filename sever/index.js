@@ -106,7 +106,7 @@ app.use("/api/v1/comment", commentRatingRouter);
 app.use("/api/v1/medicalConditions", medicalConditionRouter);
 app.use("/api/v1/favoriteDishes", userFavoriteDishesRouter);
 app.use("/api/v1/recipes", recipeRouter);
-app.use("/api/v1/foryou", foryouRouter); // Thêm endpoint mới
+app.use("/api/v1/foryou", foryouRouter);
 app.use("/api/v1/userpreference", userPreferenceRouter);
 
 // Xử lý route không tồn tại

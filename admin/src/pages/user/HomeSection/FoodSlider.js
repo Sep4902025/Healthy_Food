@@ -15,6 +15,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
   const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, dishes);
 
   const handleFoodClick = (dishId, recipeId) => {
+    if (!recipeId) return; // Prevent navigation if no recipeId
     navigate(`/${dishId}/recipes/${recipeId}`);
   };
 
@@ -77,54 +78,64 @@ const FoodSlider = ({ userId, dishes = [] }) => {
           loop={false}
           onSwiper={(swiper) => (swiperRef.current = swiper)}
         >
-          {sortedDishes.map((food) => (
-            <SwiperSlide key={food._id} className="flex items-stretch">
-              <div
-                className="food-item w-full max-w-[500px] min-w-[250px] min-h-[550px] aspect-auto h-auto flex flex-col bg-[#c1f1c6] rounded-[35px]"
-                onClick={() => handleFoodClick(food._id, food.recipeId)}
-              >
+          {sortedDishes.map((food) => {
+            const hasRecipe = !!food.recipeId; // Check if recipeId exists
+            return (
+              <SwiperSlide key={food._id} className="flex items-stretch">
                 <div
-                  className="food-like-container flex items-center justify-center"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleLike(food._id);
-                  }}
+                  className={`food-item w-full max-w-[500px] min-w-[250px] min-h-[550px] aspect-auto h-auto flex flex-col bg-[#c1f1c6] rounded-[35px] ${
+                    hasRecipe ? "cursor-pointer" : "cursor-not-allowed"
+                  }`}
+                  onClick={() => handleFoodClick(food._id, food.recipeId)}
                 >
-                  <div className="w-[87px] h-[75px] bg-[#40B491] rounded-tr-[37.5px] rounded-bl-[42.5px] flex items-center justify-center relative">
-                    <Heart
-                      size={32}
-                      className={`text-white ${
-                        likedFoods.find((item) => item.dishId === food._id)?.isLike
-                          ? "fill-white"
-                          : "stroke-white"
-                      }`}
-                    />
+                  <div
+                    className="food-like-container flex items-center justify-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleLike(food._id);
+                    }}
+                  >
+                    <div className="w-[87px] h-[75px] bg-[#40B491] rounded-tr-[37.5px] rounded-bl-[42.5px] flex items-center justify-center relative">
+                      <Heart
+                        size={32}
+                        className={`text-white ${
+                          likedFoods.find((item) => item.dishId === food._id)?.isLike
+                            ? "fill-white"
+                            : "stroke-white"
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="center-con">
+                    <div className="food-i-container">
+                      <img
+                        src={food.imageUrl || "/fallback-image.jpg"}
+                        alt={food.name}
+                        className="w-full h-40 object-cover rounded-md"
+                        onError={(e) => (e.target.src = "/fallback-image.jpg")}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="food-item-title">{food.name}</div>
+                  <div className="food-item-des">{food.description}</div>
+
+                  {/* Add "No recipe available" message if no recipeId */}
+                  {!hasRecipe && (
+                    <p className="text-red-500 text-sm italic mt-2">No recipe available</p>
+                  )}
+
+                  <div className="food-item-rating">
+                    <p className="food-item-rating-title">Rating</p>
+                    <p className="food-item-rating-average block mb-2 text-lg font-semibold text-gray-700">
+                      {food.rating > 0 ? food.rating.toFixed(1) + "⭐" : "No ratings yet"}
+                    </p>
                   </div>
                 </div>
-
-                <div className="center-con">
-                  <div className="food-i-container">
-                    <img
-                      src={food.imageUrl || "/fallback-image.jpg"}
-                      alt={food.name}
-                      className="w-full h-40 object-cover rounded-md"
-                      onError={(e) => (e.target.src = "/fallback-image.jpg")}
-                    />
-                  </div>
-                </div>
-
-                <div className="food-item-title">{food.name}</div>
-                <div className="food-item-des">{food.description}</div>
-
-                <div className="food-item-rating">
-                  <p className="food-item-rating-title">Rating</p>
-                  <p className="food-item-rating-average block mb-2 text-lg font-semibold text-gray-700">
-                    {food.rating > 0 ? food.rating.toFixed(1) + "⭐" : "No ratings yet"}
-                  </p>
-                </div>
-              </div>
-            </SwiperSlide>
-          ))}
+              </SwiperSlide>
+            );
+          })}
         </Swiper>
       </div>
 

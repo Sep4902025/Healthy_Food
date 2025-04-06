@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Link } from "react-router-dom";
 import mealPlanService from "../../../services/mealPlanServices";
-import quizService from "../../../services/quizService";
 import UserService from "../../../services/user.service";
 
 const Modal = ({ isOpen, onClose, children }) => {
@@ -65,23 +64,18 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
         }
 
         // Step 3: Check userPreferenceId
-        const userPreferenceId = userData?.user?.userPreferenceId;
-        if (!userPreferenceId) {
+        const userPreferenceData = userData?.user?.userPreferenceId;
+        if (!userPreferenceData) {
           setNeedsSurvey(true);
           setLoading(false); // Stop loading here
           return; // Exit early, no need to throw an error
         }
 
-        // Step 4: Fetch User Preference by userPreferenceId
-        const preferenceData = await quizService.getUserPreferenceByUserPreferenceId(
-          userPreferenceId
-        );
-        if (!isMounted) return;
-
-        if (!preferenceData.success || !preferenceData.data) {
+        // Step 4: Use the populated userPreference data directly
+        if (userPreferenceData.isDelete) {
           setNeedsSurvey(true);
         } else {
-          setUserPreference(preferenceData.data);
+          setUserPreference(userPreferenceData);
           setNeedsSurvey(false);
         }
       } catch (error) {
@@ -180,7 +174,7 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
     calculateNutritionTargets,
     onNutritionTargetsCalculated,
     calculationComplete,
-    needsSurvey, // Add needsSurvey as a dependency
+    needsSurvey,
   ]);
 
   const chartData = useMemo(() => {

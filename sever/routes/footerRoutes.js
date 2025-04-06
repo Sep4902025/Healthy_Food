@@ -1,5 +1,5 @@
 const express = require("express");
-const router = express.Router();
+const footerRouter = express.Router();
 const { isAuthenticated, isAdmin, isNutritionist } = require("../middlewares/isAuthenticated");
 const {
   getAllFAQs,
@@ -21,27 +21,27 @@ const {
 } = require("../controllers/footerController");
 
 // APIs FAQs
-router.get("/faqs", getAllFAQs);
-router.post("/faqs", isAuthenticated, isAdmin, createFAQ);
-router.put("/faqs/:id", isAuthenticated, isAdmin, updateFAQ);
-router.delete("/faqs/hard/:id", isAuthenticated, isAdmin, hardDeleteFAQ);
+footerRouter.get("/faqs", getAllFAQs);
+footerRouter.post("/faqs", isAuthenticated, isAdmin, createFAQ);
+footerRouter.put("/faqs/:id", isAuthenticated, isAdmin, updateFAQ);
+footerRouter.delete("/faqs/hard/:id", isAuthenticated, isAdmin, hardDeleteFAQ);
 
 // APIs AboutUs
-router.get("/about", getAllAboutUs);
-router.post("/about", isAuthenticated, isAdmin, createAboutUs);
-router.put("/about/:id", isAuthenticated, isAdmin, updateAboutUs);
-router.delete("/about/hard/:id", isAuthenticated, isAdmin, hardDeleteAboutUs);
+footerRouter.get("/about", getAllAboutUs);
+footerRouter.post("/about", isAuthenticated, isAdmin, createAboutUs);
+footerRouter.put("/about/:id", isAuthenticated, isAdmin, updateAboutUs);
+footerRouter.delete("/about/hard/:id", isAuthenticated, isAdmin, hardDeleteAboutUs);
 
 // APIs ContactUs
-router.get("/contact", getAllContactUs);
-router.post("/contact", isAuthenticated, createContactUs);
-router.put("/contact/:id", isAuthenticated, isAdmin, updateContactUs);
-router.delete("/contact/hard/:id", isAuthenticated, isAdmin, hardDeleteContactUs);
+footerRouter.get("/contact", getAllContactUs);
+footerRouter.post("/contact", isAuthenticated, createContactUs);
+footerRouter.put("/contact/:id", isAuthenticated, isAdmin, updateContactUs);
+footerRouter.delete("/contact/hard/:id", isAuthenticated, isAdmin, hardDeleteContactUs);
 
 // APIs TermsOfUse
-router.get("/terms", getAllTerms);
-router.post("/terms", isAuthenticated, isAdmin, createTerm);
-router.put("/terms/:id", isAuthenticated, isAdmin, updateTerm);
-router.delete("/terms/hard/:id", isAuthenticated, isAdmin, hardDeleteTerm);
+footerRouter.get("/terms", getAllTerms);
+footerRouter.post("/terms", isAuthenticated, isAdmin, createTerm);
+footerRouter.put("/terms/:id", isAuthenticated, isAdmin, updateTerm);
+footerRouter.delete("/terms/hard/:id", isAuthenticated, isAdmin, hardDeleteTerm);
 
-module.exports = router;
+module.exports = footerRouter;

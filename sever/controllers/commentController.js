@@ -15,9 +15,15 @@ exports.getCommentsByDish = async (req, res) => {
   try {
     const { dishId } = req.params;
     const comments = await commentService.getCommentsByDish(dishId);
-    res.status(200).json({ status: "success", results: comments.length, data: comments });
+    res.status(200).json({
+      status: "success",
+      data: comments,
+    });
   } catch (error) {
-    res.status(error.status || 500).json({ status: "fail", message: error.message });
+    res.status(error.status || 500).json({
+      status: "error",
+      message: error.message || "Internal Server Error",
+    });
   }
 };
 

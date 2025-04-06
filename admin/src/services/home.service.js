@@ -7,6 +7,11 @@ const axiosInstance = axios.create({
   timeout: 5000, // timeout sau 5 giây
 });
 
+// Hàm lấy token từ localStorage
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -63,13 +68,33 @@ const HomeService = {
     }
   },
 
-  getAllDishes: async () => {
+  // 🔹 Lấy tất cả món ăn với phân trang
+  getAllDishes: async (page = 1, limit = 10, search = "") => {
     try {
-      const response = await axiosInstance.get("/dishes");
-      return response.data;
+      const response = await axios.get(`${API_URL}/dishes`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+        params: {
+          page,
+          limit,
+          search,
+          sort: "createdAt",
+          order: "desc",
+        },
+      });
+      console.log("🔍 Danh sách món ăn từ API:", response.data);
+      return {
+        success: true,
+        data: {
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
+        },
+      };
     } catch (error) {
-      console.error("Error fetching all dishes:", error);
-      throw error;
+      console.error("❌ Lỗi khi lấy món ăn:", error.response?.data || error.message);
+      return { success: false, message: "Lỗi khi tải danh sách món ăn" };
     }
   },
 

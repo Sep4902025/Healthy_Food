@@ -16,19 +16,30 @@ const MealPlan = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [processingAction, setProcessingAction] = useState(false);
   const [nutritionTargets, setNutritionTargets] = useState(null);
+  const [isMealPlanExpired, setIsMealPlanExpired] = useState(false);
 
   const fetchUserMealPlan = async () => {
     try {
       setLoading(true);
       const response = await mealPlanService.getUserMealPlan(user._id);
       if (response.success) {
-        setUserMealPlan(response.data);
+        const mealPlan = response.data;
+        setUserMealPlan(mealPlan);
+
+        // Kiểm tra xem meal plan đã hết hạn chưa
+        const startDate = new Date(mealPlan.startDate);
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + mealPlan.duration);
+        const currentDate = new Date();
+        setIsMealPlanExpired(currentDate > endDate);
       } else {
         setUserMealPlan(null);
+        setIsMealPlanExpired(false);
       }
     } catch (error) {
       console.error("❌ Error fetching MealPlan:", error);
       setUserMealPlan(null);
+      setIsMealPlanExpired(false);
     } finally {
       setLoading(false);
     }
@@ -44,44 +55,24 @@ const MealPlan = () => {
   };
 
   const handleToggleMealPlanStatus = async () => {
-    if (!userMealPlan) return;
+    if (!userMealPlan || isMealPlanExpired) return;
 
     const newIsPause = !userMealPlan.isPause;
 
     try {
       setProcessingAction(true);
-
-      // Optimistic update
-      setUserMealPlan((prev) => ({
-        ...prev,
-        isPause: newIsPause,
-      }));
-
-      console.log(
-        `📤 Sending toggle request: mealPlanId=${userMealPlan._id}, isPause=${newIsPause}`
-      );
-
+      setUserMealPlan((prev) => ({ ...prev, isPause: newIsPause }));
       const response = await mealPlanService.toggleMealPlanStatus(userMealPlan._id, newIsPause);
-
-      console.log("📥 Toggle response:", response);
 
       if (response.success) {
         alert(`🔔 MealPlan has been ${newIsPause ? "paused" : "resumed"} successfully!`);
-        await fetchUserMealPlan(); // Fetch the latest data to ensure consistency
+        await fetchUserMealPlan();
       } else {
-        // Revert the optimistic update if the API call fails
-        setUserMealPlan((prev) => ({
-          ...prev,
-          isPause: !newIsPause,
-        }));
+        setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
         alert(`❌ Error: ${response.message}`);
       }
     } catch (error) {
-      // Revert the optimistic update on error
-      setUserMealPlan((prev) => ({
-        ...prev,
-        isPause: !newIsPause,
-      }));
+      setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
       console.error("❌ Unexpected error while toggling MealPlan status:", error);
       alert("❌ An unexpected error occurred while changing the MealPlan status");
     } finally {
@@ -107,6 +98,7 @@ const MealPlan = () => {
       if (response.success) {
         alert("🗑️ MealPlan has been deleted successfully!");
         setUserMealPlan(null);
+        setIsMealPlanExpired(false);
         setShowCreateForm(true);
       } else {
         alert(`❌ Error: ${response.message}`);
@@ -123,6 +115,14 @@ const MealPlan = () => {
     setNutritionTargets(targets);
   };
 
+  const handleCreateNewPlanClick = () => {
+    if (userMealPlan && !isMealPlanExpired) {
+      alert("❌ Please delete the current MealPlan before creating a new one.");
+    } else {
+      setShowCreateForm(true);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
 
   return (
@@ -132,8 +132,20 @@ const MealPlan = () => {
       </div>
       {userMealPlan ? (
         <div className="bg-white p-6 rounded-lg shadow-md mt-6">
+          {isMealPlanExpired && (
+            <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+              <p>
+                ⚠️ This MealPlan has expired on{" "}
+                {new Date(
+                  new Date(userMealPlan.startDate).setDate(
+                    new Date(userMealPlan.startDate).getDate() + userMealPlan.duration
+                  )
+                ).toLocaleDateString()}
+                . Please delete it to create a new one.
+              </p>
+            </div>
+          )}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-4">
-            {/* Phần thông tin bên trái */}
             <div className="infor flex-1 text-left">
               <p className="text-gray-600">
                 Title: <span className="font-medium">{userMealPlan.title}</span>
@@ -166,8 +178,6 @@ const MealPlan = () => {
                 </p>
               </div>
             </div>
-
-            {/* Phần MealPlanAimChart ở giữa */}
             <div className="flex-1 flex justify-center">
               <MealPlanAimChart
                 mealPlanId={userMealPlan._id}
@@ -175,21 +185,21 @@ const MealPlan = () => {
                 onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
               />
             </div>
-
-            {/* Phần nút bên phải */}
             <div className="flex-1 flex justify-end">
               <div className="flex space-x-2">
-                <button
-                  onClick={handleToggleMealPlanStatus}
-                  disabled={processingAction}
-                  className={`px-4 py-2 rounded text-white ${
-                    userMealPlan.isPause
-                      ? "bg-green-500 hover:bg-green-600"
-                      : "bg-yellow-500 hover:bg-yellow-600"
-                  } ${processingAction ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  {userMealPlan.isPause ? "▶️ Continue" : "⏸️ Pause"}
-                </button>
+                {!isMealPlanExpired && (
+                  <button
+                    onClick={handleToggleMealPlanStatus}
+                    disabled={processingAction}
+                    className={`px-4 py-2 rounded text-white ${
+                      userMealPlan.isPause
+                        ? "bg-green-500 hover:bg-green-600"
+                        : "bg-yellow-500 hover:bg-yellow-600"
+                    } ${processingAction ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    {userMealPlan.isPause ? "▶️ Continue" : "⏸️ Pause"}
+                  </button>
+                )}
                 <button
                   onClick={handleDeleteMealPlan}
                   disabled={processingAction}
@@ -208,7 +218,7 @@ const MealPlan = () => {
         <div className="bg-white p-6 rounded-lg shadow-md mt-6">
           {!showCreateForm ? (
             <button
-              onClick={() => setShowCreateForm(true)}
+              onClick={handleCreateNewPlanClick}
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
             >
               ✏️ Create New Meal Plan

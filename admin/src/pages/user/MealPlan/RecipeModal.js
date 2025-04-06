@@ -4,6 +4,7 @@ import dishesService from "../../../services/nutritionist/dishesServices";
 import ingredientsService from "../../../services/nutritionist/ingredientsServices";
 import { CheckCircle, Timer, X, Plus, Minus } from "lucide-react";
 import { Card } from "../../../components/ui/card";
+import recipesService from "../../../services/nutritionist/recipesServices";
 
 const RecipeModal = ({ dishId, recipeId, onClose }) => {
   const [recipe, setRecipe] = useState(null);
@@ -15,7 +16,7 @@ const RecipeModal = ({ dishId, recipeId, onClose }) => {
   useEffect(() => {
     const fetchRecipe = async () => {
       try {
-        const recipeResponse = await recipeService.getRecipeByRecipeId(dishId, recipeId);
+        const recipeResponse = await recipesService.getRecipeById(dishId, recipeId);
         setRecipe(recipeResponse.data);
 
         const dishResponse = await dishesService.getDishById(recipeResponse.data.dishId._id);

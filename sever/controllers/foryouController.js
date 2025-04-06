@@ -1,22 +1,23 @@
+const mongoose = require("mongoose");
 const Dish = require("../models/Dish");
 const MedicalCondition = require("../models/MedicalCondition");
 const UserModel = require("../models/UserModel");
-const UserPreferenceModel = require("../models/UserPrefenrenceModel"); // Giữ nguyên lỗi chính tả
-const Recipe = require("../models/Recipe"); // Thêm import cho Recipe
+const UserPreferenceModel = require("../models/UserPrefenrenceModel");
+const Recipe = require("../models/Recipe");
 
 const foryouController = {
   getForyou: async (req, res) => {
     try {
       const userId = req.user?.id || req.params.userId;
-      // Thêm các tham số phân trang
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
+      const type = req.query.type || "";
       const skip = (page - 1) * limit;
 
-      if (!userId) {
+      if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
         return res.status(400).json({
           success: false,
-          message: "userId là bắt buộc!",
+          message: "userId không hợp lệ!",
         });
       }
 
@@ -55,21 +56,29 @@ const foryouController = {
       const underDiseases = userPreference.underDisease || [];
       const hateIngredients = userPreference.hate || [];
 
-      // Trường hợp không có điều kiện y tế hoặc nguyên liệu ghét
-      if (underDiseases.length === 0 && hateIngredients.length === 0) {
-        const totalItems = await Dish.countDocuments({
-          isVisible: true,
-          isDelete: false,
-        });
+      console.log("underDiseases:", underDiseases);
+      console.log("hateIngredients:", hateIngredients);
 
-        const foryouItems = await Dish.find({
+      if (underDiseases.length === 0 && hateIngredients.length === 0) {
+        const query = {
           isVisible: true,
           isDelete: false,
-        })
+        };
+
+        if (type) {
+          query.type = type; // Không chuẩn hóa thành chữ thường
+        }
+
+        console.log("Query (no conditions):", query);
+
+        const totalItems = await Dish.countDocuments(query);
+        const foryouItems = await Dish.find(query)
           .populate("recipeId")
           .populate("medicalConditionId")
           .skip(skip)
           .limit(limit);
+
+        console.log("foryouItems (no conditions):", foryouItems);
 
         return res.status(200).json({
           success: true,
@@ -84,7 +93,6 @@ const foryouController = {
         });
       }
 
-      // Lấy danh sách điều kiện y tế và các món bị hạn chế/khuyến nghị
       const medicalConditions = await MedicalCondition.find({
         _id: { $in: underDiseases },
         isDelete: false,
@@ -93,12 +101,19 @@ const foryouController = {
         .populate("recommendedFoods");
 
       const restrictedFoods = medicalConditions
-        .flatMap((condition) => condition.restrictedFoods)
-        .map((dish) => dish._id.toString());
+        .flatMap((condition) =>
+          (condition.restrictedFoods || []).map((dish) => dish._id?.toString())
+        )
+        .filter(Boolean);
 
       const recommendedFoods = medicalConditions
-        .flatMap((condition) => condition.recommendedFoods)
-        .map((dish) => dish._id.toString());
+        .flatMap((condition) =>
+          (condition.recommendedFoods || []).map((dish) => dish._id?.toString())
+        )
+        .filter(Boolean);
+
+      console.log("restrictedFoods:", restrictedFoods);
+      console.log("recommendedFoods:", recommendedFoods);
 
       const nutritionalConstraints = medicalConditions.reduce((acc, condition) => {
         if (condition.nutritionalConstraints) {
@@ -120,7 +135,6 @@ const foryouController = {
         return acc;
       }, {});
 
-      // Xử lý nguyên liệu bị ghét và công thức bị hạn chế
       let restrictedRecipeIds = [];
       if (hateIngredients.length > 0) {
         const recipesWithHatedIngredients = await Recipe.find({
@@ -129,7 +143,6 @@ const foryouController = {
         restrictedRecipeIds = recipesWithHatedIngredients.map((recipe) => recipe._id.toString());
       }
 
-      // Truy vấn món ăn với điều kiện
       const query = {
         isVisible: true,
         isDelete: false,
@@ -137,22 +150,27 @@ const foryouController = {
         $or: [{ recipeId: { $nin: restrictedRecipeIds } }, { recipeId: { $exists: false } }],
       };
 
+      if (type) {
+        query.type = type; // Không chuẩn hóa thành chữ thường
+      }
+
       if (nutritionalConstraints.carbs) query.carbs = { $lte: nutritionalConstraints.carbs };
       if (nutritionalConstraints.fat) query.fat = { $lte: nutritionalConstraints.fat };
       if (nutritionalConstraints.protein) query.protein = { $lte: nutritionalConstraints.protein };
       if (nutritionalConstraints.calories)
         query.calories = { $lte: nutritionalConstraints.calories };
 
-      // Đếm tổng số items trước khi phân trang
-      const totalItems = await Dish.countDocuments(query);
+      console.log("Query (with conditions):", query);
 
+      const totalItems = await Dish.countDocuments(query);
       const foryouItems = await Dish.find(query)
         .populate("recipeId")
         .populate("medicalConditionId")
         .skip(skip)
         .limit(limit);
 
-      // Sắp xếp ưu tiên món ăn được khuyến nghị
+      console.log("foryouItems (with conditions):", foryouItems);
+
       const sortedItems = foryouItems.sort((a, b) => {
         const aIsRecommended = recommendedFoods.includes(a._id.toString());
         const bIsRecommended = recommendedFoods.includes(b._id.toString());
@@ -194,114 +212,39 @@ const foryouController = {
     }
   },
 
-  createForyou: async (req, res) => {
+  getForYouDishType: async (req, res) => {
     try {
-      const {
-        name,
-        description,
-        imageUrl,
-        videoUrl,
-        recipeId,
-        medicalConditionId,
-        cookingTime,
-        calories,
-        protein,
-        carbs,
-        fat,
-        totalServing,
-        flavor,
-        type,
-        season,
-      } = req.body;
-
-      const newForyou = new Dish({
-        name,
-        description,
-        imageUrl,
-        videoUrl,
-        recipeId,
-        medicalConditionId,
-        cookingTime,
-        calories,
-        protein,
-        carbs,
-        fat,
-        totalServing,
-        flavor,
-        type,
-        season,
+      // Lấy danh sách các loại món ăn duy nhất từ model Dish
+      const dishTypes = await Dish.distinct("type", {
+        isVisible: true,
+        isDelete: false,
       });
 
-      const savedForyou = await newForyou.save();
-
-      return res.status(201).json({
-        success: true,
-        message: "Foryou item created successfully",
-        data: savedForyou,
-      });
-    } catch (error) {
-      return res.status(400).json({
-        success: false,
-        message: "Error creating foryou item",
-        error: error.message,
-      });
-    }
-  },
-
-  updateForyou: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updateData = req.body;
-
-      const updatedForyou = await Dish.findByIdAndUpdate(
-        id,
-        { ...updateData, updated_at: Date.now() },
-        { new: true, runValidators: true }
-      );
-
-      if (!updatedForyou) {
+      // Kiểm tra dữ liệu trả về
+      if (!Array.isArray(dishTypes) || dishTypes.length === 0) {
         return res.status(404).json({
           success: false,
-          message: "Foryou item not found",
+          message: "Không tìm thấy loại món ăn nào!",
         });
       }
 
-      return res.status(200).json({
-        success: true,
-        message: "Foryou item updated successfully",
-        data: updatedForyou,
-      });
-    } catch (error) {
-      return res.status(400).json({
-        success: false,
-        message: "Error updating foryou item",
-        error: error.message,
-      });
-    }
-  },
-
-  deleteForyou: async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      const deletedForyou = await Dish.findByIdAndUpdate(id, { isDelete: true }, { new: true });
-
-      if (!deletedForyou) {
-        return res.status(404).json({
-          success: false,
-          message: "Foryou item not found",
-        });
-      }
+      // Chuẩn hóa dữ liệu trả về: mỗi type sẽ có id, name và image
+      const formattedDishTypes = dishTypes.map((type, index) => ({
+        id: index + 1,
+        name: type,
+        image: `https://via.placeholder.com/200?text=${type}`, // Có thể thay bằng hình ảnh thực tế nếu có
+      }));
 
       return res.status(200).json({
         success: true,
-        message: "Foryou item deleted successfully",
-        data: deletedForyou,
+        message: "Danh sách loại món ăn được lấy thành công",
+        data: formattedDishTypes,
       });
     } catch (error) {
-      return res.status(400).json({
+      console.error("Lỗi trong getForYouDishType:", error);
+      return res.status(500).json({
         success: false,
-        message: "Error deleting foryou item",
+        message: "Lỗi khi lấy danh sách loại món ăn",
         error: error.message,
       });
     }

@@ -11,14 +11,13 @@ const categories = [
   { id: 2, name: "Summer", image: SummerImg },
   { id: 3, name: "Autumn", image: AutumnImg },
   { id: 4, name: "Winter", image: WinterImg },
-  { id: 5, name: "All seasons", image: AllSeasonImg },
+  { id: 5, name: "All Seasons", image: AllSeasonImg },
 ];
 
-const SeasonSection = ({onSelectSeason }) => {
+const SeasonSection = ({ onSelectSeason, selectedSeason }) => {
   return (
     <div className="w-full bg-white py-8">
       <div className="max-w-6xl mx-auto flex flex-col items-center">
-        {/* Danh mục món ăn cùng logo */}
         <div className="flex justify-start w-full">
           <div className="flex flex-col items-center">
             <img src={Logo} alt="Explore" className="w-40 h-28" />
@@ -28,15 +27,23 @@ const SeasonSection = ({onSelectSeason }) => {
             {categories.map((category) => (
               <div
                 key={category.id}
-                className="flex flex-col items-center group transition-all duration-300"
-                onClick={() => onSelectSeason(category.name)} 
+                className="flex flex-col items-center group transition-all duration-300 cursor-pointer"
+                onClick={() => onSelectSeason(category.name)}
               >
                 <img
                   src={category.image}
                   alt={category.name}
-                  className="w-24 h-24 rounded-full shadow-md object-cover transition-transform duration-300 group-hover:scale-110"
+                  className={`w-24 h-24 rounded-full shadow-md object-cover transition-transform duration-300 group-hover:scale-110 ${
+                    selectedSeason === category.name ? "border-4 border-[#40B491]" : ""
+                  }`}
                 />
-                <p className="text-gray-700 mt-2 transition-colors duration-300 group-hover:text-[#40B491]">
+                <p
+                  className={`text-gray-700 mt-2 transition-colors duration-300 ${
+                    selectedSeason === category.name
+                      ? "text-[#40B491] font-semibold"
+                      : "group-hover:text-[#40B491]"
+                  }`}
+                >
                   {category.name}
                 </p>
               </div>
