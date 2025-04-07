@@ -94,10 +94,7 @@ const NutritionistLayout = () => {
       {/* Main Content and Sidebar */}
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside
-          className="w-64 bg-white border-r p-4 flex flex-col fixed top-0 left-0 h-screen z-10"
-          style={{ paddingTop: "4rem" }} // Điều chỉnh padding-top để tránh bị che bởi header
-        >
+        <aside className="w-64 bg-white border-r p-4 flex flex-col h-full">
           <div className="flex items-center mb-6">
             <HomeIcon size={24} className="text-green-600 mr-2" />
             <span className="text-xl font-bold text-green-700">Nutritionist</span>

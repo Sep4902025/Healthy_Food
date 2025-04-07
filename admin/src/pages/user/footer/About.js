@@ -15,7 +15,7 @@ const AboutPage = () => {
       const result = await aboutService.getAboutUs(currentPage, itemsPerPage);
       console.log("API Response:", result);
       if (result.success) {
-        setAboutData(result.data.items || []);
+        setAboutData(result.data.data.aboutUs || []); // Truy cập đúng result.data.data.aboutUs
         setTotalPages(result.data.totalPages || 1);
       } else {
         setError(result.message);

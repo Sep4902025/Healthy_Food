@@ -24,9 +24,7 @@ const ContactUs = () => {
       setFormData({ name: "", mail: "", subject: "", message: "" });
     } else {
       const errorMessage =
-        typeof result.message === "string"
-          ? result.message
-          : JSON.stringify(result.message);
+        typeof result.message === "string" ? result.message : JSON.stringify(result.message);
       setStatus({ success: false, message: errorMessage });
     }
   };
@@ -35,17 +33,13 @@ const ContactUs = () => {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-lg w-full bg-white rounded-xl shadow-2xl p-8 transform transition-all duration-300 hover:shadow-xl">
         {/* Tiêu đề */}
-        <h1 className="text-4xl font-extrabold text-center text-green-700 mb-6">
-          Contact Us
-        </h1>
+        <h1 className="text-4xl font-extrabold text-center text-green-700 mb-6">Contact Us</h1>
 
         {/* Thông báo trạng thái */}
         {status.message && (
           <p
             className={`text-center mb-6 p-3 rounded-lg font-medium ${
-              status.success
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
+              status.success ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
             }`}
           >
             {status.message}
@@ -56,9 +50,7 @@ const ContactUs = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Full Name */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Full Name
-            </label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
             <input
               type="text"
               name="name"
@@ -72,9 +64,7 @@ const ContactUs = () => {
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
             <input
               type="email"
               name="mail"
@@ -88,9 +78,7 @@ const ContactUs = () => {
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Subject
-            </label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
             <input
               type="text"
               name="subject"
@@ -104,9 +92,7 @@ const ContactUs = () => {
 
           {/* Message */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Message
-            </label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Message</label>
             <textarea
               name="message"
               value={formData.message}

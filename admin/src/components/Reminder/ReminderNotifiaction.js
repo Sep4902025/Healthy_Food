@@ -8,12 +8,12 @@ const ReminderNotification = ({ userId }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
-  // Kết nối socket và lắng nghe thông báo nhắc nhở
+  // Connect to socket and listen for reminder notifications
   useEffect(() => {
     RemindService.connectSocket(userId);
 
     RemindService.listenReminder((data) => {
-      console.log("Nhận dữ liệu nhắc nhở:", data); // Keep for debugging
+      console.log("Received reminder data:", data); // Keep for debugging
 
       setReminders((prevReminders) => {
         // Check if a reminder with the same id already exists
@@ -28,16 +28,16 @@ const ReminderNotification = ({ userId }) => {
         return [data, ...prevReminders];
       });
 
-      setHasNewReminders(true); // Đánh dấu có thông báo mới
+      setHasNewReminders(true); // Mark as having new notifications
     });
 
-    // Ngắt kết nối khi component unmount
+    // Disconnect when the component unmounts
     return () => {
       RemindService.disconnect();
     };
   }, [userId]);
 
-  // Xử lý click bên ngoài để đóng dropdown
+  // Handle click outside to close the dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
@@ -51,17 +51,17 @@ const ReminderNotification = ({ userId }) => {
     };
   }, []);
 
-  // Hàm xóa từng nhắc nhở
+  // Function to remove a single reminder
   const removeReminder = (index) => {
     setReminders((prevReminders) => prevReminders.filter((_, i) => i !== index));
   };
 
-  // Hàm xóa tất cả nhắc nhở
+  // Function to clear all reminders
   const clearReminders = () => {
     setReminders([]);
   };
 
-  // Toggle hiển thị thông báo
+  // Toggle the display of notifications
   const toggleNotifications = () => {
     setShowNotifications(!showNotifications);
     setHasNewReminders(false);
@@ -69,17 +69,17 @@ const ReminderNotification = ({ userId }) => {
 
   return (
     <div className="relative" ref={notificationRef}>
-      {/* Nút chuông thông báo */}
+      {/* Notification bell button */}
       <button
         onClick={toggleNotifications}
         className="flex items-center justify-center"
         aria-label="Notifications"
       >
         <div className="relative">
-          {/* Icon chuông */}
+          {/* Bell icon */}
           <FaRegBell />
 
-          {/* Badge hiển thị số lượng thông báo */}
+          {/* Badge showing the number of notifications */}
           {hasNewReminders && reminders.length > 0 && (
             <span className="absolute -top-1 -right-[10px] bg-red-500 text-white text-xs font-bold rounded-full h-4 w-5 flex items-center justify-center">
               {reminders.length > 9 ? "9+" : reminders.length}
@@ -88,15 +88,15 @@ const ReminderNotification = ({ userId }) => {
         </div>
       </button>
 
-      {/* Dropdown hiển thị danh sách thông báo */}
+      {/* Dropdown displaying the list of notifications */}
       {showNotifications && (
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-50">
           <div className="p-4">
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-lg font-bold">Thông báo</h2>
+              <h2 className="text-lg font-bold">Notifications</h2>
               {reminders.length > 0 && (
                 <button className="text-red-500 text-sm hover:underline" onClick={clearReminders}>
-                  Xóa tất cả
+                  Clear All
                 </button>
               )}
             </div>
@@ -114,7 +114,7 @@ const ReminderNotification = ({ userId }) => {
                     <button
                       className="text-gray-400 hover:text-red-500"
                       onClick={() => removeReminder(index)}
-                      aria-label="Xóa thông báo"
+                      aria-label="Delete notification"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -135,7 +135,7 @@ const ReminderNotification = ({ userId }) => {
                 ))}
               </ul>
             ) : (
-              <div className="py-4 text-center text-gray-500">Không có thông báo nào</div>
+              <div className="py-4 text-center text-gray-500">No notifications available</div>
             )}
           </div>
         </div>

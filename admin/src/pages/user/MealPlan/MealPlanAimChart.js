@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Link } from "react-router-dom";
 import mealPlanService from "../../../services/mealPlanServices";
-import quizService from "../../../services/quizService";
 import UserService from "../../../services/user.service";
 
 const Modal = ({ isOpen, onClose, children }) => {
@@ -39,7 +38,7 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
         setLoading(true);
         setError(null);
 
-        // Bước 1: Lấy dữ liệu Meal Plan
+        // Step 1: Fetch Meal Plan data
         const mealPlanData = await mealPlanService.getMealPlanById(mealPlanId);
         if (!isMounted) return;
 
@@ -48,13 +47,13 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
         }
         setMealPlan(mealPlanData.data);
 
-        // Kiểm tra userId từ Meal Plan
+        // Check userId from Meal Plan
         const userId = mealPlanData.data.userId;
         if (!userId) {
           throw new Error("User ID not found in Meal Plan data");
         }
 
-        // Bước 2: Lấy thông tin User bằng userId
+        // Step 2: Fetch User data by userId
         const userData = await UserService.getUserById(userId);
         console.log("USDDD", userData);
 
@@ -64,30 +63,26 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
           throw new Error(userData.message || "Unable to fetch User data");
         }
 
-        // Kiểm tra userPreferenceId từ User
-        const userPreferenceId = userData.user.userPreferenceId._id;
-        if (!userPreferenceId) {
+        // Step 3: Check userPreferenceId
+        const userPreferenceData = userData?.user?.userPreferenceId;
+        if (!userPreferenceData) {
           setNeedsSurvey(true);
-          throw new Error("User Preference ID not found in User data");
+          setLoading(false); // Stop loading here
+          return; // Exit early, no need to throw an error
         }
 
-        // Bước 3: Lấy User Preference bằng userPreferenceId
-        const preferenceData = await quizService.getUserPreferenceByUserPreferenceId(
-          userPreferenceId
-        );
-        if (!isMounted) return;
-
-        if (!preferenceData.success || !preferenceData.data) {
+        // Step 4: Use the populated userPreference data directly
+        if (userPreferenceData.isDelete) {
           setNeedsSurvey(true);
         } else {
-          setUserPreference(preferenceData.data);
+          setUserPreference(userPreferenceData);
           setNeedsSurvey(false);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
         setError(error.message || "An error occurred while fetching data");
       } finally {
-        setLoading(false);
+        if (!needsSurvey) setLoading(false); // Only stop loading if survey isn't needed
       }
     };
 
@@ -157,7 +152,7 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
   }, []);
 
   useEffect(() => {
-    if (!userPreference || !mealPlan || calculationComplete) return;
+    if (!userPreference || !mealPlan || calculationComplete || needsSurvey) return;
 
     const targets = calculateNutritionTargets(userPreference);
     if (!targets) {
@@ -179,6 +174,7 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
     calculateNutritionTargets,
     onNutritionTargetsCalculated,
     calculationComplete,
+    needsSurvey,
   ]);
 
   const chartData = useMemo(() => {
