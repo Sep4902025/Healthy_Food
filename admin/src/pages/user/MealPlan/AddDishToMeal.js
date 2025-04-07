@@ -1,91 +1,14 @@
-import React, { useEffect, useState, useCallback, useRef, memo } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import mealPlanService from "../../../services/mealPlanServices";
 import homeService from "../../../services/home.service";
 import Pagination from "../../../components/Pagination";
 import debounce from "lodash/debounce";
 
-// Component con để hiển thị danh sách dishes, được memoized để tránh re-render không cần thiết
-const DishList = memo(({ dishes, selectedDish, isAdding, isDishAlreadyAdded, isFavorite, onSelectDish }) => {
-  return (
-    <div
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-      style={{
-        gridTemplateRows: "repeat(2, minmax(0, 1fr))", // Cố định 2 hàng
-        minHeight: "calc(2 * (10rem + 2rem))", // Chiều cao của 2 hàng (10rem cho mỗi món + padding/margin)
-      }}
-    >
-      {dishes.map((dish) => {
-        const isAlreadyAdded = isDishAlreadyAdded(dish);
-        const dishFavorite = isFavorite(dish._id);
-
-        return (
-          <div
-            key={dish._id}
-            className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${
-              selectedDish?._id === dish._id
-                ? "border-custom-green border-2"
-                : "border-gray-200"
-            } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
-            onClick={() => !isAdding && !isAlreadyAdded && onSelectDish(dish)}
-          >
-            <div className="relative h-40 bg-gray-200">
-              {dish.imageUrl ? (
-                <img
-                  src={dish.imageUrl}
-                  alt={dish.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
-                  <span>No image</span>
-                </div>
-              )}
-              {dishFavorite && (
-                <span className="absolute top-2 right-2 text-yellow-500 text-xl">⭐</span>
-              )}
-              {isAlreadyAdded && (
-                <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-                  <span className="text-white font-semibold">Added</span>
-                </div>
-              )}
-              {selectedDish?._id === dish._id && !isAlreadyAdded && (
-                <div className="absolute inset-0 bg-black bg-opacity-20" />
-              )}
-            </div>
-            <div className="p-3">
-              <div className="flex justify-between items-start">
-                <h3 className="font-medium text-gray-800">{dish.name}</h3>
-                <span className="text-sm font-bold text-blue-600">
-                  {(dish.calories / (dish.totalServing || 1)).toFixed(2)} kcal
-                </span>
-              </div>
-              <div className="mt-1 text-xs text-gray-500">
-                Serves: {dish.totalServing || 1}
-              </div>
-              <div className="mt-2 flex justify-between text-xs text-gray-600">
-                <span className="inline-block bg-red-100 rounded-full px-2 py-1">
-                  Pro: {(dish.protein / (dish.totalServing || 1)).toFixed(2)}g
-                </span>
-                <span className="inline-block bg-green-100 rounded-full px-2 py-1">
-                  Carbs: {(dish.carbs / (dish.totalServing || 1)).toFixed(2)}g
-                </span>
-                <span className="inline-block bg-yellow-100 rounded-full px-2 py-1">
-                  Fat: {(dish.fat / (dish.totalServing || 1)).toFixed(2)}g
-                </span>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-});
-
 const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, userId }) => {
   const [dishes, setDishes] = useState([]);
   const [displayedDishes, setDisplayedDishes] = useState([]);
   const [selectedDish, setSelectedDish] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [existingDishes, setExistingDishes] = useState([]);
@@ -94,7 +17,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const [dishTypes, setDishTypes] = useState([]);
   const [selectedType, setSelectedType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0); // Start from 0
   const [limit, setLimit] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -104,7 +27,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     try {
       setLoading(true);
       const [dishesResponse, mealResponse, favoritesResponse] = await Promise.all([
-        mealPlanService.getAllDishes(currentPage + 1, limit, query),
+        mealPlanService.getAllDishes(currentPage + 1, limit, query), // +1 because API uses 1-based indexing
         mealPlanService.getMealByMealId(mealPlanId, mealDayId, mealId),
         homeService.getFavoriteDishes(userId),
       ]);
@@ -114,9 +37,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
         setDishes(newDishes);
         setTotalItems(dishesResponse.data.total || 0);
         const types = [
-          ...new Set(
-            dishesResponse.data.items.filter((dish) => dish.type).map((dish) => dish.type)
-          ),
+          ...new Set(newDishes.filter((dish) => dish.type).map((dish) => dish.type)),
         ];
         setDishTypes(types);
       } else {
@@ -147,19 +68,19 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   );
 
   useEffect(() => {
-    fetchAllData("");
+    fetchAllData(""); // Initial fetch with empty query
   }, [fetchAllData]);
 
   useEffect(() => {
     debouncedFetch(searchQuery);
     return () => {
-      debouncedFetch.cancel();
+      debouncedFetch.cancel(); // Cleanup debounce on unmount
     };
   }, [searchQuery, debouncedFetch]);
 
   useEffect(() => {
     if (!loading && searchInputRef.current) {
-      searchInputRef.current.focus();
+      searchInputRef.current.focus(); // Focus search input after loading
     }
   }, [loading]);
 
@@ -216,13 +137,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
         totalServing: servingSize,
       };
 
-      const response = await mealPlanService.addDishToMeal(
-        mealPlanId,
-        mealDayId,
-        mealId,
-        newDish,
-        userId
-      );
+      const response = await mealPlanService.addDishToMeal(mealPlanId, mealDayId, mealId, newDish);
       if (response.success) {
         onDishAdded();
         onClose();
@@ -232,7 +147,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
       }
     } catch (error) {
       console.error("❌ Error adding dish:", error);
-      setError("Could not add dish");
+      setError("Failed to add dish");
       setIsAdding(false);
     }
   };
@@ -240,6 +155,19 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const handlePageClick = ({ selected }) => {
     setCurrentPage(selected);
   };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <p className="ml-4">Loading dishes...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -342,21 +270,73 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
         {/* Dishes display */}
         <div className="flex-grow overflow-y-auto">
           {displayedDishes.length > 0 ? (
-            <DishList
-              dishes={displayedDishes}
-              selectedDish={selectedDish}
-              isAdding={isAdding}
-              isDishAlreadyAdded={isDishAlreadyAdded}
-              isFavorite={isFavorite}
-              onSelectDish={setSelectedDish}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {displayedDishes.map((dish) => {
+                const isAlreadyAdded = isDishAlreadyAdded(dish);
+                const dishFavorite = isFavorite(dish._id);
+
+                return (
+                  <div
+                    key={dish._id}
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${
+                      selectedDish?._id === dish._id
+                        ? "border-custom-green border-2"
+                        : "border-gray-200"
+                    } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={() => !isAdding && !isAlreadyAdded && setSelectedDish(dish)}
+                  >
+                    <div className="relative h-40 bg-gray-200">
+                      {dish.imageUrl ? (
+                        <img
+                          src={dish.imageUrl}
+                          alt={dish.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
+                          <span>No image</span>
+                        </div>
+                      )}
+                      {dishFavorite && (
+                        <span className="absolute top-2 right-2 text-yellow-500 text-xl">⭐</span>
+                      )}
+                      {isAlreadyAdded && (
+                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                          <span className="text-white font-semibold">Added</span>
+                        </div>
+                      )}
+                      {selectedDish?._id === dish._id && !isAlreadyAdded && (
+                        <div className="absolute inset-0 bg-black bg-opacity-20" />
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-medium text-gray-800">{dish.name}</h3>
+                        <span className="text-sm font-bold text-blue-600">
+                          {(dish.calories / (dish.totalServing || 1)).toFixed(2)} kcal
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        Serves: {dish.totalServing || 1}
+                      </div>
+                      <div className="mt-2 flex justify-between text-xs text-gray-600">
+                        <span className="inline-block bg-red-100 rounded-full px-2 py-1">
+                          Pro: {(dish.protein / (dish.totalServing || 1)).toFixed(2)}g
+                        </span>
+                        <span className="inline-block bg-green-100 rounded-full px-2 py-1">
+                          Carbs: {(dish.carbs / (dish.totalServing || 1)).toFixed(2)}g
+                        </span>
+                        <span className="inline-block bg-yellow-100 rounded-full px-2 py-1">
+                          Fat: {(dish.fat / (dish.totalServing || 1)).toFixed(2)}g
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
-            <div
-              className="flex flex-col items-center justify-center"
-              style={{
-                minHeight: "calc(2 * (10rem + 2rem))", // Đồng bộ chiều cao với 2 hàng
-              }}
-            >
+            <div className="flex flex-col items-center justify-center h-64">
               <svg
                 className="w-16 h-16 text-gray-400"
                 fill="none"

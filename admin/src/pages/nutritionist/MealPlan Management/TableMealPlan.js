@@ -13,93 +13,80 @@ const TableMealPlan = () => {
   const [mealPlans, setMealPlans] = useState([]);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(0); // 0-based for ReactPaginate
-  const [limit, setLimit] = useState(6); // Default limit
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit, setLimit] = useState(6); // Khớp với giao diện (6 bản ghi/trang)
   const [totalItems, setTotalItems] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Fetch meal plans
-  const fetchMealPlans = async (callback) => {
+  const fetchMealPlans = async () => {
     setIsTransitioning(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(currentPage + 1, limit); // +1 for 1-based API
-      console.log("Fetch Meal Plans Response:", response);
+      const apiPage = currentPage + 1; // Convert to 1-based for API
+      console.log("Fetching page:", apiPage, "with limit:", limit);
+      const response = await mealPlanService.getAllMealPlans(apiPage, limit);
+      console.log("API Response:", response);
+
       if (response.success) {
-        const data = response.data || [];
-        // Fallback: Use data.length if total is 0 or missing
-        const total = response.total || response.data?.total || data.length;
-        console.log("Extracted Data:", data, "Total:", total);
-
-        // Manually slice the data to enforce pagination
-        const startIndex = currentPage * limit;
-        const paginatedData = data.slice(startIndex, startIndex + limit);
-
-        setMealPlans(paginatedData);
-        setTotalItems(total);
-        if (callback) callback(response);
+        const mealPlanData = Array.isArray(response.data) ? response.data : [];
+        setMealPlans(mealPlanData);
+        setTotalItems(response.total || mealPlanData.length); // Đảm bảo totalItems đúng
+        setTotalPages(
+          response.totalPages || Math.ceil((response.total || mealPlanData.length) / limit)
+        );
       } else {
         setError(response.message || "Failed to fetch meal plans");
         setMealPlans([]);
+        setTotalPages(1);
         setTotalItems(0);
       }
     } catch (err) {
-      setError("Lỗi không xác định khi tải dữ liệu");
+      console.error("Fetch error:", err);
+      setError("An unexpected error occurred while loading meal plans");
       setMealPlans([]);
+      setTotalPages(1);
       setTotalItems(0);
-      console.error("❌ Fetch Error:", err);
     } finally {
       setIsTransitioning(false);
     }
   };
 
   useEffect(() => {
-    console.log("Fetching meal plans with page:", currentPage, "limit:", limit);
-    fetchMealPlans((result) => {
-      const newTotalPages = Math.ceil(totalItems / limit) || 1;
-      console.log("New Total Pages:", newTotalPages);
-      if (currentPage >= newTotalPages) {
-        setCurrentPage(newTotalPages - 1 >= 0 ? newTotalPages - 1 : 0);
-      }
-    });
+    fetchMealPlans();
   }, [currentPage, limit]);
 
-  // Handle page change
   const handlePageClick = ({ selected }) => {
-    console.log("Changing to page:", selected);
     setCurrentPage(selected);
   };
 
-  // Handle edit
   const handleEdit = (id) => {
     navigate(`/nutritionist/mealplan/edit/${id}`);
   };
 
-  // Handle delete
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this meal plan?")) {
       try {
         const response = await mealPlanService.deleteMealPlan(id);
         if (response.success) {
-          fetchMealPlans((result) => {
-            const totalItems = result.total || result.data?.total || result.data.length;
-            const newTotalPages = Math.ceil(totalItems / limit) || 1;
-            console.log("After Delete - Total Items:", totalItems, "New Total Pages:", newTotalPages);
-            if (result.data.length === 0 && currentPage > 0) {
-              setCurrentPage(currentPage - 1);
-            } else if (currentPage >= newTotalPages) {
-              setCurrentPage(newTotalPages - 1 >= 0 ? newTotalPages - 1 : 0);
-            }
-          });
+          const totalItemsAfterDelete = totalItems - 1;
+          const newTotalPages = Math.ceil(totalItemsAfterDelete / limit) || 1;
+          if (mealPlans.length === 1 && currentPage > 0) {
+            setCurrentPage(currentPage - 1);
+          } else if (currentPage >= newTotalPages) {
+            setCurrentPage(newTotalPages - 1);
+          } else {
+            fetchMealPlans();
+          }
+          setTotalItems(totalItemsAfterDelete);
+          setTotalPages(newTotalPages);
         } else {
-          alert("Failed to delete meal plan: " + response.message);
+          alert("Failed to delete meal plan");
         }
       } catch (error) {
         alert("Error deleting meal plan");
-        console.error("❌ Delete Error:", error);
       }
     }
   };
 
-  // Format date
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -108,7 +95,6 @@ const TableMealPlan = () => {
     });
   };
 
-  // Check if meal plan is expired
   const isExpired = (startDate, duration) => {
     const start = new Date(startDate);
     const end = new Date(start);
@@ -132,12 +118,8 @@ const TableMealPlan = () => {
     );
   }
 
-  console.log("Current Page in Render:", currentPage, "Total Items:", totalItems, "Limit:", limit);
-  console.log("Calculated Page Count:", Math.ceil(totalItems / limit));
-
   return (
     <div className="container mx-auto px-6 py-8">
-      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">Meal Plans</h1>
         <button
@@ -148,10 +130,8 @@ const TableMealPlan = () => {
         </button>
       </div>
 
-      {/* Data Container */}
       <Loading isLoading={isTransitioning}>
         <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
-          {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
             <div className="col-span-1">No.</div>
             <div className="col-span-2">Title</div>
@@ -164,7 +144,6 @@ const TableMealPlan = () => {
             <div className="col-span-2 text-center">Actions</div>
           </div>
 
-          {/* Table Body */}
           <div className="divide-y divide-gray-200">
             {mealPlans.length > 0 ? (
               mealPlans.map((mealPlan, index) => {
@@ -172,7 +151,9 @@ const TableMealPlan = () => {
                 return (
                   <div
                     key={mealPlan._id}
-                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300"
+                    className={`grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300 ${
+                      isTransitioning ? "opacity-0" : "opacity-100"
+                    }`}
                   >
                     <div className="col-span-1 text-gray-600 font-medium">
                       {currentPage * limit + index + 1}
@@ -247,16 +228,11 @@ const TableMealPlan = () => {
             )}
           </div>
 
-          {/* Pagination */}
           {totalItems > 0 && (
             <div className="p-4 bg-gray-50">
               <Pagination
-                key={`${currentPage}-${totalItems}`} // Force re-render when currentPage or totalItems changes
                 limit={limit}
-                setLimit={(newLimit) => {
-                  setLimit(newLimit);
-                  setCurrentPage(0); // Reset to first page when limit changes
-                }}
+                setLimit={setLimit}
                 totalItems={totalItems}
                 handlePageClick={handlePageClick}
                 currentPage={currentPage}
