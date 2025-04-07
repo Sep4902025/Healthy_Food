@@ -21,15 +21,17 @@ exports.getAllIngredients = async (query, token) => {
     sort = "createdAt",
     order = "desc",
   } = query;
-  let filter = { isDelete: false, isVisible: true };
+  let filter = { isDelete: false, isVisible: true }; // Default filter for all roles except nutritionist
 
   if (token) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
       const user = await UserModel.findById(decoded.id);
-      if (user && (user.role === "admin" || user.role === "nutritionist")) {
-        filter = {};
+      
+      if (user && user.role === "nutritionist") {
+        filter = { isDelete: false }; // Only for nutritionist
       }
+      // No else needed, default filter already set for other roles
     } catch (error) {
       console.error("Invalid token:", error.message);
     }
@@ -72,8 +74,13 @@ exports.updateIngredient = async (ingredientId, data) => {
 };
 
 exports.deleteIngredient = async (ingredientId) => {
-  const deletedIngredient = await Ingredients.findByIdAndDelete(ingredientId);
-  if (!deletedIngredient) throw Object.assign(new Error("Ingredient not found"), { status: 404 });
+  const updatedIngredient = await Ingredients.findByIdAndUpdate(
+    ingredientId,
+    { isDelete: true },
+    { new: true }
+  );
+  if (!updatedIngredient) throw Object.assign(new Error("Ingredient not found"), { status: 404 });
+  return updatedIngredient;
 };
 
 exports.hideIngredient = async (ingredientId) => {

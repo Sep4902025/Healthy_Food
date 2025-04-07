@@ -91,29 +91,19 @@ const ingredientsService = {
   deleteIngredient: async (id) => {
     try {
       console.log(`🗑 Xóa mềm nguyên liệu ID: ${id}`);
-      await axios.delete(`${API_URL}/ingredients/${id}`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
-      return { success: true };
+      const response = await axios.put(
+        `${API_URL}/ingredients/${id}`,
+        { isDelete: true }, // Gửi dữ liệu để cập nhật isDelete
+        {
+          headers: getAuthHeaders(),
+          withCredentials: true,
+        }
+      );
+      console.log("✅ Phản hồi từ server:", response.data);
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("❌ Lỗi khi xóa mềm nguyên liệu:", error.response?.data || error.message);
       return { success: false, message: "Xóa mềm nguyên liệu thất bại!" };
-    }
-  },
-
-  // 🔹 Xóa vĩnh viễn nguyên liệu
-  hardDeleteIngredient: async (id) => {
-    try {
-      console.log(`🗑 Xóa vĩnh viễn nguyên liệu ID: ${id}`);
-      await axios.delete(`${API_URL}/ingredients/${id}`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
-      return { success: true };
-    } catch (error) {
-      console.error("❌ Lỗi khi xóa vĩnh viễn nguyên liệu:", error.response?.data || error.message);
-      return { success: false, message: "Xóa vĩnh viễn nguyên liệu thất bại!" };
     }
   },
 };

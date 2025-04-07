@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import UploadComponent from "../../../components/UploadComponent";
 import dishesService from "../../../services/nutritionist/dishesServices";
@@ -9,7 +9,6 @@ import {
   Video,
   EditIcon,
   TrashIcon,
-  Image,
   EyeOffIcon,
   EyeIcon,
 } from "lucide-react";
@@ -17,10 +16,108 @@ import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
 import uploadFile from "../../../helpers/uploadFile";
 import imageCompression from "browser-image-compression";
+import { toast } from "react-toastify";
 
 const FLAVOR_OPTIONS = ["Sweet", "Sour", "Salty", "Bitter", "Fatty"];
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
 const SEASON_OPTIONS = ["All Season", "Spring", "Summer", "Fall", "Winter"];
+
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
+
+// Component riêng cho ô tìm kiếm
+const SearchInput = memo(({ value, onChange }) => {
+  return (
+    <input
+      type="text"
+      placeholder="Search by dish name"
+      className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+      value={value}
+      onChange={onChange}
+    />
+  );
+});
+
+// Component riêng cho danh sách món ăn
+const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVisibility }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    {dishes.length > 0 ? (
+      dishes.map((dish) => (
+        <div
+          key={dish._id}
+          className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
+        >
+          <img
+            src={dish.imageUrl || "https://via.placeholder.com/300"}
+            alt={dish.name}
+            className="w-full h-48 object-cover"
+          />
+          <div className="p-4">
+            <h3 className="text-lg font-semibold text-center text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap w-full">
+              {dish.name}
+            </h3>
+            <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
+              <span className="mr-3 flex items-center">
+                <Clock className="w-4 h-4 mr-1" />
+                {dish.cookingTime || "N/A"} mins
+              </span>
+              <span className="flex items-center">
+                <Utensils className="w-4 h-4 mr-1" />
+                {ingredientCounts[dish._id] || 0} ingredients
+              </span>
+            </div>
+          </div>
+          <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
+            <button
+              onClick={() => window.open(dish.videoUrl, "_blank")}
+              className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
+            >
+              <Video className="w-4 h-4 mr-1" />
+              Watch Video
+            </button>
+            <div className="h-4 border-l border-gray-300 mx-2"></div>
+            <button
+              onClick={() => onEdit(dish)}
+              className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
+            >
+              <EditIcon className="w-4 h-4 mr-1" />
+              Edit
+            </button>
+            <div className="h-4 border-l border-gray-300 mx-2"></div>
+            <button
+              onClick={() => onDelete(dish._id)}
+              className="text-red-500 flex items-center px-2 py-1 hover:text-red-600 transition"
+            >
+              <TrashIcon className="w-4 h-4 mr-1" />
+              Delete
+            </button>
+          </div>
+          <button
+            onClick={() => onToggleVisibility(dish)}
+            className={`absolute top-2 right-2 p-2 rounded-md text-white ${
+              dish.isVisible
+                ? "bg-gray-500 hover:bg-gray-600"
+                : "bg-[#40B491] hover:bg-[#359c7a]"
+            } transition duration-200`}
+          >
+            {dish.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+          </button>
+        </div>
+      ))
+    ) : (
+      <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+        <Utensils className="w-24 h-24 text-gray-400 mb-4" />
+        <p className="text-lg font-semibold">No dishes</p>
+        <p className="text-sm">Looks like you haven't added any dishes yet.</p>
+      </div>
+    )}
+  </div>
+));
 
 const TableDishes = () => {
   const navigate = useNavigate();
@@ -40,25 +137,22 @@ const TableDishes = () => {
     type: "",
     season: "",
     imageFile: null,
-    imageUrl: "", // This will be empty unless the user enters a URL
+    imageUrl: "",
   });
   const [errors, setErrors] = useState({});
   const [filterType, setFilterType] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [ingredientCounts, setIngredientCounts] = useState({});
   const [loadingIngredients, setLoadingIngredients] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
   const [isValidImageUrl, setIsValidImageUrl] = useState(false);
 
-  useEffect(() => {
-    fetchDishes();
-  }, [currentPage, itemsPerPage, filterType, searchTerm]);
-
   const fetchDishes = async () => {
-    setIsLoading(true);
     try {
-      const response = await dishesService.getAllDishes(currentPage + 1, itemsPerPage, searchTerm);
+      const response = await dishesService.getAllDishesForNutri(currentPage + 1, itemsPerPage, searchTerm);
+      console.log("APIIIIIIIII",response);
       if (response.success) {
         const filteredByType =
           filterType === "all"
@@ -76,10 +170,20 @@ const TableDishes = () => {
       setDishes([]);
       setTotalItems(0);
       setTotalPages(1);
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  const debouncedSearch = useCallback(
+    debounce((value) => {
+      setSearchTerm(value);
+      setCurrentPage(0);
+    }, 500),
+    []
+  );
+
+  useEffect(() => {
+    fetchDishes();
+  }, [currentPage, itemsPerPage, filterType, searchTerm]);
 
   const fetchIngredientCounts = useCallback(async () => {
     if (dishes.length === 0) return;
@@ -116,6 +220,12 @@ const TableDishes = () => {
     fetchIngredientCounts();
   }, [fetchIngredientCounts]);
 
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setInputValue(value);
+    debouncedSearch(value);
+  };
+
   const handleEditClick = (dish) => {
     let flavorArray = [];
     if (Array.isArray(dish.flavor)) {
@@ -131,17 +241,17 @@ const TableDishes = () => {
     } else if (typeof dish.flavor === "string" && dish.flavor) {
       flavorArray = dish.flavor.split(",").map((f) => f.trim());
     }
-  
+
     const validFlavors = flavorArray.filter((flavor) => FLAVOR_OPTIONS.includes(flavor));
-  
+
     setEditData({
       ...dish,
       id: dish._id,
       flavor: validFlavors,
       imageFile: null,
-      imageUrl: "", // Keep this empty unless the user enters a URL
+      imageUrl: "",
     });
-    setImagePreview(dish.imageUrl || ""); // Show the existing image in the preview
+    setImagePreview(dish.imageUrl || "");
     setIsValidImageUrl(!!dish.imageUrl);
     setErrors({});
     setIsEditModalOpen(true);
@@ -173,11 +283,13 @@ const TableDishes = () => {
 
   const handleSaveEdit = async () => {
     if (!validateForm()) {
-      alert("Please fill in all required fields correctly!");
+      toast.error("Please fill in all required fields correctly!");
       return;
     }
 
-    let imageUrl = editData.imageUrl || imagePreview; // Use existing imagePreview if no new file or URL
+    setIsSaving(true);
+
+    let imageUrl = editData.imageUrl || imagePreview;
     if (editData.imageFile) {
       try {
         const compressedFile = await compressImage(editData.imageFile);
@@ -186,7 +298,8 @@ const TableDishes = () => {
         });
         imageUrl = uploadedImage.secure_url;
       } catch (error) {
-        alert("Image upload failed!");
+        setIsSaving(false);
+        toast.error("Image upload failed!");
         console.error("Upload error:", error);
         return;
       }
@@ -198,27 +311,29 @@ const TableDishes = () => {
       flavor: editData.flavor.join(", "),
     };
     const response = await dishesService.updateDish(editData.id, updatedData);
+    setIsSaving(false);
+
     if (response.success) {
-      alert(`Dish "${editData.name}" has been saved!`);
+      toast.success(`Dish "${editData.name}" has been saved!`);
       setIsEditModalOpen(false);
       fetchDishes();
       setIngredientCounts({});
     } else {
-      alert("Failed to save dish. Please try again.");
+      toast.error("Failed to save dish. Please try again.");
     }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this dish?")) {
-      const response = await dishesService.hardDeleteDish(id);
+      const response = await dishesService.deleteDish(id);
       if (response.success) {
-        alert("Deleted successfully!");
+        toast.success("Deleted successfully!");
         fetchDishes();
         if (dishes.length === 1 && currentPage > 0) {
           setCurrentPage(currentPage - 1);
         }
       } else {
-        alert("Failed to delete dish. Please try again.");
+        toast.error("Failed to delete dish. Please try again.");
       }
     }
   };
@@ -229,7 +344,7 @@ const TableDishes = () => {
       await dishesService.updateDish(dish._id, { isVisible: !dish.isVisible });
       setDishes((prevDishes) => prevDishes.map((d) => (d._id === dish._id ? updatedDish : d)));
     } catch (error) {
-      alert("Failed to update visibility. Please try again.");
+      toast.error("Failed to update visibility. Please try again.");
     }
   };
 
@@ -251,31 +366,32 @@ const TableDishes = () => {
     setErrors({ ...errors, flavor: "" });
   };
 
-const handleFileSelect = (file) => {
-  if (file) {
-    const previewUrl = URL.createObjectURL(file);
-    setImagePreview(previewUrl);
-    setIsValidImageUrl(true);
-    setEditData({ ...editData, imageFile: file, imageUrl: "" });
-  } else {
-    setImagePreview(editData.imageUrl || ""); // Revert to the original imageUrl if no file is selected
-    setIsValidImageUrl(!!editData.imageUrl);
-    setEditData({ ...editData, imageFile: null });
-  }
-  setErrors({ ...errors, imageUrl: "" });
-};
-const handleImageUrlChange = (e) => {
-  const url = e.target.value;
-  setEditData({ ...editData, imageUrl: url, imageFile: null });
-  setErrors({ ...errors, imageUrl: "" });
+  const handleFileSelect = (file) => {
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      setIsValidImageUrl(true);
+      setEditData({ ...editData, imageFile: file, imageUrl: "" });
+    } else {
+      setImagePreview(editData.imageUrl || "");
+      setIsValidImageUrl(!!editData.imageUrl);
+      setEditData({ ...editData, imageFile: null });
+    }
+    setErrors({ ...errors, imageUrl: "" });
+  };
 
-  if (url) {
-    checkImageUrl(url);
-  } else {
-    setImagePreview("");
-    setIsValidImageUrl(false);
-  }
-};
+  const handleImageUrlChange = (e) => {
+    const url = e.target.value;
+    setEditData({ ...editData, imageUrl: url, imageFile: null });
+    setErrors({ ...errors, imageUrl: "" });
+
+    if (url) {
+      checkImageUrl(url);
+    } else {
+      setImagePreview("");
+      setIsValidImageUrl(false);
+    }
+  };
 
   const checkImageUrl = (url) => {
     const img = new Image();
@@ -349,7 +465,6 @@ const handleImageUrlChange = (e) => {
 
   return (
     <div className="container mx-auto px-6 py-8">
-      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">List of Dishes</h2>
         <button
@@ -360,7 +475,6 @@ const handleImageUrlChange = (e) => {
         </button>
       </div>
 
-      {/* Filters and Search */}
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex flex-wrap gap-2">
           <button
@@ -394,103 +508,23 @@ const handleImageUrlChange = (e) => {
           ))}
         </div>
         <div className="flex items-center">
-          <input
-            type="text"
-            placeholder="Search by dish name"
-            className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(0);
-            }}
-          />
+          <SearchInput value={inputValue} onChange={handleInputChange} />
         </div>
       </div>
 
-      {/* Dishes Grid */}
-      <Loading isLoading={isLoading || loadingIngredients}>
+      <Loading isLoading={loadingIngredients}>
         <div className="min-h-[calc(100vh-200px)]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {dishes.length > 0 ? (
-              dishes.map((dish) => (
-                <div
-                  key={dish._id}
-                  className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
-                >
-                  <img
-                    src={dish.imageUrl || "https://via.placeholder.com/300"}
-                    alt={dish.name}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center text-gray-800">{dish.name}</h3>
-                    <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
-                      <span className="mr-3 flex items-center">
-                        <Clock className="w-4 h-4 mr-1" />
-                        {dish.cookingTime || "N/A"} mins
-                      </span>
-                      <span className="flex items-center">
-                        <Utensils className="w-4 h-4 mr-1" />
-                        {ingredientCounts[dish._id] || 0} ingredients
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
-                    <button
-                      onClick={() => window.open(dish.videoUrl, "_blank")}
-                      className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
-                    >
-                      <Video className="w-4 h-4 mr-1" />
-                      Watch Video
-                    </button>
-                    <div className="h-4 border-l border-gray-300 mx-2"></div>
-                    <button
-                      onClick={() => handleEditClick(dish)}
-                      className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
-                    >
-                      <EditIcon className="w-4 h-4 mr-1" />
-                      Edit
-                    </button>
-                    <div className="h-4 border-l border-gray-300 mx-2"></div>
-                    <button
-                      onClick={() => handleDelete(dish._id)}
-                      className="text-red-500 flex items-center px-2 py-1 hover:text-red-600 transition"
-                    >
-                      <TrashIcon className="w-4 h-4 mr-1" />
-                      Delete
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => handleToggleVisibility(dish)}
-                    className={`absolute top-2 right-2 p-2 rounded-md text-white ${
-                      dish.isVisible
-                        ? "bg-gray-500 hover:bg-gray-600"
-                        : "bg-[#40B491] hover:bg-[#359c7a]"
-                    } transition duration-200`}
-                  >
-                    {dish.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-                  </button>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
-                <Utensils className="w-24 h-24 text-gray-400 mb-4" />
-                <p className="text-lg font-semibold">No dishes</p>
-                <p className="text-sm">Looks like you haven't added any dishes yet.</p>
-                <button
-                  onClick={() => navigate("/nutritionist/dishes/add")}
-                  className="mt-4 px-6 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition duration-200"
-                >
-                  + Add Dish
-                </button>
-              </div>
-            )}
-          </div>
+          <DishList
+            dishes={dishes}
+            ingredientCounts={ingredientCounts}
+            onEdit={handleEditClick}
+            onDelete={handleDelete}
+            onToggleVisibility={handleToggleVisibility}
+          />
         </div>
       </Loading>
 
-      {/* Pagination */}
-      {totalItems > 0 && !isLoading && !loadingIngredients && (
+      {totalItems > 0 && !loadingIngredients && (
         <div className="p-4 bg-gray-50">
           <Pagination
             limit={itemsPerPage}
@@ -503,18 +537,26 @@ const handleImageUrlChange = (e) => {
         </div>
       )}
 
-      {/* Edit Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          {isSaving && (
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
+              <div className="loader"></div>
+              <p className="mt-4 text-white text-lg">Saving...</p>
+            </div>
+          )}
           <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center mb-6">
               <h2 className="text-2xl font-bold text-[#40B491]">Edit Dish</h2>
               <div className="ml-auto flex space-x-3">
                 <button
                   onClick={handleSaveEdit}
-                  className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                  disabled={isSaving}
+                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                    isSaving ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
-                  Save
+                  {isSaving ? "Saving..." : "Save"}
                 </button>
                 <button
                   onClick={closeEditModal}

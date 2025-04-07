@@ -53,8 +53,12 @@ exports.updateIngredient = async (req, res) => {
 
 exports.deleteIngredient = async (req, res) => {
   try {
-    await ingredientService.deleteIngredient(req.params.ingredientId);
-    res.status(200).json({ status: "success", message: "Ingredient permanently deleted" });
+    const updatedIngredient = await ingredientService.deleteIngredient(req.params.ingredientId);
+    res.status(200).json({
+      status: "success",
+      message: "Ingredient has been soft deleted",
+      data: updatedIngredient,
+    });
   } catch (error) {
     res.status(error.status || 500).json({ status: "fail", message: error.message });
   }

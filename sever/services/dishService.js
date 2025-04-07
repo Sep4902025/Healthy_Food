@@ -15,21 +15,33 @@ exports.createManyDishes = async (dishes) => {
   return await Dish.insertMany(dishes);
 };
 
-exports.getAllDishes = async (query, token) => {
+exports.getAllDishes = async (query) => {
   const { page = 1, limit = 10, search = "", sort = "createdAt", order = "desc" } = query;
-  let filter = { isDelete: false, isVisible: true };
+  let filter = { isDelete: false, isVisible: true }; // Default filter for all roles except nutritionist
 
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-      const user = await UserModel.findById(decoded.id);
-      if (user && (user.role === "admin" || user.role === "nutritionist")) {
-        filter = {};
-      }
-    } catch (error) {
-      console.error("Invalid token:", error.message);
-    }
-  }
+  if (search) filter.name = { $regex: search, $options: "i" };
+
+  const pageNum = parseInt(page, 10);
+  const limitNum = parseInt(limit, 10);
+  const skip = (pageNum - 1) * limitNum;
+  const sortOrder = order === "desc" ? -1 : 1;
+  const sortOptions = { [sort]: sortOrder };
+
+  const totalItems = await Dish.countDocuments(filter);
+  const dishes = await Dish.find(filter).sort(sortOptions).skip(skip).limit(limitNum).lean();
+
+  return {
+    items: dishes,
+    total: totalItems,
+    currentPage: pageNum,
+    totalPages: Math.ceil(totalItems / limitNum),
+  };
+};
+
+
+exports.getAllDishesForNutri = async (query) => {
+  const { page = 1, limit = 10, search = "", sort = "createdAt", order = "desc" } = query;
+  let filter = { isDelete: false }; // Filter for nutritionists
 
   if (search) filter.name = { $regex: search, $options: "i" };
 
@@ -83,9 +95,13 @@ exports.updateDish = async (dishId, data) => {
 };
 
 exports.deleteDish = async (dishId) => {
-  const deletedDish = await Dish.findByIdAndDelete(dishId);
-  if (!deletedDish) throw Object.assign(new Error("Dish not found"), { status: 404 });
-  if (deletedDish.recipeId) await Recipe.findByIdAndDelete(deletedDish.recipeId);
+  const updatedDish = await Dish.findByIdAndUpdate(
+    dishId,
+    { isDelete: true },
+    { new: true }
+  );
+  if (!updatedDish) throw Object.assign(new Error("Dish not found"), { status: 404 });
+  return updatedDish;
 };
 
 exports.hideDish = async (dishId) => {

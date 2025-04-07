@@ -1,3 +1,5 @@
+const jwt = require("jsonwebtoken");
+const UserModel = require("../models/UserModel");
 const dishService = require("../services/dishService");
 
 exports.createDish = async (req, res) => {
@@ -20,10 +22,29 @@ exports.createManyDishes = async (req, res) => {
 
 exports.getAllDishes = async (req, res) => {
   try {
-    const result = await dishService.getAllDishes(
-      req.query,
-      req.cookies.token || req.headers.authorization?.split(" ")[1]
-    );
+    const result = await dishService.getAllDishes(req.query);
+    res.status(200).json({ status: "success", data: result });
+  } catch (error) {
+    res.status(500).json({ status: "fail", message: error.message });
+  }
+};
+
+exports.getAllDishesForNutri = async (req, res) => {
+  try {
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ status: "fail", message: "Authentication token required" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const user = await UserModel.findById(decoded.id);
+
+    if (!user || user.role !== "nutritionist") {
+      return res.status(403).json({ status: "fail", message: "Access restricted to nutritionists only" });
+    }
+
+    const result = await dishService.getAllDishesForNutri(req.query);
     res.status(200).json({ status: "success", data: result });
   } catch (error) {
     res.status(500).json({ status: "fail", message: error.message });
@@ -57,10 +78,12 @@ exports.updateDish = async (req, res) => {
   }
 };
 
+const Dish = require("../models/Dish");
+
 exports.deleteDish = async (req, res) => {
   try {
-    await dishService.deleteDish(req.params.dishId);
-    res.status(200).json({ status: "success", message: "Dish permanently deleted" });
+    const updatedDish = await dishService.deleteDish(req.params.dishId);
+    res.status(200).json({ status: "success", message: "Dish has been soft deleted", data: updatedDish });
   } catch (error) {
     res.status(error.status || 500).json({ status: "fail", message: error.message });
   }

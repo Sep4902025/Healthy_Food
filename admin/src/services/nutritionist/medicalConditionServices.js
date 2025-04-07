@@ -55,6 +55,12 @@ const medicalConditionService = {
         withCredentials: true,
       });
       console.log(`📌 Medical condition ID ${id}:`, response.data);
+      if (response.data.data?.isDelete === true) {
+        return {
+          success: false,
+          message: "Medical condition has been soft deleted!",
+        };
+      }
       return {
         success: true,
         data: response.data.data,
@@ -140,17 +146,18 @@ const medicalConditionService = {
   deleteMedicalCondition: async (id) => {
     try {
       console.log(`🗑 Soft deleting medical condition ID: ${id}`);
-      const response = await axios.delete(
+      const response = await axios.put(
         `${API_URL}/medicalConditions/${id}`,
+        { isDelete: true },
         {
           headers: getAuthHeaders(),
           withCredentials: true,
         }
       );
-      console.log("✅ Delete response:", response.data);
+      console.log("✅ Soft delete response:", response.data);
       return {
         success: true,
-        message: response.data.message,
+        message: response.data.message || "Medical condition has been soft deleted",
       };
     } catch (error) {
       console.error(
@@ -165,7 +172,7 @@ const medicalConditionService = {
       };
     }
   },
-
+  
   // 🔹 Tìm kiếm điều kiện y tế theo tên
   searchMedicalConditionByName: async (name, page = 1, limit = 10) => {
     try {

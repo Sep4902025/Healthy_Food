@@ -6,6 +6,7 @@ const {
   updateDish,
   getDishById,
   getAllDishes,
+  getAllDishesForNutri,
   deleteDish,
   getDishByType,
   createManyDishes,
@@ -14,6 +15,8 @@ const {
 
 // Routes cho Dish
 dishRouter.get("/", getAllDishes);
+dishRouter.get("/nutritionist", getAllDishesForNutri);
+
 dishRouter.post("/", isAuthenticated, isNutritionist, createDish);
 dishRouter.post("/multiple", isAuthenticated, isNutritionist, createManyDishes);
 dishRouter.put("/:dishId", isAuthenticated, isNutritionist, updateDish);

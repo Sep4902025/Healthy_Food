@@ -3,12 +3,16 @@ import dishesService from "../../../services/nutritionist/dishesServices";
 import UploadComponent from "../../../components/UploadComponent";
 import uploadFile from "../../../helpers/uploadFile";
 import imageCompression from "browser-image-compression";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+
 
 const FLAVOR_OPTIONS = ["Sweet", "Sour", "Salty", "Bitter", "Fatty"];
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
 const SEASON_OPTIONS = ["All Season", "Spring", "Summer", "Fall", "Winter"];
 
-const AddDishes = ({ onDishAdded = () => {} }) => {
+const AddDishes = ({ onDishAdded = () => { } }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -24,6 +28,7 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState("");
   const [isValidImageUrl, setIsValidImageUrl] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
@@ -139,9 +144,11 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      alert("Please fill in all required fields correctly!");
+      toast.error("Please fill in all required fields correctly!");
       return;
     }
+
+    setIsLoading(true);
 
     let imageUrl = formData.imageUrl;
     if (formData.imageFile) {
@@ -152,7 +159,8 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
         });
         imageUrl = uploadedImage.secure_url;
       } catch (error) {
-        alert("Image upload failed!");
+        setIsLoading(false);
+        toast.success("Image upload failed!");
         console.error("Upload error:", error);
         return;
       }
@@ -164,8 +172,10 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
       flavor: formData.flavor.join(", "),
     });
 
+    setIsLoading(false);
+
     if (response.success) {
-      alert("Dish added successfully!");
+      toast.success("Dish added successfully!");
       setFormData({
         name: "",
         description: "",
@@ -182,8 +192,9 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
       setImagePreview("");
       setIsValidImageUrl(false);
       onDishAdded();
+      navigate("/nutritionist/dishes");
     } else {
-      alert(response.message);
+      toast.success(response.message);
     }
   };
 
@@ -196,7 +207,14 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
   }, [imagePreview]);
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="container mx-auto px-6 py-8 relative">
+      {isLoading && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
+          <div className="loader"></div>
+          <p className="mt-4 text-white text-lg">Loading...</p>
+        </div>
+      )}
+
       <div className="flex items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
           Add New Dish
@@ -204,9 +222,11 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
         <div className="ml-auto">
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+            disabled={isLoading}
+            className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
           >
-            Save Dish
+            {isLoading ? "Saving..." : "Save Dish"}
           </button>
         </div>
       </div>
@@ -221,9 +241,8 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter dish name"
-              className={`w-full border ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
           </div>
@@ -242,9 +261,8 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                 placeholder="Cooking time"
                 min="1"
                 max="1440"
-                className={`w-full border ${
-                  errors.cookingTime ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${errors.cookingTime ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               />
               {errors.cookingTime && (
                 <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>
@@ -256,9 +274,8 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                className={`w-full border ${
-                  errors.type ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               >
                 <option value="">Select type</option>
                 {TYPE_OPTIONS.map((type) => (
@@ -279,9 +296,8 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
               value={formData.videoUrl}
               onChange={handleChange}
               placeholder="https://www.youtube.com/embed/video_id"
-              className={`w-full border ${
-                errors.videoUrl ? "border-red-500" : "border-gray-300"
-              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${errors.videoUrl ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             />
             {errors.videoUrl && <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>}
           </div>
@@ -292,9 +308,8 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
               name="season"
               value={formData.season}
               onChange={handleChange}
-              className={`w-full border ${
-                errors.season ? "border-red-500" : "border-gray-300"
-              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${errors.season ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             >
               <option value="">Select season</option>
               {SEASON_OPTIONS.map((season) => (
@@ -340,9 +355,8 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
                 value={formData.imageUrl}
                 onChange={handleImageUrlChange}
                 placeholder="Enter image URL"
-                className={`w-full border ${
-                  errors.imageUrl ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               />
               {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
             </div>
@@ -366,9 +380,8 @@ const AddDishes = ({ onDishAdded = () => {} }) => {
               value={formData.description}
               onChange={handleChange}
               placeholder="Enter description"
-              className={`w-full border ${
-                errors.description ? "border-red-500" : "border-gray-300"
-              } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             />
             {errors.description && (
               <p className="text-red-500 text-sm mt-1">{errors.description}</p>
