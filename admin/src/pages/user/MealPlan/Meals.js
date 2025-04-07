@@ -23,6 +23,8 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
   const [deletingDishId, setDeletingDishId] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [mealPlanType, setMealPlanType] = useState(null);
+  const [isMealPlanExpired, setIsMealPlanExpired] = useState(false); // New state
+  const [isMealPlanPaused, setIsMealPlanPaused] = useState(false); // New state
 
   // State cho ConfirmationDialog
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -44,7 +46,16 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
         ]);
 
         if (mealPlanResponse.success) {
-          setMealPlanType(mealPlanResponse.data.type);
+          const mealPlan = mealPlanResponse.data;
+          setMealPlanType(mealPlan.type);
+          setIsMealPlanPaused(mealPlan.isPause); // Set paused status
+
+          // Check if the meal plan is expired
+          const startDate = new Date(mealPlan.startDate);
+          const endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + mealPlan.duration);
+          const currentDate = new Date();
+          setIsMealPlanExpired(currentDate > endDate); // Set expired status
         }
 
         if (mealDayResponse.success) {
@@ -187,6 +198,7 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
   };
 
   const handleOpenAddDishModal = () => {
+    if (isMealPlanExpired || isMealPlanPaused) return; // Prevent opening if expired or paused
     setIsAddingDish(true);
     setShowAddDishModal(true);
   };
@@ -278,12 +290,23 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
               <p className="ml-7">{meal.dishes?.length || 0} dishes</p>
             </div>
             <button
-              className="text-red-500 hover:text-red-700 p-1"
+              className={`text-red-500 hover:text-red-700 p-1 ${
+                deletingMealId === meal._id || isMealPlanExpired || isMealPlanPaused
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer"
+              } transition-colors`} // Updated styling
               onClick={(e) => {
                 e.stopPropagation();
                 handleRemoveMealFromDay(meal._id);
               }}
-              disabled={deletingMealId === meal._id}
+              disabled={deletingMealId === meal._id || isMealPlanExpired || isMealPlanPaused}
+              title={
+                isMealPlanExpired
+                  ? "Cannot delete meal: Meal plan has expired"
+                  : isMealPlanPaused
+                  ? "Cannot delete meal: Meal plan is paused"
+                  : "Delete this meal"
+              }
             >
               {deletingMealId === meal._id ? (
                 <span className="text-gray-400">Deleting...</span>
@@ -295,8 +318,7 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
         </div>
       );
     });
-  }, [meals, deletingMealId]);
-
+  }, [meals, deletingMealId, isMealPlanExpired, isMealPlanPaused]);
   if (loading && meals.length === 0) {
     return <p className="text-center text-gray-500">Loading...</p>;
   }
@@ -304,6 +326,13 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
   if (error) {
     return <p className="text-center text-red-500">{error}</p>;
   }
+
+  // Determine the reason for disabling actions
+  const disableActionsReason = isMealPlanExpired
+    ? "Meal plan has expired"
+    : isMealPlanPaused
+    ? "Meal plan is paused"
+    : null;
 
   return (
     <div className="transition-all duration-300 ease-in-out h-full flex flex-col">
@@ -334,12 +363,23 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
               </button>
 
               {mealPlanType === "custom" && (
-                <button
-                  onClick={() => setShowAddMealModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                >
-                  Add Meal
-                </button>
+                <div className="relative">
+                  {(isMealPlanExpired || isMealPlanPaused) && (
+                    <span className="text-red-500 text-xs mr-2">{disableActionsReason}</span>
+                  )}
+                  <button
+                    onClick={() => setShowAddMealModal(true)}
+                    className={`bg-blue-600 text-white px-4 py-2 rounded ${
+                      isMealPlanExpired || isMealPlanPaused
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:bg-blue-700"
+                    }`}
+                    disabled={isMealPlanExpired || isMealPlanPaused}
+                    title={disableActionsReason || "Add a new meal"}
+                  >
+                    Add Meal
+                  </button>
+                </div>
               )}
             </div>
 
@@ -379,15 +419,23 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
                 Back
               </button>
 
-              <button
-                onClick={handleOpenAddDishModal}
-                disabled={isAddingDish}
-                className={`${
-                  isAddingDish ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                } text-white px-4 py-2 rounded`}
-              >
-                {isAddingDish ? "Adding..." : "Add Dish"}
-              </button>
+              <div className="relative">
+                {(isMealPlanExpired || isMealPlanPaused) && !isAddingDish && (
+                  <span className="text-red-500 text-xs mr-2">{disableActionsReason}</span>
+                )}
+                <button
+                  onClick={handleOpenAddDishModal}
+                  disabled={isAddingDish || isMealPlanExpired || isMealPlanPaused}
+                  className={`${
+                    isAddingDish || isMealPlanExpired || isMealPlanPaused
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  } text-white px-4 py-2 rounded`}
+                  title={disableActionsReason || "Add a new dish"}
+                >
+                  {isAddingDish ? "Adding..." : "Add Dish"}
+                </button>
+              </div>
             </div>
 
             <div className="mb-4">
@@ -405,6 +453,7 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
                       dish={dish}
                       onDelete={handleDeleteDish}
                       deletingDishId={deletingDishId}
+                      disableDelete={isMealPlanExpired || isMealPlanPaused} // Pass prop to disable delete
                     />
                   ))}
                 </div>

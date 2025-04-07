@@ -400,11 +400,28 @@ class MealPlanService {
       reminders: reminderDetails,
     };
   }
-
-  static async addMealToDay(mealPlanId, mealDayId, { mealTime, mealName, dishes }, userId, role) {
+  // Check MEAL PLAN STATUS
+  static async checkMealPlanStatus(mealPlanId) {
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) throw new AppError("MealPlan does not exist", 404);
 
+    const currentDate = new Date();
+    if (mealPlan.endDate < currentDate) {
+      throw new AppError("MealPlan has expired", 403);
+    }
+    if (mealPlan.isBlock) {
+      throw new AppError("MealPlan is locked", 403);
+    }
+    if (mealPlan.isPause) {
+      throw new AppError("MealPlan is paused", 403);
+    }
+    return mealPlan;
+  }
+  static async addMealToDay(mealPlanId, mealDayId, { mealTime, mealName, dishes }, userId, role) {
+    // Kiểm tra trạng thái MealPlan
+    const mealPlan = await this.checkMealPlanStatus(mealPlanId);
+
+    // Kiểm tra quyền
     const isUserAuthorized =
       mealPlan.userId.toString() === userId.toString() ||
       mealPlan.createdBy.toString() === userId.toString();
@@ -418,10 +435,6 @@ class MealPlanService {
 
     if (!isUserAuthorized && !isNutritionistAuthorized) {
       throw new AppError("You do not have permission to edit this MealPlan", 403);
-    }
-
-    if (mealPlan.isBlock && !isUserAuthorized && !isNutritionistAuthorized) {
-      throw new AppError("MealPlan is locked, cannot add meal", 403);
     }
 
     const mealDay = await MealDay.findOne({ _id: mealDayId, mealPlanId });
@@ -431,9 +444,10 @@ class MealPlanService {
   }
 
   static async removeMealFromDay(mealPlanId, mealDayId, mealId, userId, role) {
-    const mealPlan = await MealPlan.findById(mealPlanId);
-    if (!mealPlan) throw new AppError("MealPlan does not exist", 404);
+    // Kiểm tra trạng thái MealPlan
+    const mealPlan = await this.checkMealPlanStatus(mealPlanId);
 
+    // Kiểm tra quyền
     const isUserAuthorized =
       mealPlan.userId.toString() === userId.toString() ||
       mealPlan.createdBy.toString() === userId.toString();
@@ -449,17 +463,20 @@ class MealPlanService {
       throw new AppError("You do not have permission to edit this MealPlan", 403);
     }
 
-    if (mealPlan.isBlock && !isUserAuthorized && !isNutritionistAuthorized) {
-      throw new AppError("MealPlan is locked, cannot delete meal", 403);
-    }
-
     const mealDay = await MealDay.findOne({ _id: mealDayId, mealPlanId });
     if (!mealDay) throw new AppError("MealDay is invalid", 404);
 
     const meal = await Meal.findOne({ _id: mealId, mealDayId });
     if (!meal) throw new AppError("Meal does not exist", 404);
 
+    // Xóa meal
     await Meal.findByIdAndDelete(mealId);
+
+    // Xóa reminder và job liên quan
+    await Reminder.deleteMany({ userId, mealPlanId, mealDayId, mealId });
+    // Giả sử bạn có hàm xóa job, nếu không thì bỏ qua dòng này
+    // await this.cancelJob(userId, mealPlanId, mealDayId, mealId);
+
     return { mealDayId: mealDay._id };
   }
 
@@ -572,9 +589,10 @@ class MealPlanService {
       throw new AppError("Invalid list of dishes", 400);
     }
 
-    const mealPlan = await MealPlan.findById(mealPlanId);
-    if (!mealPlan) throw new AppError("MealPlan does not exist", 404);
+    // Kiểm tra trạng thái MealPlan
+    const mealPlan = await this.checkMealPlanStatus(mealPlanId);
 
+    // Kiểm tra quyền
     const targetUserId = mealPlan.userId.toString();
     const isUserAuthorized =
       targetUserId === userId.toString() || mealPlan.createdBy.toString() === userId.toString();
@@ -590,18 +608,13 @@ class MealPlanService {
       throw new AppError("You do not have permission to edit this MealPlan", 403);
     }
 
-    if (mealPlan.isBlock && !isUserAuthorized && !isNutritionistAuthorized) {
-      throw new AppError("MealPlan is locked, cannot add dishes", 403);
-    }
-
-    if (mealPlan.isPause) throw new AppError("MealPlan is paused, cannot add dishes", 403);
-
     const mealDay = await MealDay.findOne({ _id: mealDayId, mealPlanId });
     if (!mealDay) throw new AppError("Invalid meal day", 404);
 
     const meal = await Meal.findOne({ _id: mealId, mealDayId });
     if (!meal) throw new AppError("Invalid meal", 404);
 
+    // Thêm dishes
     const existingDishes = new Set(meal.dishes.map((dish) => JSON.stringify(dish)));
     dishes.forEach((dish) =>
       existingDishes.add(
@@ -620,36 +633,17 @@ class MealPlanService {
     meal.dishes = Array.from(existingDishes).map((dish) => JSON.parse(dish));
     await meal.save();
 
-    let tracking = await MealTracking.findOne({
-      userId: targetUserId,
-      mealPlanId,
-      mealDayId,
-      mealId,
-    });
-    if (!tracking) {
-      tracking = await MealTracking.create({
-        userId: targetUserId,
-        mealPlanId,
-        mealDayId,
-        mealId,
-        isDone: false,
-        caloriesConsumed: 0,
-      });
-    }
-
-    const totalCalories = meal.dishes.reduce((sum, dish) => sum + (dish.calories || 0), 0);
-    tracking.caloriesConsumed = totalCalories;
-    await tracking.save();
-
+    // Xử lý reminder và job (nếu cần)
     await this.handleReminderAndJob(targetUserId, mealPlanId, mealDayId, mealId, meal, mealDay);
 
-    return { meal, tracking };
+    return { meal };
   }
 
   static async deleteDishFromMeal(mealPlanId, mealDayId, mealId, dishId, userId, role) {
-    const mealPlan = await MealPlan.findById(mealPlanId);
-    if (!mealPlan) throw new AppError("MealPlan không tồn tại", 404);
+    // Kiểm tra trạng thái MealPlan
+    const mealPlan = await this.checkMealPlanStatus(mealPlanId);
 
+    // Kiểm tra quyền
     const isUserAuthorized =
       mealPlan.userId.toString() === userId.toString() ||
       mealPlan.createdBy.toString() === userId.toString();
@@ -662,44 +656,30 @@ class MealPlanService {
     }
 
     if (!isUserAuthorized && !isNutritionistAuthorized) {
-      throw new AppError("Bạn không có quyền chỉnh sửa MealPlan này", 403);
-    }
-
-    if (mealPlan.isBlock && !isUserAuthorized && !isNutritionistAuthorized) {
-      throw new AppError("MealPlan bị khóa, không thể xóa món ăn", 403);
+      throw new AppError("You do not have permission to edit this MealPlan", 403);
     }
 
     const mealDay = await MealDay.findOne({ _id: mealDayId, mealPlanId });
-    if (!mealDay) throw new AppError("Ngày ăn không hợp lệ", 404);
+    if (!mealDay) throw new AppError("Invalid meal day", 404);
 
     const meal = await Meal.findOne({ _id: mealId, mealDayId });
-    if (!meal) throw new AppError("Bữa ăn không hợp lệ", 404);
+    if (!meal) throw new AppError("Invalid meal", 404);
 
-    const dishIndex = meal.dishes.findIndex((dish) => dish._id.toString() === dishId);
-    if (dishIndex === -1) throw new AppError("Món ăn không tồn tại", 404);
+    const dishIndex = meal.dishes.findIndex((dish) => dish._id?.toString() === dishId);
+    if (dishIndex === -1) throw new AppError("Dish does not exist", 404);
 
-    const deletedDishCalories = meal.dishes[dishIndex].calories || 0;
     meal.dishes.splice(dishIndex, 1);
     await meal.save();
 
-    let tracking = await MealTracking.findOne({ userId, mealPlanId, mealDayId, mealId });
-    if (tracking) {
-      tracking.caloriesConsumed = Math.max(0, tracking.caloriesConsumed - deletedDishCalories);
-      if (meal.dishes.length === 0) {
-        await MealTracking.deleteOne({ userId, mealPlanId, mealDayId, mealId });
-        tracking = null;
-      } else {
-        await tracking.save();
-      }
-    }
-
+    // Xử lý reminder và job
     if (meal.dishes.length === 0) {
       await Reminder.deleteMany({ userId, mealPlanId, mealDayId, mealId });
+      // await this.cancelJob(userId, mealPlanId, mealDayId, mealId); // Nếu có job
     } else {
       await this.handleReminderAndJob(userId, mealPlanId, mealDayId, mealId, meal, mealDay);
     }
 
-    return { meal, tracking };
+    return { meal };
   }
 
   static async getAllMealPlanPayment(userId, role, { page, limit }) {
