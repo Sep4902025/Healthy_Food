@@ -3,7 +3,6 @@ import { useSelector } from "react-redux";
 import ChatService from "../../services/chat.service";
 import ChatWindow from "../../components/Chat/ChatWindow";
 
-// Component to display a single conversation item in the list
 const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
   const user = useSelector((state) => state.auth.user);
 
@@ -99,7 +98,6 @@ const NutritionChat = () => {
           return;
       }
 
-      // Luôn gán data, kể cả khi là mảng rỗng
       setConversations(response?.data?.data || []);
     } catch (error) {
       console.error("Error loading conversations:", error);
@@ -149,10 +147,8 @@ const NutritionChat = () => {
   };
 
   return (
-    <div className="flex h-full">
-      {/* Container for sidebar and chat window */}
+    <div className="flex h-[450px]">
       <div className="flex flex-1">
-        {/* Sidebar for conversation list */}
         <div className="w-64 border-r flex flex-col">
           <div className="flex border-b">
             <button
@@ -205,8 +201,7 @@ const NutritionChat = () => {
           </div>
         </div>
 
-        {/* Chat window */}
-        <div className="flex-1 flex flex-col bg-white overflow-x-hidden">
+        <div className="flex-1 flex flex-col bg-white overflow-x-hidden h-[450px]">
           {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {selectedConversation ? (

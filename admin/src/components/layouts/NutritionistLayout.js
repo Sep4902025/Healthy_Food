@@ -88,13 +88,9 @@ const NutritionistLayout = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
-      {/* Header */}
       <Header />
-
-      {/* Main Content and Sidebar */}
       <div className="flex flex-1">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white border-r p-4 flex flex-col h-full">
+        <aside className="w-64 bg-white border-r p-4 flex flex-col">
           <div className="flex items-center mb-6">
             <HomeIcon size={24} className="text-green-600 mr-2" />
             <span className="text-xl font-bold text-green-700">Nutritionist</span>
@@ -142,13 +138,10 @@ const NutritionistLayout = () => {
             ))}
           </nav>
         </aside>
-        {/* Main Content */}
-        <main className="flex-1 p-6 bg-white shadow overflow-y-auto">
+        <main className="flex-1 bg-white shadow">
           <Outlet />
         </main>
       </div>
-
-      {/* Footer */}
       <Footer />
     </div>
   );
