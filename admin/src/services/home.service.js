@@ -63,9 +63,11 @@ const HomeService = {
     }
   },
 
-  getAllDishes: async () => {
+  getAllDishes: async ({ page = 1, limit = 10, search = "", sort = "createdAt", order = "desc" } = {}) => {
     try {
-      const response = await axiosInstance.get("/dishes");
+      const response = await axiosInstance.get("/dishes", {
+        params: { page, limit, search, sort, order }
+      });
       return response.data;
     } catch (error) {
       console.error("Error fetching all dishes:", error);
