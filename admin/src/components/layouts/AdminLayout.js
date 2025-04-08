@@ -59,7 +59,6 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
 
   const menuItems = [
     { icon: <HomeIcon size={20} />, name: "Dashboard" },
-    { icon: <BookOpenIcon size={20} />, name: "Meal Plan" },
     {
       icon: <UserIcon size={20} />,
       name: "User Management",

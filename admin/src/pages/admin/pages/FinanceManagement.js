@@ -6,8 +6,8 @@ import { EyeIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
-import { Document, HeadingLevel, Packer, Paragraph, TextRun, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
+import ExcelJS from "exceljs";
 import paymentService from "../../../services/payment.service";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -99,7 +99,10 @@ const FinanceManagement = () => {
     }
   };
 
-  const fetchSalaryHistoryForModal = async (page = historyPage, limit = historyLimit) => {
+  const fetchSalaryHistoryForModal = async (
+    page = historyPage,
+    limit = historyLimit
+  ) => {
     try {
       const result = await paymentService.getSalaryHistoryByMonthYear(
         selectedMonth,
@@ -180,7 +183,9 @@ const FinanceManagement = () => {
   };
 
   const formatPrice = (price) => {
-    return price !== undefined && price !== null ? price.toLocaleString("en-US") + " VND" : "N/A";
+    return price !== undefined && price !== null
+      ? price.toLocaleString("en-US") + " VND"
+      : "N/A";
   };
 
   const isPaidForMonth = (nutriId) => {
@@ -203,14 +208,209 @@ const FinanceManagement = () => {
     return payment ? payment.status : "Not Paid";
   };
 
-  const exportToWord = () => {
-    // Keep your existing exportToWord logic
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Finance Management";
+    workbook.created = new Date();
+
+    // Sheet 1: Nutritionists Overview
+    const overviewSheet = workbook.addWorksheet("Nutritionists Overview", {
+      properties: { tabColor: { argb: "FF40B491" } }, // Màu tab xanh giống giao diện
+    });
+
+    overviewSheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Nutritionist", key: "name", width: 25 },
+      { header: "Meal Plans", key: "mealPlanCount", width: 15 },
+      { header: "Success", key: "successCount", width: 15 },
+      { header: "Pending", key: "pendingCount", width: 15 },
+      { header: "Base Salary (VND)", key: "baseSalary", width: 20 },
+      { header: "Commission (VND)", key: "commission", width: 20 },
+      { header: "Total Salary (VND)", key: "totalSalary", width: 20 },
+    ];
+
+    // Tiêu đề
+    overviewSheet.addRow(["Finance Management Report"]).font = {
+      size: 16,
+      bold: true,
+    };
+    overviewSheet.addRow([
+      `Generated on: ${new Date().toLocaleString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      })}`,
+    ]);
+    overviewSheet.addRow([]);
+    overviewSheet.addRow(["Nutritionists Overview"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    overviewSheet.getRow(4).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" }, // Màu nền xanh
+    };
+
+    // Thêm dữ liệu nutritionists
+    nutritionists.forEach((nutri, index) => {
+      const salary = calculateSalary(nutri);
+      const commission = nutri.mealPlans
+        .filter((mp) => !mp.isBlock)
+        .reduce((sum, mp) => sum + (mp.price || 0) * 0.1, 0);
+      overviewSheet.addRow({
+        no: currentPage * limit + index + 1,
+        name: nutri.name,
+        mealPlanCount: nutri.mealPlanCount,
+        successCount: nutri.successCount,
+        pendingCount: nutri.pendingCount,
+        baseSalary: 5000000,
+        commission: commission,
+        totalSalary: salary,
+      });
+    });
+
+    // Thêm hàng tổng cộng
+    overviewSheet.addRow(["Total Nutritionists", nutritionists.length]).font = {
+      bold: true,
+    };
+
+    // Định dạng bảng (bao gồm cả hàng tổng cộng)
+    overviewSheet.getRows(4, nutritionists.length + 2).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+        if (cell.value && typeof cell.value === "number") {
+          cell.numFmt = "#,##0"; // Định dạng số với dấu phân cách hàng nghìn
+        }
+      });
+    });
+
+    // Sheet 2: Meal Plan Details (cho tất cả nutritionists)
+    const detailsSheet = workbook.addWorksheet("Meal Plan Details");
+    detailsSheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Nutritionist", key: "nutritionist", width: 25 },
+      { header: "Title", key: "title", width: 30 },
+      { header: "Price (VND)", key: "price", width: 15 },
+      { header: "Start Date", key: "startDate", width: 15 },
+      { header: "Duration (days)", key: "duration", width: 15 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "User", key: "user", width: 25 },
+    ];
+
+    detailsSheet.addRow(["Meal Plan Details"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    detailsSheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    let mealPlanIndex = 1;
+    nutritionists.forEach((nutri) => {
+      nutri.mealPlans.forEach((mp) => {
+        detailsSheet.addRow({
+          no: mealPlanIndex++,
+          nutritionist: nutri.name,
+          title: mp.title || "N/A",
+          price: mp.price || 0,
+          startDate: new Date(mp.startDate).toLocaleDateString("en-US"),
+          duration: mp.duration,
+          status: !mp.isBlock ? "Success" : "Pending",
+          user: mp.userId?.username || "Unknown",
+        });
+      });
+    });
+
+    // Định dạng bảng
+    detailsSheet.getRows(1, mealPlanIndex).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+        if (cell.value && typeof cell.value === "number") {
+          cell.numFmt = "#,##0";
+        }
+      });
+    });
+
+    // Sheet 3: Salary Payment History
+    const historySheet = workbook.addWorksheet("Salary History");
+    historySheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Nutritionist", key: "nutritionist", width: 25 },
+      { header: "Amount (VND)", key: "amount", width: 20 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "Date", key: "date", width: 15 },
+      { header: "Transaction ID", key: "transactionId", width: 20 },
+    ];
+
+    historySheet.addRow(["Salary Payment History"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    historySheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    salaryHistory.forEach((payment, idx) => {
+      historySheet.addRow({
+        no: idx + 1,
+        nutritionist:
+          nutritionists.find((n) => n.id === payment.userId)?.name || "Unknown",
+        amount: payment.amount,
+        status: payment.status,
+        date: payment.paymentDate
+          ? new Date(payment.paymentDate).toLocaleDateString("en-US")
+          : "N/A",
+        transactionId: payment.transactionNo || "N/A",
+      });
+    });
+
+    // Định dạng bảng
+    historySheet.getRows(1, salaryHistory.length + 1).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+        if (cell.value && typeof cell.value === "number") {
+          cell.numFmt = "#,##0";
+        }
+      });
+    });
+
+    // Lưu file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "Finance_Management_Report.xlsx");
   };
 
   if (user?.role !== "admin") {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-red-500 text-lg font-semibold">Access Denied: Admin Only</p>
+        <p className="text-red-500 text-lg font-semibold">
+          Access Denied: Admin Only
+        </p>
       </div>
     );
   }
@@ -260,13 +460,14 @@ const FinanceManagement = () => {
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                 className="border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] focus:border-custom-green"
               >
-                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(
-                  (year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  )
-                )}
+                {Array.from(
+                  { length: 5 },
+                  (_, i) => new Date().getFullYear() - 2 + i
+                ).map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -277,10 +478,10 @@ const FinanceManagement = () => {
             View Salary History
           </button>
           <button
-            onClick={exportToWord}
+            onClick={exportToExcel}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
-            Export to Word
+            Export to Excel
           </button>
         </div>
       </div>
@@ -298,7 +499,10 @@ const FinanceManagement = () => {
           <div className="divide-y divide-gray-200">
             {nutritionists.length > 0 ? (
               nutritionists.map((nutri, index) => (
-                <div key={nutri.id} className="grid grid-cols-7 gap-4 p-4 hover:bg-gray-50">
+                <div
+                  key={nutri.id}
+                  className="grid grid-cols-7 gap-4 p-4 hover:bg-gray-50"
+                >
                   <div>{currentPage * limit + index + 1}</div>
                   <div>{nutri.name}</div>
                   <div>{nutri.mealPlanCount}</div>
@@ -345,7 +549,9 @@ const FinanceManagement = () => {
                 </div>
               ))
             ) : (
-              <div className="p-6 text-center text-gray-500">No nutritionists found.</div>
+              <div className="p-6 text-center text-gray-500">
+                No nutritionists found.
+              </div>
             )}
           </div>
           <div className="p-4 bg-gray-50">
@@ -368,7 +574,8 @@ const FinanceManagement = () => {
             {selectedNutri && (
               <>
                 <h2 className="text-2xl font-bold text-[#40B491] mb-4">
-                  Meal Plans for {selectedNutri.name} (Month {selectedMonth}/{selectedYear})
+                  Meal Plans for {selectedNutri.name} (Month {selectedMonth}/
+                  {selectedYear})
                 </h2>
                 <div className="overflow-x-auto">
                   <div className="grid grid-cols-7 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
@@ -381,11 +588,16 @@ const FinanceManagement = () => {
                     <div>User</div>
                   </div>
                   {selectedNutri.mealPlans.map((mp, idx) => (
-                    <div key={mp._id} className="grid grid-cols-7 gap-4 p-4 border-b">
+                    <div
+                      key={mp._id}
+                      className="grid grid-cols-7 gap-4 p-4 border-b"
+                    >
                       <div>{idx + 1}</div>
                       <div>{mp.title}</div>
                       <div>{formatPrice(mp.price)}</div>
-                      <div>{new Date(mp.startDate).toLocaleDateString("en-US")}</div>
+                      <div>
+                        {new Date(mp.startDate).toLocaleDateString("en-US")}
+                      </div>
                       <div>{mp.duration} days</div>
                       <div>
                         <span
@@ -423,7 +635,8 @@ const FinanceManagement = () => {
             {selectedNutri && (
               <>
                 <h2 className="text-2xl font-bold text-[#40B491] mb-4">
-                  Salary for {selectedNutri.name} (Month {selectedMonth}/{selectedYear})
+                  Salary for {selectedNutri.name} (Month {selectedMonth}/
+                  {selectedYear})
                 </h2>
                 <div className="space-y-2">
                   <p>Base Salary: {formatPrice(5000000)}</p>
@@ -465,7 +678,8 @@ const FinanceManagement = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl max-h-[80vh] overflow-y-auto">
             <>
               <h2 className="text-2xl font-bold text-[#40B491] mb-4">
-                Salary Payment History for Nutritionists (Month {selectedMonth}/{selectedYear})
+                Salary Payment History for Nutritionists (Month {selectedMonth}/
+                {selectedYear})
               </h2>
               <div className="overflow-x-auto">
                 <div className="grid grid-cols-7 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
@@ -479,7 +693,10 @@ const FinanceManagement = () => {
                 </div>
                 {salaryHistory.length > 0 ? (
                   salaryHistory.map((payment, idx) => (
-                    <div key={payment._id} className="grid grid-cols-7 gap-4 p-4 border-b">
+                    <div
+                      key={payment._id}
+                      className="grid grid-cols-7 gap-4 p-4 border-b"
+                    >
                       <div>{(historyPage - 1) * historyLimit + idx + 1}</div>
                       <div>{payment.userId?.username || "Unknown"}</div>
                       <div>{formatPrice(payment.amount)}</div>
@@ -496,7 +713,9 @@ const FinanceManagement = () => {
                       </div>
                       <div>
                         {payment.paymentDate
-                          ? new Date(payment.paymentDate).toLocaleDateString("en-US")
+                          ? new Date(payment.paymentDate).toLocaleDateString(
+                              "en-US"
+                            )
                           : "N/A"}
                       </div>
                       <div>{`${payment.month}/${payment.year}`}</div>
