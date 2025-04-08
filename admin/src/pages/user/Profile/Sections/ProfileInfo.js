@@ -19,6 +19,8 @@ import AuthService from "../../../../services/auth.service";
 import uploadFile from "../../../../helpers/uploadFile";
 import { updateUser } from "../../../../store/actions/authActions";
 import { toast } from "react-toastify";
+import { getFavoriteNamesByIds } from "../../../survey/Favorite";
+import { getHateNamesByIds } from "../../../survey/Hate";
 
 const UserProfile = () => {
   const user = useSelector(selectUser);
@@ -28,7 +30,8 @@ const UserProfile = () => {
   const [userData, setUserData] = useState(null);
   const [resetInProgress, setResetInProgress] = useState(false);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
-  const [passwordChangeInProgress, setPasswordChangeInProgress] = useState(false); // Đổi tên biến
+  const [passwordChangeInProgress, setPasswordChangeInProgress] =
+    useState(false); // Đổi tên biến
   const [showChangePassword, setShowChangePassword] = useState(false); // Đổi tên state
   const [showEditModal, setShowEditModal] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -53,9 +56,10 @@ const UserProfile = () => {
       return;
     }
     try {
-      const { success, data, message } = await quizService.getUserPreferenceByUserPreferenceId(
-        user.userPreferenceId
-      );
+      const { success, data, message } =
+        await quizService.getUserPreferenceByUserPreferenceId(
+          user.userPreferenceId
+        );
       if (success) {
         setUserData(data);
       } else {
@@ -82,6 +86,7 @@ const UserProfile = () => {
 
   const handleEditClick = () => {
     setShowEditModal(true);
+    navigate("/survey/name");
   };
 
   const handleReset = async () => {
@@ -95,7 +100,9 @@ const UserProfile = () => {
     if (!confirmReset) return;
     try {
       setResetInProgress(true);
-      const { success, message } = await quizService.deleteUserPreference(user.userPreferenceId);
+      const { success, message } = await quizService.deleteUserPreference(
+        user.userPreferenceId
+      );
       if (success) {
         toast.success("Information deleted successfully");
         setUserData(null);
@@ -211,7 +218,10 @@ const UserProfile = () => {
       const avatarUrl = result.secure_url;
 
       // Đảm bảo _id là string
-      const userId = typeof user._id === "object" && user._id.$oid ? user._id.$oid : user._id;
+      const userId =
+        typeof user._id === "object" && user._id.$oid
+          ? user._id.$oid
+          : user._id;
       const userData = { _id: userId, avatarUrl }; // Only send necessary fields
 
       const updatedUser = await dispatch(updateUser(userData));
@@ -223,7 +233,9 @@ const UserProfile = () => {
       setUserData((prev) => ({ ...prev, ...updatedUser }));
     } catch (error) {
       console.error("🚨 Error uploading avatar:", error);
-      toast.error(`An error occurred while uploading the avatar: ${error.message}`);
+      toast.error(
+        `An error occurred while uploading the avatar: ${error.message}`
+      );
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -245,7 +257,8 @@ const UserProfile = () => {
     if (userData) {
       const weight = parseFloat(userData.weight);
       const heightCm = parseFloat(userData.height);
-      if (!weight || !heightCm || weight <= 0 || heightCm <= 0) return "No data";
+      if (!weight || !heightCm || weight <= 0 || heightCm <= 0)
+        return "No data";
       const heightM = heightCm / 100;
       return (weight / (heightM * heightM)).toFixed(2);
     }
@@ -260,8 +273,10 @@ const UserProfile = () => {
         color: "text-gray-600",
         bg: "bg-gray-100",
       };
-    if (bmi < 18) return { text: "Underweight", color: "text-blue-600", bg: "bg-blue-100" };
-    if (bmi < 30) return { text: "Normal", color: "text-green-600", bg: "bg-green-100" };
+    if (bmi < 18)
+      return { text: "Underweight", color: "text-blue-600", bg: "bg-blue-100" };
+    if (bmi < 30)
+      return { text: "Normal", color: "text-green-600", bg: "bg-green-100" };
     if (bmi < 40)
       return {
         text: "Overweight",
@@ -446,7 +461,8 @@ const UserProfile = () => {
                   <div>
                     <p className="text-gray-600">Weight</p>
                     <p className="text-xl font-semibold text-blue-700">
-                      {userData?.weight || "?"} <span className="text-sm">kg</span>
+                      {userData?.weight || "?"}{" "}
+                      <span className="text-sm">kg</span>
                     </p>
                   </div>
                 </div>
@@ -455,7 +471,8 @@ const UserProfile = () => {
                   <div>
                     <p className="text-gray-600">Height</p>
                     <p className="text-xl font-semibold text-green-700">
-                      {userData?.height || "?"} <span className="text-sm">cm</span>
+                      {userData?.height || "?"}{" "}
+                      <span className="text-sm">cm</span>
                     </p>
                   </div>
                 </div>
@@ -467,7 +484,11 @@ const UserProfile = () => {
                   <FaCalculator className="text-gray-600 text-2xl" />
                   <div>
                     <p className="text-gray-600">BMI</p>
-                    <p className={`text-xl font-semibold ${getBMIStatus().color}`}>
+                    <p
+                      className={`text-xl font-semibold ${
+                        getBMIStatus().color
+                      }`}
+                    >
                       {calculateBMI()} - {getBMIStatus().text}
                     </p>
                   </div>
@@ -508,8 +529,10 @@ const UserProfile = () => {
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-700 mb-4">Nutrition Goals</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                        Nutrition Goals
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <InfoItem
                           label="Goal"
                           value={userData.goal}
@@ -519,6 +542,12 @@ const UserProfile = () => {
                         <InfoItem
                           label="Plan Duration"
                           value={userData.longOfPlan}
+                          colorClass="bg-teal-50"
+                          textClass="text-teal-700"
+                        />
+                        <InfoItem
+                          label="Weight Goal"
+                          value={userData.weightGoal}
                           colorClass="bg-teal-50"
                           textClass="text-teal-700"
                         />
@@ -543,13 +572,15 @@ const UserProfile = () => {
                         />
                         <InfoItem
                           label="Favorite Foods"
-                          value={userData.favorite?.join(", ")}
+                          value={getFavoriteNamesByIds(userData.favorite)?.join(
+                            ", "
+                          )}
                           colorClass="bg-yellow-50"
                           textClass="text-yellow-700"
                         />
                         <InfoItem
                           label="Food Allergies"
-                          value={userData.hate?.join(", ")}
+                          value={getHateNamesByIds(userData.hate)?.join(", ")}
                           colorClass="bg-red-50"
                           textClass="text-red-700"
                         />
@@ -559,10 +590,18 @@ const UserProfile = () => {
                           colorClass="bg-amber-50"
                           textClass="text-amber-700"
                         />
+                        <InfoItem
+                          label="Activity Level"
+                          value={userData.activityLevel}
+                          colorClass="bg-amber-50"
+                          textClass="text-amber-700"
+                        />
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-700 mb-4">Health Metrics</h4>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                        Health Metrics
+                      </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <InfoItem
                           label="Sleep Duration"
@@ -589,7 +628,9 @@ const UserProfile = () => {
               ) : (
                 <div className="text-center p-8 bg-gray-50 rounded-lg">
                   <FaUser className="text-4xl text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">No personal data available</p>
+                  <p className="text-gray-600 mb-4">
+                    No personal data available
+                  </p>
                   <button
                     onClick={handleEditClick}
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300"
@@ -607,10 +648,14 @@ const UserProfile = () => {
       {showChangePassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Change Password</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Change Password
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-700 mb-1">Current Password</label>
+                <label className="block text-gray-700 mb-1">
+                  Current Password
+                </label>
                 <input
                   type="password"
                   value={passwordData.currentPassword}
@@ -640,7 +685,9 @@ const UserProfile = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-1">Confirm New Password</label>
+                <label className="block text-gray-700 mb-1">
+                  Confirm New Password
+                </label>
                 <input
                   type="password"
                   value={passwordData.newPasswordConfirm}

@@ -90,6 +90,21 @@ const favoriteGroups = [
   },
 ];
 
+// Hàm ánh xạ từ id sang name
+export const getFavoriteNameById = (id) => {
+  for (const group of favoriteGroups) {
+    const item = group.items.find((item) => item.id === id);
+    if (item) return item.name;
+  }
+  return "Unknown"; // Trả về "Unknown" nếu không tìm thấy id
+};
+
+// Hàm ánh xạ danh sách ids sang danh sách names
+export const getFavoriteNamesByIds = (ids) => {
+  if (!ids || !Array.isArray(ids)) return [];
+  return ids.map((id) => getFavoriteNameById(id));
+};
+
 const Favorite = () => {
   const navigate = useNavigate();
   const [selectedItemIds, setSelectedItemIds] = useState([]);

@@ -93,6 +93,21 @@ const hateGroups = [
   },
 ];
 
+// Hàm ánh xạ từ id sang name
+export const getHateNameById = (id) => {
+  for (const group of hateGroups) {
+    const item = group.items.find((item) => item.id === id);
+    if (item) return item.name;
+  }
+  return "Unknown"; // Trả về "Unknown" nếu không tìm thấy id
+};
+
+// Hàm ánh xạ danh sách ids sang danh sách names
+export const getHateNamesByIds = (ids) => {
+  if (!ids || !Array.isArray(ids)) return [];
+  return ids.map((id) => getHateNameById(id));
+};
+
 const getItemById = (id) => {
   for (const group of hateGroups) {
     const item = group.items.find((item) => item.id === id);
