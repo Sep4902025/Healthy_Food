@@ -140,7 +140,7 @@ const IngredientList = memo(
 const TableIngredient = () => {
   const navigate = useNavigate();
   const [ingredients, setIngredients] = useState([]);
-  const [pendingIngredients, setPendingIngredients] = useState([]); // Thêm giống TableDishes
+  const [pendingIngredients, setPendingIngredients] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(8);
@@ -176,11 +176,11 @@ const TableIngredient = () => {
         searchTerm
       );
       if (response.success) {
-        setPendingIngredients(response.data.items); // Cập nhật danh sách tạm
+        setPendingIngredients(response.data.items);
         setTotalItems(response.data.total);
         setTotalPages(response.data.totalPages);
       } else {
-        setPendingIngredients([]); // Chỉ làm trống nếu thất bại
+        setPendingIngredients([]);
         setTotalItems(0);
         setTotalPages(1);
       }
@@ -191,7 +191,6 @@ const TableIngredient = () => {
     }
   };
 
-  // Đồng bộ ingredients từ pendingIngredients giống TableDishes
   useEffect(() => {
     if (pendingIngredients !== ingredients) {
       setIngredients(pendingIngredients);
@@ -321,16 +320,25 @@ const TableIngredient = () => {
   };
 
   const handleToggleVisibility = async (ingredient) => {
-    const updatedIngredient = { ...ingredient, isVisible: !ingredient.isVisible };
+    const newVisibility = !ingredient.isVisible;
+    const updatedIngredient = { ...ingredient, isVisible: newVisibility };
     try {
-      await ingredientService.updateIngredient(ingredient._id, {
-        isVisible: !ingredient.isVisible,
+      const response = await ingredientService.updateIngredient(ingredient._id, {
+        isVisible: newVisibility,
       });
-      setIngredients((prevIngredients) =>
-        prevIngredients.map((ing) => (ing._id === ingredient._id ? updatedIngredient : ing))
-      );
+      if (response.success) {
+        setIngredients((prevIngredients) =>
+          prevIngredients.map((ing) => (ing._id === ingredient._id ? updatedIngredient : ing))
+        );
+        toast.success(
+          `Ingredient "${ingredient.name}" is now ${newVisibility ? "visible" : "hidden"}!`
+        );
+      } else {
+        toast.error("Failed to update visibility. Please try again.");
+      }
     } catch (error) {
       toast.error("Failed to update visibility. Please try again.");
+      console.error("Error toggling visibility:", error);
     }
   };
 

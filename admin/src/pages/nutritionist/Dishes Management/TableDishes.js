@@ -152,7 +152,7 @@ const TableDishes = () => {
   const fetchDishes = async () => {
     try {
       const response = await dishesService.getAllDishesForNutri(currentPage + 1, itemsPerPage, searchTerm);
-      console.log("APIIIIIIIII",response);
+      console.log("APIIIIIIIII", response);
       if (response.success) {
         const filteredByType =
           filterType === "all"
@@ -339,12 +339,21 @@ const TableDishes = () => {
   };
 
   const handleToggleVisibility = async (dish) => {
-    const updatedDish = { ...dish, isVisible: !dish.isVisible };
+    const newVisibility = !dish.isVisible;
+    const updatedDish = { ...dish, isVisible: newVisibility };
     try {
-      await dishesService.updateDish(dish._id, { isVisible: !dish.isVisible });
-      setDishes((prevDishes) => prevDishes.map((d) => (d._id === dish._id ? updatedDish : d)));
+      const response = await dishesService.updateDish(dish._id, { isVisible: newVisibility });
+      if (response.success) {
+        setDishes((prevDishes) => prevDishes.map((d) => (d._id === dish._id ? updatedDish : d)));
+        toast.success(
+          `Dish "${dish.name}" is now ${newVisibility ? "visible" : "hidden"}!`
+        );
+      } else {
+        toast.error("Failed to update visibility. Please try again.");
+      }
     } catch (error) {
       toast.error("Failed to update visibility. Please try again.");
+      console.error("Error toggling visibility:", error);
     }
   };
 

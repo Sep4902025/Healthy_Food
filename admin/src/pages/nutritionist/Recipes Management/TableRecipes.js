@@ -185,30 +185,32 @@ const TableRecipes = () => {
     try {
       if (dish.recipeId) {
         const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
-        if (recipeResponse.success && recipeResponse.data?.status === "success") {
-          const recipe = recipeResponse.data.data;
-          const existingIngredients =
-            recipe.ingredients?.map((ing) => ({
-              _id: ing.ingredientId._id,
-              name: ing.ingredientId.name || "Unknown",
-              quantity: ing.quantity,
-              unit: ing.unit,
-            })) || [];
+        if (recipeResponse.success) {
+          const recipe = recipeResponse.data; // Adjusted to directly use response.data
+          const existingIngredients = recipe.ingredients?.map((ing) => ({
+            _id: ing.ingredientId._id, // Map ingredientId._id to _id
+            name: ing.ingredientId.name || "Unknown", // Map name
+            quantity: ing.quantity || "", // Map quantity
+            unit: ing.unit || "", // Map unit
+          })) || [];
           setNewRecipeData({
             ingredients: existingIngredients,
-            instruction: recipe.instruction || [],
-            cookingTime: recipe.cookingTime || "",
-            totalServing: recipe.totalServing || "",
+            instruction: recipe.instruction || [], // Map instructions
+            cookingTime: recipe.cookingTime || "", // Map cooking time
+            totalServing: recipe.totalServing || "", // Map total serving
           });
         } else {
+          // If fetching fails but recipeId exists, still open modal with empty data
           setNewRecipeData({
             ingredients: [],
             instruction: [],
             cookingTime: "",
             totalServing: "",
           });
+          toast.error("Could not load existing recipe: " + recipeResponse.message);
         }
       } else {
+        // No recipeId, initialize empty form for new recipe
         setNewRecipeData({
           ingredients: [],
           instruction: [],
@@ -216,16 +218,17 @@ const TableRecipes = () => {
           totalServing: "",
         });
       }
-      setIsAddRecipeModalOpen(true);
     } catch (error) {
+      // Handle network or unexpected errors
       setNewRecipeData({
         ingredients: [],
         instruction: [],
         cookingTime: "",
         totalServing: "",
       });
-      setIsAddRecipeModalOpen(true);
+      toast.error("Error loading recipe: " + (error.message || "Unknown error"));
     }
+    setIsAddRecipeModalOpen(true); // Open modal regardless of success/failure
   };
 
   const handleAddInstruction = () => {
@@ -327,30 +330,35 @@ const TableRecipes = () => {
     if (!validateForm()) {
       return;
     }
-
+  
     setIsSaving(true);
-
+  
     const formattedIngredients = newRecipeData.ingredients.map((ing) => ({
-      ingredientId: ing._id,
+      ingredientId: ing._id, // Ensure this is a string ID
       quantity: ing.quantity || 0,
       unit: ing.unit || "g",
     }));
-
+  
     const updatedRecipe = {
       ingredients: formattedIngredients,
       instruction: newRecipeData.instruction,
       cookingTime: newRecipeData.cookingTime,
       totalServing: newRecipeData.totalServing,
     };
-
+  
     try {
       let response;
-      if (selectedDish.recipeId) {
-        response = await recipesService.updateRecipe(selectedDish.recipeId, updatedRecipe);
+      const dishId = selectedDish._id; // Always use the dish's _id as a string
+      const recipeId = selectedDish.recipeId?._id || selectedDish.recipeId; // Handle recipeId as string
+  
+      if (recipeId) {
+        // Updating an existing recipe
+        response = await recipesService.updateRecipe(dishId, recipeId, updatedRecipe);
       } else {
-        response = await recipesService.createRecipe(selectedDish._id, updatedRecipe);
+        // Creating a new recipe
+        response = await recipesService.createRecipe(dishId, updatedRecipe);
       }
-
+  
       setIsSaving(false);
       if (response.success) {
         toast.success(`Recipe for "${selectedDish.name}" has been saved!`);

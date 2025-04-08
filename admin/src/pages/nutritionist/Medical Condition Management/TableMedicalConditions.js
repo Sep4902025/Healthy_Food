@@ -120,7 +120,7 @@ const TableMedicalConditions = () => {
   const [recommendedPage, setRecommendedPage] = useState(0);
   const [foodsPerPage, setFoodsPerPage] = useState(5);
 
-  // Fetch conditions and dishes (unchanged for brevity)
+  // Fetch conditions and dishes (unchanged)
   const fetchConditions = async () => {
     try {
       const response = searchTerm
@@ -328,17 +328,23 @@ const TableMedicalConditions = () => {
     const newErrors = {};
     if (!editData.name.trim()) newErrors.name = "Name is required";
     if (!editData.description.trim()) newErrors.description = "Description is required";
+    if (editData.restrictedFoods.length === 0)
+      newErrors.restrictedFoods = "At least one restricted food is required";
+    if (editData.recommendedFoods.length === 0)
+      newErrors.recommendedFoods = "At least one recommended food is required";
     if (editData.restrictedFoods.some((food) => editData.recommendedFoods.includes(food))) {
       newErrors.foodConflict = "A dish cannot be both restricted and recommended!";
     }
+
     ["carbs", "fat", "protein", "calories"].forEach((field) => {
       const value = editData.nutritionalConstraints[field];
-      if (value && (isNaN(value) || Number(value) < 0)) {
-        newErrors[field] = `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } must be a positive number`;
+      if (value === "" || value === null || value === undefined) {
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
+      } else if (isNaN(value) || Number(value) < 0) {
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} must be a positive number`;
       }
     });
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -356,18 +362,10 @@ const TableMedicalConditions = () => {
       restrictedFoods: editData.restrictedFoods,
       recommendedFoods: editData.recommendedFoods,
       nutritionalConstraints: {
-        carbs: editData.nutritionalConstraints.carbs
-          ? Number(editData.nutritionalConstraints.carbs)
-          : null,
-        fat: editData.nutritionalConstraints.fat
-          ? Number(editData.nutritionalConstraints.fat)
-          : null,
-        protein: editData.nutritionalConstraints.protein
-          ? Number(editData.nutritionalConstraints.protein)
-          : null,
-        calories: editData.nutritionalConstraints.calories
-          ? Number(editData.nutritionalConstraints.calories)
-          : null,
+        carbs: Number(editData.nutritionalConstraints.carbs),
+        fat: Number(editData.nutritionalConstraints.fat),
+        protein: Number(editData.nutritionalConstraints.protein),
+        calories: Number(editData.nutritionalConstraints.calories),
       },
     };
     const response = await medicalConditionService.updateMedicalCondition(editData.id, updatedData);
@@ -382,7 +380,6 @@ const TableMedicalConditions = () => {
     }
   };
 
-  // Synchronized handleOpenFoodModal with AddMedicalCondition
   const handleOpenFoodModal = (type) => {
     setFoodModalType(type);
     setIsFoodModalOpen(true);
@@ -521,7 +518,7 @@ const TableMedicalConditions = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">Name *</label>
                   <input
                     type="text"
                     name="name"
@@ -534,9 +531,7 @@ const TableMedicalConditions = () => {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
-                  </label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">Description *</label>
                   <textarea
                     name="description"
                     value={editData.description}
@@ -552,9 +547,7 @@ const TableMedicalConditions = () => {
 
               <div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Restricted Foods
-                  </label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">Restricted Foods *</label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {paginatedRestrictedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
@@ -603,12 +596,13 @@ const TableMedicalConditions = () => {
                   >
                     Add Restricted Foods
                   </button>
+                  {errors.restrictedFoods && (
+                    <p className="text-red-500 text-sm mt-1">{errors.restrictedFoods}</p>
+                  )}
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Recommended Foods
-                  </label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">Recommended Foods *</label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {paginatedRecommendedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
@@ -657,14 +651,17 @@ const TableMedicalConditions = () => {
                   >
                     Add Recommended Foods
                   </button>
+                  {errors.recommendedFoods && (
+                    <p className="text-red-500 text-sm mt-1">{errors.recommendedFoods}</p>
+                  )}
                   {errors.foodConflict && (
                     <p className="text-red-500 text-sm mt-1">{errors.foodConflict}</p>
                   )}
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nutritional Constraints (Max Values)
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">
+                    Nutritional Constraints (Max Values) *
                   </label>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -743,11 +740,11 @@ const TableMedicalConditions = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">Name</label>
                   <p className="text-lg font-semibold text-gray-800">{viewData.name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Restricted Foods</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">Restricted Foods</label>
                   <div className="flex flex-wrap gap-2">
                     {viewData.restrictedFoods.length > 0 ? (
                       viewData.restrictedFoods.map((foodId) => {
@@ -769,7 +766,7 @@ const TableMedicalConditions = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Recommended Foods</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">Recommended Foods</label>
                   <div className="flex flex-wrap gap-2">
                     {viewData.recommendedFoods.length > 0 ? (
                       viewData.recommendedFoods.map((foodId) => {
@@ -791,7 +788,7 @@ const TableMedicalConditions = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">
                     Nutritional Constraints (Max Values)
                   </label>
                   <div className="grid grid-cols-2 gap-4">
@@ -823,10 +820,11 @@ const TableMedicalConditions = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <p className="text-gray-900 h-96 overflow-y-auto p-3 border border-gray-300 rounded-md">
-                  {viewData.description}
-                </p>
+                <label className="block text-sm font-bold text-[#40B491] mb-1">Description</label>
+                <div
+                  className="text-gray-900 h-96 overflow-y-auto p-3 border border-gray-300 rounded-md whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{ __html: viewData.description.replace(/\n/g, '<br />') }}
+                />
               </div>
             </div>
           </div>

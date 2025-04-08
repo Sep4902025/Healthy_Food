@@ -193,7 +193,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
           <>
             {/* Price */}
             <div>
-              <label className="block text-gray-700 mb-1">Price ($)</label>
+              <label className="block text-gray-700 mb-1">Price (Vnd)</label>
               <input
                 type="number"
                 value={price}
