@@ -58,6 +58,7 @@ exports.getUserById = catchAsync(async (req, res, next) => {
     data: { user },
   });
 });
+
 exports.searchUserByEmail = catchAsync(async (req, res, next) => {
   const { email } = req.query;
 
@@ -86,6 +87,7 @@ exports.searchUserByEmail = catchAsync(async (req, res, next) => {
     data: { users },
   });
 });
+
 // Update User By ID
 exports.updateUserById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
