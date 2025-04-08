@@ -8,6 +8,8 @@ import { DarkModeContext } from "../context/DarkModeContext";
 import UserService from "../../services/user.service";
 import { useSelector } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
+import { toast } from "react-toastify";
+import HomeService from "../../services/home.service";
 
 // Hàm debounce để giới hạn tần suất gọi handleScroll
 const debounce = (func, wait) => {
@@ -28,10 +30,10 @@ const FALLBACK_IMAGES = {
   SNACKS: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
   BREAKFAST: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
   VEGAN: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
-  "VIETNAMESE BEEF": "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg", // Added for Vietnamese Beef
-  "VIETNAMESE BEVERAGE": "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg", // Added for Vietnamese Beverage
+  "VIETNAMESE BEEF": "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  "VIETNAMESE BEVERAGE": "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
   DEFAULT:
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=200&auto=format&fit=crop", // Default fallback for unknown categories
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=200&auto=format&fit=crop",
 };
 
 const ForYouPage = () => {
@@ -48,9 +50,35 @@ const ForYouPage = () => {
   const [error, setError] = useState(null);
   const [selectedType, setSelectedType] = useState("");
   const [categories, setCategories] = useState([]);
-  const [alertMessage, setAlertMessage] = useState(null); // Trạng thái để hiển thị cảnh báo
+  const [alertMessage, setAlertMessage] = useState(null);
+  const [likedFoods, setLikedFoods] = useState([]); // Thêm state để quản lý danh sách món ăn yêu thích
 
   const limit = 8;
+
+  // Hàm lấy danh sách món ăn yêu thích từ API
+  const fetchLikedFoods = useCallback(async () => {
+    try {
+      const response = await UserService.getFavoriteDishes(userId);
+      if (response.success) {
+        const likedDishes = response.data.map((dish) => ({
+          dishId: dish._id,
+          isLike: true,
+        }));
+        setLikedFoods(likedDishes);
+      } else {
+        console.error("Failed to fetch liked foods:", response.message);
+      }
+    } catch (err) {
+      console.error("Error fetching liked foods:", err);
+    }
+  }, [userId]);
+
+  // Gọi API để lấy danh sách món ăn yêu thích khi component mount
+  useEffect(() => {
+    if (userId) {
+      fetchLikedFoods();
+    }
+  }, [userId, fetchLikedFoods]);
 
   const formatCategoryName = (name) => {
     if (!name) return "Unknown";
@@ -72,7 +100,6 @@ const ForYouPage = () => {
       if (response.success) {
         const formattedCategories = response.data.map((category) => {
           const formattedName = formatCategoryName(category.name);
-          // Check if the image is a placeholder or missing
           const isPlaceholderImage = category.image?.includes("via.placeholder.com");
           const image =
             !category.image || isPlaceholderImage
@@ -81,7 +108,7 @@ const ForYouPage = () => {
 
           console.log(
             `Category: ${formattedName}, API Image: ${category.image}, Using Image: ${image}`
-          ); // Debugging log
+          );
 
           return {
             ...category,
@@ -203,12 +230,38 @@ const ForYouPage = () => {
     const recipeId = recipe?._id;
 
     if (!recipeId) {
-      setAlertMessage("This dish does not have a recipe yet!");
-      setTimeout(() => setAlertMessage(null), 3000);
+      toast.error("This dish does not have a recipe yet!");
+
       return;
     }
 
     navigate(`/${dishId}/recipes/${recipeId}`);
+  };
+
+  // Hàm xử lý thả tim yêu thích món ăn
+  const handleLike = async (dishId) => {
+    const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
+    const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
+
+    try {
+      const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId, isCurrentlyLiked);
+      setLikedFoods((prev) =>
+        newLikeState
+          ? [...prev.filter((item) => item.dishId !== dishId), { dishId, isLike: true }]
+          : prev.filter((item) => item.dishId !== dishId)
+      );
+      const food = recommendedRecipes.find((item) => item._id === dishId);
+      if (food) {
+        toast.success(
+          newLikeState
+            ? `Added "${food.name}" to favorites! ❤️`
+            : `Removed "${food.name}" from favorites! 💔`
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast.error("An error occurred while updating favorites!");
+    }
   };
 
   return (
@@ -317,8 +370,21 @@ const ForYouPage = () => {
                 </p>
               </div>
               {!recipe.recipeId && <p className="mt-2 text-sm text-red-500">No recipe available</p>}
-              <div className="absolute right-[-10px] bottom-[-5px] w-[55px] h-[35px] bg-[#40b491] rounded-tr-[37.50px] rounded-bl-[42.50px] flex items-center justify-center">
-                <Heart size={25} className="text-white fill-white" />
+              <div
+                className="absolute right-[-10px] bottom-[-5px] w-[55px] h-[35px] bg-[#40b491] rounded-tr-[37.50px] rounded-bl-[42.50px] flex items-center justify-center"
+                onClick={(e) => {
+                  e.stopPropagation(); // Ngăn sự kiện click lan lên thẻ cha
+                  handleLike(recipe._id);
+                }}
+              >
+                <Heart
+                  size={25}
+                  className={`text-white ${
+                    likedFoods.find((item) => item.dishId === recipe._id)?.isLike
+                      ? "fill-white"
+                      : "stroke-white"
+                  }`}
+                />
               </div>
             </div>
           ))}

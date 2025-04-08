@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import recipeService from "../../../services/recipe.service";
 import dishesService from "../../../services/nutritionist/dishesServices";
 import ingredientsService from "../../../services/nutritionist/ingredientsServices";
-import { CheckCircle, Timer, X, Plus, Minus } from "lucide-react";
+import { Timer, X, Plus, Minus } from "lucide-react";
 import { Card } from "../../../components/ui/card";
 import recipesService from "../../../services/nutritionist/recipesServices";
 
 const RecipeModal = ({ dishId, recipeId, onClose }) => {
   const [recipe, setRecipe] = useState(null);
+  console.log("RC", recipe);
+
   const [dish, setDish] = useState(null);
   const [ingredients, setIngredients] = useState([]);
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(true);
@@ -143,14 +144,39 @@ const RecipeModal = ({ dishId, recipeId, onClose }) => {
               </button>
             </div>
             {isInstructionsOpen && (
-              <ol className="list-decimal pl-5 text-gray-700 space-y-2 max-h-60 overflow-y-auto text-sm">
-                {recipe.instruction?.map((step, index) => (
-                  <li key={index} className="flex items-start">
-                    <span className="font-medium mr-1">Step {step.step}:</span>
-                    <p>{step.description}</p>
-                  </li>
-                ))}
-              </ol>
+              <div className="max-h-80 overflow-y-auto">
+                {" "}
+                {/* Added max-height and scrolling */}
+                {/* Video Section (if videoUrl exists) */}
+                {recipe?.dishId?.videoUrl && (
+                  <div className="mb-4">
+                    <h4 className="text-md font-semibold text-gray-700 mb-2 flex items-center">
+                      <span className="mr-2">🎥</span> Video Tutorial
+                    </h4>
+                    <div
+                      className="relative w-full"
+                      style={{ paddingTop: "56.25%" /* 16:9 Aspect Ratio */ }}
+                    >
+                      <iframe
+                        src={recipe?.dishId?.videoUrl}
+                        title="Recipe Video Tutorial"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="absolute top-0 left-0 w-full h-full rounded-lg border-0"
+                      ></iframe>
+                    </div>
+                  </div>
+                )}
+                {/* Written Instructions */}
+                <ol className="list-decimal pl-5 text-gray-700 space-y-2 max-h-40 overflow-y-auto text-sm">
+                  {recipe.instruction?.map((step, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="font-medium mr-1">Step {step.step}:</span>
+                      <p>{step.description}</p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             )}
           </Card>
         </div>

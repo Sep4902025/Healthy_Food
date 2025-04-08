@@ -118,7 +118,7 @@ const FoodSlider = ({ userId, dishes = [] }) => {
                     </div>
                   </div>
 
-                  <div className="food-item-title">{food.name}</div>
+                  <div className="food-item-title truncate">{food.name}</div>
                   <div className="food-item-des">{food.description}</div>
 
                   {/* Add "No recipe available" message if no recipeId */}

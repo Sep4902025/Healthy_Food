@@ -147,14 +147,17 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
 
                 <div className="flex justify-center pt-2">
                   <img
-                    src={dish.imageUrl}
+                    src={
+                      dish.imageUrl ||
+                      "https://i.pinimg.com/736x/a2/76/1f/a2761ff3654cddb3992f412589f6c3e6.jpg"
+                    }
                     alt={dish.name}
                     className="w-48 h-48 rounded-full object-cover"
                   />
                 </div>
 
                 <div className="p-4 text-center">
-                  <h3 className="text-xl font-semibold text-gray-800 font-['Inter']">
+                  <h3 className="text-xl font-semibold text-gray-800 font-['Inter'] truncate">
                     {dish.name}
                   </h3>
                   <p className="text-sm text-gray-500 font-['Inter'] mt-1 line-clamp-2">

@@ -231,7 +231,7 @@ const ChatWindow = ({ conversation, setCurrentConversation }) => {
       >
         <MessageList messages={messages} currentUserId={user._id} />
       </div>
-      <div className="border-t border-gray-200">
+      <div className="border-t border-gray-200 mt-1">
         <ChatInput
           onSendMessage={handleSendMessage}
           conversation={conversation}
