@@ -94,7 +94,7 @@ const HomeService = {
 
   getRecipeByRecipeId: async (dishId, recipeId) => {
     try {
-      const response = await axiosInstance.get(`/dishes/${dishId}/recipes/${recipeId}`);
+      const response = await axiosInstance.get(`/recipes/${dishId}/${recipeId}`);
       console.log("Fetched Recipes:", response.data);
       return {
         success: true,

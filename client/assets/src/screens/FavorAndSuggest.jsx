@@ -24,6 +24,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import YoutubePlayer from "react-native-youtube-iframe";
 import HomeService from "../services/HomeService";
 import { getIngredient } from "../services/ingredient";
+import commentService from './../services/commentService';
 
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
@@ -33,6 +34,7 @@ function FavorAndSuggest({ route }) {
   const [recipe, setRecipe] = useState(null);
   const [ingredientDetails, setIngredientDetails] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [rating, setRating] = useState(0);
 
   const dispatch = useDispatch();
   const favorite = useSelector(favorSelector);
@@ -48,6 +50,30 @@ function FavorAndSuggest({ route }) {
       Alert.alert("Error", "Dish data is not available.");
     }
   }, [route?.params?.dish]);
+
+  // Load rating
+  useEffect(() => {
+    
+    const fetchRating = async () => {
+      if (!recipe?._id) return; // tránh lỗi nếu chưa có recipe
+  
+      try {
+        console.log("📌 Recipe mới:", recipe);
+        const data = await commentService.getRatingsByRecipe(recipe._id);
+        if (data) {
+          setRating(data);
+          console.log("Lấy rating thành công:", data);
+        } else {
+          console.warn("Không nhận được dữ liệu từ getRatingsByRecipe");
+        }
+      } catch (error) {
+        console.error("Lỗi khi gọi getRatingsByRecipe:", error);
+      }
+    };
+  
+    fetchRating();
+  }, [recipe]); 
+  
 
   // Load recipe when dish changes
   useEffect(() => {
@@ -147,9 +173,23 @@ function FavorAndSuggest({ route }) {
     }
   };
 
-  const handleRate = (ratePoint) => {
-    setRecipe((prev) => ({ ...prev, rate: ratePoint }));
+  const handleRate = async (ratePoint) => {
+    try {
+      const res = await commentService.rateRecipe(dish._id, user._id, ratePoint);
+  
+      if (res?.success || res?.status === 200) {
+        // ✅ Thành công
+        setRecipe((prev) => ({ ...prev, rate: ratePoint }));
+      } else {
+        // ❌ Thất bại - log ra hoặc báo lỗi cho người dùng
+        console.warn('Rating thất bại:', res);
+      }
+    } catch (err) {
+      console.error('Lỗi khi gọi rateRecipe:', err);
+      // Hiển thị toast, alert, hay gì đó cho người dùng biết
+    }
   };
+  
 
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
