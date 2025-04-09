@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from "react";
-import { Flame, Dumbbell, Wheat, Droplet } from "lucide-react";
-import Pagination from "../../../components/Pagination"; // Đảm bảo import đúng đường dẫn
+import React, { useState, useCallback, useEffect } from "react";
+import Pagination from "../../../components/Pagination";
+import recipesService from "../../../services/nutritionist/recipesServices";
 
-// Hàm debounce để trì hoãn tìm kiếm
+// Debounce function to delay search
 const debounce = (func, delay) => {
   let timeoutId;
   return (...args) => {
@@ -11,7 +11,7 @@ const debounce = (func, delay) => {
   };
 };
 
-// SearchInput Component (tái sử dụng từ AddMedicalCondition.js)
+// SearchInput Component
 const SearchInput = React.memo(({ value, onChange }) => {
   return (
     <input
@@ -40,12 +40,13 @@ const FoodSelectionModal = ({
   const [filterType, setFilterType] = useState("all");
   const [tempSelectedDishes, setTempSelectedDishes] = useState(selectedDishes || []);
   const [currentPage, setCurrentPage] = useState(0);
-  const [limit, setLimit] = useState(8); // 8 items per page để vừa với grid 4x2
+  const [limit, setLimit] = useState(8); // 8 items per page to fit 4x2 grid
+  const [enrichedDishes, setEnrichedDishes] = useState([]);
 
   const debouncedSearch = useCallback(
     debounce((value) => {
       setSearchTerm(value);
-      setCurrentPage(0); // Reset về trang đầu khi tìm kiếm
+      setCurrentPage(0); // Reset to first page when searching
     }, 500),
     []
   );
@@ -58,11 +59,38 @@ const FoodSelectionModal = ({
 
   const handleFilterChange = (e) => {
     setFilterType(e.target.value);
-    setCurrentPage(0); // Reset về trang đầu khi lọc
+    setCurrentPage(0); // Reset to first page when filtering
   };
 
-  // Lọc danh sách món ăn dựa trên searchTerm và filterType
-  const filteredDishes = availableDishes.filter((dish) => {
+  // Fetch recipe data for dishes with recipeId
+  useEffect(() => {
+    const fetchRecipeData = async () => {
+      const dishesWithRecipes = await Promise.all(
+        availableDishes.map(async (dish) => {
+          if (dish.recipeId && !dish.recipe) {
+            try {
+              const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
+              if (recipeResponse.success) {
+                console.log(`Recipe for ${dish.name}:`, recipeResponse.data); // Debug log
+                return { ...dish, recipe: recipeResponse.data };
+              }
+            } catch (error) {
+              console.error(`Failed to fetch recipe for dish ${dish._id}:`, error);
+            }
+          }
+          return dish;
+        })
+      );
+      setEnrichedDishes(dishesWithRecipes);
+    };
+
+    if (isOpen && availableDishes.length > 0) {
+      fetchRecipeData();
+    }
+  }, [isOpen, availableDishes]);
+
+  // Filter dishes based on searchTerm and filterType
+  const filteredDishes = enrichedDishes.filter((dish) => {
     const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === "all" || dish.type === filterType;
     return matchesSearch && matchesType;
@@ -75,7 +103,8 @@ const FoodSelectionModal = ({
     (currentPage + 1) * limit
   );
 
-  const handleCheckboxChange = (dishId) => {
+  const handleDishClick = (dishId) => {
+    if (conflictingDishes.includes(dishId)) return; // Prevent selecting conflicting dishes
     const isSelected = tempSelectedDishes.includes(dishId);
     if (isSelected) {
       setTempSelectedDishes(tempSelectedDishes.filter((id) => id !== dishId));
@@ -98,11 +127,13 @@ const FoodSelectionModal = ({
     setCurrentPage(data.selected);
   };
 
+  const isFavorite = (dishId) => false; // Placeholder; integrate with actual favorites if available
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-[90vw] max-w-5xl h-[80vh] flex flex-col shadow-xl">
+      <div className="bg-white rounded-2xl p-6 w-[90vw] max-w-5xl h-[100vh] flex flex-col shadow-xl">
         <div className="flex items-center mb-6">
           <h2 className="text-2xl font-bold text-[#40B491]">
             Select {foodModalType === "restricted" ? "Restricted" : "Recommended"} Dishes
@@ -110,7 +141,10 @@ const FoodSelectionModal = ({
           <div className="ml-auto flex space-x-3">
             <button
               onClick={handleConfirm}
-              className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                tempSelectedDishes.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              disabled={tempSelectedDishes.length === 0}
             >
               Confirm
             </button>
@@ -145,54 +179,87 @@ const FoodSelectionModal = ({
               paginatedDishes.map((dish) => {
                 const isConflicting = conflictingDishes.includes(dish._id);
                 const isSelected = tempSelectedDishes.includes(dish._id);
+                const dishFavorite = isFavorite(dish._id);
+                const nutritionData = dish.recipe || {
+                  totalCalories: "N/A",
+                  totalProtein: "N/A",
+                  totalCarbs: "N/A",
+                  totalFat: "N/A",
+                }; // Use recipe data with correct field names
+
+                console.log(`Dish ${dish.name} nutritionData:`, nutritionData); // Debug log
+
                 return (
                   <div
                     key={dish._id}
-                    className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg h-72 flex flex-col"
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${
+                      isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                    } ${isConflicting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={() => !isConflicting && handleDishClick(dish._id)}
                   >
-                    <img
-                      src={dish.imageUrl || "https://via.placeholder.com/300"}
-                      alt={dish.name}
-                      className="w-full h-32 object-cover"
-                    />
-                    <div className="p-4 flex-1 flex flex-col justify-between">
-                      <h3 className="text-lg font-semibold text-center text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap">
-                        {dish.name}
-                      </h3>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div className="flex justify-between items-center">
-                          <span className="flex items-center">
-                            <Flame className="w-4 h-4 mr-1" />
-                            {dish.nutritions.calories} kcal
-                          </span>
-                          <span className="flex items-center">
-                            <Dumbbell className="w-4 h-4 mr-1" />
-                            {dish.nutritions.protein}g
+                    <div className="relative h-40 bg-gray-200">
+                      {dish.imageUrl ? (
+                        <img
+                          src={dish.imageUrl}
+                          alt={dish.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                          <img
+                            src="https://via.placeholder.com/150?text=No+Image"
+                            alt="No image available"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      {dishFavorite && (
+                        <span className="absolute top-2 right-2 text-yellow-500 text-xl">⭐</span>
+                      )}
+                      {isConflicting && (
+                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                          <span className="text-white font-semibold">Added</span>
+                        </div>
+                      )}
+                      {isSelected && !isConflicting && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="bg-[#40B491] text-white px-4 py-2 rounded-full font-semibold text-sm shadow-md">
+                            Choice
                           </span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="flex items-center">
-                            <Wheat className="w-4 h-4 mr-1" />
-                            {dish.nutritions.carbs}g
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-medium text-gray-800">{dish.name}</h3>
+                        <span className="text-sm font-bold text-blue-600">
+                          {nutritionData.totalCalories}{" "}
+                          {nutritionData.totalCalories !== "N/A" ? "kcal" : ""}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Protein:</span>
+                          <span className="font-medium">
+                            {nutritionData.totalProtein}{" "}
+                            {nutritionData.totalProtein !== "N/A" ? "g" : ""}
                           </span>
-                          <span className="flex items-center">
-                            <Droplet className="w-4 h-4 mr-1" />
-                            {dish.nutritions.fat}g
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Fat:</span>
+                          <span className="font-medium">
+                            {nutritionData.totalFat}{" "}
+                            {nutritionData.totalFat !== "N/A" ? "g" : ""}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Carbs:</span>
+                          <span className="font-medium">
+                            {nutritionData.totalCarbs}{" "}
+                            {nutritionData.totalCarbs !== "N/A" ? "g" : ""}
                           </span>
                         </div>
                       </div>
-                    </div>
-                    <div className="p-2 bg-gray-50 border-t border-gray-200 flex justify-center items-center">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleCheckboxChange(dish._id)}
-                        disabled={isConflicting}
-                        className={isConflicting ? "opacity-50 cursor-not-allowed" : ""}
-                      />
-                      {isConflicting && (
-                        <span className="text-sm text-gray-500 ml-2">Conflicting</span>
-                      )}
                     </div>
                   </div>
                 );

@@ -7,7 +7,10 @@ exports.createDish = async (req, res) => {
     const newDish = await dishService.createDish(req.body);
     res.status(201).json({ status: "success", data: newDish });
   } catch (error) {
-    res.status(400).json({ status: "fail", message: error.message });
+    res.status(error.status || 400).json({ 
+      status: "fail", 
+      message: error.message 
+    });
   }
 };
 

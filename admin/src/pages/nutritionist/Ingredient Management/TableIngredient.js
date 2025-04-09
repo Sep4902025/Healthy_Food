@@ -230,7 +230,13 @@ const TableIngredient = () => {
     const newErrors = {};
 
     if (!editData.name.trim()) newErrors.name = "Name is required";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.name)) {
+      newErrors.name = "Input must not contain special characters.";
+    }
     if (!editData.description.trim()) newErrors.description = "Description is required";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.description)) {
+      newErrors.description = "Input must not contain special characters.";
+    }
     if (!editData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required";
     if (!editData.type) newErrors.type = "Type is required";
     if (editData.type === "Others" && !editData.customType.trim()) {

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import UploadComponent from "../../../components/UploadComponent";
 import dishesService from "../../../services/nutritionist/dishesServices";
-import recipesService from "../../../services/nutritionist/recipesServices";
+import recipeService from "../../../services/nutritionist/recipesServices";
 import {
   Clock,
   Utensils,
@@ -62,13 +62,9 @@ const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVis
               {dish.name}
             </h3>
             <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
-              <span className="mr-3 flex items-center">
-                <Clock className="w-4 h-4 mr-1" />
-                {dish.cookingTime || "N/A"} mins
-              </span>
               <span className="flex items-center">
                 <Utensils className="w-4 h-4 mr-1" />
-                {ingredientCounts[dish._id] || 0} ingredients
+                {ingredientCounts[dish._id] !== undefined ? ingredientCounts[dish._id] : "Loading..."} ingredients
               </span>
             </div>
           </div>
@@ -78,7 +74,7 @@ const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVis
               className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
             >
               <Video className="w-4 h-4 mr-1" />
-              Watch Video
+              Video
             </button>
             <div className="h-4 border-l border-gray-300 mx-2"></div>
             <button
@@ -99,11 +95,8 @@ const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVis
           </div>
           <button
             onClick={() => onToggleVisibility(dish)}
-            className={`absolute top-2 right-2 p-2 rounded-md text-white ${
-              dish.isVisible
-                ? "bg-gray-500 hover:bg-gray-600"
-                : "bg-[#40B491] hover:bg-[#359c7a]"
-            } transition duration-200`}
+            className={`absolute top-2 right-2 p-2 rounded-md text-white ${dish.isVisible ? "bg-gray-500 hover:bg-gray-600" : "bg-[#40B491] hover:bg-[#359c7a]"
+              } transition duration-200`}
           >
             {dish.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
           </button>
@@ -132,7 +125,6 @@ const TableDishes = () => {
     name: "",
     description: "",
     videoUrl: "",
-    cookingTime: "",
     flavor: [],
     type: "",
     season: "",
@@ -152,12 +144,16 @@ const TableDishes = () => {
   const fetchDishes = async () => {
     try {
       const response = await dishesService.getAllDishesForNutri(currentPage + 1, itemsPerPage, searchTerm);
-      console.log("APIIIIIIIII", response);
+      console.log("Dishes API response:", response);
       if (response.success) {
         const filteredByType =
           filterType === "all"
             ? response.data.items
             : response.data.items.filter((dish) => dish.type === filterType);
+        console.log(
+          "Dishes with IDs and recipeIds:",
+          filteredByType.map((d) => ({ _id: d._id, recipeId: d.recipeId }))
+        );
         setDishes(filteredByType);
         setTotalItems(response.data.total);
         setTotalPages(response.data.totalPages);
@@ -189,32 +185,34 @@ const TableDishes = () => {
     if (dishes.length === 0) return;
 
     setLoadingIngredients(true);
-    const counts = { ...ingredientCounts };
-    const dishesToFetch = dishes.filter((dish) => counts[dish._id] === undefined);
-
-    if (dishesToFetch.length > 0) {
-      await Promise.all(
-        dishesToFetch.map(async (dish) => {
-          if (dish.recipeId) {
-            try {
-              const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
-              if (recipeResponse.success && recipeResponse.data?.status === "success") {
-                counts[dish._id] = recipeResponse.data.data.ingredients?.length || 0;
-              } else {
-                counts[dish._id] = 0;
-              }
-            } catch (error) {
+    const counts = {};
+    await Promise.all(
+      dishes.map(async (dish) => {
+        console.log(`Fetching for dish ${dish._id}, recipeId: ${dish.recipeId}`);
+        if (dish.recipeId) {
+          try {
+            const recipeResponse = await recipeService.getRecipeById(dish._id, dish.recipeId); // Dùng getRecipeById
+            console.log(`Recipe response for dish ${dish._id}:`, recipeResponse);
+            if (recipeResponse.success) {
+              counts[dish._id] = recipeResponse.data.ingredients?.length || 0;
+            } else {
               counts[dish._id] = 0;
+              console.log(`No success for dish ${dish._id}`);
             }
-          } else {
+          } catch (error) {
+            console.error(`Error fetching recipe for dish ${dish._id}:`, error);
             counts[dish._id] = 0;
           }
-        })
-      );
-      setIngredientCounts(counts);
-    }
+        } else {
+          counts[dish._id] = 0;
+          console.log(`No recipeId for dish ${dish._id}`);
+        }
+      })
+    );
+    console.log("Final ingredient counts:", counts);
+    setIngredientCounts(counts);
     setLoadingIngredients(false);
-  }, [dishes, ingredientCounts]);
+  }, [dishes]);
 
   useEffect(() => {
     fetchIngredientCounts();
@@ -259,24 +257,35 @@ const TableDishes = () => {
 
   const validateForm = () => {
     const newErrors = {};
+
     if (!editData.name.trim()) newErrors.name = "Name is required";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.name)) {
+      newErrors.name = "Input must not contain special characters.";
+    }
     if (!editData.description.trim()) newErrors.description = "Description is required";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.description)) {
+      newErrors.description = "Input must not contain special characters.";
+    }
     if (!editData.imageFile && !editData.imageUrl.trim() && !imagePreview) {
       newErrors.imageUrl = "Image (file or URL) is required";
     } else if (editData.imageUrl && !isValidImageUrl) {
       newErrors.imageUrl = "Invalid image URL. Please provide a valid image link.";
     }
-    if (!editData.cookingTime) newErrors.cookingTime = "Cooking time is required";
     if (editData.flavor.length === 0) newErrors.flavor = "At least one flavor is required";
     if (!editData.type) newErrors.type = "Type is required";
     if (!editData.season) newErrors.season = "Season is required";
-    if (editData.videoUrl) {
+
+    if (!editData.videoUrl.trim()) {
+      newErrors.videoUrl = "Video URL is required";
+    } else {
       const youtubeEmbedRegex =
         /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
       if (!youtubeEmbedRegex.test(editData.videoUrl)) {
-        newErrors.videoUrl = "Video URL must be a valid YouTube embed link";
+        newErrors.videoUrl =
+          "Video URL must be a valid YouTube embed link (e.g., https://www.youtube.com/embed/video_id)";
       }
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -300,7 +309,6 @@ const TableDishes = () => {
       } catch (error) {
         setIsSaving(false);
         toast.error("Image upload failed!");
-        console.error("Upload error:", error);
         return;
       }
     }
@@ -316,8 +324,8 @@ const TableDishes = () => {
     if (response.success) {
       toast.success(`Dish "${editData.name}" has been saved!`);
       setIsEditModalOpen(false);
-      fetchDishes();
-      setIngredientCounts({});
+      await fetchDishes();
+      await fetchIngredientCounts();
     } else {
       toast.error("Failed to save dish. Please try again.");
     }
@@ -431,15 +439,6 @@ const TableDishes = () => {
     }
   };
 
-  const handleCookingTimeChange = (e) => {
-    let value = e.target.value;
-    value = value.replace(/[^0-9]/g, "");
-    value = value === "" ? "" : parseInt(value, 10);
-    if (value < 0 || isNaN(value)) value = 0;
-    else if (value > 1440) value = 1440;
-    setEditData({ ...editData, cookingTime: value });
-    setErrors({ ...errors, cookingTime: "" });
-  };
 
   const handlePageClick = ({ selected }) => {
     setCurrentPage(selected);
@@ -452,7 +451,6 @@ const TableDishes = () => {
       name: "",
       description: "",
       videoUrl: "",
-      cookingTime: "",
       flavor: [],
       type: "",
       season: "",
@@ -491,11 +489,10 @@ const TableDishes = () => {
               setFilterType("all");
               setCurrentPage(0);
             }}
-            className={`px-4 py-2 rounded-md font-semibold ${
-              filterType === "all"
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            } transition duration-200`}
+            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
+              ? "bg-[#40B491] text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
           >
             All
           </button>
@@ -506,11 +503,10 @@ const TableDishes = () => {
                 setFilterType(filterType === type ? "all" : type);
                 setCurrentPage(0);
               }}
-              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
-                filterType === type
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
             >
               {type}
             </button>
@@ -561,9 +557,8 @@ const TableDishes = () => {
                 <button
                   onClick={handleSaveEdit}
                   disabled={isSaving}
-                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
-                    isSaving ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isSaving ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </button>
@@ -586,47 +581,21 @@ const TableDishes = () => {
                     value={editData.name || ""}
                     onChange={handleChange}
                     placeholder="Enter dish name"
-                    className={`w-full border ${
-                      errors.name ? "border-red-500" : "border-gray-300"
-                    } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cooking Time *
-                    </label>
-                    <div className="flex items-center">
-                      <input
-                        type="number"
-                        name="cookingTime"
-                        value={editData.cookingTime || ""}
-                        onChange={handleCookingTimeChange}
-                        onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
-                        placeholder="1"
-                        min="1"
-                        max="1440"
-                        className={`w-full border ${
-                          errors.cookingTime ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
-                      />
-                      <span className="ml-2 text-sm text-gray-500">Minutes</span>
-                    </div>
-                    {errors.cookingTime && (
-                      <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>
-                    )}
-                  </div>
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
                     <select
                       name="type"
                       value={editData.type || ""}
                       onChange={handleChange}
-                      className={`w-full border ${
-                        errors.type ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     >
                       <option value="">Select type</option>
                       {TYPE_OPTIONS.map((type) => (
@@ -637,24 +606,24 @@ const TableDishes = () => {
                     </select>
                     {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Video URL *</label>
+                    <input
+                      type="text"
+                      name="videoUrl"
+                      value={editData.videoUrl || ""}
+                      onChange={handleChange}
+                      placeholder="https://www.youtube.com/embed/video_id"
+                      className={`w-full border ${errors.videoUrl ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    />
+                    {errors.videoUrl && (
+                      <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
-                  <input
-                    type="text"
-                    name="videoUrl"
-                    value={editData.videoUrl || ""}
-                    onChange={handleChange}
-                    placeholder="https://www.youtube.com/embed/video_id"
-                    className={`w-full border ${
-                      errors.videoUrl ? "border-red-500" : "border-gray-300"
-                    } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
-                  />
-                  {errors.videoUrl && (
-                    <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>
-                  )}
-                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Season *</label>
@@ -662,9 +631,8 @@ const TableDishes = () => {
                     name="season"
                     value={editData.season || ""}
                     onChange={handleChange}
-                    className={`w-full border ${
-                      errors.season ? "border-red-500" : "border-gray-300"
-                    } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${errors.season ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   >
                     <option value="">Select season</option>
                     {SEASON_OPTIONS.map((season) => (
@@ -684,9 +652,7 @@ const TableDishes = () => {
                         <input
                           type="checkbox"
                           value={flavor}
-                          checked={
-                            Array.isArray(editData.flavor) && editData.flavor.includes(flavor)
-                          }
+                          checked={Array.isArray(editData.flavor) && editData.flavor.includes(flavor)}
                           onChange={handleFlavorChange}
                           className="mr-2 h-4 w-4 text-[#40B491] focus:ring-[#40B491] rounded"
                         />
@@ -713,9 +679,8 @@ const TableDishes = () => {
                       value={editData.imageUrl || ""}
                       onChange={handleImageUrlChange}
                       placeholder="Enter image URL"
-                      className={`w-full border ${
-                        errors.imageUrl ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     />
                     {errors.imageUrl && (
                       <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>
@@ -743,9 +708,8 @@ const TableDishes = () => {
                     value={editData.description || ""}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${
-                      errors.description ? "border-red-500" : "border-gray-300"
-                    } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">{errors.description}</p>

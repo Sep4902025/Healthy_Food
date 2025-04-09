@@ -4,6 +4,15 @@ const jwt = require("jsonwebtoken");
 const UserModel = require("../models/UserModel");
 
 exports.createDish = async (data) => {
+  const existingDish = await Dish.findOne({ 
+    name: data.name, 
+    isDelete: false 
+  });
+  
+  if (existingDish) {
+    throw Object.assign(new Error("Dish with this name already exists"), { status: 400 });
+  }
+
   const newDish = new Dish(data);
   return await newDish.save();
 };

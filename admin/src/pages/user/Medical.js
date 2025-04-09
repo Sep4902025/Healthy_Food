@@ -40,18 +40,22 @@ const MedicalConditionList = memo(
       {conditions.map((condition) => (
         <article
           key={condition._id}
-          className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1"
+          className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1 flex flex-col"
+          style={{ height: "220px" }} // Fixed height for the card
           onClick={() => onConditionClick(condition._id)}
         >
-          <div className="p-6">
+          <div className="p-6 flex flex-col flex-grow">
             <h2 className="text-2xl font-bold text-gray-900 mb-3 font-['Syne'] line-clamp-1">
               {condition.name}
             </h2>
-            <p className="text-gray-600 text-base mb-4 line-clamp-3 leading-relaxed">
+            <p
+              className="text-gray-600 text-base mb-4 leading-relaxed line-clamp-3 flex-grow"
+              style={{ height: "72px" }} // Fixed height for description (3 lines)
+            >
               {condition.description || "Learn more about this condition and its dietary impacts."}
             </p>
             <button
-              className="text-[#40B491] font-semibold hover:text-[#359c7a] transition duration-200 flex items-center"
+              className="text-[#40B491] font-semibold hover:text-[#359c7a] transition duration-200 flex items-center mt-auto"
               onClick={(e) => {
                 e.stopPropagation();
                 onConditionClick(condition._id);

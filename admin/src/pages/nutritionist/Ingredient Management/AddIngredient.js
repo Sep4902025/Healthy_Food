@@ -42,7 +42,13 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
     const newErrors = {};
 
     if (!formData.name.trim()) newErrors.name = "Name is required!";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.name)) {
+      newErrors.name = "Input must not contain special characters.";
+    }
     if (!formData.description.trim()) newErrors.description = "Description is required!";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.description)) {
+      newErrors.description = "Input must not contain special characters.";
+    }
     if (!formData.imageFile && !formData.imageUrl.trim())
       newErrors.imageUrl = "Image (file or URL) is required!";
     else if (formData.imageUrl && !isValidImageUrl)
@@ -222,7 +228,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
       onIngredientAdded();
       navigate("/nutritionist/ingredients");
     } else {
-      toast.error("Failed to add ingredient: " + response.message);
+      toast.error(response.message);
     }
   };
 

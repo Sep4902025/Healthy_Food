@@ -3,6 +3,13 @@ const jwt = require("jsonwebtoken");
 const UserModel = require("../models/UserModel");
 
 exports.createIngredient = async (data) => {
+  const existingIngredient = await Ingredients.findOne({ 
+    name: data.name, 
+    isDelete: false 
+  });
+  if (existingIngredient) {
+    throw Object.assign(new Error("Ingredient with this name already exists"), { status: 400 });
+  }
   const newIngredient = new Ingredients(data);
   return await newIngredient.save();
 };

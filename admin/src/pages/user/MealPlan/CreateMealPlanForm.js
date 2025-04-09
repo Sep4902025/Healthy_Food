@@ -111,7 +111,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-l-4 border-green-500">
+    <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-l-4 border-[#40B491]">
       <h2 className="text-xl font-semibold mb-6 text-gray-800">Create New Meal Plan</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -123,7 +123,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter plan title"
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
           />
         </div>
 
@@ -134,7 +134,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
           />
         </div>
 
@@ -144,7 +144,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
           >
             <option value="fixed">Fixed (With Meals)</option>
             <option value="custom">Custom (No Meals Required)</option>
@@ -171,14 +171,14 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
               min="1"
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               placeholder="Enter number of days"
             />
           ) : (
             <select
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
             >
               <option value={7}>7 Days</option>
               <option value={14}>14 Days</option>
@@ -201,7 +201,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
                 min="0"
                 step="0.01"
                 placeholder="Enter price"
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               />
             </div>
 
@@ -216,7 +216,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
                   if (!e.target.value) setTargetUserId(null);
                 }}
                 placeholder="Search by user email"
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               />
               {userSuggestions.length > 0 && (
                 <ul className="absolute z-auto w-full bg-white border rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg">
@@ -280,7 +280,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
                     value={meal.mealName}
                     onChange={(e) => handleMealChange(index, "mealName", e.target.value)}
                     placeholder="Enter meal name"
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
                   />
                 </div>
                 <button
@@ -311,8 +311,8 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
       <button
         onClick={handleCreateMealPlan}
         disabled={creating}
-        className={`mt-6 w-full bg-green-500 text-white px-4 py-2 rounded-md transition duration-200 ${
-          creating ? "opacity-50 cursor-not-allowed" : "hover:bg-green-600"
+        className={`mt-6 w-full bg-[#40B491] text-white px-4 py-2 rounded-md transition duration-200 ${
+          creating ? "opacity-50 cursor-not-allowed" : "hover:bg-[#40B491]/90"
         }`}
       >
         {creating ? "Creating..." : "Create Meal Plan"}

@@ -19,7 +19,6 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
     imageFile: null,
     imageUrl: "",
     videoUrl: "",
-    cookingTime: "",
     nutritions: "",
     flavor: [],
     type: "",
@@ -34,17 +33,24 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
     const newErrors = {};
 
     if (!formData.name.trim()) newErrors.name = "Name is required";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.name)) {
+      newErrors.name = "Input must not contain special characters.";
+    }
     if (!formData.description.trim()) newErrors.description = "Description is required";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.description)) {
+      newErrors.description = "Input must not contain special characters.";
+    }
     if (!formData.imageFile && !formData.imageUrl.trim())
       newErrors.imageUrl = "Image (file or URL) is required";
     else if (formData.imageUrl && !isValidImageUrl)
       newErrors.imageUrl = "Invalid image URL. Please provide a valid image link.";
-    if (!formData.cookingTime) newErrors.cookingTime = "Cooking time is required";
     if (formData.flavor.length === 0) newErrors.flavor = "At least one flavor is required";
     if (!formData.type) newErrors.type = "Type is required";
     if (!formData.season) newErrors.season = "Season is required";
 
-    if (formData.videoUrl) {
+    if (!formData.videoUrl.trim()) {
+      newErrors.videoUrl = "Video URL is required";
+    } else {
       const youtubeEmbedRegex =
         /^https:\/\/www\.youtube\.com\/embed\/[A-Za-z0-9_-]+\??(si=[A-Za-z0-9_-]+)?$/;
       if (!youtubeEmbedRegex.test(formData.videoUrl)) {
@@ -114,17 +120,6 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
     img.src = url;
   };
 
-  const handleCookingTimeChange = (e) => {
-    let value = e.target.value;
-    value = value.replace(/[^0-9]/g, "");
-    value = value === "" ? "" : parseInt(value, 10);
-
-    if (value < 0 || isNaN(value)) value = 0;
-    else if (value > 1440) value = 1440;
-
-    setFormData({ ...formData, cookingTime: value });
-    setErrors({ ...errors, cookingTime: "" });
-  };
 
   const compressImage = async (file) => {
     const options = {
@@ -182,7 +177,6 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
         imageFile: null,
         imageUrl: "",
         videoUrl: "",
-        cookingTime: "",
         nutritions: "",
         flavor: [],
         type: "",
@@ -194,7 +188,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
       onDishAdded();
       navigate("/nutritionist/dishes");
     } else {
-      toast.success(response.message);
+      toast.error(response.message);
     }
   };
 
@@ -214,7 +208,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
           <p className="mt-4 text-white text-lg">Loading...</p>
         </div>
       )}
-
+  
       <div className="flex items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
           Add New Dish
@@ -223,14 +217,15 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
           <button
             onClick={handleSubmit}
             disabled={isLoading}
-            className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isLoading ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+            className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+              isLoading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
             {isLoading ? "Saving..." : "Save Dish"}
           </button>
         </div>
       </div>
-
+  
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="mb-4">
@@ -241,75 +236,57 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter dish name"
-              className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
           </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cooking Time (minutes) *
-              </label>
-              <input
-                type="number"
-                name="cookingTime"
-                value={formData.cookingTime}
-                onChange={handleCookingTimeChange}
-                onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
-                placeholder="Cooking time"
-                min="1"
-                max="1440"
-                className={`w-full border ${errors.cookingTime ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
-              />
-              {errors.cookingTime && (
-                <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
-              >
-                <option value="">Select type</option>
-                {TYPE_OPTIONS.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-              {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
-            </div>
-          </div>
-
+  
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+            <select
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
+              className={`w-full border ${
+                errors.type ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+            >
+              <option value="">Select type</option>
+              {TYPE_OPTIONS.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+            {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
+          </div>
+  
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Video URL *</label>
             <input
               type="text"
               name="videoUrl"
               value={formData.videoUrl}
               onChange={handleChange}
               placeholder="https://www.youtube.com/embed/video_id"
-              className={`w-full border ${errors.videoUrl ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${
+                errors.videoUrl ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             />
             {errors.videoUrl && <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>}
           </div>
-
+  
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Season *</label>
             <select
               name="season"
               value={formData.season}
               onChange={handleChange}
-              className={`w-full border ${errors.season ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${
+                errors.season ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             >
               <option value="">Select season</option>
               {SEASON_OPTIONS.map((season) => (
@@ -320,7 +297,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
             </select>
             {errors.season && <p className="text-red-500 text-sm mt-1">{errors.season}</p>}
           </div>
-
+  
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">Flavor *</label>
             <div className="flex flex-wrap gap-4">
@@ -339,7 +316,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
             </div>
             {errors.flavor && <p className="text-red-500 text-sm mt-1">{errors.flavor}</p>}
           </div>
-
+  
           <div className="bg-gray-50 p-6 rounded-lg">
             <div className="text-center mb-4">
               <UploadComponent
@@ -355,8 +332,9 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
                 value={formData.imageUrl}
                 onChange={handleImageUrlChange}
                 placeholder="Enter image URL"
-                className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${
+                  errors.imageUrl ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               />
               {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
             </div>
@@ -371,7 +349,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
             )}
           </div>
         </div>
-
+  
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
@@ -380,8 +358,9 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
               value={formData.description}
               onChange={handleChange}
               placeholder="Enter description"
-              className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${
+                errors.description ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             />
             {errors.description && (
               <p className="text-red-500 text-sm mt-1">{errors.description}</p>

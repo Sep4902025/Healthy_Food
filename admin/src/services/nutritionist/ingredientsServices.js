@@ -9,7 +9,7 @@ const getAuthHeaders = () => {
 };
 
 const ingredientsService = {
-  // 🔹 Lấy tất cả nguyên liệu với phân trang và lọc
+  // Get all ingredients with pagination and filtering
   getAllIngredients: async (page = 1, limit = 10, type = "all", search = "") => {
     try {
       const response = await axios.get(`${API_URL}/ingredients`, {
@@ -18,13 +18,12 @@ const ingredientsService = {
         params: {
           page,
           limit,
-          type,  // Lọc theo loại nguyên liệu
-          search, // Tìm kiếm theo tên
-          sort: "createdAt", // Thêm tham số sắp xếp
-          order: "desc",     // Sắp xếp theo thứ tự giảm dần
+          type,  // Filter by ingredient type
+          search, // Search by name
+          sort: "createdAt", // Add sort parameter
+          order: "desc",     // Sort in descending order
         },
       });
-      console.log("📌 Danh sách nguyên liệu:", response.data);
       return {
         success: true,
         data: {
@@ -35,75 +34,75 @@ const ingredientsService = {
         },
       };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy danh sách nguyên liệu:", error.response?.data || error.message);
-      return { success: false, message: "Lỗi khi tải danh sách nguyên liệu" };
+      return { success: false, message: "Error loading ingredients list" };
     }
   },
-  
 
-  // 🔹 Lấy nguyên liệu theo ID
+  // Get ingredient by ID
   getIngredientById: async (id) => {
     try {
       const response = await axios.get(`${API_URL}/ingredients/${id}`, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-      console.log(`📌 Nguyên liệu ID ${id}:`, response.data);
       return { success: true, data: response.data };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy nguyên liệu:", error.response?.data || error.message);
-      return { success: false, message: "Không tìm thấy nguyên liệu!" };
+      return { success: false, message: "Ingredient not found!" };
     }
   },
 
-  // 🔹 Thêm nguyên liệu mới
+  // Create a new ingredient
   createIngredient: async (data) => {
     try {
-      console.log("📤 Gửi dữ liệu tạo nguyên liệu:", data);
       const response = await axios.post(`${API_URL}/ingredients`, data, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-      console.log("✅ Phản hồi từ server:", response.data);
-      return { success: true };
+      return { success: true, data: response.data.data }; // Return ingredient data if needed
     } catch (error) {
-      console.error("❌ Lỗi khi thêm nguyên liệu:", error.response?.data || error.message);
-      return { success: false, message: "Thêm nguyên liệu thất bại!" };
+      // Check for duplicate name error from server
+      if (error.response?.data?.message === "Ingredient with this name already exists") {
+        return { 
+          success: false, 
+          message: "Ingredient with this name already exists" 
+        };
+      }
+  
+      // Handle other errors
+      return { 
+        success: false, 
+        message: error.response?.data?.message || "Failed to add ingredient!" 
+      };
     }
   },
 
-  // 🔹 Cập nhật nguyên liệu
+  // Update an ingredient
   updateIngredient: async (id, data) => {
     try {
-      console.log(`✏️ Cập nhật nguyên liệu ID ${id}:`, data);
       await axios.put(`${API_URL}/ingredients/${id}`, data, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
       return { success: true };
     } catch (error) {
-      console.error("❌ Lỗi khi cập nhật nguyên liệu:", error.response?.data || error.message);
-      return { success: false, message: "Cập nhật nguyên liệu thất bại!" };
+      return { success: false, message: "Failed to update ingredient!" };
     }
   },
 
-  // 🔹 Xóa mềm nguyên liệu
+  // Soft delete an ingredient
   deleteIngredient: async (id) => {
     try {
-      console.log(`🗑 Xóa mềm nguyên liệu ID: ${id}`);
       const response = await axios.put(
         `${API_URL}/ingredients/${id}`,
-        { isDelete: true }, // Gửi dữ liệu để cập nhật isDelete
+        { isDelete: true }, // Send data to update isDelete
         {
           headers: getAuthHeaders(),
           withCredentials: true,
         }
       );
-      console.log("✅ Phản hồi từ server:", response.data);
       return { success: true, data: response.data.data };
     } catch (error) {
-      console.error("❌ Lỗi khi xóa mềm nguyên liệu:", error.response?.data || error.message);
-      return { success: false, message: "Xóa mềm nguyên liệu thất bại!" };
+      return { success: false, message: "Failed to soft delete ingredient!" };
     }
   },
 };

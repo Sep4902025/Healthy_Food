@@ -73,7 +73,7 @@ const TableRecipes = () => {
     carbs: 0,
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const [inputValue, setInputValue] = useState(""); // Giá trị hiển thị trong input
+  const [inputValue, setInputValue] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
@@ -110,27 +110,42 @@ const TableRecipes = () => {
         dishService.getAllDishes(currentPage, itemsPerPage, searchTerm),
         ingredientService.getAllIngredients(1, 1000),
       ]);
-
+  
       if (dishesResponse?.success) {
-        setDishes(dishesResponse.data.items || []);
+        let dishesData = dishesResponse.data.items || [];
+        // If recipeId is a string, fetch the full recipe data
+        for (let dish of dishesData) {
+          if (dish.recipeId && typeof dish.recipeId === "string") {
+            const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
+            if (recipeResponse.success) {
+              dish.recipeId = recipeResponse.data; // Assign full recipe object
+            } else {
+              dish.recipeId = null; // Set to null if fetch fails to avoid errors
+            }
+          }
+        }
+        setDishes(dishesData);
         setTotalItems(dishesResponse.data.total || 0);
         setTotalDishPages(dishesResponse.data.totalPages || 1);
       } else {
         setDishes([]);
-        toast.error("Không thể tải danh sách món ăn: " + dishesResponse.message);
+        toast.error("Failed to load dish list: " + dishesResponse.message);
       }
+  
       if (ingredientsResponse?.success) {
         setAvailableIngredients(ingredientsResponse.data.items || []);
       } else {
         setAvailableIngredients([]);
+        toast.error("Failed to load ingredient list: " + ingredientsResponse.message);
       }
     } catch (error) {
       setDishes([]);
       setAvailableIngredients([]);
-      toast.error("Đã xảy ra lỗi khi tải dữ liệu: " + error.message);
+      toast.error("An error occurred while loading data: " + error.message);
     }
     setIsLoading(false);
   };
+  
 
   useEffect(() => {
     if (filterType === "all") {
@@ -182,35 +197,42 @@ const TableRecipes = () => {
   const handleAddRecipeClick = async (dish) => {
     setSelectedDish(dish);
     setErrors({});
+    setNewInstructionStep({ step: "", description: "" });
+    setIsEditingInstruction(null);
+  
     try {
-      if (dish.recipeId) {
+      let recipeData = null;
+  
+      // Kiểm tra xem dish.recipeId là object hay chuỗi
+      if (dish.recipeId && typeof dish.recipeId === "object") {
+        // Nếu dish.recipeId đã là object đầy đủ, sử dụng trực tiếp
+        recipeData = dish.recipeId;
+      } else if (dish.recipeId && typeof dish.recipeId === "string") {
+        // Nếu dish.recipeId là chuỗi ID, gọi API để lấy dữ liệu công thức
         const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
         if (recipeResponse.success) {
-          const recipe = recipeResponse.data; // Adjusted to directly use response.data
-          const existingIngredients = recipe.ingredients?.map((ing) => ({
-            _id: ing.ingredientId._id, // Map ingredientId._id to _id
-            name: ing.ingredientId.name || "Unknown", // Map name
-            quantity: ing.quantity || "", // Map quantity
-            unit: ing.unit || "", // Map unit
-          })) || [];
-          setNewRecipeData({
-            ingredients: existingIngredients,
-            instruction: recipe.instruction || [], // Map instructions
-            cookingTime: recipe.cookingTime || "", // Map cooking time
-            totalServing: recipe.totalServing || "", // Map total serving
-          });
+          recipeData = recipeResponse.data;
         } else {
-          // If fetching fails but recipeId exists, still open modal with empty data
-          setNewRecipeData({
-            ingredients: [],
-            instruction: [],
-            cookingTime: "",
-            totalServing: "",
-          });
           toast.error("Could not load existing recipe: " + recipeResponse.message);
         }
+      }
+  
+      if (recipeData) {
+        const existingIngredients = recipeData.ingredients?.map((ing) => ({
+          _id: ing.ingredientId._id || ing.ingredientId, // Xử lý trường hợp ingredientId là object hoặc ID
+          name: ing.ingredientId.name || "Unknown",
+          quantity: ing.quantity || "",
+          unit: ing.unit || "",
+        })) || [];
+  
+        setNewRecipeData({
+          ingredients: existingIngredients,
+          instruction: recipeData.instruction || [],
+          cookingTime: recipeData.cookingTime || "",
+          totalServing: recipeData.totalServing || "",
+        });
       } else {
-        // No recipeId, initialize empty form for new recipe
+        // Nếu không có recipeId hoặc không lấy được dữ liệu, reset về mặc định
         setNewRecipeData({
           ingredients: [],
           instruction: [],
@@ -219,7 +241,6 @@ const TableRecipes = () => {
         });
       }
     } catch (error) {
-      // Handle network or unexpected errors
       setNewRecipeData({
         ingredients: [],
         instruction: [],
@@ -228,17 +249,28 @@ const TableRecipes = () => {
       });
       toast.error("Error loading recipe: " + (error.message || "Unknown error"));
     }
-    setIsAddRecipeModalOpen(true); // Open modal regardless of success/failure
+    setIsAddRecipeModalOpen(true);
   };
 
   const handleAddInstruction = () => {
-    if (!newInstructionStep.step || !newInstructionStep.description.trim()) {
+    const step = newInstructionStep.step;
+    const description = newInstructionStep.description.trim();
+
+    if (!step && !description) {
       setErrors({ ...errors, instruction: "Please enter both step number and description!" });
+      return;
+    }
+    if (!step) {
+      setErrors({ ...errors, instruction: "Please enter a step number!" });
+      return;
+    }
+    if (!description) {
+      setErrors({ ...errors, instruction: "Please enter a description!" });
       return;
     }
 
     const stepExists = newRecipeData.instruction.some(
-      (inst) => inst.step === parseInt(newInstructionStep.step)
+      (inst) => inst.step === parseInt(step)
     );
     if (stepExists) {
       setErrors({ ...errors, instruction: "Step number already exists!" });
@@ -249,10 +281,7 @@ const TableRecipes = () => {
       ...newRecipeData,
       instruction: [
         ...newRecipeData.instruction,
-        {
-          step: parseInt(newInstructionStep.step),
-          description: newInstructionStep.description.trim(),
-        },
+        { step: parseInt(step), description },
       ].sort((a, b) => a.step - b.step),
     });
     setNewInstructionStep({ step: "", description: "" });
@@ -260,13 +289,24 @@ const TableRecipes = () => {
   };
 
   const handleSaveInstruction = (index) => {
-    if (!newInstructionStep.step || !newInstructionStep.description.trim()) {
+    const step = newInstructionStep.step;
+    const descripción = newInstructionStep.description.trim();
+
+    if (!step && !descripción) {
       setErrors({ ...errors, instruction: "Please enter both step number and description!" });
+      return;
+    }
+    if (!step) {
+      setErrors({ ...errors, instruction: "Please enter a step number!" });
+      return;
+    }
+    if (!descripción) {
+      setErrors({ ...errors, instruction: "Please enter a description!" });
       return;
     }
 
     const stepExists = newRecipeData.instruction.some(
-      (inst, i) => inst.step === parseInt(newInstructionStep.step) && i !== index
+      (inst, i) => inst.step === parseInt(step) && i !== index
     );
     if (stepExists) {
       setErrors({ ...errors, instruction: "Step number already exists!" });
@@ -274,10 +314,7 @@ const TableRecipes = () => {
     }
 
     const updatedInstructions = [...newRecipeData.instruction];
-    updatedInstructions[index] = {
-      step: parseInt(newInstructionStep.step),
-      description: newInstructionStep.description.trim(),
-    };
+    updatedInstructions[index] = { step: parseInt(step), description: descripción };
     setNewRecipeData({
       ...newRecipeData,
       instruction: updatedInstructions.sort((a, b) => a.step - b.step),
@@ -330,35 +367,33 @@ const TableRecipes = () => {
     if (!validateForm()) {
       return;
     }
-  
+
     setIsSaving(true);
-  
+
     const formattedIngredients = newRecipeData.ingredients.map((ing) => ({
-      ingredientId: ing._id, // Ensure this is a string ID
+      ingredientId: ing._id,
       quantity: ing.quantity || 0,
       unit: ing.unit || "g",
     }));
-  
+
     const updatedRecipe = {
       ingredients: formattedIngredients,
       instruction: newRecipeData.instruction,
       cookingTime: newRecipeData.cookingTime,
       totalServing: newRecipeData.totalServing,
     };
-  
+
     try {
       let response;
-      const dishId = selectedDish._id; // Always use the dish's _id as a string
-      const recipeId = selectedDish.recipeId?._id || selectedDish.recipeId; // Handle recipeId as string
-  
+      const dishId = selectedDish._id;
+      const recipeId = selectedDish.recipeId?._id || selectedDish.recipeId;
+
       if (recipeId) {
-        // Updating an existing recipe
         response = await recipesService.updateRecipe(dishId, recipeId, updatedRecipe);
       } else {
-        // Creating a new recipe
         response = await recipesService.createRecipe(dishId, updatedRecipe);
       }
-  
+
       setIsSaving(false);
       if (response.success) {
         toast.success(`Recipe for "${selectedDish.name}" has been saved!`);
@@ -370,6 +405,7 @@ const TableRecipes = () => {
           cookingTime: "",
           totalServing: "",
         });
+        setSelectedDish(null);
         setErrors({});
       } else {
         toast.error("Failed to save: " + response.message);
@@ -447,6 +483,22 @@ const TableRecipes = () => {
     }
   };
 
+  // Reset newRecipeData when the modal is closed
+  useEffect(() => {
+    if (!isAddRecipeModalOpen) {
+      setNewRecipeData({
+        ingredients: [],
+        instruction: [],
+        cookingTime: "",
+        totalServing: "",
+      });
+      setSelectedDish(null);
+      setNewInstructionStep({ step: "", description: "" });
+      setIsEditingInstruction(null);
+      setErrors({});
+    }
+  }, [isAddRecipeModalOpen]);
+
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -460,11 +512,10 @@ const TableRecipes = () => {
               setFilterType("all");
               setCurrentPage(1);
             }}
-            className={`px-4 py-2 rounded-md font-semibold ${
-              filterType === "all"
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            } transition duration-200`}
+            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
+              ? "bg-[#40B491] text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
           >
             All
           </button>
@@ -475,11 +526,10 @@ const TableRecipes = () => {
                 setFilterType(type);
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
-                filterType === type
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
             >
               {type}
             </button>
@@ -508,46 +558,60 @@ const TableRecipes = () => {
                     <h3 className="text-lg font-semibold text-center text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap w-full">
                       {dish.name}
                     </h3>
-                    <div className="text-sm text-gray-600 mt-2 space-y-2">
-                      <div className="flex justify-between items-center px-4">
-                        <span className="flex items-center">
-                          <Clock className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.cookingTime || "N/A"} mins
-                        </span>
-                        <span className="flex items-center">
-                          <Users className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.totalServing || "N/A"} servings
-                        </span>
-                        <span className="flex items-center">
-                          <Flame className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.totalServing && dish.calories
-                            ? (dish.calories / dish.totalServing).toFixed(2)
-                            : "N/A"}{" "}
-                          kcal
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center px-4">
-                        <span className="flex items-center">
-                          <Dumbbell className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.totalServing && dish.protein
-                            ? (dish.protein / dish.totalServing).toFixed(2)
-                            : "N/A"}
-                          g
-                        </span>
-                        <span className="flex items-center">
-                          <Wheat className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.totalServing && dish.carbs
-                            ? (dish.carbs / dish.totalServing).toFixed(2)
-                            : "N/A"}
-                          g
-                        </span>
-                        <span className="flex items-center">
-                          <Droplet className="w-4 h-4 mr-1 text-gray-500" />
-                          {dish.totalServing && dish.fat
-                            ? (dish.fat / dish.totalServing).toFixed(2)
-                            : "N/A"}
-                          g
-                        </span>
+                    <div className="text-sm text-gray-600 mt-2">
+                      <div className="flex justify-between">
+                        <div className="flex flex-col space-y-2">
+                          <div className="flex items-center">
+                            <Clock className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs">
+                              Time: {dish.recipeId?.cookingTime || "N/A"} m
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <Dumbbell className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs">
+                              Protein: {dish.totalServing && dish.protein
+                                ? (dish.protein / dish.totalServing).toFixed(2)
+                                : "N/A"}
+                              g
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <Droplet className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs">
+                              Fat: {dish.totalServing && dish.fat
+                                ? (dish.fat / dish.totalServing).toFixed(2)
+                                : "N/A"}
+                              g
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col space-y-2">
+                          <div className="flex items-center">
+                            <Users className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs">
+                              Serving size: {dish.totalServing || "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs">
+                              Calories: {dish.totalServing && dish.calories
+                                ? (dish.calories / dish.totalServing).toFixed(2)
+                                : "N/A"}
+                              kcal
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <Wheat className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                            <span className="text-xs">
+                              Carbs: {dish.totalServing && dish.carbs
+                                ? (dish.carbs / dish.totalServing).toFixed(2)
+                                : "N/A"}
+                              g
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -555,17 +619,17 @@ const TableRecipes = () => {
                     <div className="flex w-full justify-center items-center gap-2">
                       <button
                         onClick={() => handleAddRecipeClick(dish)}
-                        className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition"
+                        className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition whitespace-nowrap"
                       >
                         <EditIcon className="w-4 h-4 mr-1" />
                         Edit Recipe
                       </button>
                       {dish.recipeId && (
                         <>
-                          <div className="h-4 border-l border-gray-300 mx-2"></div>
+                          <div className="h-4 border-l border-gray-300 mx-1"></div>
                           <button
                             onClick={() => handleDeleteRecipe(dish)}
-                            className="flex-1 text-red-500 flex items-center justify-center px-2 py-1 hover:text-red-600 transition"
+                            className="flex-1 text-red-500 flex items-center justify-center px-2 py-1 hover:text-red-600 transition whitespace-nowrap"
                           >
                             <TrashIcon className="w-4 h-4 mr-1" />
                             Delete Recipe
@@ -617,16 +681,23 @@ const TableRecipes = () => {
                 <button
                   onClick={handleSaveRecipe}
                   disabled={isSaving}
-                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
-                    isSaving ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </button>
                 <button
                   onClick={() => {
-                    setIsAddRecipeModalOpen(false);
+                    setNewRecipeData({
+                      ingredients: [],
+                      instruction: [],
+                      cookingTime: "",
+                      totalServing: "",
+                    });
+                    setSelectedDish(null);
+                    setNewInstructionStep({ step: "", description: "" });
+                    setIsEditingInstruction(null);
                     setErrors({});
+                    setIsAddRecipeModalOpen(false);
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
                 >
@@ -655,9 +726,7 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${
-                        errors.cookingTime ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.cookingTime ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.cookingTime}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -688,9 +757,7 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${
-                        errors.totalServing ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.totalServing ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.totalServing}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -723,9 +790,9 @@ const TableRecipes = () => {
                   {newRecipeData.instruction.length > 0 ? (
                     <ul className="space-y-2">
                       {newRecipeData.instruction.map((step, index) => (
-                        <li key={index} className="flex justify-between items-center">
+                        <li key={index} className="flex justify-between items-start">
                           {isEditingInstruction === index ? (
-                            <div className="flex items-center w-full space-x-2">
+                            <div className="flex items-start w-full space-x-2">
                               <input
                                 type="number"
                                 className="w-16 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
@@ -735,38 +802,45 @@ const TableRecipes = () => {
                                   value = value === "" ? "" : parseInt(value, 10);
                                   if (value > 100) value = 100;
                                   setNewInstructionStep({ ...newInstructionStep, step: value });
+                                  setErrors({ ...errors, instruction: "" });
                                 }}
                                 placeholder="Step #"
                                 min="1"
                               />
-                              <input
-                                type="text"
-                                className="flex-1 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+                              <textarea
+                                className="flex-1 min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
                                 value={newInstructionStep.description}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   setNewInstructionStep({
                                     ...newInstructionStep,
                                     description: e.target.value,
-                                  })
-                                }
+                                  });
+                                  setErrors({ ...errors, instruction: "" });
+                                }}
                                 placeholder="Enter direction"
                               />
-                              <button
-                                className="text-green-500 hover:text-green-700"
-                                onClick={() => handleSaveInstruction(index)}
-                              >
-                                Save
-                              </button>
-                              <button
-                                className="text-gray-500 hover:text-gray-700"
-                                onClick={() => setIsEditingInstruction(null)}
-                              >
-                                Cancel
-                              </button>
+                              <div className="flex space-x-2">
+                                <button
+                                  className="text-green-500 hover:text-green-700"
+                                  onClick={() => handleSaveInstruction(index)}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  className="text-gray-500 hover:text-gray-700"
+                                  onClick={() => {
+                                    setIsEditingInstruction(null);
+                                    setNewInstructionStep({ step: "", description: "" });
+                                    setErrors({ ...errors, instruction: "" });
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <>
-                              <span>
+                              <span className="flex-1">
                                 Step {step.step}: {step.description}
                               </span>
                               <div className="space-x-2">
@@ -813,8 +887,8 @@ const TableRecipes = () => {
                       <p>Looks like you haven't added any directions yet.</p>
                     </div>
                   )}
-                  {newInstructionStep.step !== undefined && isEditingInstruction === null && (
-                    <div className="flex items-center space-x-2 mt-2">
+                  {isEditingInstruction === null && (
+                    <div className="flex items-start space-x-2 mt-2">
                       <input
                         type="number"
                         className="w-16 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
@@ -824,22 +898,23 @@ const TableRecipes = () => {
                           value = value === "" ? "" : parseInt(value, 10);
                           if (value > 100) value = 100;
                           setNewInstructionStep({ ...newInstructionStep, step: value });
+                          setErrors({ ...errors, instruction: "" });
                         }}
                         placeholder="Step #"
                         min="1"
                       />
-                      <input
-                        type="text"
-                        className="flex-1 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+                      <textarea
+                        className="flex-1 min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
                         value={newInstructionStep.description}
-                        onChange={(e) =>
-                          setNewInstructionStep({ ...newInstructionStep, description: e.target.value })
-                        }
+                        onChange={(e) => {
+                          setNewInstructionStep({ ...newInstructionStep, description: e.target.value });
+                          setErrors({ ...errors, instruction: "" });
+                        }}
                         placeholder="Enter direction"
                       />
                       <button
                         className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
-                        onClick={() => handleAddInstruction()}
+                        onClick={handleAddInstruction}
                       >
                         Add
                       </button>
@@ -975,7 +1050,7 @@ const TableRecipes = () => {
                     Nutrition (Total for {newRecipeData.totalServing || 1} Servings)
                   </h3>
                   {newRecipeData.ingredients.length > 0 &&
-                  newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
+                    newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
@@ -1046,7 +1121,6 @@ const TableRecipes = () => {
   );
 };
 
-// Component IngredientSelectionModal giữ nguyên, chỉ cần đảm bảo import Loading nếu cần
 const IngredientSelectionModal = ({
   isOpen,
   onClose,
@@ -1060,42 +1134,41 @@ const IngredientSelectionModal = ({
   const [tempSelectedIngredients, setTempSelectedIngredients] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const [currentIngredients, setCurrentIngredients] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
 
+  // Reset when modal opens
   useEffect(() => {
-    fetchIngredients();
-  }, [currentPage, itemsPerPage, filterType, searchTerm]);
-
-  const fetchIngredients = async () => {
-    setIsLoading(true);
-    try {
-      const response = await ingredientService.getAllIngredients(
-        currentPage,
-        itemsPerPage,
-        filterType,
-        searchTerm
-      );
-      if (response.success) {
-        setCurrentIngredients(response.data.items || []);
-        setTotalItems(response.data.total || 0);
-        setTotalPages(response.data.totalPages || 1);
-      } else {
-        setCurrentIngredients([]);
-        setTotalItems(0);
-        setTotalPages(1);
-      }
-    } catch (error) {
-      setCurrentIngredients([]);
-      setTotalItems(0);
-      setTotalPages(1);
+    if (isOpen) {
+      setTempSelectedIngredients([]);
+      setCurrentPage(1);
+      setSearchTerm("");
+      setFilterType("all");
     }
-    setIsLoading(false);
+  }, [isOpen]);
+
+  const handleClose = () => {
+    setTempSelectedIngredients([]);
+    setCurrentPage(1);
+    setSearchTerm("");
+    setFilterType("all");
+    onClose();
   };
 
-  const handleCheckboxChange = (ingredient) => {
+  // Filter and paginate ingredients
+  const filteredIngredients = availableIngredients.filter((ing) => {
+    const matchesSearch = ing.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === "all" || ing.type === filterType;
+    return matchesSearch && matchesType;
+  });
+
+  const totalItems = filteredIngredients.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentIngredients = filteredIngredients.slice(startIndex, startIndex + itemsPerPage);
+
+  const handleIngredientClick = (ingredient) => {
+    const isAlreadyAdded = selectedIngredients.some((selected) => selected._id === ingredient._id);
+    if (isAlreadyAdded) return; // Prevent selecting already added ingredients
+
     const isSelected = tempSelectedIngredients.some((item) => item._id === ingredient._id);
     if (isSelected) {
       setTempSelectedIngredients(
@@ -1111,9 +1184,7 @@ const IngredientSelectionModal = ({
 
   const handleConfirm = () => {
     onSelect(tempSelectedIngredients);
-    setTempSelectedIngredients([]);
-    setCurrentPage(1);
-    onClose();
+    handleClose();
   };
 
   const handlePageClick = (data) => {
@@ -1127,24 +1198,27 @@ const IngredientSelectionModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-3/4 max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-white rounded-2xl p-6 w-[90vw] max-w-5xl h-[100vh] flex flex-col shadow-xl">
         <div className="flex items-center mb-6">
           <h2 className="text-2xl font-bold text-[#40B491]">Select Ingredients</h2>
           <div className="ml-auto flex space-x-3">
             <button
               onClick={handleConfirm}
-              className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${tempSelectedIngredients.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              disabled={tempSelectedIngredients.length === 0}
             >
               Confirm
             </button>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
             >
               Close
             </button>
           </div>
         </div>
+
         <div className="flex flex-col gap-4 mb-6">
           <div className="flex flex-wrap gap-2">
             <button
@@ -1152,11 +1226,10 @@ const IngredientSelectionModal = ({
                 setFilterType("all");
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold ${
-                filterType === "all"
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
             >
               All
             </button>
@@ -1167,11 +1240,10 @@ const IngredientSelectionModal = ({
                   setFilterType(type);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
-                  filterType === type
-                    ? "bg-[#40B491] text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                } transition duration-200`}
+                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  } transition duration-200`}
               >
                 {type}
               </button>
@@ -1187,81 +1259,120 @@ const IngredientSelectionModal = ({
             />
           </div>
         </div>
-        <Loading isLoading={isLoading}>
+
+        <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {currentIngredients.length > 0 ? (
               currentIngredients.map((ing) => {
                 const isAlreadyAdded = selectedIngredients.some(
                   (selected) => selected._id === ing._id
                 );
+                const isSelected = tempSelectedIngredients.some(
+                  (item) => item._id === ing._id
+                );
+
                 return (
                   <div
                     key={ing._id}
-                    className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                      } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={() => !isAlreadyAdded && handleIngredientClick(ing)}
                   >
-                    <img
-                      src={ing.imageUrl || "https://via.placeholder.com/300"}
-                      alt={ing.name}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="p-4">
-                      <h3 className="text-lg font-semibold text-center text-gray-800">{ing.name}</h3>
-                      <div className="text-sm text-gray-600 mt-2 space-y-2">
-                        <div className="flex justify-between items-center px-10">
-                          <span className="flex items-center">
-                            <Flame className="w-4 h-4 mr-1" />
-                            {ing.calories || "N/A"} kcal
-                          </span>
-                          <span className="flex items-center">
-                            <Dumbbell className="w-4 h-4 mr-1" />
-                            {ing.protein || "N/A"}g
+                    <div className="relative h-40 bg-gray-200">
+                      {ing.imageUrl ? (
+                        <img
+                          src={ing.imageUrl}
+                          alt={ing.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                          <img
+                            src="https://via.placeholder.com/150?text=No+Image"
+                            alt="No image available"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      {isAlreadyAdded && (
+                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                          <span className="text-white font-semibold">Added</span>
+                        </div>
+                      )}
+                      {isSelected && !isAlreadyAdded && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="bg-[#40B491] text-white px-4 py-2 rounded-full font-semibold text-sm shadow-md">
+                            Choice
                           </span>
                         </div>
-                        <div className="flex justify-between items-center px-10">
-                          <span className="flex items-center">
-                            <Wheat className="w-4 h-4 mr-1" />
-                            {ing.carbs || "N/A"}g
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-medium text-gray-800">{ing.name}</h3>
+                        <span className="text-sm font-bold text-blue-600">
+                          {ing.calories || "N/A"}{" "}
+                          {ing.calories !== "N/A" ? "kcal" : ""}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Protein:</span>
+                          <span className="font-medium">
+                            {ing.protein || "N/A"}{" "}
+                            {ing.protein !== "N/A" ? "g" : ""}
                           </span>
-                          <span className="flex items-center">
-                            <Droplet className="w-4 h-4 mr
-
--1" />
-                            {ing.fat || "N/A"}g
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Fat:</span>
+                          <span className="font-medium">
+                            {ing.fat || "N/A"}{" "}
+                            {ing.fat !== "N/A" ? "g" : ""}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Carbs:</span>
+                          <span className="font-medium">
+                            {ing.carbs || "N/A"}{" "}
+                            {ing.carbs !== "N/A" ? "g" : ""}
                           </span>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
-                      <input
-                        type="checkbox"
-                        checked={tempSelectedIngredients.some((item) => item._id === ing._id)}
-                        onChange={() => handleCheckboxChange(ing)}
-                        disabled={isAlreadyAdded}
-                        className={isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}
-                      />
-                      {isAlreadyAdded && (
-                        <span className="text-sm text-gray-500 ml-2">Already Added</span>
-                      )}
                     </div>
                   </div>
                 );
               })
             ) : (
-              <div className="col-span-full text-center text-gray-500">
-                <p>No ingredients found.</p>
+              <div className="col-span-4 flex flex-col items-center justify-center h-full text-gray-500">
+                <svg
+                  className="w-24 h-24 text-gray-400 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+                <p className="text-lg font-semibold">No ingredients found</p>
+                <p className="text-sm">Try adjusting your search term.</p>
               </div>
             )}
           </div>
-        </Loading>
-        {totalItems > 0 && !isLoading && (
-          <div className="p-4 bg-gray-50">
+        </div>
+
+        {totalItems > 0 && (
+          <div className="mt-6 p-4 bg-gray-50">
             <Pagination
               limit={itemsPerPage}
               setLimit={setItemsPerPage}
               totalItems={totalItems}
               handlePageClick={handlePageClick}
               currentPage={currentPage - 1}
-              text={"Ingredients"}
+              text="Ingredients"
             />
           </div>
         )}
