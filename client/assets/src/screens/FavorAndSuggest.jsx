@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  TextInput,
+  Modal,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
@@ -24,8 +26,9 @@ import { useTheme } from "../contexts/ThemeContext";
 import YoutubePlayer from "react-native-youtube-iframe";
 import HomeService from "../services/HomeService";
 import { getIngredient } from "../services/ingredient";
-import commentService from './../services/commentService';
-
+import commentService from "./../services/commentService";
+import { useNavigation } from "@react-navigation/native";
+import RatingModal from "../components/common/RatingModal";
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
 
@@ -35,11 +38,15 @@ function FavorAndSuggest({ route }) {
   const [ingredientDetails, setIngredientDetails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
-
+  const [averageRating, setAverageRating] = useState(0);
   const dispatch = useDispatch();
   const favorite = useSelector(favorSelector);
   const user = useSelector(userSelector);
   const { theme } = useTheme();
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
+  const navigation = useNavigation();
+  const [comment, setComment] = useState("");
 
   // Load dish from route params
   useEffect(() => {
@@ -51,29 +58,73 @@ function FavorAndSuggest({ route }) {
     }
   }, [route?.params?.dish]);
 
+  const submitComment = async (commentText) => {
+    if (!user?._id) {
+      setLoginModalVisible(true);
+      return;
+    }
+  
+    try {
+      var comment = await commentService.addComment(dish._id,commentText,user._id);
+      if (!comment.success) {
+        Alert.alert("Error", comment.message || "Failed to submit comment.");
+        return;
+      }
+      console.log("Comment submitted:", comment);
+      setComment("");
+      Alert.alert("Success", "Your comment has been submitted!");
+    } catch (error) {
+      console.error("Submit comment error:", error);
+      Alert.alert("Error", "Failed to submit comment. Please try again.");
+    }
+  };
+  
+
+  const fetchRating = async () => {
+    if (!recipe?._id || !user?._id) return;
+
+    try {
+      const response = await commentService.getRatingsByRecipe(recipe._id);
+      const ratings = response?.data;
+      if (ratings && Array.isArray(ratings)) {
+        const myRating = ratings.find(
+          (rating) =>
+            rating.userId._id === user._id && rating.recipeId === recipe._id
+        );
+        const total = ratings.reduce((sum, r) => sum + r.star, 0);
+        const average = ratings.length > 0 ? total / ratings.length : 0;
+        setRating(myRating ?? null);
+        setAverageRating(average.toFixed(1));
+        console.log("⭐️ My rating:", myRating);
+      } else {
+        console.warn("Không nhận được dữ liệu từ getRatingsByRecipe");
+      }
+    } catch (error) {
+      console.error("Lỗi khi gọi getRatingsByRecipe:", error);
+    }
+  };
+
+  const handleRate = async (ratePoint) => {
+    setRecipe((prev) => ({ ...prev, rate: ratePoint }));
+    try {
+      const res = await commentService.rateRecipe(
+        dish.recipeId,
+        user._id,
+        ratePoint
+      );
+
+      console.log("⭐️ Đánh giá thành công:", res);
+
+      await fetchRating();
+    } catch (err) {
+      console.error("Lỗi khi gọi rateRecipe:", err);
+    }
+  };
+
   // Load rating
   useEffect(() => {
-    
-    const fetchRating = async () => {
-      if (!recipe?._id) return; // tránh lỗi nếu chưa có recipe
-  
-      try {
-        console.log("📌 Recipe mới:", recipe);
-        const data = await commentService.getRatingsByRecipe(recipe._id);
-        if (data) {
-          setRating(data);
-          console.log("Lấy rating thành công:", data);
-        } else {
-          console.warn("Không nhận được dữ liệu từ getRatingsByRecipe");
-        }
-      } catch (error) {
-        console.error("Lỗi khi gọi getRatingsByRecipe:", error);
-      }
-    };
-  
     fetchRating();
-  }, [recipe]); 
-  
+  }, [recipe, user]);
 
   // Load recipe when dish changes
   useEffect(() => {
@@ -105,7 +156,8 @@ function FavorAndSuggest({ route }) {
 
           // Ensure ingredientId is a string
           const ingredientId =
-            typeof ingredient.ingredientId === "object" && ingredient.ingredientId?._id
+            typeof ingredient.ingredientId === "object" &&
+            ingredient.ingredientId?._id
               ? ingredient.ingredientId._id
               : ingredient.ingredientId;
 
@@ -140,7 +192,10 @@ function FavorAndSuggest({ route }) {
     setLoading(true);
 
     try {
-      const response = await HomeService.getRecipeByRecipeId(dish._id, dish.recipeId);
+      const response = await HomeService.getRecipeByRecipeId(
+        dish._id,
+        dish.recipeId
+      );
       if (response.success) {
         setRecipe(response.data);
       } else {
@@ -173,24 +228,6 @@ function FavorAndSuggest({ route }) {
     }
   };
 
-  const handleRate = async (ratePoint) => {
-    try {
-      const res = await commentService.rateRecipe(dish._id, user._id, ratePoint);
-  
-      if (res?.success || res?.status === 200) {
-        // ✅ Thành công
-        setRecipe((prev) => ({ ...prev, rate: ratePoint }));
-      } else {
-        // ❌ Thất bại - log ra hoặc báo lỗi cho người dùng
-        console.warn('Rating thất bại:', res);
-      }
-    } catch (err) {
-      console.error('Lỗi khi gọi rateRecipe:', err);
-      // Hiển thị toast, alert, hay gì đó cho người dùng biết
-    }
-  };
-  
-
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
     const regex =
@@ -216,7 +253,9 @@ function FavorAndSuggest({ route }) {
           <SpinnerLoading />
         ) : (
           <>
-            <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>
+            <Text
+              style={{ ...styles.sectionTitle, color: theme.greyTextColor }}
+            >
               {ingredientDetails.length} Ingredients
             </Text>
             {ingredientDetails.length > 0 ? (
@@ -228,7 +267,10 @@ function FavorAndSuggest({ route }) {
                   }
                   return (
                     <View key={idx} style={styles.ingredientRow}>
-                      <Image source={{ uri: ingredient.imageUrl }} style={styles.ingredientImage} />
+                      <Image
+                        source={{ uri: ingredient.imageUrl }}
+                        style={styles.ingredientImage}
+                      />
                       <View style={styles.ingredientInfo}>
                         <Text
                           style={{
@@ -272,7 +314,9 @@ function FavorAndSuggest({ route }) {
                 })
                 .filter(Boolean)
             ) : (
-              <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
+              <Text
+                style={{ ...styles.noDataText, color: theme.greyTextColor }}
+              >
                 Failed to load ingredients. Please try again later.
               </Text>
             )}
@@ -296,7 +340,9 @@ function FavorAndSuggest({ route }) {
                 height={200}
                 play={false}
                 videoId={videoId}
-                onError={(error) => console.error("YouTube Player Error:", error)}
+                onError={(error) =>
+                  console.error("YouTube Player Error:", error)
+                }
               />
             </View>
           ) : dish?.videoUrl ? (
@@ -390,17 +436,31 @@ function FavorAndSuggest({ route }) {
     return (
       <View style={styles.recipeCard}>
         <Image source={{ uri: dish?.imageUrl }} style={styles.recipeImage} />
-        <TouchableOpacity style={styles.heartIcon} onPress={() => handleOnSavePress(dish)}>
+        <TouchableOpacity
+          style={styles.heartIcon}
+          onPress={() => handleOnSavePress(dish)}
+        >
           {favorite.isLoading ? (
             <ActivityIndicator size={24} color="#FC8019" />
           ) : isFavorite(dish._id) ? (
-            <MaterialCommunityIcons name="heart-multiple" size={24} color="#FF8A65" />
+            <MaterialCommunityIcons
+              name="heart-multiple"
+              size={24}
+              color="#FF8A65"
+            />
           ) : (
             <Ionicons name="heart-outline" size={24} color="#FF8A65" />
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.playIcon} onPress={() => handleOnPlayPress(dish)}>
-          <MaterialCommunityIcons name="play-circle-outline" size={24} color="#FF8A65" />
+        <TouchableOpacity
+          style={styles.playIcon}
+          onPress={() => handleOnPlayPress(dish)}
+        >
+          <MaterialCommunityIcons
+            name="play-circle-outline"
+            size={24}
+            color="#FF8A65"
+          />
         </TouchableOpacity>
         <View
           style={{
@@ -409,31 +469,121 @@ function FavorAndSuggest({ route }) {
           }}
         >
           <View style={styles.recipeHeader}>
-            <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>{dish.name}</Text>
+            <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>
+              {dish.name}
+            </Text>
             <View style={styles.recipeRate}>
-              <Rating rate={recipe?.rate ?? 0} starClick={handleRate} size={WIDTH * 0.06} />
+              <Text style={{ fontSize: 14, marginBottom: 4 }}>
+                Average Rating:
+              </Text>
+
+              <Rating rate={averageRating ?? 0} size={WIDTH * 0.06} disabled />
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (!user?._id) {
+                    setLoginModalVisible(true);
+                  } else {
+                    setRatingModalVisible(true);
+                  }
+                }}
+                style={styles.openModal}
+              >
+                <Text style={{ fontSize: 14, color: "#333" }}>Rating now</Text>
+              </TouchableOpacity>
             </View>
+
+            <Modal
+              visible={loginModalVisible}
+              animationType="fade"
+              transparent
+              onRequestClose={() => setLoginModalVisible(false)}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: "rgba(0,0,0,0.5)",
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: "#fff",
+                    padding: 20,
+                    borderRadius: 10,
+                    width: "80%",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontSize: 16, marginBottom: 10 }}>
+                    You need to sign in to rate this recipe
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setLoginModalVisible(false);
+                      navigation.navigate("signin");
+                    }}
+                    style={styles.loginButton}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                      Sign In
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setLoginModalVisible(false)}
+                    style={{ marginTop: 10 }}
+                  >
+                    <Text style={{ color: "#888" }}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
+            <RatingModal
+              visible={ratingModalVisible}
+              onClose={() => setRatingModalVisible(false)}
+              rating={rating}
+              setRating={setRating}
+              comment={comment}
+              setComment={setComment}
+              handleRate={handleRate}
+              submitComment={submitComment}
+            />
+
           </View>
-          <Text style={{ ...styles.recipeDescription, color: theme.greyTextColor }}>
+          <Text
+            style={{ ...styles.recipeDescription, color: theme.greyTextColor }}
+          >
             {dish.description}
           </Text>
 
           <View style={styles.nutritionInfo}>
             <View style={styles.nutritionItem}>
               <Ionicons name="restaurant-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalCarbs ?? 0} carbs</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalCarbs ?? 0} carbs
+              </Text>
             </View>
             <View style={styles.nutritionItem}>
               <Ionicons name="fitness-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalProtein ?? 0} proteins</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalProtein ?? 0} proteins
+              </Text>
             </View>
             <View style={styles.nutritionItem}>
               <Ionicons name="flame-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalCalories ?? 0} Kcal</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalCalories ?? 0} Kcal
+              </Text>
             </View>
             <View style={styles.nutritionItem}>
               <Ionicons name="water-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalFat ?? 0} fats</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalFat ?? 0} fats
+              </Text>
             </View>
           </View>
 
@@ -455,7 +605,10 @@ function FavorAndSuggest({ route }) {
   return (
     <MainLayoutWrapper>
       <View style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+        >
           {renderRecipeCard()}
         </ScrollView>
       </View>
@@ -624,6 +777,7 @@ const styles = StyleSheet.create({
     color: "#78909C",
     textAlign: "center",
   },
+
 });
 
 export default FavorAndSuggest;
