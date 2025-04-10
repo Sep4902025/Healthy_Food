@@ -63,7 +63,7 @@ const RatingModal = ({
             style={styles.textInput}
           />
 
-          {comment.trim().length > 0 && (
+          {comment.length > 0 && (
             <TouchableOpacity
               onPress={() => {
                 submitComment(comment);
