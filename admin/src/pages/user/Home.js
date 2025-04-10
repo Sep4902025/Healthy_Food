@@ -7,6 +7,7 @@ import SeasonSection from "./HomeSection/SeasonSection";
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
 import FoodBySeasonSection from "./HomeSection/FoodBySeasonSection";
+import { useSearch } from "../context/SearchContext";
 
 // Define useCurrentSeason hook directly in Home.js
 const useCurrentSeason = () => {
@@ -19,23 +20,26 @@ const useCurrentSeason = () => {
 
 const Home = () => {
   const navigate = useNavigate();
-  const [dishes, setDishes] = useState([]);
   const [loading, setLoading] = useState(true);
   const userId = useSelector(selectAuth)?.user?._id;
   const currentSeason = useCurrentSeason(); // Use the hook to get the current season
   const [selectedSeason, setSelectedSeason] = useState(currentSeason); // Default to current season (e.g., "Summer")
+  const { searchTerm } = useSearch();
+  const [allDishes, setAllDishes] = useState([]);
+  const [filteredDishes, setFilteredDishes] = useState([]);
 
   useEffect(() => {
     const fetchDishes = async () => {
       setLoading(true);
       try {
-        const data = await HomeService.getAllDishes();
-        console.log("API Response:", data);
+        const data = await HomeService.getAllDishes(1,1000);
         const dishesArray = data.data.items || data.data || [];
-        setDishes(dishesArray);
+        setAllDishes(dishesArray);
+        setFilteredDishes(dishesArray); // default
       } catch (error) {
         console.error("Error fetching food data:", error);
-        setDishes([]);
+        setAllDishes([]);
+        setFilteredDishes([]);
       } finally {
         setLoading(false);
       }
@@ -43,11 +47,25 @@ const Home = () => {
     fetchDishes();
   }, []);
 
+  useEffect(() => {
+    if (!searchTerm || searchTerm.trim() === "") {
+      setFilteredDishes(allDishes);
+    } else {
+      const filtered = allDishes.filter((dish) =>
+        dish.name && typeof dish.name === "string"
+          ? dish.name.toLowerCase().includes(searchTerm.toLowerCase())
+          : false
+      );
+      setFilteredDishes(filtered);
+    }
+  }, [searchTerm, allDishes]);
+  
+
   if (loading) {
     return <div className="text-center p-10">Loading dishes...</div>;
   }
 
-  if (!dishes.length) {
+  if (!filteredDishes.length) {
     return <div className="text-center p-10">No dishes available at the moment.</div>;
   }
 
@@ -91,7 +109,7 @@ const Home = () => {
             Standout Foods From Our Menu
           </h1>
         </div>
-        <FoodSlider userId={userId} dishes={dishes} />
+        <FoodSlider userId={userId} dishes={filteredDishes} />
         <hr className="w-full border-t border-gray-300 my-6" />
 
         <SeasonSection onSelectSeason={setSelectedSeason} selectedSeason={selectedSeason} />

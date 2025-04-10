@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import logo from "../assets/images/Logo.png";
-import quizService from "../services/quizService";
 import mealPlanService from "../services/mealPlanServices";
 import { FaSearch, FaSignOutAlt } from "react-icons/fa";
 import { RiShoppingBag4Line } from "react-icons/ri";
@@ -15,6 +14,7 @@ import PreviewModal from "../pages/user/MealPlan/PreviewModal";
 import HomeService from "../services/home.service";
 import ReminderNotification from "./Reminder/ReminderNotifiaction";
 
+import {useSearch } from "../pages/context/SearchContext";
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,6 +35,22 @@ const Header = () => {
   const [cartViewed, setCartViewed] = useState(false); // New state to track if cart is viewed
   const userMenuRef = useRef(null);
   const cartMenuRef = useRef(null);
+  const { setSearchTerm } = useSearch();
+  const [inputValue, setInputValue] = useState("");
+  const [debounceTimer, setDebounceTimer] = useState(null);
+
+  useEffect(() => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+
+    const timer = setTimeout(() => {
+      setSearchTerm(inputValue);
+    }, 500); // debounce 500ms
+
+    setDebounceTimer(timer);
+
+    return () => clearTimeout(timer);
+  }, [inputValue]);
+
 
   // Check query parameters to display toast
   useEffect(() => {
@@ -303,6 +319,8 @@ const Header = () => {
               type="text"
               placeholder="Search"
               className="pl-10 pr-4 py-1 border rounded-full w-32 md:w-48 focus:outline-none focus:ring-1 focus:ring-green-400 text-sm"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
             />
             <FaSearch className="absolute left-3 top-2 text-gray-500 text-sm" />
           </div>
