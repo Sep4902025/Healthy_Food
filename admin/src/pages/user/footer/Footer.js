@@ -1,12 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { selectUser } from "../../../store/selectors/authSelectors"; // Giả sử bạn có selector để lấy thông tin user
+import { selectUser } from "../../../store/selectors/authSelectors";
 
 const Footer = () => {
   const navigate = useNavigate();
-  const user = useSelector(selectUser); // Lấy thông tin user từ Redux store
-  const isLoggedIn = !!localStorage.getItem("token"); // Kiểm tra xem có token trong localStorage hay không
-  const isAdminOrNutritionist = user && (user.role === "admin" || user.role === "nutritionist");
+  const user = useSelector(selectUser);
+  const userRole = user?.role;
+  const isLoggedIn = !!localStorage.getItem("token");
+  const isAdminOrNutritionist =
+    user && (user.role === "admin" || user.role === "nutritionist");
 
   // Điều kiện để hiển thị nút "Apply to Become a Nutritionist"
   const showApplyButton = isLoggedIn && !isAdminOrNutritionist;
@@ -14,7 +16,9 @@ const Footer = () => {
   return (
     <footer className="bg-white py-8 px-12 flex flex-col md:flex-row justify-between items-center mt-auto w-full border-t">
       {/* Phần bên trái */}
-      <p className="text-sm mb-4 md:mb-0">Copyright © 2025 HFINC | All rights reserved</p>
+      <p className="text-sm mb-4 md:mb-0">
+        Copyright © 2025 HFINC | All rights reserved
+      </p>
 
       {/* Phần giữa - Nút Apply */}
       {showApplyButton && (
@@ -26,18 +30,43 @@ const Footer = () => {
         </button>
       )}
 
-      {/* Phần bên phải */}
       <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6 text-center md:text-left">
-        <button onClick={() => navigate("/about")} className="hover:underline">
+        <button
+          onClick={() =>
+            navigate(
+              userRole === "admin" ? "/admin/aboutusmanagement" : "/about"
+            )
+          }
+          className="hover:underline"
+        >
           About Us
         </button>
-        <button onClick={() => navigate("/faqs")} className="hover:underline">
+        <button
+          onClick={() =>
+            navigate(userRole === "admin" ? "/admin/faqsmanagement" : "/faqs")
+          }
+          className="hover:underline"
+        >
           FAQs
         </button>
-        <button onClick={() => navigate("/contact")} className="hover:underline">
+        <button
+          onClick={() =>
+            navigate(
+              userRole === "admin" ? "/admin/contactusmanagement" : "/contact"
+            )
+          }
+          className="hover:underline"
+        >
           Contact Us
         </button>
-        <button onClick={() => navigate("/term")} className="hover:underline">
+        <button
+          onClick={() =>
+            navigate(
+              userRole === "admin" ? "/admin/termofusemanagement" : "/term"
+            )
+          }
+          className="hover:underline"
+        >
           Terms of Use
         </button>
       </div>

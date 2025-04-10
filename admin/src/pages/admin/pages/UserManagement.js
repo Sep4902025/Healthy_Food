@@ -3,14 +3,7 @@ import UserService from "../../../services/user.service";
 import { EditIcon, TrashIcon, SearchIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import Pagination from "../../../components/Pagination";
-import {
-  Document,
-  HeadingLevel,
-  Packer,
-  Paragraph,
-  TextRun,
-  AlignmentType,
-} from "docx";
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
 const UserManagement = () => {
@@ -141,145 +134,145 @@ const UserManagement = () => {
     setCurrentPage(selected + 1);
   };
 
-  // Export to Word function
-  const exportToWord = () => {
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: [
-            new Paragraph({
-              text: "User Management Report",
-              heading: HeadingLevel.TITLE,
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 400 },
-            }),
-            new Paragraph({
-              text: `Generated on: ${new Date().toLocaleDateString('en-US', {
-                month: 'long',
-                day: '2-digit',
-                year: 'numeric'
-              })}`,
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 300 },
-            }),
-            new Paragraph({
-              text: "All Users",
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 200 },
-            }),
-            ...filteredUsers.map((user, index) => {
-              return new Paragraph({
-                children: [
-                  new TextRun(
-                    `No.: ${(currentPage - 1) * usersPerPage + index + 1}`
-                  ),
-                  new TextRun({
-                    text: `\nUsername: ${user.username || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nPhone: ${
-                      user.userPreferenceId?.phoneNumber || "N/A"
-                    }`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nEmail: ${user.email || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nRole: ${user.role || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nStatus: ${user.isBan ? "Inactive" : "Active"}`,
-                    break: 1,
-                  }),
-                ],
-                spacing: { after: 200 },
-              });
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `Total Users: ${totalItems}`,
-                  bold: true,
-                }),
-              ],
-              spacing: { before: 200, after: 300 },
-            }),
-            new Paragraph({
-              text: "Pending Nutritionist Applications",
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 200 },
-            }),
-            ...pendingNutritionists.map((user, index) => {
-              return new Paragraph({
-                children: [
-                  new TextRun(`No. ${index + 1}`),
-                  new TextRun({
-                    text: `\nUsername: ${user.username || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nEmail: ${user.email || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nSubmitted At: ${new Date(
-                      user.nutritionistApplication.submittedAt
-                    ).toLocaleDateString()}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nFull Name: ${
-                      user.nutritionistApplication.personalInfo.fullName ||
-                      "N/A"
-                    }`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nPhone: ${
-                      user.nutritionistApplication.personalInfo.phoneNumber ||
-                      "N/A"
-                    }`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nAddress: ${
-                      user.nutritionistApplication.personalInfo.address || "N/A"
-                    }`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nIntroduction: ${
-                      user.nutritionistApplication.introduction ||
-                      "No introduction provided"
-                    }`,
-                    break: 1,
-                  }),
-                ],
-                spacing: { after: 200 },
-              });
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `Total Pending Applications: ${pendingNutritionists.length}`,
-                  bold: true,
-                }),
-              ],
-              spacing: { before: 200 },
-            }),
-          ],
-        },
-      ],
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "User Management";
+    workbook.created = new Date();
+
+    // Sheet 1: All Users
+    const userSheet = workbook.addWorksheet("All Users", {
+      properties: { tabColor: { argb: "FF40B491" } }, // Màu tab xanh giống giao diện
     });
 
-    Packer.toBlob(doc).then((blob) => {
-      saveAs(blob, "User_Management_Report.docx");
+    userSheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Username", key: "username", width: 20 },
+      { header: "Phone", key: "phone", width: 15 },
+      { header: "Email", key: "email", width: 30 },
+      { header: "Role", key: "role", width: 15 },
+      { header: "Status", key: "status", width: 15 },
+    ];
+
+    // Tiêu đề
+    userSheet.addRow(["User Management Report"]).font = {
+      size: 16,
+      bold: true,
+    };
+    userSheet.addRow([
+      `Generated on: ${new Date().toLocaleDateString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      })}`,
+    ]);
+    userSheet.addRow([]);
+    userSheet.addRow(["All Users"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    userSheet.getRow(4).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    // Thêm dữ liệu người dùng
+    filteredUsers.forEach((user, index) => {
+      userSheet.addRow({
+        no: (currentPage - 1) * usersPerPage + index + 1,
+        username: user.username || "N/A",
+        phone: user.userPreferenceId?.phoneNumber || "N/A",
+        email: user.email || "N/A",
+        role: user.role || "N/A",
+        status: user.isBan ? "Inactive" : "Active",
+      });
     });
+
+    // Thêm hàng tổng cộng vào bảng
+    userSheet.addRow(["Total Users", totalItems]).font = { bold: true };
+
+    // Định dạng bảng (bao gồm cả hàng tổng cộng)
+    userSheet.getRows(4, filteredUsers.length + 2).forEach((row) => {
+      // +2 để bao gồm tiêu đề và tổng cộng
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+    });
+
+    // Sheet 2: Pending Nutritionist Applications
+    const pendingSheet = workbook.addWorksheet("Pending Applications");
+    pendingSheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Username", key: "username", width: 20 },
+      { header: "Email", key: "email", width: 30 },
+      { header: "Submitted At", key: "submittedAt", width: 15 },
+      { header: "Full Name", key: "fullName", width: 25 },
+      { header: "Phone", key: "phone", width: 15 },
+      { header: "Address", key: "address", width: 30 },
+      { header: "Introduction", key: "introduction", width: 40 },
+    ];
+
+    // Tiêu đề
+    pendingSheet.addRow(["Pending Nutritionist Applications"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    pendingSheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    // Thêm dữ liệu ứng viên
+    pendingNutritionists.forEach((user, index) => {
+      pendingSheet.addRow({
+        no: index + 1,
+        username: user.username || "N/A",
+        email: user.email || "N/A",
+        submittedAt: new Date(
+          user.nutritionistApplication.submittedAt
+        ).toLocaleDateString(),
+        fullName: user.nutritionistApplication.personalInfo.fullName || "N/A",
+        phone: user.nutritionistApplication.personalInfo.phoneNumber || "N/A",
+        address: user.nutritionistApplication.personalInfo.address || "N/A",
+        introduction:
+          user.nutritionistApplication.introduction ||
+          "No introduction provided",
+      });
+    });
+
+    // Thêm hàng tổng cộng vào bảng
+    pendingSheet.addRow([
+      "Total Pending Applications",
+      pendingNutritionists.length,
+    ]).font = { bold: true };
+
+    // Định dạng bảng (bao gồm cả hàng tổng cộng)
+    pendingSheet.getRows(1, pendingNutritionists.length + 2).forEach((row) => {
+      // +2 để bao gồm tiêu đề và tổng cộng
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+    });
+
+    // Lưu file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "User_Management_Report.xlsx");
   };
 
   if (loading)
@@ -303,10 +296,10 @@ const UserManagement = () => {
           User Management
         </h1>
         <button
-          onClick={exportToWord}
+          onClick={exportToExcel}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-          Export to Word
+          Export to Excel
         </button>
       </div>
 

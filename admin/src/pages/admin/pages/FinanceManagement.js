@@ -6,8 +6,8 @@ import { EyeIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
-import { Document, HeadingLevel, Packer, Paragraph, TextRun, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
+import ExcelJS from "exceljs";
 import paymentService from "../../../services/payment.service";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -98,6 +98,47 @@ const FinanceManagement = () => {
       navigate("/admin/financemanagement", { replace: true });
     }
   }, [location, navigate]);
+
+  const fetchFinanceData = async () => {
+    setLoading(true);
+    try {
+      const response = await mealPlanService.getAllNutritionistsWithMealPlans(
+        currentPage + 1,
+        limit,
+        selectedMonth,
+        selectedYear
+      );
+      if (response.success) {
+        setNutritionists(response.data.nutritionists || []);
+        setTotalItems(response.total || 0);
+        setTotalPages(response.totalPages || 1);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load finance data");
+      setNutritionists([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSalaryHistory = async () => {
+    try {
+      const result = await paymentService.getSalaryHistoryByMonthYear(
+        selectedMonth,
+        selectedYear,
+        1, // Fetch only the first page for the table
+        1000 // Use a large limit to ensure we get all relevant records for the table
+      );
+      if (result.success) {
+        setSalaryHistory(result.data || []);
+      } else {
+        toast.error(result.message || "Failed to fetch salary history");
+      }
+    } catch (err) {
+      toast.error("Error fetching salary history");
+      console.error(err);
+    }
+  };
 
   const fetchSalaryHistoryForModal = async (page = historyPage, limit = historyLimit) => {
     try {
@@ -221,41 +262,200 @@ const FinanceManagement = () => {
     return payment ? payment.status : "Not Paid";
   };
 
-  const exportToWord = () => {
-    // Giữ nguyên logic exportToWord của bạn
-    // Ví dụ:
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: [
-            new Paragraph({
-              text: `Finance Management Report - Month ${selectedMonth}/${selectedYear}`,
-              heading: HeadingLevel.HEADING_1,
-              alignment: AlignmentType.CENTER,
-            }),
-            ...nutritionists.map(
-              (nutri, index) =>
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: `${index + 1}. ${nutri.name} - Meal Plans: ${
-                        nutri.mealPlanCount
-                      }, Success: ${nutri.successCount}, Pending: ${
-                        nutri.pendingCount
-                      }, Status: ${getPaymentStatus(nutri.id)}`,
-                    }),
-                  ],
-                })
-            ),
-          ],
-        },
-      ],
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Finance Management";
+    workbook.created = new Date();
+
+    // Sheet 1: Nutritionists Overview
+    const overviewSheet = workbook.addWorksheet("Nutritionists Overview", {
+      properties: { tabColor: { argb: "FF40B491" } }, // Màu tab xanh giống giao diện
     });
 
-    Packer.toBlob(doc).then((blob) => {
-      saveAs(blob, `Finance_Report_${selectedMonth}_${selectedYear}.docx`);
+    overviewSheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Nutritionist", key: "name", width: 25 },
+      { header: "Meal Plans", key: "mealPlanCount", width: 15 },
+      { header: "Success", key: "successCount", width: 15 },
+      { header: "Pending", key: "pendingCount", width: 15 },
+      { header: "Base Salary (VND)", key: "baseSalary", width: 20 },
+      { header: "Commission (VND)", key: "commission", width: 20 },
+      { header: "Total Salary (VND)", key: "totalSalary", width: 20 },
+    ];
+
+    // Tiêu đề
+    overviewSheet.addRow(["Finance Management Report"]).font = {
+      size: 16,
+      bold: true,
+    };
+    overviewSheet.addRow([
+      `Generated on: ${new Date().toLocaleString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      })}`,
+    ]);
+    overviewSheet.addRow([]);
+    overviewSheet.addRow(["Nutritionists Overview"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    overviewSheet.getRow(4).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" }, // Màu nền xanh
+    };
+
+    // Thêm dữ liệu nutritionists
+    nutritionists.forEach((nutri, index) => {
+      const salary = calculateSalary(nutri);
+      const commission = nutri.mealPlans
+        .filter((mp) => !mp.isBlock)
+        .reduce((sum, mp) => sum + (mp.price || 0) * 0.1, 0);
+      overviewSheet.addRow({
+        no: currentPage * limit + index + 1,
+        name: nutri.name,
+        mealPlanCount: nutri.mealPlanCount,
+        successCount: nutri.successCount,
+        pendingCount: nutri.pendingCount,
+        baseSalary: 5000000,
+        commission: commission,
+        totalSalary: salary,
+      });
     });
+
+    // Thêm hàng tổng cộng
+    overviewSheet.addRow(["Total Nutritionists", nutritionists.length]).font = {
+      bold: true,
+    };
+
+    // Định dạng bảng (bao gồm cả hàng tổng cộng)
+    overviewSheet.getRows(4, nutritionists.length + 2).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+        if (cell.value && typeof cell.value === "number") {
+          cell.numFmt = "#,##0"; // Định dạng số với dấu phân cách hàng nghìn
+        }
+      });
+    });
+
+    // Sheet 2: Meal Plan Details (cho tất cả nutritionists)
+    const detailsSheet = workbook.addWorksheet("Meal Plan Details");
+    detailsSheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Nutritionist", key: "nutritionist", width: 25 },
+      { header: "Title", key: "title", width: 30 },
+      { header: "Price (VND)", key: "price", width: 15 },
+      { header: "Start Date", key: "startDate", width: 15 },
+      { header: "Duration (days)", key: "duration", width: 15 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "User", key: "user", width: 25 },
+    ];
+
+    detailsSheet.addRow(["Meal Plan Details"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    detailsSheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    let mealPlanIndex = 1;
+    nutritionists.forEach((nutri) => {
+      nutri.mealPlans.forEach((mp) => {
+        detailsSheet.addRow({
+          no: mealPlanIndex++,
+          nutritionist: nutri.name,
+          title: mp.title || "N/A",
+          price: mp.price || 0,
+          startDate: new Date(mp.startDate).toLocaleDateString("en-US"),
+          duration: mp.duration,
+          status: !mp.isBlock ? "Success" : "Pending",
+          user: mp.userId?.username || "Unknown",
+        });
+      });
+    });
+
+    // Định dạng bảng
+    detailsSheet.getRows(1, mealPlanIndex).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+        if (cell.value && typeof cell.value === "number") {
+          cell.numFmt = "#,##0";
+        }
+      });
+    });
+
+    // Sheet 3: Salary Payment History
+    const historySheet = workbook.addWorksheet("Salary History");
+    historySheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Nutritionist", key: "nutritionist", width: 25 },
+      { header: "Amount (VND)", key: "amount", width: 20 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "Date", key: "date", width: 15 },
+      { header: "Transaction ID", key: "transactionId", width: 20 },
+    ];
+
+    historySheet.addRow(["Salary Payment History"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    historySheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    salaryHistory.forEach((payment, idx) => {
+      historySheet.addRow({
+        no: idx + 1,
+        nutritionist: nutritionists.find((n) => n.id === payment.userId)?.name || "Unknown",
+        amount: payment.amount,
+        status: payment.status,
+        date: payment.paymentDate
+          ? new Date(payment.paymentDate).toLocaleDateString("en-US")
+          : "N/A",
+        transactionId: payment.transactionNo || "N/A",
+      });
+    });
+
+    // Định dạng bảng
+    historySheet.getRows(1, salaryHistory.length + 1).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+        if (cell.value && typeof cell.value === "number") {
+          cell.numFmt = "#,##0";
+        }
+      });
+    });
+
+    // Lưu file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "Finance_Management_Report.xlsx");
   };
 
   if (user?.role !== "admin") {
@@ -328,10 +528,10 @@ const FinanceManagement = () => {
             View Salary History
           </button>
           <button
-            onClick={exportToWord}
+            onClick={exportToExcel}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
-            Export to Word
+            Export to Excel
           </button>
         </div>
       </div>
