@@ -1,3 +1,4 @@
+import * as Linking from "expo-linking";
 import "react-native-gesture-handler";
 import { Provider } from "react-redux";
 import { ActivityIndicator, Text, View } from "react-native";
@@ -30,7 +31,8 @@ const customTextRender = function (...args) {
 Text.render = customTextRender;
 
 export default function App() {
-  let [fontsLoaded] = useFonts({
+  // Gọi tất cả hooks trước bất kỳ lệnh return nào
+  const [fontsLoaded] = useFonts({
     Aleo_300Light,
     Aleo_300Light_Italic,
     Aleo_400Regular,
@@ -39,9 +41,31 @@ export default function App() {
     Aleo_700Bold_Italic,
   });
 
-  if (!fontsLoaded) {
-    return <ActivityIndicator size="large" />;
-  }
+  const handleDeepLink = (event) => {
+    const { path, queryParams } = Linking.parse(event.url);
+    console.log("Deep link received:", event.url, path, queryParams);
+
+    if (path === "payment") {
+      const { status, message } = queryParams;
+      Toast.show({
+        type: status === "success" ? "success" : "error",
+        text1: status === "success" ? "Payment Successful" : "Payment Failed",
+        text2: message || "Please try again.",
+      });
+    }
+  };
+
+  useEffect(() => {
+    Linking.addEventListener("url", handleDeepLink);
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+    return () => {
+      Linking.removeEventListener("url", handleDeepLink);
+    };
+  }, []);
 
   const toastConfig = {
     success: ({ text1, text2, props }) => (
@@ -69,6 +93,15 @@ export default function App() {
       </View>
     ),
   };
+
+  // Render UI sau khi tất cả hooks đã được gọi
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <Provider store={store}>

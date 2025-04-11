@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import RecipeModal from "./RecipeModal"; // Import modal
 
-const DishCard = ({ dish, onDelete, deletingDishId }) => {
+const DishCard = ({ dish, onDelete, deletingDishId, disableDelete }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -20,29 +20,23 @@ const DishCard = ({ dish, onDelete, deletingDishId }) => {
             e.stopPropagation();
             onDelete(dish._id || dish.dishId);
           }}
-          disabled={deletingDishId === (dish._id || dish.dishId)}
+          disabled={deletingDishId === (dish._id || dish.dishId) || disableDelete}
           className={`absolute top-0 right-0 text-red-500 hover:text-red-700 transition-colors ${
-            deletingDishId === (dish._id || dish.dishId) ? "opacity-50 cursor-not-allowed" : ""
+            deletingDishId === (dish._id || dish.dishId) || disableDelete
+              ? "opacity-50 cursor-not-allowed"
+              : ""
           }`}
+          title={
+            disableDelete
+              ? "Cannot delete dish: Meal plan is expired or paused"
+              : "Delete this dish"
+          }
         >
           {deletingDishId === (dish._id || dish.dishId) ? (
             <span className="animate-pulse text-sm">Deleting...</span>
           ) : (
             <div className="flex items-center gap-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-              </svg>
-              <span className="text-sm">Delete</span>
+              <span className="text-sm">🗑️ Delete</span>
             </div>
           )}
         </button>

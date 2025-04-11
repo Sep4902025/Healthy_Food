@@ -5,7 +5,6 @@ const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL;
 let socket = null;
 
 const RemindService = {
-
   connectSocket: async (userId) => {
     if (!userId) {
       console.error("❌ Không có userId để kết nối socket!");
@@ -45,17 +44,15 @@ const RemindService = {
     }
   },
 
- 
   listenReminder: (callback) => {
     if (!socket) return;
 
-    socket.off("receive_reminder"); 
+    socket.off("receive_reminder");
     socket.on("receive_reminder", (data) => {
       console.log("🔔 Nhắc nhở nhận được:", data);
       callback(data);
     });
   },
-
 
   getReminders: async (userId) => {
     try {
@@ -79,7 +76,6 @@ const RemindService = {
     }
   },
 
- 
   disconnect: () => {
     if (socket && socket.connected) {
       socket.disconnect();

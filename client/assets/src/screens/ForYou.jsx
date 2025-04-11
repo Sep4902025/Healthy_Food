@@ -27,7 +27,7 @@ const ForYou = ({ navigation }) => {
   const [hasMore, setHasMore] = useState(true);
   const limit = 10;
   const user = useSelector(userSelector);
-  const userId = user._id; 
+  const userId = user._id;
 
   const loadForYouDishes = useCallback(
     async (pageNum, isRefresh = false) => {
@@ -35,7 +35,7 @@ const ForYou = ({ navigation }) => {
         const response = await quizService.getForyou(userId, pageNum, limit);
         if (response.success) {
           const newDishes = response.dishes || [];
-      
+
           setDishes((prev) => {
             const existingIds = isRefresh ? new Set() : new Set(prev.map((dish) => dish._id));
             const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));

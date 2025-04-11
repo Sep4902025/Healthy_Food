@@ -1,6 +1,5 @@
-import axiosInstance from "./axiosInstance"; 
+import axiosInstance from "./axiosInstance";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 
 const getAuthHeaders = async () => {
   try {
@@ -13,14 +12,13 @@ const getAuthHeaders = async () => {
 };
 
 const dishesService = {
-
   getAllDishes: async (page, limit, search = "") => {
     try {
       const response = await axiosInstance.get("/dishes", {
         params: {
           page,
           limit,
-          search, 
+          search,
         },
       });
       console.log("🔍 Danh sách món ăn từ API:", response.data);
@@ -63,7 +61,6 @@ const dishesService = {
     }
   },
 
-
   hardDeleteDish: async (id) => {
     try {
       console.log(`🗑️ Xóa vĩnh viễn món ăn ID: ${id}`);
@@ -76,17 +73,16 @@ const dishesService = {
     }
   },
 
-
-  getRecipeByRecipeId: async (dishId, recipeId) => {
+  getRecipeByRecipeId: async (recipeId) => {
     try {
       const headers = await getAuthHeaders();
-      const response = await axiosInstance.get(`/dishes/${dishId}/recipes/${recipeId}`, {
+      const response = await axiosInstance.get(`/recipes/dish/${recipeId}`, {
         headers,
       });
       console.log("Fetched Recipes nè :", response.data.data);
       return {
         success: true,
-        data: response.data?.data || {}, 
+        data: response.data?.data || {},
       };
     } catch (error) {
       console.error("Error fetching recipe:", error);
@@ -97,14 +93,13 @@ const dishesService = {
     }
   },
 
-
   getDishById: async (dishId) => {
     try {
       const headers = await getAuthHeaders();
       const response = await axiosInstance.get(`/dishes/${dishId}`, { headers });
       return {
         success: true,
-        data: response.data.data || {}, 
+        data: response.data.data || {},
       };
     } catch (error) {
       console.error("Error fetching dish:", error);

@@ -8,18 +8,22 @@ import { useSelector } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
 import FoodBySeasonSection from "./HomeSection/FoodBySeasonSection";
 
+// Define useCurrentSeason hook directly in Home.js
+const useCurrentSeason = () => {
+  const month = new Date().getMonth() + 1; // getMonth() returns 0-11, so add 1
+  if (month >= 1 && month <= 3) return "Spring";
+  if (month >= 4 && month <= 6) return "Summer";
+  if (month >= 7 && month <= 9) return "Autumn";
+  return "Winter";
+};
+
 const Home = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
   const [loading, setLoading] = useState(true);
   const userId = useSelector(selectAuth)?.user?._id;
-  const [selectedSeason, setSelectedSeason] = useState("All seasons");
-
-  const filteredSeasonDishes = Array.isArray(dishes)
-    ? selectedSeason === "All seasons"
-      ? dishes
-      : dishes.filter((dish) => dish.season === selectedSeason)
-    : [];
+  const currentSeason = useCurrentSeason(); // Use the hook to get the current season
+  const [selectedSeason, setSelectedSeason] = useState(currentSeason); // Default to current season (e.g., "Summer")
 
   useEffect(() => {
     const fetchDishes = async () => {
@@ -53,9 +57,7 @@ const Home = () => {
         <div className="flex flex-col md:flex-row items-center justify-between">
           <div className="text-center md:text-left md:w-1/2">
             <h1 className="m-10 text-xl md:text-4xl lg:text-[62px] font-extrabold text-black leading-normal md:leading-[1.2] w-full md:w-2/3 lg:w-[65%] text-center md:text-left mx-auto md:mx-0">
-              <span className="text-[#40B491]">
-                Do you want to personalize it for you?
-              </span>
+              <span className="text-[#40B491]">Do you want to personalize it for you?</span>
             </h1>
             <p className="pt-5 text-sm md:text-base lg:text-lg">
               Please tell us more about yourself.
@@ -92,14 +94,10 @@ const Home = () => {
         <FoodSlider userId={userId} dishes={dishes} />
         <hr className="w-full border-t border-gray-300 my-6" />
 
-        <SeasonSection onSelectSeason={setSelectedSeason} />
+        <SeasonSection onSelectSeason={setSelectedSeason} selectedSeason={selectedSeason} />
         <hr className="w-full border-t border-gray-300 my-6" />
 
-        <FoodBySeasonSection
-          userId={userId}
-          selectedSeason={selectedSeason}
-          dishes={filteredSeasonDishes}
-        />
+        <FoodBySeasonSection userId={userId} selectedSeason={selectedSeason} />
 
         <hr className="w-full border-t border-gray-300 my-6" />
       </div>

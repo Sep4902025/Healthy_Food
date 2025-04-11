@@ -17,7 +17,7 @@ const FAQsPage = () => {
       console.log("API Response:", result);
 
       if (result.success) {
-        setFaqs(result.data.items || []);
+        setFaqs(result.data.data.faqs || []); // Truy cập đúng result.data.data.faqs
         setTotalPages(result.data.totalPages || 1);
       } else {
         setError(result.message);
@@ -29,7 +29,9 @@ const FAQsPage = () => {
   }, [currentPage]);
 
   const categories = [...new Set(faqs.map((faq) => faq.category))];
-  const filteredFaqs = selectedCategory ? faqs.filter((faq) => faq.category === selectedCategory) : faqs;
+  const filteredFaqs = selectedCategory
+    ? faqs.filter((faq) => faq.category === selectedCategory)
+    : faqs;
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -46,7 +48,9 @@ const FAQsPage = () => {
             <li
               key={index}
               className={`text-lg font-medium cursor-pointer p-2 rounded-lg ${
-                selectedCategory === category ? "bg-green-500 text-white" : "text-gray-800 hover:bg-green-100"
+                selectedCategory === category
+                  ? "bg-green-500 text-white"
+                  : "text-gray-800 hover:bg-green-100"
               }`}
               onClick={() => setSelectedCategory(category)}
             >

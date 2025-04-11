@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import {
   View,
   Text,
@@ -16,28 +17,22 @@ import { useTheme } from "../../contexts/ThemeContext";
 
 const HEIGHT = Dimensions.get("window").height;
 
-export const EditHealthModal = ({
-  visible,
-  onClose,
-  onSave,
-  userPreference,
-}) => {
+export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) => {
   const { theme } = useTheme();
   const [healthData, setHealthData] = useState({
     ...userPreference,
   });
   const [bmi, setBmi] = useState(null);
 
- 
   useEffect(() => {
     setHealthData(userPreference);
     calculateBMI(userPreference.weight, userPreference.height);
+    calculateBMI(userPreference.weight, userPreference.height);
   }, [userPreference]);
-
 
   const calculateBMI = (weight, height) => {
     const w = parseFloat(weight);
-    const h = parseFloat(height) / 100; 
+    const h = parseFloat(height) / 100;
     if (w && h && !isNaN(w) && !isNaN(h) && h > 0) {
       const bmiValue = (w / (h * h)).toFixed(1);
       setBmi(bmiValue);
@@ -117,14 +112,14 @@ export const EditHealthModal = ({
     [
       {
         label: "Diet",
-        field: "diet", 
+        field: "diet",
         value: healthData.diet ?? "",
-        keyboardType: "default", 
+        keyboardType: "default",
         editable: false,
       },
       {
         label: "MealNumber",
-        field: "mealNumber", 
+        field: "mealNumber",
         value: healthData.mealNumber ?? "",
         keyboardType: "default",
         editable: false,
@@ -133,7 +128,7 @@ export const EditHealthModal = ({
     [
       {
         label: "UnderDisease",
-        field: "underDisease", 
+        field: "underDisease",
         value: "",
         keyboardType: "default",
         editable: false,
@@ -145,36 +140,33 @@ export const EditHealthModal = ({
     {
       label: "EatHabit",
       field: "eatHabit",
-      value: healthData.eatHabit || [], 
+      value: healthData.eatHabit || [],
       keyboardType: "default",
       editable: false,
     },
     {
       label: "RecommendedFoods",
       field: "recommendedFoods",
-      value: healthData.recommendedFoods || [], 
+      value: healthData.recommendedFoods || [],
       keyboardType: "default",
       editable: false,
     },
     {
       label: "Hate",
       field: "hate",
-      value: healthData.hate || [], 
+      value: healthData.hate || [],
       keyboardType: "default",
       editable: false,
     },
   ];
 
- 
   const renderInputField = (fieldConfig) => {
     if (!fieldConfig) return <View style={styles.formItem} />;
 
     const { label, field, value, keyboardType, editable } = fieldConfig;
     return (
       <View style={styles.formItem}>
-        <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-          {label}
-        </Text>
+        <Text style={{ ...styles.label, color: theme.greyTextColor }}>{label}</Text>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -193,14 +185,11 @@ export const EditHealthModal = ({
 
     const { label, field, value, keyboardType, editable } = fieldConfig;
 
- 
     const items = Array.isArray(value) ? value : [];
 
     return (
       <View style={styles.formItemFull}>
-        <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-          {label}
-        </Text>
+        <Text style={{ ...styles.label, color: theme.greyTextColor }}>{label}</Text>
         <View style={styles.tagsContainer}>
           {items.map((item, index) => (
             <View key={`${field}-${index}`} style={styles.tagItem}>
@@ -213,12 +202,7 @@ export const EditHealthModal = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <EditModalHeader onCancel={onClose} />
 
       <View
@@ -227,27 +211,19 @@ export const EditHealthModal = ({
           backgroundColor: theme.editModalbackgroundColor,
         }}
       >
-        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
-          Health Information
-        </Text>
+        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>Health Information</Text>
         <ScrollView style={styles.scrollContent}>
           <View style={styles.formGrid}>
             {formData.map((row, rowIndex) => (
               <View key={`row-${rowIndex}`} style={styles.formRow}>
                 {renderInputField(row[0])}
-                {row[1] ? (
-                  renderInputField(row[1])
-                ) : (
-                  <View style={styles.formItem} />
-                )}
+                {row[1] ? renderInputField(row[1]) : <View style={styles.formItem} />}
               </View>
             ))}
           </View>
           <View style={styles.formGrid}>
             {viewForm.map((fieldConfig, index) => (
-              <View key={`view-field-${index}`}>
-                {renderViewField(fieldConfig)}
-              </View>
+              <View key={`view-field-${index}`}>{renderViewField(fieldConfig)}</View>
             ))}
           </View>
         </ScrollView>

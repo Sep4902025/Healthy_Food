@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Animated } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // For back arrow icon
+import { Ionicons } from "@expo/vector-icons";
 import AddDishToMeal from "./AddDishToMeal";
 import AddMealModal from "./AddMealModal";
 import DishCard from "./DishCard";
-import ConfirmationDialog from "./ComfirmDialog"; // Note: Typo in import ("ComfirmDialog" should be "ConfirmationDialog")
+import ConfirmationDialog from "./ComfirmDialog";
 import HomeService from "../../services/HomeService";
 import mealPlanService from "../../services/mealPlanService";
 import { useSelector } from "react-redux";
 import { userSelector } from "../../redux/selectors/selector";
+import ShowToast from "../../components/common/CustomToast";
 
 const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
   const user = useSelector(userSelector);
@@ -23,8 +24,10 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
   const [isAddingDish, setIsAddingDish] = useState(false);
   const [deletingMealId, setDeletingMealId] = useState(null);
   const [deletingDishId, setDeletingDishId] = useState(null);
-  const [fadeAnim] = useState(new Animated.Value(1)); // Use Animated.Value for opacity transition
+  const [fadeAnim] = useState(new Animated.Value(1));
   const [mealPlanType, setMealPlanType] = useState(null);
+  const [isMealPlanExpired, setIsMealPlanExpired] = useState(false);
+  const [isMealPlanPaused, setIsMealPlanPaused] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [mealToDelete, setMealToDelete] = useState(null);
 
@@ -44,7 +47,14 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
         ]);
 
         if (mealPlanResponse.success) {
-          setMealPlanType(mealPlanResponse.data.type);
+          const mealPlan = mealPlanResponse.data;
+          setMealPlanType(mealPlan.type);
+          setIsMealPlanPaused(mealPlan.isPause);
+          const startDate = new Date(mealPlan.startDate);
+          const endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + mealPlan.duration);
+          const currentDate = new Date();
+          setIsMealPlanExpired(currentDate > endDate);
         }
 
         if (mealDayResponse.success) {
@@ -183,8 +193,20 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
   };
 
   const handleOpenAddDishModal = () => {
+    if (isMealPlanExpired || isMealPlanPaused) {
+      ShowToast("error", "❌ Cannot add dish: MealPlan is expired or paused.");
+      return;
+    }
     setIsAddingDish(true);
     setShowAddDishModal(true);
+  };
+
+  const handleOpenAddMealModal = () => {
+    if (isMealPlanExpired || isMealPlanPaused) {
+      ShowToast("error", "❌ Cannot add meal: MealPlan is expired or paused.");
+      return;
+    }
+    setShowAddMealModal(true);
   };
 
   const handleCloseAddDishModal = () => {
@@ -279,11 +301,13 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
           <TouchableOpacity
             className="p-1"
             onPress={() => handleRemoveMealFromDay(item._id)}
-            disabled={deletingMealId === item._id}
+            disabled={deletingMealId === item._id || isMealPlanExpired || isMealPlanPaused}
           >
             <Text
               className={`${
-                deletingMealId === item._id ? "text-gray-400" : "text-red-500"
+                deletingMealId === item._id || isMealPlanExpired || isMealPlanPaused
+                  ? "text-gray-400"
+                  : "text-red-500"
               } text-base`}
             >
               {deletingMealId === item._id ? "Deleting..." : "🗑️"}
@@ -322,8 +346,11 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
               </TouchableOpacity>
               {mealPlanType === "custom" && (
                 <TouchableOpacity
-                  className="bg-blue-600 px-4 py-2 rounded"
-                  onPress={() => setShowAddMealModal(true)}
+                  className={`px-4 py-2 rounded ${
+                    isMealPlanExpired || isMealPlanPaused ? "bg-gray-400" : "bg-blue-600"
+                  }`}
+                  onPress={handleOpenAddMealModal}
+                  disabled={isMealPlanExpired || isMealPlanPaused}
                 >
                   <Text className="text-white">Add Meal</Text>
                 </TouchableOpacity>
@@ -334,7 +361,7 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
               data={meals}
               renderItem={renderMealItem}
               keyExtractor={(item) => item._id}
-              contentContainerStyle={{ paddingBottom: 80 }} // Add padding to avoid overlap with bottom navigation
+              contentContainerStyle={{ paddingBottom: 80 }}
               ListEmptyComponent={
                 <View className="flex-1 justify-center items-center py-4">
                   <Text className="text-center text-gray-500">No meals for this day yet.</Text>
@@ -350,9 +377,13 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
                 <Text className="text-blue-600 ml-2">Back</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                className={`${isAddingDish ? "bg-gray-400" : "bg-blue-600"} px-4 py-2 rounded`}
+                className={`${
+                  isAddingDish || isMealPlanExpired || isMealPlanPaused
+                    ? "bg-gray-400"
+                    : "bg-blue-600"
+                } px-4 py-2 rounded`}
                 onPress={handleOpenAddDishModal}
-                disabled={isAddingDish}
+                disabled={isAddingDish || isMealPlanExpired || isMealPlanPaused}
               >
                 <Text className="text-white">{isAddingDish ? "Adding..." : "Add Dish"}</Text>
               </TouchableOpacity>
@@ -368,7 +399,7 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
                 <DishCard dish={item} onDelete={handleDeleteDish} deletingDishId={deletingDishId} />
               )}
               keyExtractor={(item, index) => index.toString()}
-              contentContainerStyle={{ paddingBottom: 80 }} // Add padding to avoid overlap with bottom navigation
+              contentContainerStyle={{ paddingBottom: 80 }}
               ListEmptyComponent={
                 <View className="flex-1 justify-center items-center">
                   <Text className="text-gray-500">No dishes in this meal yet.</Text>

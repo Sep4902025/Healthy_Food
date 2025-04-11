@@ -20,7 +20,7 @@ const MealPlansAnalytics = () => {
     totalCustom: 0,
     paidMealPlans: 0,
     unpaidMealPlans: 0,
-    monthlyRevenue: [],
+    monthlyRevenue: {},
     totalMealPlans: 0,
     expiredMealPlans: 0,
     pausedMealPlans: 0,
@@ -30,7 +30,7 @@ const MealPlansAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showValue, setShowValue] = useState(false);
-  const [yearFilter, setYearFilter] = useState("2025");
+  const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString());
 
   const COLORS = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"];
 
@@ -39,99 +39,105 @@ const MealPlansAnalytics = () => {
       setLoading(true);
       setError(null);
 
-      // Lấy danh sách MealPlan hiện tại
-      const mealPlansResponse = await mealPlanService.getAllMealPlans();
-      const mealPlans = mealPlansResponse.success ? mealPlansResponse.data : [];
+      // Fetch all meal plans with pagination
+      let allMealPlans = [];
+      let page = 1;
+      const limit = 100; // Set a high limit to fetch more data per request
+      let hasMore = true;
 
-      // Lấy lịch sử MealPlan của tất cả user
-      const allUsersHistory = await Promise.all(
-        mealPlans.map(async (plan) => {
-          const historyResponse = await mealPlanService.getMealPlanHistory(plan.userId._id);
-          return historyResponse.success ? historyResponse.data : [];
-        })
-      );
-      const historicalMealPlans = allUsersHistory.flat().map((h) => h.mealPlanId);
-
-      // Kết hợp MealPlan hiện tại và lịch sử
-      const allMealPlans = [...mealPlans, ...historicalMealPlans];
-
-      // Tính số lượng Fixed và Custom Meal Plans
-      const totalFixed = allMealPlans.filter((plan) => plan.type === "fixed").length;
-      const totalCustom = allMealPlans.filter((plan) => plan.type === "custom").length;
-
-      // Tính số lượng Paid và Unpaid Meal Plans
-      const paidMealPlans = allMealPlans.filter((plan) => plan.paymentId !== null).length;
-      const unpaidMealPlans = allMealPlans.filter((plan) => plan.paymentId === null).length;
-
-      // Tính tổng số MealPlan và phân loại theo trạng thái dựa trên endDate
-      const totalMealPlans = allMealPlans.length;
-      const expiredMealPlans = allMealPlans.filter(
-        (plan) => new Date(plan.endDate) < new Date()
-      ).length;
-      const pausedMealPlans = allMealPlans.filter((plan) => plan.isPause === true).length;
-      const activeMealPlans = allMealPlans.filter(
-        (plan) => new Date(plan.endDate) >= new Date() && !plan.isPause
-      ).length;
-
-      // Lấy danh sách paymentId từ các MealPlan đã thanh toán
-      const paymentIds = allMealPlans
-        .filter((plan) => plan.paymentId !== null)
-        .map((plan) => plan.paymentId);
-
-      let payments = [];
-      if (paymentIds.length > 0) {
-        const paymentsResponse = await Promise.all(
-          paymentIds.map(async (paymentId) => {
-            const response = await mealPlanService.checkPaymentStatus(paymentId);
-            return response.success ? response.data : null;
-          })
+      while (hasMore) {
+        const mealPlansResponse = await mealPlanService.getAllMealPlanNutritionistCreatedBy(
+          page,
+          limit
         );
-        payments = paymentsResponse.filter((payment) => payment !== null);
+        if (!mealPlansResponse.success) {
+          throw new Error(`Unable to fetch Meal Plans list: ${mealPlansResponse.message}`);
+        }
+
+        const mealPlans = mealPlansResponse.data.mealPlans || [];
+        allMealPlans = [...allMealPlans, ...mealPlans];
+
+        // Check if there are more pages
+        const totalItems = mealPlansResponse.total || mealPlans.length;
+        const totalPages = mealPlansResponse.totalPages || Math.ceil(totalItems / limit);
+        hasMore = page < totalPages;
+        page += 1;
       }
 
-      // Tính tổng thu nhập theo từng tháng
-      const monthlyRevenueMap = {};
-      payments.forEach((payment) => {
-        if (payment.status === "success") {
-          const paymentDate = new Date(payment.paymentDate);
-          const year = paymentDate.getFullYear();
-          const month = paymentDate.getMonth() + 1;
-          const monthYear = `${year}-${String(month).padStart(2, "0")}`;
+      // Fetch payment history
+      let allPayments = [];
+      try {
+        const paymentResponse = await mealPlanService.getPaymentHistoryForNutritionist();
+        if (paymentResponse.success) {
+          allPayments = paymentResponse.data || [];
+        } else {
+          throw new Error(`Unable to fetch payment history: ${paymentResponse.message}`);
+        }
+      } catch (paymentError) {
+        throw new Error(`Error calling payment history API: ${paymentError.message}`);
+      }
 
-          if (!monthlyRevenueMap[year]) {
-            monthlyRevenueMap[year] = {};
+      // Process payment data for monthly revenue
+      const monthlyRevenueMap = {};
+      allPayments.forEach((payment, index) => {
+        if (payment.status === "success" && payment.paymentDate && payment.amount) {
+          const paymentDate = new Date(payment.paymentDate);
+          if (isNaN(paymentDate.getTime())) {
+            throw new Error(`Invalid payment date at payment ${index}: ${payment.paymentDate}`);
           }
-          if (!monthlyRevenueMap[year][month]) {
-            monthlyRevenueMap[year][month] = 0;
-          }
-          monthlyRevenueMap[year][month] += payment.amount;
+          const year = paymentDate.getFullYear().toString();
+          const month = paymentDate.getMonth() + 1; // Month from 1-12
+          if (!monthlyRevenueMap[year]) monthlyRevenueMap[year] = {};
+          if (!monthlyRevenueMap[year][month]) monthlyRevenueMap[year][month] = 0;
+          monthlyRevenueMap[year][month] += Number(payment.amount);
         }
       });
 
       const monthlyRevenue = {};
       Object.keys(monthlyRevenueMap).forEach((year) => {
-        monthlyRevenue[year] = Object.keys(monthlyRevenueMap[year])
-          .sort((a, b) => a - b)
-          .map((month) => ({
-            month: `Th${month}`,
-            revenue: monthlyRevenueMap[year][month],
+        monthlyRevenue[year] = Array(12)
+          .fill(null)
+          .map((_, index) => ({
+            month: `M${String(index + 1).padStart(2, "0")}`,
+            revenue: monthlyRevenueMap[year][index + 1] || 0,
           }));
       });
 
+      const currentYear = new Date().getFullYear().toString();
+      if (!monthlyRevenue[currentYear]) {
+        monthlyRevenue[currentYear] = Array(12)
+          .fill(null)
+          .map((_, index) => ({
+            month: `M${String(index + 1).padStart(2, "0")}`,
+            revenue: 0,
+          }));
+      }
+
+      // Calculate analytics data
+      const currentDate = new Date();
       setAnalyticsData({
-        totalFixed,
-        totalCustom,
-        paidMealPlans,
-        unpaidMealPlans,
+        totalFixed: allMealPlans.filter((plan) => plan.type === "fixed").length,
+        totalCustom: allMealPlans.filter((plan) => plan.type === "custom").length,
+        paidMealPlans: allMealPlans.filter((plan) => plan.paymentId !== null).length,
+        unpaidMealPlans: allMealPlans.filter((plan) => plan.paymentId === null).length,
         monthlyRevenue,
-        totalMealPlans,
-        expiredMealPlans,
-        pausedMealPlans,
-        activeMealPlans,
+        totalMealPlans: allMealPlans.length,
+        expiredMealPlans: allMealPlans.filter((plan) => {
+          const startDate = new Date(plan.startDate);
+          const endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + plan.duration);
+          return endDate < currentDate;
+        }).length,
+        pausedMealPlans: allMealPlans.filter((plan) => plan.isPause === true).length,
+        activeMealPlans: allMealPlans.filter((plan) => {
+          const startDate = new Date(plan.startDate);
+          const endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + plan.duration);
+          return endDate >= currentDate && !plan.isPause && !plan.isBlock;
+        }).length,
       });
     } catch (err) {
-      console.error("Error fetching analytics data:", err.message);
-      setError("Failed to load analytics data. Please try again later.");
+      setError(`Unable to load analytics data: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -140,12 +146,12 @@ const MealPlansAnalytics = () => {
   useEffect(() => {
     fetchAnalyticsData();
     const intervalId = setInterval(() => {
-      console.log("Auto-refreshing analytics data...");
       fetchAnalyticsData();
-    }, 10000);
+    }, 30000);
     return () => clearInterval(intervalId);
   }, []);
 
+  // Data for Pie charts
   const typeChartData = [
     { name: "Fixed Plans", value: analyticsData.totalFixed },
     { name: "Custom Plans", value: analyticsData.totalCustom },
@@ -162,39 +168,74 @@ const MealPlansAnalytics = () => {
     { name: "Active", value: analyticsData.activeMealPlans },
   ];
 
-  const revenueData = analyticsData.monthlyRevenue[yearFilter] || [];
+  // Data for Line chart
+  const revenueData =
+    analyticsData.monthlyRevenue[yearFilter] ||
+    Array(12)
+      .fill(null)
+      .map((_, index) => ({
+        month: `M${String(index + 1).padStart(2, "0")}`,
+        revenue: 0,
+      }));
+
+  // Get list of available years
+  const availableYears =
+    Object.keys(analyticsData.monthlyRevenue).length > 0
+      ? Object.keys(analyticsData.monthlyRevenue).sort((a, b) => b - a)
+      : [new Date().getFullYear().toString()];
 
   if (loading) {
-    return <div className="flex justify-center items-center h-full"><p>Loading...</p></div>;
+    return (
+      <div className="flex justify-center items-center h-full">
+        <p className="text-gray-500">Loading analytics data...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="flex justify-center items-center h-full"><p className="text-red-500">{error}</p></div>;
+    return (
+      <div className="flex justify-center items-center h-full">
+        <p className="text-red-500">{error}</p>
+        <button
+          className="ml-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          onClick={fetchAnalyticsData}
+        >
+          Try Again
+        </button>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Meal Plans Analytics</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-lg font-semibold">Total Meal Plans</h3>
-          <p className="text-2xl font-bold">{analyticsData.totalFixed + analyticsData.totalCustom}</p>
-          <p>Fixed: {analyticsData.totalFixed} | Custom: {analyticsData.totalCustom}</p>
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <h1 className="text-3xl font-bold text-gray-800 mb-8">Meal Plans Analytics</h1>
+
+      {/* Stats cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold text-gray-700">Total Meal Plans</h3>
+          <p className="text-3xl font-bold text-gray-800">
+            {analyticsData.totalFixed + analyticsData.totalCustom}
+          </p>
+          <p className="text-sm text-gray-600">
+            Fixed: {analyticsData.totalFixed} | Custom: {analyticsData.totalCustom}
+          </p>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-lg font-semibold">Paid Meal Plans</h3>
-          <p className="text-2xl font-bold text-green-600">{analyticsData.paidMealPlans}</p>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold text-gray-700">Paid Meal Plans</h3>
+          <p className="text-3xl font-bold text-green-600">{analyticsData.paidMealPlans}</p>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-lg font-semibold">Unpaid Meal Plans</h3>
-          <p className="text-2xl font-bold text-red-600">{analyticsData.unpaidMealPlans}</p>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold text-gray-700">Unpaid Meal Plans</h3>
+          <p className="text-3xl font-bold text-red-600">{analyticsData.unpaidMealPlans}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white p-4 rounded shadow">
+      {/* Pie Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Meal Plan Types</h3>
+            <h3 className="text-lg font-semibold text-gray-700">Meal Plan Types</h3>
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -203,7 +244,9 @@ const MealPlansAnalytics = () => {
                 checked={showValue}
                 onChange={() => setShowValue(!showValue)}
               />
-              <label htmlFor="showValueType">Show Value</label>
+              <label htmlFor="showValueType" className="text-sm text-gray-600">
+                Show Values
+              </label>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={250}>
@@ -213,23 +256,25 @@ const MealPlansAnalytics = () => {
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
-                outerRadius={80}
+                outerRadius={90}
                 fill="#8884d8"
                 dataKey="value"
-                label={showValue}
+                label={showValue ? ({ name, value }) => `${name}: ${value}` : false}
+                labelLine={showValue}
               >
                 {typeChartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip formatter={(value) => `${value} plans`} />
+              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-4 rounded shadow">
+        <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Payment Status</h3>
+            <h3 className="text-lg font-semibold text-gray-700">Payment Status</h3>
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -238,7 +283,9 @@ const MealPlansAnalytics = () => {
                 checked={showValue}
                 onChange={() => setShowValue(!showValue)}
               />
-              <label htmlFor="showValuePayment">Show Value</label>
+              <label htmlFor="showValuePayment" className="text-sm text-gray-600">
+                Show Values
+              </label>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={250}>
@@ -248,23 +295,25 @@ const MealPlansAnalytics = () => {
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
-                outerRadius={80}
+                outerRadius={90}
                 fill="#8884d8"
                 dataKey="value"
-                label={showValue}
+                label={showValue ? ({ name, value }) => `${name}: ${value}` : false}
+                labelLine={showValue}
               >
                 {paymentStatusChartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip formatter={(value) => `${value} plans`} />
+              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-4 rounded shadow">
+        <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Meal Plan Status</h3>
+            <h3 className="text-lg font-semibold text-gray-700">Meal Plan Status</h3>
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -273,7 +322,9 @@ const MealPlansAnalytics = () => {
                 checked={showValue}
                 onChange={() => setShowValue(!showValue)}
               />
-              <label htmlFor="showValueStatus">Show Value</label>
+              <label htmlFor="showValueStatus" className="text-sm text-gray-600">
+                Show Values
+              </label>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={250}>
@@ -283,47 +334,57 @@ const MealPlansAnalytics = () => {
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
-                outerRadius={80}
+                outerRadius={90}
                 fill="#8884d8"
                 dataKey="value"
-                label={showValue}
+                label={showValue ? ({ name, value }) => `${name}: ${value}` : false}
+                labelLine={showValue}
               >
                 {statusChartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip formatter={(value) => `${value} plans`} />
+              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded shadow">
+      {/* Line Chart */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Monthly Revenue</h3>
-          <div>
-            <button
-              className={`mr-2 px-3 py-1 rounded ${yearFilter === "2025" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-              onClick={() => setYearFilter("2025")}
-            >
-              2025
-            </button>
-            <button
-              className={`px-3 py-1 rounded ${yearFilter === "2026" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-              onClick={() => setYearFilter("2026")}
-            >
-              2026
-            </button>
+          <h3 className="text-lg font-semibold text-gray-700">Monthly Revenue</h3>
+          <div className="flex space-x-2">
+            {availableYears.map((year) => (
+              <button
+                key={year}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  yearFilter === year
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+                onClick={() => setYearFilter(year)}
+              >
+                {year}
+              </button>
+            ))}
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="100%" height={300}>
           <LineChart data={revenueData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+            <XAxis dataKey="month" stroke="#666" />
+            <YAxis stroke="#666" />
+            <Tooltip formatter={(value) => `${Number(value).toLocaleString("en-US")} VND`} />
             <Legend />
-            <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
+            <Line
+              type="monotone"
+              dataKey="revenue"
+              stroke="#8884d8"
+              strokeWidth={2}
+              activeDot={{ r: 8 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -332,6 +393,3 @@ const MealPlansAnalytics = () => {
 };
 
 export default MealPlansAnalytics;
-
-
-

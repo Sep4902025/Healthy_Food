@@ -1,7 +1,6 @@
 import axiosInstance from "./axiosInstance";
 
 const HomeService = {
- 
   getIngredientsGroupedByType: async () => {
     try {
       const response = await axiosInstance.get("/Home/ingredients/type");
@@ -21,7 +20,6 @@ const HomeService = {
       throw error;
     }
   },
-
 
   getIngredientById: async (ingredientId) => {
     try {
@@ -55,7 +53,6 @@ const HomeService = {
       throw error;
     }
   },
-
 
   getAllDishes: async (page, limit, search = "") => {
     try {
@@ -92,9 +89,9 @@ const HomeService = {
     }
   },
 
-  getRecipeByRecipeId: async (dishId, recipeId) => {
+  getRecipeByRecipeId: async (recipeId) => {
     try {
-      const response = await axiosInstance.get(`/dishes/${dishId}/recipes/${recipeId}`);
+      const response = await axiosInstance.get(`/recipes/dish/${recipeId}`);
       console.log("Fetched Recipes:", response.data);
       return {
         success: true,

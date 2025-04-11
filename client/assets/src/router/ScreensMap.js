@@ -41,6 +41,7 @@ import Email from "../screens/Survey/Email";
 import PhoneNumber from "../screens/Survey/PhoneNumber";
 import Name from "../screens/Survey/Name";
 import SurveyScreen from "../screens/SurveyScreen";
+import PaymentScreen from "../screens/MealPlan/PaymentScreen";
 
 export const ScreensMap = [
   {
@@ -109,7 +110,7 @@ export const ScreensMap = [
   },
   {
     name: ScreensName.survey,
-    component: SurveyScreen, 
+    component: SurveyScreen,
     options: {
       tabBarIcon: ({ color, focused }) => <AntDesignIcon name="calendar" size={28} color={color} />,
       iconStyles: { transform: [{ translateX: 25 }] },
@@ -324,6 +325,13 @@ export const ScreensMap = [
   {
     name: ScreensName.forYou,
     component: ForYou,
+    options: {
+      tabBarButton: () => null,
+    },
+  },
+  {
+    name: ScreensName.payment,
+    component: PaymentScreen,
     options: {
       tabBarButton: () => null,
     },

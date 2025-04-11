@@ -23,8 +23,10 @@ const homeRouter = require("./routes/homeRouter");
 const commentRatingRouter = require("./routes/commentRatingRouter");
 const medicalConditionRouter = require("./routes/medicalConditionRouter");
 const userFavoriteDishesRouter = require("./routes/userFavoriteDishesRouter");
-
+const paymentRouter = require("./routes/paymentRouter");
+const foryouRouter = require("./routes/foryouRouter"); // Thêm router mới
 const userPreferenceRouter = require("./routes/userPreferenceRouter");
+
 const app = express();
 const server = http.createServer(app);
 
@@ -74,7 +76,7 @@ const io = socketIo(server, {
 // Import và khởi tạo các socket (chat, reminder)
 const initializeChatSocket = require("./socket/chatSocket");
 const initializeReminderSocket = require("./socket/reminderSocket");
-const paymentRouter = require("./routes/paymentRouter");
+const recipeRouter = require("./routes/recipeRouter");
 
 io.on("connection", (socket) => {
   console.log("A user connected");
@@ -100,14 +102,12 @@ app.use("/api/v1/jobs", jobRouter);
 app.use("/api/v1/footer", footerRouter);
 app.use("/api/v1/home", homeRouter);
 app.use("/api/v1/comment", commentRatingRouter);
-app.use("/api/v1/recipe", commentRatingRouter);
+//app.use("/api/v1/recipe", commentRatingRouter);
 app.use("/api/v1/medicalConditions", medicalConditionRouter);
 app.use("/api/v1/favoriteDishes", userFavoriteDishesRouter);
-app.use("/api/v1/recipes", dishRouter);
-
-app.use("/api/v1/userPreference", userPreferenceRouter);
-
-
+app.use("/api/v1/recipes", recipeRouter);
+app.use("/api/v1/foryou", foryouRouter);
+app.use("/api/v1/userpreference", userPreferenceRouter);
 
 // Xử lý route không tồn tại
 app.all("*", (req, res, next) => {

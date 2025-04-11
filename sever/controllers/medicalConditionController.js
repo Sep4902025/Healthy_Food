@@ -1,11 +1,10 @@
 // medicalConditionController.js
-const MedicalCondition = require("../models/MedicalCondition");
+const medicalConditionService = require("../services/medicalConditionService");
 
 // Tạo Medical Condition
 exports.createMedicalCondition = async (req, res) => {
   try {
-    const newCondition = new MedicalCondition(req.body);
-    await newCondition.save();
+    const newCondition = await medicalConditionService.createMedicalCondition(req.body);
     res.status(201).json({
       status: "success",
       data: newCondition,
@@ -18,42 +17,29 @@ exports.createMedicalCondition = async (req, res) => {
   }
 };
 
-// Lấy tất cả Medical Conditions (chỉ lấy những chưa bị soft delete)
+// Lấy tất cả Medical Conditions
 exports.getAllMedicalConditions = async (req, res) => {
   try {
-    const conditions = await MedicalCondition.find({ isDelete: false })
-      .populate("restrictedFoods")
-      .populate("recommendedFoods");
+    const result = await medicalConditionService.getAllMedicalConditions(req.query);
     res.status(200).json({
       status: "success",
-      results: conditions.length,
-      data: conditions,
+      data: result,
     });
   } catch (error) {
-    res.status(400).json({
-      status: "fail",
-      message: error.message,
-    });
+    res.status(500).json({ status: "fail", message: error.message });
   }
 };
 
 // Lấy Medical Condition theo ID
 exports.getMedicalConditionById = async (req, res) => {
   try {
-    const condition = await MedicalCondition.findOne({
-      _id: req.params.conditionId,
-      isDelete: false,
-    })
-      .populate("restrictedFoods")
-      .populate("recommendedFoods");
-
+    const condition = await medicalConditionService.getMedicalConditionById(req.params.conditionId);
     if (!condition) {
       return res.status(404).json({
         status: "fail",
         message: "Medical condition not found",
       });
     }
-
     res.status(200).json({
       status: "success",
       data: condition,
@@ -69,21 +55,16 @@ exports.getMedicalConditionById = async (req, res) => {
 // Cập nhật Medical Condition
 exports.updateMedicalCondition = async (req, res) => {
   try {
-    const condition = await MedicalCondition.findOneAndUpdate(
-      { _id: req.params.conditionId, isDelete: false },
-      req.body,
-      { new: true, runValidators: true }
-    )
-      .populate("restrictedFoods")
-      .populate("recommendedFoods");
-
+    const condition = await medicalConditionService.updateMedicalCondition(
+      req.params.conditionId,
+      req.body
+    );
     if (!condition) {
       return res.status(404).json({
         status: "fail",
         message: "Medical condition not found",
       });
     }
-
     res.status(200).json({
       status: "success",
       data: condition,
@@ -96,22 +77,16 @@ exports.updateMedicalCondition = async (req, res) => {
   }
 };
 
-// Xóa mềm Medical Condition (soft delete)
+// Xóa mềm Medical Condition
 exports.deleteMedicalCondition = async (req, res) => {
   try {
-    const condition = await MedicalCondition.findOneAndUpdate(
-      { _id: req.params.conditionId, isDelete: false },
-      { isDelete: true },
-      { new: true }
-    );
-
-    if (!condition) {
+    const result = await medicalConditionService.deleteMedicalCondition(req.params.conditionId);
+    if (!result) {
       return res.status(404).json({
         status: "fail",
         message: "Medical condition not found",
       });
     }
-
     res.status(200).json({
       status: "success",
       message: "Medical condition has been soft deleted",
@@ -127,14 +102,7 @@ exports.deleteMedicalCondition = async (req, res) => {
 // Tìm kiếm Medical Condition theo tên
 exports.searchMedicalConditionByName = async (req, res) => {
   try {
-    const { name } = req.query;
-    const conditions = await MedicalCondition.find({
-      name: { $regex: name, $options: "i" },
-      isDelete: false,
-    })
-      .populate("restrictedFoods")
-      .populate("recommendedFoods");
-
+    const conditions = await medicalConditionService.searchMedicalConditionByName(req.query);
     res.status(200).json({
       status: "success",
       results: conditions.length,

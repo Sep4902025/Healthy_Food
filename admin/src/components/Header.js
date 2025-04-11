@@ -188,7 +188,7 @@ const Header = () => {
     dispatch(logoutUser());
     setHasCompletedQuiz(false);
     navigate("/signin");
-    toast.success("Logged out successfully!");
+    toast.success("Signed out successfully!");
   };
 
   const handlePayMealPlan = async (mealPlan) => {
@@ -260,14 +260,29 @@ const Header = () => {
           )}
           {user?.role === "user" && (
             <>
-              <a
-                href="/survey/name"
-                className={`font-medium transition-colors ${
-                  isActive("/survey/name") ? "text-green-600" : "text-gray-700 hover:text-green-600"
-                }`}
-              >
-                Survey
-              </a>
+              {/* If userPreferenceId exists, show "For You" instead of "Survey" */}
+              {user?.userPreferenceId ? (
+                <a
+                  href="/foryou"
+                  className={`font-medium transition-colors ${
+                    isActive("/foryou") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                  }`}
+                >
+                  For You
+                </a>
+              ) : (
+                <a
+                  href="/survey/name"
+                  className={`font-medium transition-colors ${
+                    isActive("/survey/name")
+                      ? "text-green-600"
+                      : "text-gray-700 hover:text-green-600"
+                  }`}
+                >
+                  Survey
+                </a>
+              )}
+
               <a
                 href="/mealplan"
                 className={`font-medium transition-colors ${
@@ -311,7 +326,7 @@ const Header = () => {
                 {cartMenuOpen && (
                   <div className="absolute right-0 mt-2 w-60 bg-white border rounded-lg shadow-lg z-10">
                     {/* Tabs */}
-                    <div className="flex border-b">
+                    <div className="flex border-b px-2">
                       <button
                         className={`flex-1 py-2 text-center ${
                           activeTab === "mealPlan"
@@ -323,7 +338,7 @@ const Header = () => {
                         Meal Plans
                       </button>
                       <button
-                        className={`flex-1 py-2 text-center ${
+                        className={`flex py-2 text-center ${
                           activeTab === "history"
                             ? "border-b-2 border-green-500 text-green-600"
                             : "text-gray-600"
@@ -335,10 +350,10 @@ const Header = () => {
                     </div>
 
                     {/* Tab Content */}
-                    <div className="p-4">
+                    <div className="flex flex-col justify-center items-center max-h-48 overflow-y-auto">
                       {activeTab === "mealPlan" ? (
                         mealPlans.length > 0 ? (
-                          <div className="max-h-48 overflow-y-auto">
+                          <div className="">
                             {mealPlans.map((mealPlan) => (
                               <div key={mealPlan._id} className="border-b py-2 last:border-b-0">
                                 <p className="font-medium text-gray-700">Name: {mealPlan.title}</p>
@@ -392,12 +407,6 @@ const Header = () => {
                                   </p>
                                 </div>
                               ))}
-                              <button
-                                onClick={() => navigate("/payment-history")}
-                                className="mt-2 w-full text-center text-blue-500 hover:underline"
-                              >
-                                View More
-                              </button>
                             </div>
                           ) : (
                             <p className="text-sm text-gray-500">No payment history.</p>
@@ -431,7 +440,7 @@ const Header = () => {
                     </div>
                     <div className="py-1">
                       <button
-                        onClick={() => navigate("/user")}
+                        onClick={handleProfileClick}
                         className="w-full text-left px-4 py-2 hover:bg-gray-100"
                       >
                         Profile
@@ -440,7 +449,7 @@ const Header = () => {
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 flex items-center"
                       >
-                        <FaSignOutAlt className="mr-2" /> Logout
+                        <FaSignOutAlt className="mr-2" /> Signout
                       </button>
                     </div>
                   </div>

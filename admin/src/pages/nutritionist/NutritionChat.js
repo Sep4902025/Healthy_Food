@@ -3,7 +3,6 @@ import { useSelector } from "react-redux";
 import ChatService from "../../services/chat.service";
 import ChatWindow from "../../components/Chat/ChatWindow";
 
-// Component to display a single conversation item in the list
 const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
   const user = useSelector((state) => state.auth.user);
 
@@ -33,7 +32,7 @@ const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
               )}
               <button
                 onClick={() => onAccept(conversation._id)}
-                className="px-2 py-1 text-xs text-white bg-blue-500 rounded-full hover:bg-blue-600"
+                className="px-2 py-1 text-xs text-white bg-[#40B491] rounded-full hover:bg-[#359c7a]"
               >
                 Consult
               </button>
@@ -43,7 +42,7 @@ const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
             <span className="px-2 py-1 text-xs text-gray-500">Seen</span>
           )}
           {conversation.status === "active" && (
-            <span className="px-2 py-1 text-xs text-green-500">Consulting</span>
+            <span className="px-2 py-1 text-xs text-[#40B491]">Consulting</span>
           )}
         </div>
       </div>
@@ -99,7 +98,6 @@ const NutritionChat = () => {
           return;
       }
 
-      // Luôn gán data, kể cả khi là mảng rỗng
       setConversations(response?.data?.data || []);
     } catch (error) {
       console.error("Error loading conversations:", error);
@@ -149,69 +147,74 @@ const NutritionChat = () => {
   };
 
   return (
-    <div className="flex h-full">
-      {/* Sidebar for conversation list */}
-      <div className="w-64 border-r">
-        <div className="flex border-b">
-          <button
-            className={`flex-1 p-2 text-sm ${
-              activeTab === "pending" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab("pending")}
-          >
-            Pending
-          </button>
-          <button
-            className={`flex-1 p-2 text-sm ${
-              activeTab === "checked" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab("checked")}
-          >
-            Seen
-          </button>
-          <button
-            className={`flex-1 p-2 text-sm ${
-              activeTab === "active" ? "border-b-2 border-blue-500 text-blue-500" : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab("active")}
-          >
-            Messages
-          </button>
+    <div className="flex h-[calc(100vh-60px)]">
+      <div className="flex flex-1">
+        <div className="w-64 border-r flex flex-col h-[calc(100vh-60px)]">
+          <div className="flex border-b">
+            <button
+              className={`flex-1 p-2 text-sm ${
+                activeTab === "pending"
+                  ? "border-b-2 border-[#40B491] text-[#40B491]"
+                  : "text-gray-600"
+              }`}
+              onClick={() => setActiveTab("pending")}
+            >
+              Pending
+            </button>
+            <button
+              className={`flex-1 p-2 text-sm ${
+                activeTab === "checked"
+                  ? "border-b-2 border-[#40B491] text-[#40B491]"
+                  : "text-gray-600"
+              }`}
+              onClick={() => setActiveTab("checked")}
+            >
+              Seen
+            </button>
+            <button
+              className={`flex-1 p-2 text-sm ${
+                activeTab === "active"
+                  ? "border-b-2 border-[#40B491] text-[#40B491]"
+                  : "text-gray-600"
+              }`}
+              onClick={() => setActiveTab("active")}
+            >
+              Messages
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {loading ? (
+              <div className="p-3 text-center text-gray-500 text-sm">Loading...</div>
+            ) : conversations.length === 0 ? (
+              <div className="p-3 text-center text-gray-500 text-sm">No conversations</div>
+            ) : (
+              conversations.map((conv) => (
+                <ConversationItem
+                  key={conv._id}
+                  conversation={conv}
+                  onAccept={handleAcceptChat}
+                  onCheck={handleMarkAsChecked}
+                  onClick={handleSelectConversation}
+                />
+              ))
+            )}
+          </div>
         </div>
 
-        <div className="overflow-y-auto h-[calc(100%-3rem)]">
-          {loading ? (
-            <div className="p-3 text-center text-gray-500 text-sm">Loading...</div>
-          ) : conversations.length === 0 ? (
-            <div className="p-3 text-center text-gray-500 text-sm">No conversations</div>
-          ) : (
-            conversations.map((conv) => (
-              <ConversationItem
-                key={conv._id}
-                conversation={conv}
-                onAccept={handleAcceptChat}
-                onCheck={handleMarkAsChecked}
-                onClick={handleSelectConversation}
+        <div className="flex-1 flex flex-col bg-white h-[calc(100vh-60px)]">
+          {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
+          <div className="flex-1 overflow-hidden">
+            {selectedConversation ? (
+              <ChatWindow
+                conversation={selectedConversation}
+                setCurrentConversation={handleUpdateConversation}
               />
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Chat window */}
-      <div className="flex-1 flex flex-col bg-white overflow-x-hidden">
-        {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
-          {selectedConversation ? (
-            <ChatWindow
-              conversation={selectedConversation}
-              setCurrentConversation={handleUpdateConversation}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-              Select a conversation to start
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                Select a conversation to start
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ const getAuthHeaders = () => {
 };
 
 const dishesService = {
-  // 🔹 Lấy tất cả món ăn với phân trang
+  // Get all dishes with pagination
   getAllDishes: async (page = 1, limit = 10, search = "") => {
     try {
       const response = await axios.get(`${API_URL}/dishes`, {
@@ -18,10 +18,11 @@ const dishesService = {
         params: {
           page,
           limit,
-          search, // Thêm tham số tìm kiếm
+          search,
+          sort: "createdAt",
+          order: "desc",
         },
       });
-      console.log("🔍 Danh sách món ăn từ API:", response.data);
       return {
         success: true,
         data: {
@@ -32,85 +33,103 @@ const dishesService = {
         },
       };
     } catch (error) {
-      console.error(
-        "❌ Lỗi khi lấy món ăn:",
-        error.response?.data || error.message
-      );
-      return { success: false, message: "Lỗi khi tải danh sách món ăn" };
+      return { success: false, message: "Error loading dishes list" };
     }
   },
 
-  // 🔹 Thêm món ăn mới
+  getAllDishesForNutri: async (page = 1, limit = 10, search = "") => {
+    try {
+      const response = await axios.get(`${API_URL}/dishes/nutritionist`, {
+        headers: getAuthHeaders(),
+        withCredentials: true,
+        params: {
+          page,
+          limit,
+          search,
+          sort: "createdAt",
+          order: "desc",
+        },
+      });
+      return {
+        success: true,
+        data: {
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
+        },
+      };
+    } catch (error) {
+      return { success: false, message: "Error loading dishes list for nutritionist" };
+    }
+  },
+
   createDish: async (data) => {
     try {
       const response = await axios.post(`${API_URL}/dishes`, data, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-      console.log("✅ Phản hồi từ server:", response.data);
-      return { success: true };
+      return { success: true, data: response.data.data }; // Return dish data if needed
     } catch (error) {
-      console.error(
-        "❌ Lỗi khi thêm món ăn:",
-        error.response?.data || error.message
-      );
-      return { success: false, message: "Thêm món ăn thất bại!" };
+      // Check for duplicate name error from server
+      if (error.response?.data?.message === "Dish with this name already exists") {
+        return { 
+          success: false, 
+          message: "Dish with this name already exists" 
+        };
+      }
+      
+      // Handle other errors
+      return { 
+        success: false, 
+        message: error.response?.data?.message || "Failed to add dish!" 
+      };
     }
   },
 
-  // 🔹 Cập nhật món ăn
   updateDish: async (id, data) => {
     try {
-      console.log(`📤 Cập nhật món ăn ID: ${id}`, data);
       await axios.put(`${API_URL}/dishes/${id}`, data, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
       return { success: true };
     } catch (error) {
-      console.error(
-        "❌ Lỗi khi cập nhật món ăn:",
-        error.response?.data || error.message
-      );
-      return { success: false, message: "Cập nhật món ăn thất bại!" };
+      return { success: false, message: "Failed to update dish!" };
     }
   },
 
-  // 🔹 Xóa vĩnh viễn món ăn
-  hardDeleteDish: async (id) => {
+  deleteDish: async (id) => {
     try {
-      console.log(`🗑️ Xóa vĩnh viễn món ăn ID: ${id}`);
-      await axios.delete(`${API_URL}/dishes/${id}`, {
-        headers: getAuthHeaders(),
-        withCredentials: true,
-      });
-      return { success: true };
-    } catch (error) {
-      console.error(
-        "❌ Lỗi khi xóa vĩnh viễn món ăn:",
-        error.response?.data || error.message
+      const response = await axios.put(
+        `${API_URL}/dishes/${id}`,
+        { isDelete: true }, // Send data to update isDelete
+        {
+          headers: getAuthHeaders(),
+          withCredentials: true,
+        }
       );
-      return { success: false, message: "Xóa vĩnh viễn món ăn thất bại!" };
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      return { success: false, message: "Failed to soft delete dish!" };
     }
   },
 
-  // 🔹 Lấy thông tin món ăn theo ID
   getDishById: async (dishId) => {
     try {
       const response = await axios.get(`${API_URL}/dishes/${dishId}`, {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-      console.log("Fetched Dish:", response.data);
       return {
         success: true,
         data: response.data.data || {},
       };
     } catch (error) {
-      console.error("Error fetching dish:", error);
       return {
         success: false,
-        message: error.response?.data?.error || "Lỗi khi tải món ăn",
+        message: error.response?.data?.error || "Error loading dish",
       };
     }
   },
