@@ -22,7 +22,7 @@ const CategoryCard = ({ category, onPress, cardWidth, imageSize, style }) => {
         ...styles.categoryCard,
         width: cardWidth ?? "45%",
         backgroundColor: theme.cardBackgroundColor,
- 
+        // shadowColor: theme.cardShadowColor,
         ...style,
       }}
       onPress={onPress}

@@ -28,16 +28,16 @@ export const EditHealthModal = ({
   });
   const [bmi, setBmi] = useState(null);
 
- 
+  // Update healthData when userPreference changes
   useEffect(() => {
     setHealthData(userPreference);
     calculateBMI(userPreference.weight, userPreference.height);
   }, [userPreference]);
 
-
+  // Calculate BMI
   const calculateBMI = (weight, height) => {
     const w = parseFloat(weight);
-    const h = parseFloat(height) / 100; 
+    const h = parseFloat(height) / 100; // Convert from cm to m
     if (w && h && !isNaN(w) && !isNaN(h) && h > 0) {
       const bmiValue = (w / (h * h)).toFixed(1);
       setBmi(bmiValue);
@@ -48,6 +48,7 @@ export const EditHealthModal = ({
     }
   };
 
+  // Handle input changes
   const handleInputChange = (field, value) => {
     setHealthData((prev) => {
       const updatedData = { ...prev, [field]: value };
@@ -101,14 +102,14 @@ export const EditHealthModal = ({
     [
       {
         label: "Goal",
-        field: "goal",
+        field: "goal", // Keep field as is, but label is Goal
         value: healthData.goal ?? "",
         keyboardType: "default",
         editable: false,
       },
       {
         label: "LongOfPlan",
-        field: "longOfPlan",
+        field: "longOfPlan", // Keep field as is, but label is LongOfPlan
         value: healthData.longOfPlan ?? "",
         keyboardType: "default",
         editable: false,
@@ -117,14 +118,14 @@ export const EditHealthModal = ({
     [
       {
         label: "Diet",
-        field: "diet", 
+        field: "diet", // Keep field as is, but label is Diet
         value: healthData.diet ?? "",
-        keyboardType: "default", 
+        keyboardType: "default", // Changed to default for age ranges
         editable: false,
       },
       {
         label: "MealNumber",
-        field: "mealNumber", 
+        field: "mealNumber", // Keep field as is, but label is MealNumber
         value: healthData.mealNumber ?? "",
         keyboardType: "default",
         editable: false,
@@ -133,7 +134,7 @@ export const EditHealthModal = ({
     [
       {
         label: "UnderDisease",
-        field: "underDisease", 
+        field: "underDisease", // Keep field as is, but label is UnderDisease
         value: "",
         keyboardType: "default",
         editable: false,
@@ -145,27 +146,27 @@ export const EditHealthModal = ({
     {
       label: "EatHabit",
       field: "eatHabit",
-      value: healthData.eatHabit || [], 
+      value: healthData.eatHabit || [], // Make sure this is an array
       keyboardType: "default",
       editable: false,
     },
     {
       label: "RecommendedFoods",
       field: "recommendedFoods",
-      value: healthData.recommendedFoods || [], 
+      value: healthData.recommendedFoods || [], // Make sure this is an array
       keyboardType: "default",
       editable: false,
     },
     {
       label: "Hate",
       field: "hate",
-      value: healthData.hate || [], 
+      value: healthData.hate || [], // Make sure this is an array
       keyboardType: "default",
       editable: false,
     },
   ];
 
- 
+  // Render input field based on field config
   const renderInputField = (fieldConfig) => {
     if (!fieldConfig) return <View style={styles.formItem} />;
 
@@ -193,7 +194,7 @@ export const EditHealthModal = ({
 
     const { label, field, value, keyboardType, editable } = fieldConfig;
 
- 
+    // Assuming value is an array of strings
     const items = Array.isArray(value) ? value : [];
 
     return (

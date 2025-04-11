@@ -13,6 +13,7 @@ import { ScreensMap } from "./ScreensMap";
 import CustomTabBar from "../components/common/CustomTabBar";
 import { useTheme } from "../contexts/ThemeContext";
 import CustomDrawerLayout from "../components/layout/CustomDrawerLayout";
+import { navigationRef } from "../utils/NavigationService";
 
 
 const Stack = createStackNavigator();
@@ -88,7 +89,7 @@ const Navigator = () => {
         backgroundColor="transparent"
         translucent
       />
-      <NavigationContainer theme={navigationTheme}>
+      <NavigationContainer theme={navigationTheme} ref={navigationRef}>
         <CustomDrawerLayout theme={theme}>
           {TabNavigator()}
         </CustomDrawerLayout>

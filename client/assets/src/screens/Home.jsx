@@ -32,11 +32,10 @@ function Home({ navigation }) {
   const [loading, setLoading] = useState({ initial: true, more: false });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const limit = 10; 
+  const limit = 10; // Số lượng món ăn mỗi trang
 
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
-  console.log("USEREDUC", user);
 
   const dispatch = useDispatch();
   const season = useCurrentSeason() || "spring";
@@ -50,8 +49,8 @@ function Home({ navigation }) {
   }, [dispatch, user]);
 
   const loadFavoritesData = async () => {
-    if (user?.userId) {
-      dispatch(loadFavorites(user.userId));
+    if (user?._id) {
+      dispatch(loadFavorites(user._id));
     }
   };
 
@@ -76,7 +75,9 @@ function Home({ navigation }) {
           (dish) => dish.season && typeof dish.season === "string"
         );
 
-        setSeasonalDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+        setSeasonalDishes((prev) =>
+          isRefresh ? newDishes : [...prev, ...newDishes]
+        );
 
         setPage(pageNum);
         setHasMore(pageNum < response.data.totalPages);
@@ -115,7 +116,10 @@ function Home({ navigation }) {
     ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
       const paddingToBottom = 20;
-      if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+      if (
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+      ) {
         loadMoreDishes();
       }
     },
@@ -129,7 +133,9 @@ function Home({ navigation }) {
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <SearchBar
           placeholder="What do you need?"
@@ -141,24 +147,19 @@ function Home({ navigation }) {
 
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Browse by category</Text>
-          <ScrollView
-            style={styles.categoriesGrid}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingRight: WIDTH * ((Object.values(DishType).length - 1) * 0.22),
-            }}
-          >
+          <View style={styles.categoriesGrid}>
             {Object.values(DishType).map((category, key) => (
               <CategoryCard
                 key={key}
                 category={{ id: key, ...category }}
-                onPress={() => navigation.navigate(ScreensName.search, { category })}
-                cardWidth={"20%"}
-                style={{ marginRight: "4%" }}
+                onPress={() =>
+                  navigation.navigate(ScreensName.search, { category })
+                }
+                cardWidth={"40%"}
+                // style={{ marginRight: "4%" }}
               />
             ))}
-          </ScrollView>
+          </View>
         </View>
 
         <View style={styles.seasonalSection}>
@@ -171,14 +172,20 @@ function Home({ navigation }) {
 
           {loading.initial ? (
             <SpinnerLoading />
-          ) : seasonalDishes.length > 0 ? (
+          ) : seasonalDishes.filter((item) =>
+              item?.season?.toLowerCase()?.includes(season?.toLowerCase())
+            ).length > 0 ? (
             seasonalDishes
-              .filter((item) => item?.season?.toLowerCase()?.includes(season?.toLowerCase()))
+              .filter((item) =>
+                item?.season?.toLowerCase()?.includes(season?.toLowerCase())
+              )
               .map((dish) => (
                 <DishedV1
                   dish={dish}
                   key={dish._id}
-                  onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })}
+                  onPress={() =>
+                    navigation.navigate(ScreensName.favorAndSuggest, { dish })
+                  }
                 />
               ))
           ) : (
@@ -186,7 +193,11 @@ function Home({ navigation }) {
           )}
 
           {loading.more && (
-            <ActivityIndicator size="large" color="#38B2AC" style={styles.loadingMore} />
+            <ActivityIndicator
+              size="large"
+              color="#38B2AC"
+              style={styles.loadingMore}
+            />
           )}
         </View>
       </ScrollView>
@@ -211,6 +222,7 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-around",
   },
   seasonalSection: {
     marginVertical: 16,

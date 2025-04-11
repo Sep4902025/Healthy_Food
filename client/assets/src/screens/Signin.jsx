@@ -63,8 +63,6 @@ function Signin({ navigation }) {
 
     try {
       const responseLogin = await dispatch(loginThunk(credentials));
-
-      ShowToast("success", "Đăng nhập thành công");
       if (
         responseLogin.type.endsWith("fulfilled") &&
         responseLogin?.payload?.data?.status
@@ -73,7 +71,11 @@ function Signin({ navigation }) {
         ShowToast("success", "Welcome back " + username);
         navigation.navigate(ScreensName.home);
       } else {
-        ShowToast("error", "Login fail : " + responseLogin?.payload?.message);
+        ShowToast(
+          "error",
+          "Login fail : " + responseLogin?.payload?.message ??
+            "Unable to connect. Check your network connection and try again."
+        );
       }
     } catch (error) {
       console.log(error);
@@ -138,7 +140,9 @@ function Signin({ navigation }) {
         >
           <TouchableOpacity
             onPress={() => {
-              navigation.navigate(ScreensName.verifyEmail);
+              navigation.navigate(ScreensName.verifyEmail, {
+                type: "resetPassword"
+              });
             }}
           >
             <Text style={styles.forgotPassword}>Forgot Password?</Text>

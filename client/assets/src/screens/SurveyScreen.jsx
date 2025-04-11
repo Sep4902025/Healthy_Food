@@ -35,7 +35,7 @@ const SurveyScreen = ({ navigation }) => {
       >
         It only takes a few minutes to complete!
       </Text>
-
+      {/* Nút Start Survey */}
       <TouchableOpacity
         onPress={handleStartSurveyScreen}
         className="bg-custom-green p-4 px-10 rounded-lg shadow-lg"

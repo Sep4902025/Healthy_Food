@@ -107,6 +107,7 @@ const CustomDrawerLayout = forwardRef(
             closeDrawer();
           },
         },
+        // Add more drawer items as needed
       ];
 
       return (
@@ -161,7 +162,7 @@ const CustomDrawerLayout = forwardRef(
       );
     };
 
-   
+    // Expose drawer methods to parent component
     useImperativeHandle(ref, () => ({
       openDrawer: () => drawerRef.current?.openDrawer(),
       closeDrawer: () => drawerRef.current?.closeDrawer(),

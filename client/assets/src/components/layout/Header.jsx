@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect } from "react"; // Thêm useEffect
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
@@ -17,20 +17,20 @@ function Header() {
   const dispatch = useDispatch();
   const { theme } = useTheme();
 
-  
-  const token = user?.accessToken; 
+  // Giả sử token được lưu trong user.token
+  const token = user?.accessToken; // Lấy token từ Redux store
 
-  
+  // Kết nối socket khi user và token có sẵn
   useEffect(() => {
     if (user?._id && token) {
       RemindService.connectSocket(user._id);
     }
 
-
+    // Ngắt kết nối socket khi component unmount
     return () => {
       RemindService.disconnect();
     };
-  }, [user, token]); 
+  }, [user, token]); // Chạy lại khi user hoặc token thay đổi
 
   const checkAuth = () => {
     if (user) {
@@ -51,14 +51,14 @@ function Header() {
         backgroundColor: theme.headerBackgroundColor,
       }}
     >
-   
+      {/* Nút Drawer */}
       <TouchableOpacity style={styles.backIcon} onPress={onDrawerPress}>
         <Ionicons name="reorder-three" size={32} color={theme.backButtonColor} />
       </TouchableOpacity>
 
-      
+      {/* Tích hợp ReminderNotification */}
       {user ? (
-        <ReminderNotification userId={user?._id} /> 
+        <ReminderNotification userId={user?._id} /> // Truyền userId từ user
       ) : (
         <TouchableOpacity onPress={() => navigation.navigate(ScreensName.signin)}>
           <Text style={{ fontSize: 32, color: theme.backButtonColor }}>🔔</Text>

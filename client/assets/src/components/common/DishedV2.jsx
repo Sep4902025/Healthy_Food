@@ -49,7 +49,7 @@ const DishedV2 = ({ item, onPress, onFavoritePress }) => {
 
         <Text style={styles.resultDescription}>{item.description}</Text>
       </View>
-      <Image source={{ uri: item.image_url }} style={styles.resultImage} />
+      <Image source={{ uri: item.imageUrl }} style={styles.resultImage} />
       <TouchableOpacity
         style={styles.favoriteButton}
         onPress={() => handleOnSavePress(item)}
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   resultTitleContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    
+    // alignItems: "center",
   },
   resultTitle: {
     fontSize: 16,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Text,
   View,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from "react-native";
 
 import SafeAreaWrapper from "../components/layout/SafeAreaWrapper";
@@ -17,6 +18,7 @@ import ShowToast from "../components/common/CustomToast";
 import { changePassword } from "../services/authService";
 import { ScreensName } from "../constants/ScreensName";
 import { useTheme } from "../contexts/ThemeContext";
+import { Feather } from "@expo/vector-icons"; // Assuming you're using Expo
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -25,37 +27,108 @@ function ChangePassword({ navigation, route }) {
   const email = route.params?.email;
   const { theme } = useTheme();
 
+  const [presentPassword, setPresentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPresentPassword, setShowPresentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({
+    presentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [isFormValid, setIsFormValid] = useState(false);
+
+  // Password strength checker
+  const checkPasswordStrength = (password) => {
+    let strength = 0;
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (password.length >= 8) strength++;
+    if (hasLowerCase) strength++;
+    if (hasUpperCase) strength++;
+    if (hasNumbers) strength++;
+    if (hasSpecialChars) strength++;
+
+    if (password && strength < 3) {
+      return {
+        isStrong: false,
+        message:
+          "Password is too weak. Include uppercase, lowercase, numbers, and special characters.",
+      };
+    }
+
+    return { isStrong: true, message: "" };
+  };
+
+  // Validate form on input change
+  useEffect(() => {
+    validateForm();
+  }, [presentPassword, newPassword, confirmPassword]);
+
+  const validateForm = () => {
+    const newErrors = {
+      presentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    };
+
+    let isValid = true;
+
+    // Validate present password
+    if (!presentPassword.trim()) {
+      newErrors.presentPassword = "Current password is required";
+      isValid = false;
+    }
+
+    // Validate new password
+    if (!newPassword.trim()) {
+      newErrors.newPassword = "New password is required";
+      isValid = false;
+    } else {
+      const passwordStrength = checkPasswordStrength(newPassword);
+      if (!passwordStrength.isStrong) {
+        newErrors.newPassword = passwordStrength.message;
+        isValid = false;
+      }
+    }
+
+    // Validate confirm password
+    if (!confirmPassword.trim()) {
+      newErrors.confirmPassword = "Confirm password is required";
+      isValid = false;
+    } else if (newPassword !== confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    setIsFormValid(isValid);
+    return isValid;
+  };
 
   const handleResetPassword = async () => {
-    if (!newPassword || !confirmPassword) {
-      ShowToast("error", "Vui lòng điền đầy đủ thông tin");
+    if (!validateForm()) {
+      ShowToast("error", "Complete form to change password");
       return;
     }
-
-    if (newPassword !== confirmPassword) {
-      ShowToast("error", "Mật khẩu không khớp");
-      return;
-    }
-
-    console.log({
-      email: email?.trim(),
-      password: newPassword,
-      passwordConfirm: confirmPassword,
-    });
 
     const response = await changePassword({
-      email: email.trim(),
-      password: newPassword,
-      passwordConfirm: confirmPassword,
+      currentPassword: presentPassword,
+      newPassword: newPassword,
+      newPasswordConfirm: confirmPassword,
     });
-    console.log(response.status);
 
     if (response.status === 200) {
-      ShowToast("success", "Đổi mật khẩu thành công");
+      ShowToast("success", "Password changed successfully");
       console.log("Password reset:", newPassword);
       navigation.navigate(ScreensName.signin);
+    } else {
+      ShowToast("error", response.message || "Failed to change password");
     }
   };
 
@@ -69,31 +142,109 @@ function ChangePassword({ navigation, route }) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.card}>
-          <Text style={{ ...styles.title, color: theme.textColor }}>Change New Password</Text>
+          <Text style={{ ...styles.title, color: theme.textColor }}>
+            Change Password
+          </Text>
           <Text style={{ ...styles.subtitle, color: theme.greyTextColor }}>
-            Enter a different password with{"\n"}the previous
+            Enter a different password from{"\n"}your previous one
           </Text>
 
           <View style={styles.inputContainer}>
-            <Text style={{ ...styles.label, color: theme.greyTextColor }}>New Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••••••"
-              placeholderTextColor="#666"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              secureTextEntry
-            />
+            <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+              Current Password
+            </Text>
+            <View
+              style={[
+                styles.inputWrapper,
+                errors.presentPassword ? styles.inputError : null,
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••••••"
+                placeholderTextColor="#666"
+                value={presentPassword}
+                onChangeText={setPresentPassword}
+                secureTextEntry={!showPresentPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPresentPassword(!showPresentPassword)}
+              >
+                <Feather
+                  name={showPresentPassword ? "eye" : "eye-off"}
+                  size={24}
+                  color="#666"
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.presentPassword ? (
+              <Text style={styles.errorText}>{errors.presentPassword}</Text>
+            ) : null}
 
-            <Text style={{ ...styles.label, color: theme.greyTextColor }}>Confirm Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••••••"
-              placeholderTextColor="#666"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-            />
+            <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+              New Password
+            </Text>
+            <View
+              style={[
+                styles.inputWrapper,
+                errors.newPassword ? styles.inputError : null,
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••••••"
+                placeholderTextColor="#666"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry={!showNewPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowNewPassword(!showNewPassword)}
+              >
+                <Feather
+                  name={showNewPassword ? "eye" : "eye-off"}
+                  size={24}
+                  color="#666"
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.newPassword ? (
+              <Text style={styles.errorText}>{errors.newPassword}</Text>
+            ) : null}
+
+            <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+              Confirm Password
+            </Text>
+            <View
+              style={[
+                styles.inputWrapper,
+                errors.confirmPassword ? styles.inputError : null,
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••••••"
+                placeholderTextColor="#666"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <Feather
+                  name={showConfirmPassword ? "eye" : "eye-off"}
+                  size={24}
+                  color="#666"
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.confirmPassword ? (
+              <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+            ) : null}
           </View>
 
           <View style={styles.illustrationContainer}>
@@ -106,10 +257,11 @@ function ChangePassword({ navigation, route }) {
           </View>
 
           <RippleButton
-            buttonStyle={styles.submitButton}
-            buttonText="Reset Password"
+            buttonStyle={{ ...styles.submitButton }}
+            buttonText="Change Password"
             textStyle={styles.buttonText}
             onPress={handleResetPassword}
+            disabled={!isFormValid}
           />
         </View>
       </KeyboardAvoidingView>
@@ -153,15 +305,37 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 8,
   },
-  input: {
+  inputWrapper: {
     width: "100%",
     height: 50,
     backgroundColor: "#F5F5F5",
     borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
+    marginBottom: 5,
+  },
+  inputError: {
+    borderColor: "#FF6B6B",
+  },
+  input: {
+    flex: 1,
+    height: "100%",
     paddingHorizontal: 15,
     fontSize: 16,
     fontFamily: "Aleo_400Regular",
-    marginBottom: 20,
+  },
+  eyeIcon: {
+    paddingHorizontal: 15,
+    height: "100%",
+    justifyContent: "center",
+  },
+  errorText: {
+    color: "#FF6B6B",
+    fontSize: 12,
+    fontFamily: "Aleo_400Regular",
+    marginBottom: 15,
   },
   illustrationContainer: {
     position: "relative",
@@ -211,6 +385,10 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     marginTop: 25,
+  },
+  disabledButton: {
+    backgroundColor: "#A5D6A7",
+    opacity: 0.7,
   },
   buttonText: {
     color: "#FFFFFF",

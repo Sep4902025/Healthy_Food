@@ -141,7 +141,7 @@ const mealPlanService = {
   // Lấy MealPlan hiện tại của user
   getUserMealPlan: async (userId) => {
     try {
-      const response = await axiosInstance.get(`/mealPlan/user/${userId}`);
+      const response = await axiosInstance.get(`/mealPlan/users/${userId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -151,7 +151,7 @@ const mealPlanService = {
   // 🔹 Lấy danh sách MealDays theo MealPlan ID
   getMealDaysByMealPlan: async (mealPlanId) => {
     try {
-      const response = await axiosInstance.get(`/mealPlan/${mealPlanId}/mealDay`);
+      const response = await axiosInstance.get(`/mealPlan/${mealPlanId}/mealDays`);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
       console.error("❌ Lỗi khi lấy MealDays:", error.response?.data || error.message);
@@ -161,7 +161,7 @@ const mealPlanService = {
   // In your mealPlanService, add this function:
   getMealDayById: async (mealPlanId, mealDayId) => {
     try {
-      const response = await axiosInstance.get(`/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`);
+      const response = await axiosInstance.get(`/mealPlan/${mealPlanId}/mealDays/${mealDayId}/meals`);
       return { success: true, data: response.data.data || {} };
     } catch (error) {
       console.error("❌ Lỗi khi lấy MealDay:", error.response?.data || error.message);
@@ -171,7 +171,7 @@ const mealPlanService = {
   // 🔹 Lấy danh sách Meals theo MealDay ID
   getMealsByMealDay: async (mealPlanId, mealDayId) => {
     try {
-      const response = await axiosInstance.get(`/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`);
+      const response = await axiosInstance.get(`/mealPlan/${mealPlanId}/mealDays/${mealDayId}/meals`);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
       console.error("❌ Lỗi khi lấy Meals:", error.response?.data || error.message);
@@ -182,7 +182,7 @@ const mealPlanService = {
   getMealByMealId: async (mealPlanId, mealDayId, mealId) => {
     try {
       const response = await axiosInstance.get(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`
+        `/mealPlan/${mealPlanId}/mealDays/${mealDayId}/meals/${mealId}`
       );
       return { success: true, data: response.data.data };
     } catch (error) {
@@ -213,7 +213,7 @@ const mealPlanService = {
       console.log("📤 Gửi request POST để thêm bữa ăn:", mealData);
 
       const response = await axiosInstance.post(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`,
+        `/mealPlan/${mealPlanId}/mealDays/${mealDayId}/meals`,
         mealData
       );
 
@@ -231,7 +231,7 @@ const mealPlanService = {
       console.log("📤 Gửi request DELETE để xóa bữa ăn:", mealId);
 
       const response = await axiosInstance.delete(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`
+        `/mealPlan/${mealPlanId}/mealDays/${mealDayId}/meals/${mealId}`
       );
 
       console.log("✅ Bữa ăn đã được xóa:", response.data);
@@ -247,7 +247,7 @@ const mealPlanService = {
     try {
       // 🔍 Lấy danh sách món ăn hiện tại của Meal
       const mealsResponse = await axiosInstance.get(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`
+        `/mealPlan/${mealPlanId}/mealDays/${mealDayId}/meals/${mealId}`
       );
 
       const existingDishes = mealsResponse.data.data?.dishes || [];
@@ -270,7 +270,7 @@ const mealPlanService = {
       console.log(`📤 Gửi request POST với dữ liệu:`, dishData);
 
       const response = await axiosInstance.post(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}/dishes`,
+        `/mealPlan/${mealPlanId}/mealDays/${mealDayId}/meals/${mealId}/dishes`,
         dishData
       );
 
@@ -311,7 +311,7 @@ const mealPlanService = {
   deleteDishFromMeal: async (mealPlanId, mealDayId, mealId, dishId) => {
     try {
       const response = await axiosInstance.delete(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}/dishes/${dishId}`
+        `/mealPlan/${mealPlanId}/mealDays/${mealDayId}/meals/${mealId}/dishes/${dishId}`
       );
       console.log("✅ Món ăn đã được xóa:", response.data);
       return { success: true, data: response.data };

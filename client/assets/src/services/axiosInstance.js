@@ -2,6 +2,9 @@ import axios from "axios";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ShowToast from "../components/common/CustomToast";
+import { useNavigation } from "@react-navigation/native";
+import { ScreensName } from "../constants/ScreensName";
+import { navigate } from "../utils/NavigationService";
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
@@ -39,8 +42,19 @@ axiosInstance.interceptors.response.use(
     return response;
   },
 
-  (error) => {
-    ShowToast("error", error?.response?.data?.message);
+  async (error) => {
+    const status = error?.response?.status;
+
+    if (status === 401) {
+      ShowToast("error", "Session expired. Please log in again.");
+      await AsyncStorage.removeItem("accessToken");
+
+      // Điều hướng về màn hình SignIn
+      navigate(ScreensName.signin);
+    } else {
+      ShowToast("error", error?.response?.data?.message || "Something went wrong.");
+    }
+
     return Promise.reject(error);
   }
 );

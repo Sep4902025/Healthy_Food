@@ -32,15 +32,126 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
     email: user?.email || "",
     phoneNumber: user?.phoneNumber || "",
     gender: user?.gender || "",
-    countryCode: "+84", 
+    countryCode: "+84", // Default country code for Vietnam
     weight: user?.weight || "",
     height: user?.height || "",
     weightGoal: user?.weightGoal || "",
     avtChange: false,
     ...user,
   });
+  
+  // State to track which fields are currently editable
+  const [editableFields, setEditableFields] = useState({
+    username: false,
+    email: false,
+    phoneNumber: false,
+    weight: false,
+    height: false,
+    weightGoal: false,
+  });
+  
+  // State to track validation errors
+  const [validationErrors, setValidationErrors] = useState({
+    username: "",
+    email: "",
+    phoneNumber: "",
+    weight: "",
+    height: "",
+    weightGoal: "",
+  });
+
+  // Toggle edit mode for a specific field
+  const toggleEditMode = (fieldName) => {
+    setEditableFields(prev => ({
+      ...prev,
+      [fieldName]: !prev[fieldName]
+    }));
+  };
+
+  // Validate email format
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Validate Vietnamese phone number
+  const validateVietnamesePhone = (phone) => {
+    // Vietnam phone number format: 10 digits, starting with 0
+    const phoneRegex = /^0\d{9}$/;
+    return phoneRegex.test(phone);
+  };
+
+  // Validate numeric fields
+  const validateNumericField = (value, fieldName) => {
+    if (isNaN(value) || value <= 0) {
+      return `${fieldName} phải là số dương`;
+    }
+    return "";
+  };
+
+  // Handle field change with validation
+  const handleFieldChange = (fieldName, value) => {
+    let error = "";
+    
+    // Validate based on field type
+    switch (fieldName) {
+      case "username":
+        if (!value.trim()) {
+          error = "Tên không được để trống";
+        }
+        break;
+      case "email":
+        if (!value.trim()) {
+          error = "Email không được để trống";
+        } else if (!validateEmail(value)) {
+          error = "Định dạng email không hợp lệ";
+        }
+        break;
+      case "phoneNumber":
+        if (!validateVietnamesePhone(value)) {
+          error = "Số điện thoại không hợp lệ (Việt Nam: 10 số, bắt đầu bằng số 0)";
+        }
+        break;
+      case "weight":
+        error = validateNumericField(value, "Cân nặng");
+        break;
+      case "height":
+        error = validateNumericField(value, "Chiều cao");
+        break;
+      case "weightGoal":
+        error = validateNumericField(value, "Mục tiêu cân nặng");
+        break;
+      default:
+        break;
+    }
+    
+    // Update validation errors
+    setValidationErrors(prev => ({
+      ...prev,
+      [fieldName]: error
+    }));
+    
+    // Update profile state
+    setProfile(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+  };
 
   const handleSave = async () => {
+    // Check for validation errors before saving
+    const hasErrors = Object.values(validationErrors).some(error => error !== "");
+    const hasEmptyRequiredFields = !profile.username || !profile.email;
+    
+    if (hasErrors || hasEmptyRequiredFields) {
+      Alert.alert(
+        "Lỗi",
+        "Vui lòng điền đầy đủ thông tin và sửa các lỗi trước khi lưu",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    
     const response = profile?.avtChange
       ? await uploadToCloudinary(profile?.avatarUrl)
       : profile.avatarUrl;
@@ -50,11 +161,11 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Sorry, we need camera roll permissions to make this work!");
+      Alert.alert("Xin lỗi, chúng tôi cần quyền truy cập thư viện ảnh để thực hiện tính năng này!");
       return;
     }
 
-  
+    // Launch image picker
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -69,6 +180,43 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
         avtChange: true,
       }));
     }
+  };
+
+  // Renders input field with edit button
+  const renderEditableField = (label, fieldName, placeholder, keyboardType = "default") => {
+    return (
+      <>
+        <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+          {label}
+        </Text>
+        <View style={styles.editableFieldContainer}>
+          <TextInput
+            style={[
+              styles.editableInput,
+              !editableFields[fieldName] && styles.disabledInput
+            ]}
+            value={profile[fieldName]}
+            onChangeText={(text) => handleFieldChange(fieldName, text)}
+            placeholder={placeholder}
+            keyboardType={keyboardType}
+            editable={editableFields[fieldName]}
+          />
+          <TouchableOpacity 
+            style={styles.editFieldButton}
+            onPress={() => toggleEditMode(fieldName)}
+          >
+            <Ionicons 
+              name={editableFields[fieldName] ? "checkmark" : "pencil"} 
+              size={20} 
+              color="#40B491" 
+            />
+          </TouchableOpacity>
+        </View>
+        {validationErrors[fieldName] ? (
+          <Text style={styles.errorText}>{validationErrors[fieldName]}</Text>
+        ) : null}
+      </>
+    );
   };
 
   return (
@@ -114,103 +262,52 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
 
           <ScrollView style={styles.scrollContent}>
             <View style={styles.formContainer}>
-              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                Full Name
-              </Text>
-              <TextInput
-                style={styles.fullWidthInput}
-                value={profile.username}
-                onChangeText={(text) =>
-                  setProfile({ ...profile, username: text })
-                }
-                placeholder="Enter full name"
-              />
+              {renderEditableField("Họ và tên", "username", "Nhập họ và tên")}
+              
+              {renderEditableField("Email", "email", "Nhập địa chỉ email", "email-address")}
 
               <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                Email
-              </Text>
-              <TextInput
-                style={styles.fullWidthInput}
-                value={profile.email}
-                onChangeText={(text) => setProfile({ ...profile, email: text })}
-                placeholder="Enter email"
-                keyboardType="email-address"
-              />
-
-              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                Phone Number
+                Số điện thoại
               </Text>
               <View style={styles.phoneInputContainer}>
                 <View style={styles.countryCodeContainer}>
                   <Text style={styles.countryCode}>{profile.countryCode}</Text>
                 </View>
                 <TextInput
-                  style={styles.phoneInput}
+                  style={[
+                    styles.phoneInput,
+                    !editableFields.phoneNumber && styles.disabledInput
+                  ]}
                   value={profile.phoneNumber}
-                  onChangeText={(text) =>
-                    setProfile({ ...profile, phoneNumber: text })
-                  }
-                  placeholder="Phone number"
+                  onChangeText={(text) => handleFieldChange("phoneNumber", text)}
+                  placeholder="Nhập số điện thoại"
                   keyboardType="phone-pad"
-                  editable={false}
+                  editable={editableFields.phoneNumber}
                 />
+                <TouchableOpacity 
+                  style={styles.editPhoneButton}
+                  onPress={() => toggleEditMode("phoneNumber")}
+                >
+                  <Ionicons 
+                    name={editableFields.phoneNumber ? "checkmark" : "pencil"} 
+                    size={20} 
+                    color="#40B491" 
+                  />
+                </TouchableOpacity>
               </View>
+              {validationErrors.phoneNumber ? (
+                <Text style={styles.errorText}>{validationErrors.phoneNumber}</Text>
+              ) : null}
 
-              {/* <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                Gender
-              </Text>
-              <TextInput
-                style={styles.fullWidthInput}
-                value={profile.gender}
-                onChangeText={(text) =>
-                  setProfile({ ...profile, gender: text })
-                }
-                placeholder="Enter gender"
-              /> */}
-
-              {/* New fields: Weight, Height, and WeightGoal */}
-              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                Weight (kg)
-              </Text>
-              <TextInput
-                style={styles.fullWidthInput}
-                value={profile.weight}
-                onChangeText={(text) =>
-                  setProfile({ ...profile, weight: text })
-                }
-                placeholder="Enter weight in kg"
-                keyboardType="numeric"
-              />
-
-              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                Height (cm)
-              </Text>
-              <TextInput
-                style={styles.fullWidthInput}
-                value={profile.height}
-                onChangeText={(text) =>
-                  setProfile({ ...profile, height: text })
-                }
-                placeholder="Enter height in cm"
-                keyboardType="numeric"
-              />
-
-              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                Weight Goal (kg)
-              </Text>
-              <TextInput
-                style={styles.fullWidthInput}
-                value={profile.weightGoal}
-                onChangeText={(text) =>
-                  setProfile({ ...profile, weightGoal: text })
-                }
-                placeholder="Enter weight goal in kg"
-                keyboardType="numeric"
-              />
+              {renderEditableField("Cân nặng (kg)", "weight", "Nhập cân nặng (kg)", "numeric")}
+              
+              {renderEditableField("Chiều cao (cm)", "height", "Nhập chiều cao (cm)", "numeric")}
+              
+              {renderEditableField("Mục tiêu cân nặng (kg)", "weightGoal", "Nhập mục tiêu cân nặng (kg)", "numeric")}
             </View>
           </ScrollView>
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Save</Text>
+            <Text style={styles.saveButtonText}>Lưu</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -279,19 +376,10 @@ const styles = StyleSheet.create({
   formContainer: {
     marginBottom: 16,
   },
-  fullWidthInput: {
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 44,
-    marginBottom: 16,
-    fontSize: 14,
-    backgroundColor: "white",
-  },
   phoneInputContainer: {
     flexDirection: "row",
-    marginBottom: 16,
+    marginBottom: 8, // Reduced to account for possible error text
+    alignItems: "center",
   },
   countryCodeContainer: {
     borderWidth: 1,
@@ -348,5 +436,39 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#fff",
+  },
+  editableFieldContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  editableInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 44,
+    fontSize: 14,
+    backgroundColor: "white",
+  },
+  disabledInput: {
+    backgroundColor: "#f9f9f9",
+    color: "#666",
+  },
+  editFieldButton: {
+    position: "absolute",
+    right: 10,
+    padding: 5,
+  },
+  editPhoneButton: {
+    padding: 5,
+    marginLeft: 10,
+  },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginBottom: 8,
+    marginTop: -4,
   },
 });

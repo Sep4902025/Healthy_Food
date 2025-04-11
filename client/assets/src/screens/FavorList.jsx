@@ -25,7 +25,7 @@ function FavorList() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const limit = 10; 
+  const limit = 10; // Số lượng món ăn mỗi trang
   const favor = useSelector(favorSelector);
   const { theme } = useTheme();
 
@@ -84,6 +84,7 @@ function FavorList() {
 
   const loadFavoriteItems = () => {
     const filteredItems = dishes.filter((item) => isFavorite(item._id));
+    
     setFavoriteItems(filteredItems);
   };
 
@@ -91,7 +92,10 @@ function FavorList() {
     ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
       const paddingToBottom = 20;
-      if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+      if (
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+      ) {
         loadMoreDishes();
       }
     },
@@ -101,7 +105,9 @@ function FavorList() {
   return (
     <MainLayoutWrapper>
       <View style={styles.container}>
-        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>My Favorites</Text>
+        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
+          My Favorites
+        </Text>
         {loading.initial ? (
           <View style={styles.loadingContainer}>
             <SpinnerLoading />
@@ -112,11 +118,15 @@ function FavorList() {
             showsVerticalScrollIndicator={false}
             onScroll={handleScroll}
             scrollEventThrottle={16}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
           >
             <View style={styles.gridContainer}>
               {favoriteItems.length === 0 ? (
-                <Text style={{ color: theme.textColor }}>No favorite items found.</Text>
+                <Text style={{ color: theme.textColor }}>
+                  No favorite items found.
+                </Text>
               ) : (
                 favoriteItems.map((item) => (
                   <View key={item._id} style={styles.gridItem}>

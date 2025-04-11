@@ -5,7 +5,7 @@ const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL;
 let socket = null;
 
 const RemindService = {
-
+  // Kết nối socket với userId
   connectSocket: async (userId) => {
     if (!userId) {
       console.error("❌ Không có userId để kết nối socket!");
@@ -45,18 +45,18 @@ const RemindService = {
     }
   },
 
- 
+  // Lắng nghe thông báo nhắc nhở từ server
   listenReminder: (callback) => {
     if (!socket) return;
 
-    socket.off("receive_reminder"); 
+    socket.off("receive_reminder"); // Đảm bảo không đăng ký nhiều lần
     socket.on("receive_reminder", (data) => {
       console.log("🔔 Nhắc nhở nhận được:", data);
       callback(data);
     });
   },
 
-
+  // Lấy danh sách nhắc nhở từ API
   getReminders: async (userId) => {
     try {
       const token = await AsyncStorage.getItem("accessToken");
@@ -79,7 +79,7 @@ const RemindService = {
     }
   },
 
- 
+  // Ngắt kết nối socket
   disconnect: () => {
     if (socket && socket.connected) {
       socket.disconnect();

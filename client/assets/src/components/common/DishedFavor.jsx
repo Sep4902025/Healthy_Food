@@ -34,8 +34,8 @@ const DishedFavor = ({ item }) => {
       <View style={styles.imageContainer}>
         <Image
           source={
-            item.image_url
-              ? { uri: item.image_url }
+            item.imageUrl
+              ? { uri: item.imageUrl }
               : require("../../../assets/image/blueberry-egg.png")
           }
           style={styles.dishImage}
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   deleteButton: {
- 
+    // position: "absolute",
     bottom: 8,
     alignSelf: "center",
   },
