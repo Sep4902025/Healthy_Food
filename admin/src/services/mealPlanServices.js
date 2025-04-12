@@ -10,38 +10,156 @@ const getAuthHeaders = () => {
 };
 
 const mealPlanService = {
-  // Lấy danh sách meal plans với phân trang
-  // Lấy danh sách meal plans với phân trang
-  getAllMealPlans: async () => {
+  // Service: Lấy tất cả MealPlan cho admin
+  getAllMealPlanAdmin: async (page = 1, limit = 10) => {
     try {
-      let allMealPlans = [];
-      let page = 1;
-      let totalPages = 1;
+      const response = await api.get("/mealPlan/admin", {
+        params: {
+          page,
+          limit,
+          sort: "createdAt",
+          order: "desc",
+        },
+      });
+      const data = response.data;
 
-      while (page <= totalPages) {
-        const response = await api.get(`/mealPlan`, {
-          params: {
-            page,
-            limit: 100,
-            sort: "createdAt", // Sắp xếp theo thời gian tạo
-            order: "desc", // Giảm dần (mới nhất trước)
+      if (data.status === "success") {
+        const mealPlans = data.data.mealPlans || [];
+        const total = data.results || 0;
+        const totalPages = data.totalPages || 1;
+
+        const summary = data.data.summary || {
+          totalMealPlans: total,
+          unpaidMealPlans: 0,
+          activeMealPlans: 0,
+        };
+
+        console.log("Summary from API (Admin):", summary);
+
+        return {
+          success: true,
+          data: {
+            mealPlans,
+            summary,
           },
-        });
-        const data = response.data.data;
-
-        // Gộp dữ liệu mới lên đầu danh sách
-        allMealPlans = [...data.mealPlans, ...allMealPlans]; // 🆕 Đảo ngược thứ tự khi gộp
-
-        totalPages = response.data.totalPages;
-        page++;
+          total,
+          totalPages,
+        };
+      } else {
+        return {
+          success: false,
+          message: data.message || "Không thể lấy danh sách MealPlan",
+        };
       }
-      console.log("All Meal Plans from API:", allMealPlans);
-      return { success: true, data: allMealPlans };
     } catch (error) {
-      console.error("Error fetching meal plans:", error.response?.data || error.message);
+      console.error(
+        "Lỗi khi lấy danh sách MealPlan cho admin:",
+        error.response?.data || error.message
+      );
       return {
         success: false,
-        message: error.response?.data?.message || "Unable to fetch meal plans",
+        message: error.response?.data?.message || "Không thể lấy danh sách MealPlan",
+      };
+    }
+  },
+
+  // Lấy danh sách tất cả nutritionist và meal plan của họ
+  getAllNutritionistsWithMealPlans: async (page = 1, limit = 10, month, year) => {
+    try {
+      const response = await api.get("/mealPlan/nutritionists", {
+        params: {
+          page,
+          limit,
+          sort: "username",
+          order: "asc",
+          month,
+          year,
+        },
+      });
+      const data = response.data;
+
+      if (data.status === "success") {
+        const nutritionists = data.data.nutritionists || [];
+        const total = data.results || 0;
+        const totalPages = data.totalPages || 1;
+
+        return {
+          success: true,
+          data: {
+            nutritionists,
+          },
+          total,
+          totalPages,
+        };
+      } else {
+        console.warn("API returned non-success status:", data);
+        return {
+          success: false,
+          message: data.message || "Không thể lấy danh sách nutritionist",
+        };
+      }
+    } catch (error) {
+      console.error(
+        "Lỗi khi lấy danh sách nutritionist và meal plan:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || "Lỗi server: Không thể lấy danh sách nutritionist",
+      };
+    }
+  },
+
+  // Service: Lấy MealPlan do nutritionist tạo
+  getAllMealPlanNutritionistCreatedBy: async (page = 1, limit = 10) => {
+    try {
+      const response = await api.get("/mealPlan/nutritionist/created", {
+        params: {
+          page,
+          limit,
+          sort: "createdAt",
+          order: "desc",
+        },
+      });
+      const data = response.data;
+
+      if (data.status === "success") {
+        const mealPlans = data.data.mealPlans || [];
+        const total = data.results || 0;
+        const totalPages = data.totalPages || 1;
+
+        const summary = data.data.summary || {
+          totalMealPlans: total,
+          unpaidMealPlans: 0,
+          activeMealPlans: 0,
+        };
+
+        console.log("Summary from API (Nutritionist):", summary);
+
+        return {
+          success: true,
+          data: {
+            mealPlans,
+            summary,
+          },
+          total,
+          totalPages,
+        };
+      } else {
+        return {
+          success: false,
+          message: data.message || "Không thể lấy danh sách MealPlan",
+        };
+      }
+    } catch (error) {
+      console.error(
+        "Lỗi khi lấy danh sách MealPlan cho nutritionist:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: error.response?.data?.message || "Không thể lấy danh sách MealPlan",
       };
     }
   },
@@ -61,7 +179,7 @@ const mealPlanService = {
   // Lấy meal plan cần thanh toán của user
   getUnpaidMealPlanForUser: async (userId) => {
     try {
-      const response = await api.get(`/mealPlan/user/${userId}/unpaid`);
+      const response = await api.get(`/mealPlan/users/${userId}/unpaid`);
       console.log("🔍 MealPlan cần thanh toán:", response.data);
       return {
         success: response.data.status === "success",
@@ -86,7 +204,7 @@ const mealPlanService = {
   // Xem chi tiết meal plan (bao gồm các ngày và món ăn)
   getMealPlanDetails: async (mealPlanId) => {
     try {
-      const response = await api.get(`/mealPlan/details/${mealPlanId}`);
+      const response = await api.get(`/mealPlan/${mealPlanId}/details`);
       console.log("🔍 Chi tiết MealPlan (bao gồm ngày và món ăn):", response.data);
       return {
         success: response.data.status === "success",
@@ -104,7 +222,7 @@ const mealPlanService = {
 
   getMealPlanHistory: async (userId) => {
     try {
-      const response = await api.get(`/mealPlan/history/${userId}`);
+      const response = await api.get(`/mealPlan/users/${userId}/history`);
       const historyData = response.data.data || [];
       console.log(`History for user ${userId}:`, historyData);
       return { success: true, data: historyData };
@@ -117,7 +235,9 @@ const mealPlanService = {
   // Lấy lịch sử giao dịch của user
   getPaymentHistory: async (userId, page = 1, limit = 10) => {
     try {
-      const response = await api.get(`/payment/history/${userId}?page=${page}&limit=${limit}`);
+      const response = await api.get(`/payment/history/${userId}`, {
+        params: { page, limit },
+      });
       console.log("🔍 Lịch sử giao dịch:", response.data);
       return {
         success: response.data.status === "success",
@@ -141,7 +261,7 @@ const mealPlanService = {
     }
   },
 
-  // Tạo yêu cầu thanh toán cho meal plan
+  // // Tạo yêu cầu thanh toán cho meal plan
   createMealPlanPayment: async (userId, mealPlanId, amount) => {
     try {
       const response = await api.post(`/payment/vnpay/pay`, {
@@ -198,7 +318,7 @@ const mealPlanService = {
   // Lấy MealPlan hiện tại của user
   getUserMealPlan: async (userId) => {
     try {
-      const response = await api.get(`/mealPlan/user/${userId}`);
+      const response = await api.get(`/mealPlan/users/${userId}`);
       return response.data;
     } catch (error) {
       console.error("Lỗi lấy meal plan của user:", error);
@@ -209,7 +329,7 @@ const mealPlanService = {
   // Lấy danh sách MealDays theo MealPlan ID
   getMealDaysByMealPlan: async (mealPlanId) => {
     try {
-      const response = await api.get(`/mealPlan/${mealPlanId}/mealDay`);
+      const response = await api.get(`/mealPlan/${mealPlanId}/mealdays`);
       console.log("🔍 Danh sách MealDays:", response.data);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
@@ -220,7 +340,7 @@ const mealPlanService = {
 
   getMealDayById: async (mealPlanId, mealDayId) => {
     try {
-      const response = await api.get(`/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`);
+      const response = await api.get(`/mealPlan/${mealPlanId}/mealdays/${mealDayId}/meals`);
       return { success: true, data: response.data.data || {} };
     } catch (error) {
       console.error("❌ Lỗi khi lấy MealDay:", error.response?.data || error.message);
@@ -231,7 +351,7 @@ const mealPlanService = {
   // Lấy danh sách Meals theo MealDay ID
   getMealsByMealDay: async (mealPlanId, mealDayId) => {
     try {
-      const response = await api.get(`/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`);
+      const response = await api.get(`/mealPlan/${mealPlanId}/mealdays/${mealDayId}/meals`);
       return { success: true, data: response.data.data || [] };
     } catch (error) {
       console.error("❌ Lỗi khi lấy Meals:", error.response?.data || error.message);
@@ -242,7 +362,9 @@ const mealPlanService = {
   // Lấy chi tiết một bữa ăn cụ thể
   getMealByMealId: async (mealPlanId, mealDayId, mealId) => {
     try {
-      const response = await api.get(`/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`);
+      const response = await api.get(
+        `/mealPlan/${mealPlanId}/mealdays/${mealDayId}/meals/${mealId}`
+      );
       return { success: true, data: response.data.data };
     } catch (error) {
       console.error("Lỗi khi lấy chi tiết bữa ăn:", error.response?.data || error.message);
@@ -271,7 +393,7 @@ const mealPlanService = {
     try {
       console.log("📤 Gửi request POST để thêm bữa ăn:", mealData);
       const response = await api.post(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal`,
+        `/mealPlan/${mealPlanId}/mealdays/${mealDayId}/meals`,
         mealData
       );
       console.log("✅ Bữa ăn đã được thêm:", response.data);
@@ -287,7 +409,7 @@ const mealPlanService = {
     try {
       console.log("📤 Gửi request DELETE để xóa bữa ăn:", mealId);
       const response = await api.delete(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`
+        `/mealPlan/${mealPlanId}/mealdays/${mealDayId}/meals/${mealId}`
       );
       console.log("✅ Bữa ăn đã được xóa:", response.data);
       return { success: true, data: response.data };
@@ -297,38 +419,37 @@ const mealPlanService = {
     }
   },
 
-  // Thêm món ăn vào Meal
-  addDishToMeal: async (mealPlanId, mealDayId, mealId, dish, userId) => {
+  // Add dish to Meal
+  addDishToMeal: async (mealPlanId, mealDayId, mealId, dish) => {
     try {
-      console.log("cos USERID", userId);
       const mealsResponse = await api.get(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}`
+        `/mealPlan/${mealPlanId}/mealdays/${mealDayId}/meals/${mealId}`
       );
       const existingDishes = mealsResponse.data.data?.dishes || [];
       const isAlreadyAdded = existingDishes.some(
         (existingDish) => existingDish.dishId === dish.dishId
       );
       if (isAlreadyAdded) {
-        console.warn("⚠️ Món ăn đã tồn tại trong bữa ăn!");
+        console.warn("⚠️ Dish already exists in the meal!");
         return {
           success: false,
-          message: "Món ăn này đã được thêm vào bữa ăn!",
+          message: "This dish has already been added to the meal!",
         };
       }
       const dishData = {
-        userId: userId,
         dishes: [dish],
       };
-      console.log(`📤 Gửi request POST với dữ liệu:`, dishData);
+      console.log(`📤 Sending POST request with data:`, dishData);
       const response = await api.post(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}/dishes`,
+        `/mealPlan/${mealPlanId}/mealdays/${mealDayId}/meals/${mealId}/dishes`,
         dishData
       );
-      console.log("✅ Món ăn đã được thêm:", response.data);
+      console.log("✅ Dish added successfully:", response.data);
       return { success: true, data: response.data };
     } catch (error) {
-      console.error("❌ Lỗi khi thêm món ăn vào Meal:", error.response?.data || error.message);
-      return { success: false, message: "Không thể thêm món ăn!" };
+      console.error("❌ Error adding dish to Meal:", error.response?.data || error.message);
+      const errorMessage = error.response?.data?.message || "Failed to add dish!";
+      return { success: false, message: errorMessage };
     }
   },
 
@@ -362,7 +483,7 @@ const mealPlanService = {
   deleteDishFromMeal: async (mealPlanId, mealDayId, mealId, dishId) => {
     try {
       const response = await api.delete(
-        `/mealPlan/${mealPlanId}/mealDay/${mealDayId}/meal/${mealId}/dishes/${dishId}`
+        `/mealPlan/${mealPlanId}/mealdays/${mealDayId}/meals/${mealId}/dishes/${dishId}`
       );
       console.log("✅ Món ăn đã được xóa:", response.data);
       return { success: true, data: response.data };
@@ -410,7 +531,6 @@ const mealPlanService = {
       const response = await api.get(`/payment/history/nutritionist`);
       console.log("🔍 Raw response from /payment/history/nutritionist:", response.data);
       if (response.data.success) {
-        // Sửa từ status thành success để khớp với backend
         const payments = response.data.data || [];
         console.log("🔍 All Payments fetched in service:", payments);
         return { success: true, data: payments };
@@ -426,7 +546,7 @@ const mealPlanService = {
       return {
         success: false,
         message: error.response?.data?.message || "Cannot fetch payment history!",
-        error: error.response?.status, // Thêm status code để debug dễ hơn
+        error: error.response?.status,
       };
     }
   },

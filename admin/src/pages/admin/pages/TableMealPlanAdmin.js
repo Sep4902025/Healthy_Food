@@ -4,14 +4,7 @@ import { selectAuth } from "../../../store/selectors/authSelectors";
 import mealPlanService from "../../../services/mealPlanServices";
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
-import {
-  Document,
-  HeadingLevel,
-  Packer,
-  Paragraph,
-  TextRun,
-  AlignmentType,
-} from "docx";
+import { Document, HeadingLevel, Packer, Paragraph, TextRun, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 
 const TableMealPlanAdmin = () => {
@@ -28,10 +21,7 @@ const TableMealPlanAdmin = () => {
   const fetchMealPlans = async () => {
     setIsTransitioning(true);
     try {
-      const response = await mealPlanService.getAllMealPlans(
-        currentPage + 1,
-        limit
-      );
+      const response = await mealPlanService.getAllMealPlanAdmin(currentPage + 1, limit);
       if (response.success) {
         setMealPlans(response.data.mealPlans || []);
         setTotalPages(response.totalPages || 1);
@@ -99,10 +89,10 @@ const TableMealPlanAdmin = () => {
               spacing: { after: 400 },
             }),
             new Paragraph({
-              text: `Generated on: ${new Date().toLocaleDateString('en-US', {
-                month: 'long',
-                day: '2-digit',
-                year: 'numeric'
+              text: `Generated on: ${new Date().toLocaleDateString("en-US", {
+                month: "long",
+                day: "2-digit",
+                year: "numeric",
               })}`,
               alignment: AlignmentType.CENTER,
               spacing: { after: 300 },
@@ -133,7 +123,6 @@ const TableMealPlanAdmin = () => {
 
               return new Paragraph({
                 children: [
-                  
                   new TextRun(`No. ${currentPage * limit + index + 1}`),
                   new TextRun({ text: `\nTitle: ${mealPlan.title}`, break: 1 }),
                   new TextRun({
@@ -145,9 +134,7 @@ const TableMealPlanAdmin = () => {
                     break: 1,
                   }),
                   new TextRun({
-                    text: `\nType: ${
-                      mealPlan.type === "fixed" ? "Fixed" : "Custom"
-                    }`,
+                    text: `\nType: ${mealPlan.type === "fixed" ? "Fixed" : "Custom"}`,
                     break: 1,
                   }),
                   new TextRun({
@@ -162,9 +149,7 @@ const TableMealPlanAdmin = () => {
                   }),
                   new TextRun({
                     text: `\nCreated By: ${
-                      mealPlan.createdBy?.username ||
-                      mealPlan.createdBy ||
-                      "Unknown"
+                      mealPlan.createdBy?.username || mealPlan.createdBy || "Unknown"
                     }`,
                     break: 1,
                   }),
@@ -186,9 +171,7 @@ const TableMealPlanAdmin = () => {
   if (user?.role !== "admin") {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-red-500 text-lg font-semibold">
-          Access Denied: Admin Only
-        </p>
+        <p className="text-red-500 text-lg font-semibold">Access Denied: Admin Only</p>
       </div>
     );
   }
@@ -244,10 +227,7 @@ const TableMealPlanAdmin = () => {
           <div className="divide-y divide-gray-200">
             {mealPlans.length > 0 ? (
               mealPlans.map((mealPlan, index) => {
-                const expired = isExpired(
-                  mealPlan.startDate,
-                  mealPlan.duration
-                );
+                const expired = isExpired(mealPlan.startDate, mealPlan.duration);
                 return (
                   <div
                     key={mealPlan._id}
@@ -264,9 +244,7 @@ const TableMealPlanAdmin = () => {
                     <div className="col-span-1 text-gray-700 text-sm">
                       {formatDate(mealPlan.startDate)}
                     </div>
-                    <div className="col-span-1 text-gray-700 text-sm">
-                      {mealPlan.duration} days
-                    </div>
+                    <div className="col-span-1 text-gray-700 text-sm">{mealPlan.duration} days</div>
                     <div className="col-span-1 text-gray-700 text-sm">
                       {mealPlan.type === "fixed" ? "Fixed" : "Custom"}
                     </div>
@@ -283,9 +261,7 @@ const TableMealPlanAdmin = () => {
                         className="w-8 h-8 rounded-full mr-2 ml-14"
                       />
                       <span className="line-clamp-1">
-                        {mealPlan.userId?.username ||
-                          mealPlan.userId ||
-                          "Unknown"}
+                        {mealPlan.userId?.username || mealPlan.userId || "Unknown"}
                       </span>
                     </div>
                     <div className="col-span-1 text-gray-700 text-sm flex items-center">
@@ -298,9 +274,7 @@ const TableMealPlanAdmin = () => {
                         className="w-8 h-8 rounded-full mr-2"
                       />
                       <span className="line-clamp-1">
-                        {mealPlan.createdBy?.username ||
-                          mealPlan.createdBy ||
-                          "Unknown"}
+                        {mealPlan.createdBy?.username || mealPlan.createdBy || "Unknown"}
                       </span>
                     </div>
                     <div className="col-span-1 text-center">
@@ -328,9 +302,7 @@ const TableMealPlanAdmin = () => {
                 );
               })
             ) : (
-              <div className="p-6 text-center text-gray-500">
-                No meal plans found.
-              </div>
+              <div className="p-6 text-center text-gray-500">No meal plans found.</div>
             )}
           </div>
 

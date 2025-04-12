@@ -1,7 +1,6 @@
 import axiosInstance from "./axiosInstance";
 
 const HomeService = {
-  // Lấy danh sách nguyên liệu nhóm theo loại
   getIngredientsGroupedByType: async () => {
     try {
       const response = await axiosInstance.get("/Home/ingredients/type");
@@ -22,7 +21,6 @@ const HomeService = {
     }
   },
 
-  // Lấy nguyên liệu theo ID
   getIngredientById: async (ingredientId) => {
     try {
       const response = await axiosInstance.get(`/ingredients/${ingredientId}`);
@@ -56,14 +54,13 @@ const HomeService = {
     }
   },
 
-  // 🔹 Lấy tất cả món ăn với phân trang
   getAllDishes: async (page, limit, search = "") => {
     try {
       const response = await axiosInstance.get("/dishes", {
         params: {
           page,
           limit,
-          search, // Thêm tham số tìm kiếm
+          search,
         },
       });
       console.log("🔍 Danh sách món ăn từ API:", response.data);
@@ -92,9 +89,9 @@ const HomeService = {
     }
   },
 
-  getRecipeByRecipeId: async (dishId, recipeId) => {
+  getRecipeByRecipeId: async (recipeId) => {
     try {
-      const response = await axiosInstance.get(`/dishes/${dishId}/recipes/${recipeId}`);
+      const response = await axiosInstance.get(`/recipes/dish/${recipeId}`);
       console.log("Fetched Recipes:", response.data);
       return {
         success: true,

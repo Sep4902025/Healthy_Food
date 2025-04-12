@@ -1,5 +1,28 @@
-import React, { useState } from "react";
-import { ChevronLeft, ChevronRight, Flame, Dumbbell, Wheat, Droplet } from "lucide-react";
+import React, { useState, useCallback, useEffect } from "react";
+import Pagination from "../../../components/Pagination";
+import recipesService from "../../../services/nutritionist/recipesServices";
+
+// Debounce function to delay search
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
+
+// SearchInput Component
+const SearchInput = React.memo(({ value, onChange }) => {
+  return (
+    <input
+      type="text"
+      placeholder="Search by dish name"
+      className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+      value={value}
+      onChange={onChange}
+    />
+  );
+});
 
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
 
@@ -10,70 +33,136 @@ const FoodSelectionModal = ({
   availableDishes,
   selectedDishes,
   conflictingDishes,
+  foodModalType,
 }) => {
-  const [tempSelectedDishes, setTempSelectedDishes] = useState([...selectedDishes]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [tempSelectedDishes, setTempSelectedDishes] = useState(selectedDishes || []);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [limit, setLimit] = useState(8); // 8 items per page to fit 4x2 grid
+  const [enrichedDishes, setEnrichedDishes] = useState([]);
 
-  // Lọc danh sách món ăn dựa trên searchTerm và filterType
-  const filteredDishes = availableDishes.filter((dish) => {
-    const matchesSearch = searchTerm
-      ? dish.name.toLowerCase().includes(searchTerm.toLowerCase())
-      : true;
+  const debouncedSearch = useCallback(
+    debounce((value) => {
+      setSearchTerm(value);
+      setCurrentPage(0); // Reset to first page when searching
+    }, 500),
+    []
+  );
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setInputValue(value);
+    debouncedSearch(value);
+  };
+
+  const handleFilterChange = (e) => {
+    setFilterType(e.target.value);
+    setCurrentPage(0); // Reset to first page when filtering
+  };
+
+  // Fetch recipe data for dishes with recipeId
+  useEffect(() => {
+    const fetchRecipeData = async () => {
+      const dishesWithRecipes = await Promise.all(
+        availableDishes.map(async (dish) => {
+          if (dish.recipeId && !dish.recipe) {
+            try {
+              const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
+              if (recipeResponse.success) {
+                console.log(`Recipe for ${dish.name}:`, recipeResponse.data); // Debug log
+                return { ...dish, recipe: recipeResponse.data };
+              }
+            } catch (error) {
+              console.error(`Failed to fetch recipe for dish ${dish._id}:`, error);
+            }
+          }
+          return dish;
+        })
+      );
+      setEnrichedDishes(dishesWithRecipes);
+    };
+
+    if (isOpen && availableDishes.length > 0) {
+      fetchRecipeData();
+    }
+  }, [isOpen, availableDishes]);
+
+  // Filter dishes based on searchTerm and filterType
+  const filteredDishes = enrichedDishes.filter((dish) => {
+    const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === "all" || dish.type === filterType;
     return matchesSearch && matchesType;
   });
 
-  // Tính toán phân trang
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentDishes = filteredDishes.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredDishes.length / itemsPerPage);
+  const totalItems = filteredDishes.length;
+  const totalPages = Math.ceil(totalItems / limit);
+  const paginatedDishes = filteredDishes.slice(
+    currentPage * limit,
+    (currentPage + 1) * limit
+  );
 
-  // Xử lý phân trang
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // Xử lý chọn/bỏ chọn món ăn
-  const handleCheckboxChange = (dishId) => {
-    setTempSelectedDishes((prev) =>
-      prev.includes(dishId) ? prev.filter((id) => id !== dishId) : [...prev, dishId]
-    );
+  const handleDishClick = (dishId) => {
+    if (conflictingDishes.includes(dishId)) return; // Prevent selecting conflicting dishes
+    const isSelected = tempSelectedDishes.includes(dishId);
+    if (isSelected) {
+      setTempSelectedDishes(tempSelectedDishes.filter((id) => id !== dishId));
+    } else {
+      setTempSelectedDishes([...tempSelectedDishes, dishId]);
+    }
   };
 
-  // Xác nhận lựa chọn
   const handleConfirm = () => {
     onSelect(tempSelectedDishes);
+    setTempSelectedDishes([]);
+    setSearchTerm("");
+    setInputValue("");
+    setFilterType("all");
+    setCurrentPage(0);
+    onClose();
   };
 
-  // Nếu modal không mở thì không render gì cả
+  const handlePageClick = (data) => {
+    setCurrentPage(data.selected);
+  };
+
+  const isFavorite = (dishId) => false; // Placeholder; integrate with actual favorites if available
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Select Dishes</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-[90vw] max-w-5xl h-[100vh] flex flex-col shadow-xl">
+        <div className="flex items-center mb-6">
+          <h2 className="text-2xl font-bold text-[#40B491]">
+            Select {foodModalType === "restricted" ? "Restricted" : "Recommended"} Dishes
+          </h2>
+          <div className="ml-auto flex space-x-3">
+            <button
+              onClick={handleConfirm}
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                tempSelectedDishes.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              disabled={tempSelectedDishes.length === 0}
+            >
+              Confirm
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
 
-        {/* Tìm kiếm và lọc */}
-        <div className="flex space-x-4 mb-4">
-          <input
-            type="text"
-            placeholder="Search by dish name"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset về trang 1 khi tìm kiếm
-            }}
-          />
+        <div className="flex space-x-4 mb-6">
+          <SearchInput value={inputValue} onChange={handleInputChange} />
           <select
-            className="border border-gray-300 rounded-md px-3 py-2"
+            className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
             value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value);
-              setCurrentPage(1); // Reset về trang 1 khi lọc
-            }}
+            onChange={handleFilterChange}
           >
             <option value="all">All Types</option>
             {TYPE_OPTIONS.map((type) => (
@@ -84,116 +173,131 @@ const FoodSelectionModal = ({
           </select>
         </div>
 
-        {/* Danh sách món ăn */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {currentDishes.length > 0 ? (
-            currentDishes.map((dish) => {
-              const isConflicting = conflictingDishes.includes(dish._id);
-              return (
-                <div
-                  key={dish._id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden relative"
-                >
-                  <img
-                    src={dish.imageUrl || "https://via.placeholder.com/300"}
-                    alt={dish.name}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-center">{dish.name}</h3>
-                    <div className="text-sm text-gray-600 mt-2 text-center">
-                      <div className="flex justify-center items-center">
-                        <span className="mr-3 flex items-center">
-                          <Flame className="w-4 h-4 mr-1" />
-                          {dish.nutritions.calories} kcal
-                        </span>
-                        <span className="flex items-center">
-                          <Dumbbell className="w-4 h-4 mr-1" />
-                          {dish.nutritions.protein}g
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {paginatedDishes.length > 0 ? (
+              paginatedDishes.map((dish) => {
+                const isConflicting = conflictingDishes.includes(dish._id);
+                const isSelected = tempSelectedDishes.includes(dish._id);
+                const dishFavorite = isFavorite(dish._id);
+                const nutritionData = dish.recipe || {
+                  totalCalories: "N/A",
+                  totalProtein: "N/A",
+                  totalCarbs: "N/A",
+                  totalFat: "N/A",
+                }; // Use recipe data with correct field names
+
+                console.log(`Dish ${dish.name} nutritionData:`, nutritionData); // Debug log
+
+                return (
+                  <div
+                    key={dish._id}
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${
+                      isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                    } ${isConflicting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={() => !isConflicting && handleDishClick(dish._id)}
+                  >
+                    <div className="relative h-40 bg-gray-200">
+                      {dish.imageUrl ? (
+                        <img
+                          src={dish.imageUrl}
+                          alt={dish.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                          <img
+                            src="https://via.placeholder.com/150?text=No+Image"
+                            alt="No image available"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      {dishFavorite && (
+                        <span className="absolute top-2 right-2 text-yellow-500 text-xl">⭐</span>
+                      )}
+                      {isConflicting && (
+                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                          <span className="text-white font-semibold">Added</span>
+                        </div>
+                      )}
+                      {isSelected && !isConflicting && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="bg-[#40B491] text-white px-4 py-2 rounded-full font-semibold text-sm shadow-md">
+                            Choice
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-medium text-gray-800">{dish.name}</h3>
+                        <span className="text-sm font-bold text-blue-600">
+                          {nutritionData.totalCalories}{" "}
+                          {nutritionData.totalCalories !== "N/A" ? "kcal" : ""}
                         </span>
                       </div>
-                      <div className="flex justify-center items-center mt-1">
-                        <span className="mr-3 flex items-center">
-                          <Wheat className="w-4 h-4 mr-1" />
-                          {dish.nutritions.carbs}g
-                        </span>
-                        <span className="flex items-center">
-                          <Droplet className="w-4 h-4 mr-1" />
-                          {dish.nutritions.fat}g
-                        </span>
+                      <div className="mt-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Protein:</span>
+                          <span className="font-medium">
+                            {nutritionData.totalProtein}{" "}
+                            {nutritionData.totalProtein !== "N/A" ? "g" : ""}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Fat:</span>
+                          <span className="font-medium">
+                            {nutritionData.totalFat}{" "}
+                            {nutritionData.totalFat !== "N/A" ? "g" : ""}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Carbs:</span>
+                          <span className="font-medium">
+                            {nutritionData.totalCarbs}{" "}
+                            {nutritionData.totalCarbs !== "N/A" ? "g" : ""}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center items-center p-2 bg-gray-100 border-t border-gray-200">
-                    <input
-                      type="checkbox"
-                      checked={tempSelectedDishes.includes(dish._id)}
-                      onChange={() => handleCheckboxChange(dish._id)}
-                      disabled={isConflicting}
-                      className={isConflicting ? "opacity-50 cursor-not-allowed" : ""}
-                    />
-                    {isConflicting && (
-                      <span className="text-sm text-red-500 ml-2">Conflicting</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="col-span-full text-center text-gray-500">
-              <p>No dishes found.</p>
-            </div>
-          )}
+                );
+              })
+            ) : (
+              <div className="col-span-4 flex flex-col items-center justify-center h-full text-gray-500">
+                <svg
+                  className="w-24 h-24 text-gray-400 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+                <p className="text-lg font-semibold">No dishes found</p>
+                <p className="text-sm">Try adjusting your search term.</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Phân trang */}
-        {filteredDishes.length > 0 && (
-          <div className="p-4 flex justify-between items-center">
-            <div className="flex space-x-2">
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100"
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === i + 1 ? "bg-green-500 text-white" : "border hover:bg-gray-100"
-                  }`}
-                  onClick={() => paginate(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                className="border rounded px-3 py-1 hover:bg-gray-100"
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+        {totalItems > 0 && (
+          <div className="mt-6 p-4 bg-gray-50">
+            <Pagination
+              limit={limit}
+              setLimit={setLimit}
+              totalItems={totalItems}
+              handlePageClick={handlePageClick}
+              currentPage={currentPage}
+              text="Dishes"
+            />
           </div>
         )}
-
-        {/* Nút điều khiển */}
-        <div className="flex justify-end mt-4 space-x-2">
-          <button
-            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
-            onClick={handleConfirm}
-          >
-            Confirm
-          </button>
-          <button
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
-            onClick={onClose}
-          >
-            Close
-          </button>
-        </div>
       </div>
     </div>
   );

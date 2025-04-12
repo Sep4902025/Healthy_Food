@@ -20,8 +20,7 @@ const quizService = {
       const response = await axiosInstance.post(`/userpreference`, finalData);
       console.log("REU", response);
 
-      // await AsyncStorage.removeItem("quizData"); // Thay sessionStorage bằng AsyncStorage nếu dùng React Native
-
+      
       return { success: true, data: response.data };
     } catch (error) {
       console.error("Submit quiz error:", error);
@@ -31,7 +30,6 @@ const quizService = {
       };
     }
   },
-  // Lấy danh sách món ăn đề xuất cho người dùng dựa trên userId với phân trang
   getForyou: async (userId, page = 1, limit = 10) => {
     try {
       if (!userId) {
@@ -41,7 +39,7 @@ const quizService = {
         };
       }
 
-      // Gửi request với query parameters page và limit
+    
       const response = await axiosInstance.get(`/foryou/${userId}`, {
         params: {
           page,
@@ -55,9 +53,9 @@ const quizService = {
         return {
           success: true,
           message: message || "Danh sách món ăn được lấy thành công",
-          dishes: data.items, // Danh sách món ăn trong trang hiện tại
+          dishes: data.items,
           pagination: {
-            // Thông tin phân trang
+         
             totalItems: data.totalItems,
             currentPage: data.currentPage,
             totalPages: data.totalPages,
@@ -87,9 +85,7 @@ const quizService = {
     }
 
     try {
-      console.log("🚀 Đang lấy sở thích người dùng với userPreferenceId:", userPreferenceId);
       const response = await axiosInstance.get(`${API_URL}/userpreference/${userPreferenceId}`);
-      console.log("🚀 Phản hồi từ /userPreference:", response.data);
 
       if (response.data.success) {
         return {

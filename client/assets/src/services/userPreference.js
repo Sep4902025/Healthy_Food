@@ -10,6 +10,16 @@ export const getUserPreference = async (userId) => {
   }
 };
 
+export const resetUserPreference = async (userId) => {
+  try {
+    const response = await axiosInstance.put(`/userPreference/reset/${userId}`);
+    return response;
+  } catch (error) {
+    console.log("resetUserPreference error: ", error);
+    return error;
+  }
+};
+
 export const createUserPreference = async (data) => {
   try {
     const response = await axiosInstance.post(`/userPreference`, data);

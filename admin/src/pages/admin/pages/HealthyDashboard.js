@@ -13,14 +13,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import {
-  AlignmentType,
-  Document,
-  HeadingLevel,
-  Packer,
-  Paragraph,
-  TextRun,
-} from "docx";
+import { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 import { saveAs } from "file-saver";
 import mealPlanService from "../../../services/mealPlanServices";
 import dishService from "../../../services/nutritionist/dishesServices";
@@ -57,11 +50,10 @@ const HealthyDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const mealPlanResponse = await mealPlanService.getAllMealPlans();
-        const paymentResponse = await axios.get(
-          "http://localhost:8080/api/v1/payment/",
-          { withCredentials: true }
-        );
+        const mealPlanResponse = await mealPlanService.getAllMealPlanAdmin();
+        const paymentResponse = await axios.get("http://localhost:8080/api/v1/payment/", {
+          withCredentials: true,
+        });
         const dishResponse = await dishService.getAllDishes();
         const userResponse = await userService.getAllUsers();
 
@@ -86,15 +78,13 @@ const HealthyDashboard = () => {
             return acc;
           }, {});
 
-          const planTypeDataFormatted = Object.keys(planTypeCounts).map(
-            (type) => ({
-              name:
-                type === "predetermined"
-                  ? "Fixed Plans"
-                  : type.charAt(0).toUpperCase() + type.slice(1) + " Plans", // Đổi "predetermined" thành "Fixed Plans"
-              value: planTypeCounts[type],
-            })
-          );
+          const planTypeDataFormatted = Object.keys(planTypeCounts).map((type) => ({
+            name:
+              type === "predetermined"
+                ? "Fixed Plans"
+                : type.charAt(0).toUpperCase() + type.slice(1) + " Plans", // Đổi "predetermined" thành "Fixed Plans"
+            value: planTypeCounts[type],
+          }));
           setPlanTypeData(planTypeDataFormatted);
         }
 
@@ -164,10 +154,10 @@ const HealthyDashboard = () => {
               spacing: { after: 400 },
             }),
             new Paragraph({
-              text: `Generated on: ${new Date().toLocaleDateString('en-US', {
-                month: 'long',
-                day: '2-digit',
-                year: 'numeric'
+              text: `Generated on: ${new Date().toLocaleDateString("en-US", {
+                month: "long",
+                day: "2-digit",
+                year: "numeric",
               })}`,
               alignment: AlignmentType.CENTER,
               spacing: { after: 300 },
@@ -228,8 +218,7 @@ const HealthyDashboard = () => {
             }),
             new Paragraph({
               children: planTypeData.map(
-                (plan) =>
-                  new TextRun({ text: `${plan.name}: ${plan.value}`, break: 1 })
+                (plan) => new TextRun({ text: `${plan.name}: ${plan.value}`, break: 1 })
               ),
               spacing: { after: 200 },
             }),
@@ -243,9 +232,7 @@ const HealthyDashboard = () => {
                 new Paragraph({
                   children: [
                     new TextRun(
-                      `Month ${data.month.slice(
-                        2
-                      )}: ${data.revenue.toLocaleString()} VND`
+                      `Month ${data.month.slice(2)}: ${data.revenue.toLocaleString()} VND`
                     ),
                   ],
                   spacing: { after: 100 },
@@ -300,9 +287,7 @@ const HealthyDashboard = () => {
         <div className="grid grid-cols-3 gap-4 mb-6 ml-6">
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500 mb-2">Total Dishes</h3>
-            <p className="text-2xl font-bold mb-2">
-              {systemOverview.totalDishes}
-            </p>
+            <p className="text-2xl font-bold mb-2">{systemOverview.totalDishes}</p>
             <div className="max-h-40 overflow-y-auto">
               {systemOverview.dishes.map((dish) => (
                 <div key={dish._id} className="flex items-center mb-2">
@@ -319,9 +304,7 @@ const HealthyDashboard = () => {
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500 mb-2">Total Users</h3>
-            <p className="text-2xl font-bold mb-2">
-              {systemOverview.totalUsers}
-            </p>
+            <p className="text-2xl font-bold mb-2">{systemOverview.totalUsers}</p>
             <div className="max-h-40 overflow-y-auto">
               {systemOverview.users.map((user) => (
                 <div key={user._id} className="flex items-center mb-2">
@@ -338,9 +321,7 @@ const HealthyDashboard = () => {
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500">Total Revenue</h3>
-            <p className="text-xl font-bold text-green-500">
-              {totalRevenue.toLocaleString()} VND
-            </p>
+            <p className="text-xl font-bold text-green-500">{totalRevenue.toLocaleString()} VND</p>
           </div>
         </div>
 
@@ -361,9 +342,7 @@ const HealthyDashboard = () => {
             </div>
             <div className="flex justify-around">
               <div>
-                <h4 className="text-center text-gray-600 mb-2">
-                  Payment Status
-                </h4>
+                <h4 className="text-center text-gray-600 mb-2">Payment Status</h4>
                 <PieChart width={220} height={220}>
                   {" "}
                   {/* Tăng kích thước một chút */}
@@ -380,10 +359,8 @@ const HealthyDashboard = () => {
                         ? ({ name, value, cx, cy, midAngle, outerRadius }) => {
                             const RADIAN = Math.PI / 180;
                             const radius = outerRadius + 20; // Di chuyển nhãn ra xa tâm
-                            const x =
-                              cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y =
-                              cy + radius * Math.sin(-midAngle * RADIAN);
+                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
                             return (
                               <text
                                 x={x}
@@ -401,10 +378,7 @@ const HealthyDashboard = () => {
                     labelLine={showValue} // Hiển thị đường dẫn từ nhãn đến phần biểu đồ
                   >
                     {paymentStatusDatas.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -428,10 +402,8 @@ const HealthyDashboard = () => {
                         ? ({ name, value, cx, cy, midAngle, outerRadius }) => {
                             const RADIAN = Math.PI / 180;
                             const radius = outerRadius + 20; // Di chuyển nhãn ra xa tâm
-                            const x =
-                              cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y =
-                              cy + radius * Math.sin(-midAngle * RADIAN);
+                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
                             return (
                               <text
                                 x={x}
@@ -449,10 +421,7 @@ const HealthyDashboard = () => {
                     labelLine={showValue} // Hiển thị đường dẫn từ nhãn đến phần biểu đồ
                   >
                     {planTypeData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[(index + 2) % COLORS.length]}
-                      />
+                      <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -467,9 +436,7 @@ const HealthyDashboard = () => {
               <div>
                 <button
                   className={`mr-2 px-3 py-1 rounded ${
-                    yearFilters === "2025"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200"
+                    yearFilters === "2025" ? "bg-blue-500 text-white" : "bg-gray-200"
                   }`}
                   onClick={() => setYearFilters("2025")}
                 >
@@ -477,9 +444,7 @@ const HealthyDashboard = () => {
                 </button>
                 <button
                   className={`px-3 py-1 rounded ${
-                    yearFilters === "2026"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200"
+                    yearFilters === "2026" ? "bg-blue-500 text-white" : "bg-gray-200"
                   }`}
                   onClick={() => setYearFilters("2026")}
                 >
@@ -494,12 +459,7 @@ const HealthyDashboard = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#8884d8"
-                  strokeWidth={2}
-                />
+                <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </div>

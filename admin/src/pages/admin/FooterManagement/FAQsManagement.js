@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import faqService from "../../../services/footer/faqServices";
 import { PlusIcon, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
 import Pagination from "../../../components/Pagination";
+import { toast } from "react-toastify"; // Import toast
 
 const FAQsManagement = () => {
   const [faqs, setFaqs] = useState([]);
@@ -10,6 +11,7 @@ const FAQsManagement = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
   const [formData, setFormData] = useState({ category: "", question: "", answer: "" });
+  const [formErrors, setFormErrors] = useState({ category: "", question: "", answer: "" }); // State để quản lý lỗi
   const [currentPage, setCurrentPage] = useState(0);
   const [faqsPerPage, setFaqsPerPage] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
@@ -21,15 +23,17 @@ const FAQsManagement = () => {
   const fetchFAQs = async () => {
     setLoading(true);
     try {
-      const result = await faqService.getFAQs(currentPage + 1, faqsPerPage); // +1 vì API dùng từ 1
+      const result = await faqService.getFAQs(currentPage + 1, faqsPerPage);
       if (result.success) {
         setFaqs(result.data.data.faqs || []);
         setTotalItems(result.data.total || 0);
       } else {
         setError(result.message);
+        toast.error(result.message || "Failed to fetch FAQs"); // Sử dụng toast.error
       }
     } catch (err) {
       setError("Lỗi không xác định khi tải FAQs");
+      toast.error("Failed to fetch FAQs"); // Sử dụng toast.error
       console.error("❌ Lỗi trong fetchFAQs:", err);
     } finally {
       setLoading(false);
@@ -39,14 +43,24 @@ const FAQsManagement = () => {
   const handleToggleVisibility = async (faq) => {
     const updatedFAQ = { ...faq, isVisible: !faq.isVisible };
     const response = await faqService.updateFAQ(faq._id, updatedFAQ);
-    if (response.success) fetchFAQs();
-    else console.error("Error updating display status:", response.message);
+    if (response.success) {
+      toast.success(`FAQ ${updatedFAQ.isVisible ? "shown" : "hidden"} successfully!`); // Sử dụng toast.success
+      fetchFAQs();
+    } else {
+      toast.error("Failed to update FAQ visibility"); // Sử dụng toast.error
+      console.error("Error updating display status:", response.message);
+    }
   };
 
   const handleHardDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this question?")) {
-      await faqService.hardDeleteFAQ(id);
-      fetchFAQs();
+      const response = await faqService.hardDeleteFAQ(id);
+      if (response.success) {
+        toast.success("FAQ deleted successfully!"); // Sử dụng toast.success
+        fetchFAQs();
+      } else {
+        toast.error("Failed to delete FAQ"); // Sử dụng toast.error
+      }
     }
   };
 
@@ -58,34 +72,52 @@ const FAQsManagement = () => {
       setEditData(null);
       setFormData({ category: "", question: "", answer: "" });
     }
+    setFormErrors({ category: "", question: "", answer: "" }); // Reset lỗi khi mở modal
     setModalOpen(true);
   };
 
-  const handleSave = async () => {
+  const validateForm = () => {
+    let errors = { category: "", question: "", answer: "" };
+    let isValid = true;
+
     if (!formData.category.trim()) {
-      alert("Category cannot be empty!");
-      return;
+      errors.category = "Category cannot be empty!";
+      isValid = false;
     }
     if (!formData.question.trim()) {
-      alert("Question cannot be left blank!");
-      return;
+      errors.question = "Question cannot be empty!";
+      isValid = false;
     }
     if (!formData.answer.trim()) {
-      alert("Answer cannot be left blank!");
+      errors.answer = "Answer cannot be empty!";
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
       return;
     }
+
     const response = editData
       ? await faqService.updateFAQ(editData._id, formData)
       : await faqService.createFAQ(formData);
     if (response.success) {
+      toast.success(editData ? "FAQ updated successfully!" : "FAQ created successfully!"); // Sử dụng toast.success
       setModalOpen(false);
       fetchFAQs();
     } else {
-      alert(response.message);
+      toast.error(response.message || "Failed to save FAQ"); // Sử dụng toast.error
     }
   };
 
-  const handlePageClick = ({ selected }) => setCurrentPage(selected);
+  const handlePageClick = ({ selected }) => {
+    console.log("Selected Page:", selected);
+    setCurrentPage(selected);
+  };
 
   if (loading)
     return (
@@ -99,6 +131,8 @@ const FAQsManagement = () => {
         <p className="text-red-500 text-lg font-semibold">Error: {error}</p>
       </div>
     );
+
+  console.log("Current Page in Render:", currentPage); // Debug log
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -195,14 +229,16 @@ const FAQsManagement = () => {
         {/* Pagination */}
         <div className="p-4 bg-gray-50">
           <Pagination
+            key={currentPage}
             limit={faqsPerPage}
             setLimit={(value) => {
               setFaqsPerPage(value);
-              setCurrentPage(0); // Reset về trang đầu khi thay đổi số lượng item mỗi trang
+              setCurrentPage(0);
             }}
             totalItems={totalItems}
             handlePageClick={handlePageClick}
             text="FAQs"
+            currentPage={currentPage}
           />
         </div>
       </div>
@@ -218,26 +254,44 @@ const FAQsManagement = () => {
             <label className="block mb-2 text-gray-700">Category:</label>
             <input
               type="text"
-              className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+              className="w-full border p-2 mb-2 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, category: e.target.value });
+                setFormErrors({ ...formErrors, category: "" }); // Xóa lỗi category khi nhập
+              }}
             />
+            {formErrors.category && (
+              <p className="text-red-500 text-sm mb-2">{formErrors.category}</p>
+            )}
 
             <label className="block mb-2 text-gray-700">Question:</label>
             <textarea
-              className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+              className="w-full border p-2 mb-2 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               rows="2"
               value={formData.question}
-              onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, question: e.target.value });
+                setFormErrors({ ...formErrors, question: "" }); // Xóa lỗi question khi nhập
+              }}
             ></textarea>
+            {formErrors.question && (
+              <p className="text-red-500 text-sm mb-2">{formErrors.question}</p>
+            )}
 
             <label className="block mb-2 text-gray-700">Answer:</label>
             <textarea
-              className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+              className="w-full border p-2 mb-2 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               rows="4"
               value={formData.answer}
-              onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, answer: e.target.value });
+                setFormErrors({ ...formErrors, answer: "" }); // Xóa lỗi answer khi nhập
+              }}
             ></textarea>
+            {formErrors.answer && (
+              <p className="text-red-500 text-sm mb-2">{formErrors.answer}</p>
+            )}
 
             <div className="flex justify-end space-x-2">
               <button

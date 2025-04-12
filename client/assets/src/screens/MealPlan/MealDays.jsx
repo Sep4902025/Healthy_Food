@@ -9,14 +9,13 @@ import {
   Modal,
 } from "react-native";
 import Meals from "./Meals";
-import { Dimensions } from "react-native";
 import mealPlanService from "../../services/mealPlanService";
 import dishesService from "../../services/dishService";
-import CustomPieChart from "./CustomPieChart"; // Import CustomPieChart
-
-const screenWidth = Dimensions.get("window").width;
+import CustomPieChart from "./CustomPieChart";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets }) => {
+  const { theme } = useTheme();
   if (!isOpen || !nutritionData || !nutritionTargets) return null;
 
   const proteinDiff = nutritionData.protein - nutritionTargets.protein.target;
@@ -42,27 +41,30 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
       advice.push(`Add ${Math.abs(Math.round(fatDiff))}g of fats (avocados, olive oil, nuts).`);
     else if (fatDiff > 10)
       advice.push(`Reduce by ${Math.round(fatDiff)}g of fat to align with your goal.`);
-
     return advice.length > 0 ? advice : ["Your nutrition levels are well-balanced!"];
   };
 
   return (
     <Modal visible={isOpen} transparent animationType="slide">
-      <View className="flex-1 justify-center bg-black/50">
-        <View className="bg-white p-4 m-4 rounded-lg">
-          <Text className="text-xl font-bold mb-4">Nutrition Advice</Text>
+      <View className="flex-1 items-center justify-center bg-black/50">
+        <View className="bg-surface dark:bg-dark-surface p-4 m-4 rounded-lg max-w-md">
+          <Text className="text-xl font-bold text-text dark:text-dark-text mb-4">
+            Nutrition Advice
+          </Text>
           {["calories", "protein", "carbs", "fat"].map((nutrient) => (
             <View key={nutrient} className="mb-4">
-              <Text className="font-medium">
-                {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)}:
-              </Text>
-              <Text>
-                {Math.round(nutritionData[nutrient])} / {nutritionTargets[nutrient].target}
-                {nutrient === "calories" ? " kcal" : "g"}
-              </Text>
-              <View className="w-full h-1 bg-gray-200 rounded">
+              <View className="flex-row justify-between">
+                <Text className="font-medium text-text dark:text-dark-text">
+                  {nutrient.charAt(0).toUpperCase() + nutrient.slice(1)}:
+                </Text>
+                <Text className="text-text dark:text-dark-text">
+                  {Math.round(nutritionData[nutrient])} / {nutritionTargets[nutrient].target}
+                  {nutrient === "calories" ? " kcal" : "g"}
+                </Text>
+              </View>
+              <View className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full mt-1">
                 <View
-                  className="h-1 rounded"
+                  className="h-2 rounded-full"
                   style={{
                     width: `${Math.min(
                       100,
@@ -70,26 +72,26 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
                     )}%`,
                     backgroundColor:
                       nutritionData[nutrient] < nutritionTargets[nutrient].min
-                        ? "#eab308"
+                        ? theme.warningColor || "#eab308"
                         : nutritionData[nutrient] > nutritionTargets[nutrient].max
-                        ? "#ef4444"
-                        : "#16a34a",
+                        ? theme.errorColor || "#ef4444"
+                        : theme.successColor || "#16a34a",
                   }}
                 />
               </View>
             </View>
           ))}
-          <Text className="font-medium mb-2">Suggestions:</Text>
+          <Text className="font-medium text-text dark:text-dark-text mb-2">Suggestions:</Text>
           {generateAdvice().map((advice, index) => (
-            <Text key={index} className="text-sm text-gray-700">
+            <Text key={index} className="text-sm text-text-secondary dark:text-dark-text-secondary">
               • {advice}
             </Text>
           ))}
           <TouchableOpacity
-            className="bg-blue-600 p-2 rounded-lg items-center mt-4"
+            className="bg-primary dark:bg-dark-primary p-3 rounded-lg mt-4"
             onPress={onClose}
           >
-            <Text className="text-white">Close</Text>
+            <Text className="text-white text-center font-medium">Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -98,6 +100,7 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
 };
 
 const MealDays = ({ mealPlanId, nutritionTargets }) => {
+  const { theme } = useTheme();
   const [mealDays, setMealDays] = useState([]);
   const [mealDayNutrition, setMealDayNutrition] = useState({});
   const [loading, setLoading] = useState(true);
@@ -106,33 +109,25 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
   const [fadeAnim] = useState(new Animated.Value(1));
   const [showNutritionAdvice, setShowNutritionAdvice] = useState(false);
   const [selectedDayNutrition, setSelectedDayNutrition] = useState(null);
+  const [isTransitioning, setIsTransitioning] = useState(false); // Thêm trạng thái chuyển đổi
   const firstLoad = useRef(true);
 
   const fetchMealDays = async () => {
     if (!mealPlanId) {
-      console.log("No mealPlanId provided, skipping fetch.");
       setLoading(false);
       return;
     }
-
     if (!firstLoad.current && mealDays.length === 0) setLoading(true);
-
     try {
-      console.log("Fetching meal days for mealPlanId:", mealPlanId);
       const data = await mealPlanService.getMealDaysByMealPlan(mealPlanId);
-      console.log("API Response:", data); // Debug API response
-
       if (data.success) {
-        // Ensure data.data is an array
         const mealDaysData = Array.isArray(data.data) ? data.data : [];
         setMealDays(mealDaysData);
         fetchAllMealDaysNutrition(mealDaysData);
       } else {
-        console.log("API Error:", data.message);
         setError(data.message);
       }
     } catch (err) {
-      console.error("Error fetching meal days:", err);
       setError("Error fetching data");
     } finally {
       setLoading(false);
@@ -198,7 +193,6 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
       carbs <= nutritionTargets.carbs.max &&
       fat >= nutritionTargets.fat.min &&
       fat <= nutritionTargets.fat.max;
-
     if (
       calories > nutritionTargets.calories.max ||
       protein > nutritionTargets.protein.max ||
@@ -211,34 +205,81 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
 
   const getNutritionStatusColor = (mealDayId) => {
     const nutrition = mealDayNutrition[mealDayId];
-    if (!nutrition || !nutritionTargets) return "#e5e7eb";
+    if (!nutrition || !nutritionTargets) return theme.borderColor || "#e5e7eb";
     const status = evaluateNutritionStatus(nutrition);
-    return status === "exceeded" ? "#ef4444" : status === "optimal" ? "#16a34a" : "#eab308";
+    return status === "exceeded"
+      ? theme.errorColor || "#ef4444"
+      : status === "optimal"
+      ? theme.successColor || "#16a34a"
+      : theme.warningColor || "#eab308";
+  };
+
+  const getStatusIcon = (mealDayId) => {
+    const nutrition = mealDayNutrition[mealDayId];
+    if (!nutrition) return null;
+    const status = evaluateNutritionStatus(nutrition);
+    return status === "exceeded" ? (
+      <Text className=" ml-2 text-red-500">❗</Text>
+    ) : status === "optimal" ? (
+      <Text className="ml-2 text-green-500">✅</Text>
+    ) : (
+      <Text className="ml-2 text-yellow-500">⚠️</Text>
+    );
   };
 
   const handleMealDaySelect = (mealDay) => {
-    Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+    setIsTransitioning(true);
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
       setSelectedMealDay(mealDay);
-      Animated.timing(fadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+      setIsTransitioning(false);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
     });
   };
 
   const handleMealsClose = () => {
-    Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+    setIsTransitioning(true);
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
       setSelectedMealDay(null);
       fetchMealDays();
-      Animated.timing(fadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+      setIsTransitioning(false);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
     });
   };
 
   const renderNutritionChart = (mealDayId) => {
     const nutrition = mealDayNutrition[mealDayId];
     if (!nutrition) return null;
+    if (nutrition.protein === 0 && nutrition.carbs === 0 && nutrition.fat === 0) {
+      return (
+        <View className="items-center">
+          <Text className="text-lg font-bold text-text dark:text-dark-text">
+            {Math.round(nutrition.calories)}
+          </Text>
+          <Text className="text-xs text-text-secondary dark:text-dark-text-secondary">kcal</Text>
+        </View>
+      );
+    }
 
     const chartData = [
-      { x: "Protein", y: nutrition.protein, color: "#ef4444" },
-      { x: "Carbs", y: nutrition.carbs, color: "#3b82f6" },
-      { x: "Fat", y: nutrition.fat, color: "#facc15" },
+      { x: "Protein", y: nutrition.protein, color: theme.proteinColor || "#ef4444" },
+      { x: "Carbs", y: nutrition.carbs, color: theme.carbsColor || "#3b82f6" },
+      { x: "Fat", y: nutrition.fat, color: theme.fatColor || "#facc15" },
     ].filter((item) => item.y > 0);
 
     return (
@@ -248,26 +289,34 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
             data={chartData}
             width={80}
             height={80}
-            innerRadius={20}
-            outerRadius={30}
+            innerRadius={25}
+            outerRadius={35}
           />
           <View className="absolute flex items-center justify-center">
-            <Text className="text-sm font-bold">{Math.round(nutrition.calories)}</Text>
-            <Text className="text-xs text-gray-500">kcal</Text>
+            <Text className="text-sm font-bold text-text dark:text-dark-text">
+              {Math.round(nutrition.calories)}
+            </Text>
+            <Text className="text-xs text-text-secondary dark:text-dark-text-secondary">kcal</Text>
           </View>
         </View>
-        <View className="flex-row flex-wrap justify-center mt-1">
-          <View className="flex-row items-center gap-1 mr-1">
+        <View className="flex-row flex-wrap justify-center mt-2 gap-2">
+          <View className="flex-row items-center gap-1">
             <View className="w-2 h-2 rounded-full bg-red-500" />
-            <Text className="text-xs">Protein: {Math.round(nutrition.protein)}g</Text>
+            <Text className="text-xs text-text dark:text-dark-text">
+              Protein: {Math.round(nutrition.protein)}g
+            </Text>
           </View>
-          <View className="flex-row items-center gap-1 mr-1">
+          <View className="flex-row items-center gap-1">
             <View className="w-2 h-2 rounded-full bg-blue-500" />
-            <Text className="text-xs">Carbs: {Math.round(nutrition.carbs)}g</Text>
+            <Text className="text-xs text-text dark:text-dark-text">
+              Carbs: {Math.round(nutrition.carbs)}g
+            </Text>
           </View>
           <View className="flex-row items-center gap-1">
             <View className="w-2 h-2 rounded-full bg-yellow-400" />
-            <Text className="text-xs">Fat: {Math.round(nutrition.fat)}g</Text>
+            <Text className="text-xs text-text dark:text-dark-text">
+              Fat: {Math.round(nutrition.fat)}g
+            </Text>
           </View>
         </View>
       </View>
@@ -278,39 +327,44 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
     const borderColor = getNutritionStatusColor(item._id);
     return (
       <TouchableOpacity
-        className="flex-1 m-2 p-4 border-2 rounded-lg bg-white shadow-md"
+        className="flex-1 m-2 p-4 border-2 rounded-lg bg-surface dark:bg-dark-surface"
         style={{ borderColor }}
         onPress={() => handleMealDaySelect(item)}
       >
-        <View className="flex-row justify-between mb-2">
-          <Text className="text-lg font-bold">Day {index + 1}</Text>
+        <View className="flex-row justify-between items-center mb-2">
+          <View className="flex-row items-center">
+            <Text className="text-lg font-bold text-text dark:text-dark-text">Day {index + 1}</Text>
+            {getStatusIcon(item._id)}
+          </View>
           {mealDayNutrition[item._id] && (
             <TouchableOpacity
-              className="bg-blue-100 p-1 rounded"
+              className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded"
               onPress={() => {
                 setSelectedDayNutrition(mealDayNutrition[item._id]);
                 setShowNutritionAdvice(true);
               }}
             >
-              <Text className="text-blue-600 text-xs">Suggest</Text>
+              <Text className="text-blue-600 dark:text-blue-300 text-xs">Suggest</Text>
             </TouchableOpacity>
           )}
         </View>
-        <Text className="text-xs text-gray-600 mb-2">{formatDate(item.date)}</Text>
+        <Text className="text-xs text-text-secondary dark:text-dark-text-secondary mb-2">
+          {formatDate(item.date)}
+        </Text>
         {renderNutritionChart(item._id)}
       </TouchableOpacity>
     );
   };
 
   return (
-    <View className="flex-1 bg-white p-2">
-      {loading && mealDays.length === 0 ? (
+    <View className="flex-1 bg-background dark:bg-dark-background p-2">
+      {(loading && mealDays.length === 0) || isTransitioning ? (
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#16a34a" />
+          <ActivityIndicator size="large" color={theme.primaryColor || "#16a34a"} />
         </View>
       ) : error ? (
         <View className="flex-1 justify-center items-center">
-          <Text className="text-center text-red-500">{error}</Text>
+          <Text className="text-center text-error dark:text-dark-error">{error}</Text>
         </View>
       ) : (
         <Animated.View className="flex-1" style={{ opacity: fadeAnim }}>
@@ -324,7 +378,9 @@ const MealDays = ({ mealPlanId, nutritionTargets }) => {
               contentContainerStyle={{ paddingBottom: 80 }}
               ListEmptyComponent={
                 <View className="flex-1 justify-center items-center p-4">
-                  <Text className="text-center text-gray-600">No meal days available.</Text>
+                  <Text className="text-center text-text-secondary dark:text-dark-text-secondary">
+                    No meal days available.
+                  </Text>
                 </View>
               }
             />

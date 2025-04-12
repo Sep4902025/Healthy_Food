@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   },
   modalIcon: {
     alignSelf: "center",
-    // alignItems: "center",
+  
     marginBottom: 10,
     padding: 12,
     backgroundColor: "#D9D9D9",

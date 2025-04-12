@@ -8,90 +8,67 @@ import {
   ScrollView,
   Dimensions,
   Modal,
-  SafeAreaView,
-  StatusBar,
   Image,
   Platform,
+  Alert,
+  StatusBar,
 } from "react-native";
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
 import { useSelector } from "react-redux";
 import { userSelector } from "../../redux/selectors/selector";
-import { CountryPicker } from "react-native-country-codes-picker";
-import { Picker } from "@react-native-picker/picker";
-import RNPickerSelect from "react-native-picker-select";
 import { useTheme } from "../../contexts/ThemeContext";
+import * as ImagePicker from "expo-image-picker";
+import { uploadToCloudinary } from "../../services/cloundaryService";
 
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
 export const EditProfileModal = ({ visible, onClose, onSave }) => {
   const user = useSelector(userSelector);
   const { theme } = useTheme();
-  const [showChooseCountry, setShowChooseCountry] = useState(false);
   const [profile, setProfile] = useState({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
     email: user?.email || "",
     phoneNumber: user?.phoneNumber || "",
     gender: user?.gender || "",
-    countryCode: "+84",
+    countryCode: "+84", 
+    weight: user?.weight || "",
+    height: user?.height || "",
+    weightGoal: user?.weightGoal || "",
+    avtChange: false,
     ...user,
   });
 
-  const handleSave = () => {
-    onSave(profile);
+  const handleSave = async () => {
+    const response = profile?.avtChange
+      ? await uploadToCloudinary(profile?.avatarUrl)
+      : profile.avatarUrl;
+    onSave({ ...profile, avatarUrl: response });
   };
 
-  const [showGenderPicker, setShowGenderPicker] = useState(false);
-
-  const genderOptions = [
-    { label: "Select gender", value: "" },
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-    { label: "Non-binary", value: "non-binary" },
-    { label: "Prefer not to say", value: "prefer-not-to-say" },
-  ];
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Sorry, we need camera roll permissions to make this work!");
+      return;
+    }
 
   
-  const renderGenderPickerModal = () => {
-    if (Platform.OS !== "ios") return null;
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
 
-    return (
-      <Modal
-        visible={showGenderPicker}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowGenderPicker(false)}
-      >
-        <View
-          style={{
-            ...styles.pickerModalContainer,
-          }}
-        >
-          <View style={styles.pickerModalContent}>
-            <View style={styles.pickerHeader}>
-              <TouchableOpacity onPress={() => setShowGenderPicker(false)}>
-                <Text style={styles.doneButton}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <Picker
-              selectedValue={profile.gender}
-              onValueChange={(itemValue) => {
-                setProfile({ ...profile, gender: itemValue });
-              }}
-            >
-              {genderOptions.map((option) => (
-                <Picker.Item
-                  key={option.value}
-                  label={option.label}
-                  value={option.value}
-                />
-              ))}
-            </Picker>
-          </View>
-        </View>
-      </Modal>
-    );
+    if (!result.canceled) {
+      setProfile((pre) => ({
+        ...pre,
+        avatarUrl: result.assets[0].uri,
+        avtChange: true,
+      }));
+    }
   };
 
   return (
@@ -113,12 +90,12 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
             Edit Profile
           </Text>
 
-         
+          {/* Profile Image */}
           <View style={styles.profileImageContainer}>
             <View style={styles.profileImageWrapper}>
-              {profile?.avatar_url ? (
+              {profile?.avatarUrl ? (
                 <Image
-                  source={{ uri: profile.avatar_url }}
+                  source={{ uri: profile.avatarUrl }}
                   style={styles.profileImage}
                 />
               ) : (
@@ -126,9 +103,12 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
                   style={[styles.profileImage, styles.profileImagePlaceholder]}
                 />
               )}
-              <View style={styles.editProfileImageButton}>
-                <Ionicons name="checkmark" size={20} color="#fff" />
-              </View>
+              <TouchableOpacity
+                style={styles.editProfileImageButton}
+                onPress={pickImage}
+              >
+                <Ionicons name="pencil" size={20} color="#fff" />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -161,12 +141,9 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
                 Phone Number
               </Text>
               <View style={styles.phoneInputContainer}>
-                <TouchableOpacity
-                  style={styles.countryCodeContainer}
-                  
-                >
+                <View style={styles.countryCodeContainer}>
                   <Text style={styles.countryCode}>{profile.countryCode}</Text>
-                </TouchableOpacity>
+                </View>
                 <TextInput
                   style={styles.phoneInput}
                   value={profile.phoneNumber}
@@ -179,57 +156,63 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
                 />
               </View>
 
-              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+              {/* <Text style={{ ...styles.label, color: theme.greyTextColor }}>
                 Gender
               </Text>
-              {Platform.OS === "ios" ? (
-                <TouchableOpacity
-                  style={styles.genderSelector}
-                  onPress={() => setShowGenderPicker(true)}
-                >
-                  <Text>
-                    {profile.gender
-                      ? genderOptions.find(
-                          (opt) => opt.value === profile.gender
-                        )?.label
-                      : "Select gender"}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color="#000" />
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.genderSelector}>
-                  <Picker
-                    selectedValue={profile.gender}
-                    onValueChange={(itemValue) =>
-                      setProfile({ ...profile, gender: itemValue })
-                    }
-                    style={styles.androidPicker}
-                  >
-                    {genderOptions.map((option) => (
-                      <Picker.Item
-                        key={option.value}
-                        label={option.label}
-                        value={option.value}
-                      />
-                    ))}
-                  </Picker>
-                </View>
-              )}
-              
+              <TextInput
+                style={styles.fullWidthInput}
+                value={profile.gender}
+                onChangeText={(text) =>
+                  setProfile({ ...profile, gender: text })
+                }
+                placeholder="Enter gender"
+              /> */}
+
+              {/* New fields: Weight, Height, and WeightGoal */}
+              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+                Weight (kg)
+              </Text>
+              <TextInput
+                style={styles.fullWidthInput}
+                value={profile.weight}
+                onChangeText={(text) =>
+                  setProfile({ ...profile, weight: text })
+                }
+                placeholder="Enter weight in kg"
+                keyboardType="numeric"
+              />
+
+              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+                Height (cm)
+              </Text>
+              <TextInput
+                style={styles.fullWidthInput}
+                value={profile.height}
+                onChangeText={(text) =>
+                  setProfile({ ...profile, height: text })
+                }
+                placeholder="Enter height in cm"
+                keyboardType="numeric"
+              />
+
+              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
+                Weight Goal (kg)
+              </Text>
+              <TextInput
+                style={styles.fullWidthInput}
+                value={profile.weightGoal}
+                onChangeText={(text) =>
+                  setProfile({ ...profile, weightGoal: text })
+                }
+                placeholder="Enter weight goal in kg"
+                keyboardType="numeric"
+              />
             </View>
           </ScrollView>
-          {renderGenderPickerModal()}
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
             <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
         </View>
-        <CountryPicker
-          show={showChooseCountry}
-          pickerButtonOnPress={(item) => {
-            setProfile({ ...profile, countryCode: item.dial_code });
-            setShowChooseCountry(false);
-          }}
-        />
       </Modal>
     </>
   );
@@ -332,18 +315,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
     fontSize: 14,
-    backgroundColor: "white",
-  },
-  genderSelector: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 44,
-    marginBottom: 16,
     backgroundColor: "white",
   },
   profileImageContainer: {

@@ -39,7 +39,6 @@ function FavorAndSuggest({ route }) {
   const user = useSelector(userSelector);
   const { theme } = useTheme();
 
-  // Load dish from route params
   useEffect(() => {
     if (route?.params?.dish) {
       setDish(route.params.dish);
@@ -49,7 +48,6 @@ function FavorAndSuggest({ route }) {
     }
   }, [route?.params?.dish]);
 
-  // Load recipe when dish changes
   useEffect(() => {
     if (!dish?._id || !dish?.recipeId) {
       setLoading(false);
@@ -59,7 +57,6 @@ function FavorAndSuggest({ route }) {
     loadRecipe();
   }, [dish]);
 
-  // Fetch ingredient details when recipe changes
   useEffect(() => {
     const fetchIngredientDetails = async () => {
       if (!recipe?.ingredients?.length) {
@@ -72,12 +69,11 @@ function FavorAndSuggest({ route }) {
         const detailsObj = [];
 
         const promises = recipe.ingredients.map(async (ingredient) => {
-          console.log("Ingredient:", ingredient); // Debug log
-          console.log("Ingredient ID:", ingredient?.ingredientId); // Debug log
+          console.log("Ingredient:", ingredient);
+          console.log("Ingredient ID:", ingredient?.ingredientId);
 
           if (!ingredient?.ingredientId) return;
 
-          // Ensure ingredientId is a string
           const ingredientId =
             typeof ingredient.ingredientId === "object" && ingredient.ingredientId?._id
               ? ingredient.ingredientId._id
@@ -114,7 +110,7 @@ function FavorAndSuggest({ route }) {
     setLoading(true);
 
     try {
-      const response = await HomeService.getRecipeByRecipeId(dish._id, dish.recipeId);
+      const response = await HomeService.getRecipeByRecipeId(dish.recipeId);
       if (response.success) {
         setRecipe(response.data);
       } else {
@@ -423,7 +419,6 @@ function FavorAndSuggest({ route }) {
   );
 }
 
-// Styles remain the same
 const styles = StyleSheet.create({
   container: {
     flex: 1,

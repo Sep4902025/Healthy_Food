@@ -326,7 +326,7 @@ const Header = () => {
                 {cartMenuOpen && (
                   <div className="absolute right-0 mt-2 w-60 bg-white border rounded-lg shadow-lg z-10">
                     {/* Tabs */}
-                    <div className="flex border-b">
+                    <div className="flex border-b px-2">
                       <button
                         className={`flex-1 py-2 text-center ${
                           activeTab === "mealPlan"
@@ -338,7 +338,7 @@ const Header = () => {
                         Meal Plans
                       </button>
                       <button
-                        className={`flex-1 py-2 text-center ${
+                        className={`flex py-2 text-center ${
                           activeTab === "history"
                             ? "border-b-2 border-green-500 text-green-600"
                             : "text-gray-600"
@@ -350,10 +350,10 @@ const Header = () => {
                     </div>
 
                     {/* Tab Content */}
-                    <div className="p-4">
+                    <div className="flex flex-col justify-center items-center max-h-48 overflow-y-auto">
                       {activeTab === "mealPlan" ? (
                         mealPlans.length > 0 ? (
-                          <div className="max-h-48 overflow-y-auto">
+                          <div className="">
                             {mealPlans.map((mealPlan) => (
                               <div key={mealPlan._id} className="border-b py-2 last:border-b-0">
                                 <p className="font-medium text-gray-700">Name: {mealPlan.title}</p>
@@ -407,12 +407,6 @@ const Header = () => {
                                   </p>
                                 </div>
                               ))}
-                              <button
-                                onClick={() => navigate("/payment-history")}
-                                className="mt-2 w-full text-center text-blue-500 hover:underline"
-                              >
-                                View More
-                              </button>
                             </div>
                           ) : (
                             <p className="text-sm text-gray-500">No payment history.</p>

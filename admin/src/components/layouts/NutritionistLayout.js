@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import Header from "../Header";
-import Footer from "../../pages/user/footer/Footer";
 import {
   UtensilsIcon,
   LeafIcon,
@@ -10,7 +9,7 @@ import {
   HeartPulseIcon,
   MessageSquareIcon,
   ChevronDownIcon,
-  CalendarHeart
+  CalendarHeart,
 } from "lucide-react";
 
 const menuItems = [
@@ -21,10 +20,10 @@ const menuItems = [
   },
   {
     icon: <CalendarHeart size={20} />,
-    name: "Meal Plans Management", // Đổi tên từ "Meal Plan" thành "Meal Plans Management"
+    name: "Meal Plans Management",
     submenus: [
-      { name: "View Meal Plans", path: "/nutritionist/mealPlan" }, // Submenu mới
-      { name: "Meal Plans Analytics", path: "/nutritionist/mealPlan/analytics" }, // Submenu mới
+      { name: "View Meal Plans", path: "/nutritionist/mealPlan" },
+      { name: "Meal Plans Analytics", path: "/nutritionist/mealPlan/analytics" },
     ],
   },
   {
@@ -61,6 +60,7 @@ const menuItems = [
 const NutritionistLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const mainRef = useRef(null);
 
   const [activeMenu, setActiveMenu] = useState("");
   const [openSubmenus, setOpenSubmenus] = useState({});
@@ -78,34 +78,38 @@ const NutritionistLayout = () => {
     } else {
       setActiveMenu(item.name);
       navigate(item.path);
+      scrollToTop();
     }
   };
 
   const handleSubmenuClick = (submenu) => {
     setActiveMenu(submenu.name);
     navigate(submenu.path);
+    scrollToTop();
+  };
+
+  const scrollToTop = () => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
-      {/* Header */}
       <Header />
-
-      {/* Main Content and Sidebar */}
       <div className="flex flex-1">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white border-r p-4 flex flex-col">
-          <div className="flex items-center mb-6">
-            <HomeIcon size={24} className="text-green-600 mr-2" />
-            <span className="text-xl font-bold text-green-700">Nutritionist</span>
+        <aside className="w-64 bg-white border-r p-4 flex flex-col fixed top-[60px] left-0 min-h-[calc(100vh-60px)]">
+          <div className="flex items-center mb-6 shrink-0">
+            <HomeIcon size={24} className="text-[#40B491] mr-2" />
+            <span className="text-xl font-bold text-[#40B491]">Nutritionist</span>
           </div>
-          <nav className="flex-1 overflow-y-auto">
+          <nav className="flex-1 overflow-y-auto max-h-[calc(100vh-60px-72px)] scrollbar-hidden">
             {menuItems.map((item) => (
               <div key={item.name}>
                 <div
-                  className={`flex items-center p-3 cursor-pointer rounded hover:bg-green-50 ${
+                  className={`flex items-center p-3 cursor-pointer rounded hover:bg-[#40B491]/10 ${
                     location.pathname === item.path || openSubmenus[item.name]
-                      ? "bg-green-100 text-green-600"
+                      ? "bg-[#40B491]/20 text-[#40B491]"
                       : "text-gray-600"
                   }`}
                   onClick={() => handleMenuClick(item)}
@@ -126,9 +130,9 @@ const NutritionistLayout = () => {
                     {item.submenus.map((submenu) => (
                       <div
                         key={submenu.name}
-                        className={`p-2 cursor-pointer rounded hover:bg-green-50 ${
+                        className={`p-2 cursor-pointer rounded hover:bg-[#40B491]/10 ${
                           location.pathname === submenu.path
-                            ? "bg-green-100 text-green-600"
+                            ? "bg-[#40B491]/20 text-[#40B491]"
                             : "text-gray-600"
                         }`}
                         onClick={() => handleSubmenuClick(submenu)}
@@ -142,14 +146,24 @@ const NutritionistLayout = () => {
             ))}
           </nav>
         </aside>
-        {/* Main Content */}
-        <main className="flex-1 p-6 bg-white shadow overflow-y-auto">
+        <main
+          ref={mainRef}
+          className="flex-1 bg-white shadow overflow-y-auto min-h-[calc(100vh-60px)] ml-64"
+        >
           <Outlet />
         </main>
       </div>
 
-      {/* Footer */}
-      <Footer />
+      {/* Inline CSS to hide scrollbar */}
+      <style jsx>{`
+        .scrollbar-hidden {
+          -ms-overflow-style: none; /* IE and Edge */
+          scrollbar-width: none; /* Firefox */
+        }
+        .scrollbar-hidden::-webkit-scrollbar {
+          display: none; /* Chrome, Safari, and Opera */
+        }
+      `}</style>
     </div>
   );
 };

@@ -27,7 +27,7 @@ const List = () => {
       const response = await dishesService.getAllDishes(pageNum, limit);
       if (response.success) {
         const newDishes = response.data.items || [];
-        // Loại bỏ các món ăn trùng lặp dựa trên _id
+
         setDishes((prev) => {
           const existingIds = isRefresh ? new Set() : new Set(prev.map((dish) => dish._id));
           const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));

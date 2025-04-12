@@ -65,7 +65,10 @@ function Signin({ navigation }) {
       const responseLogin = await dispatch(loginThunk(credentials));
 
       ShowToast("success", "Đăng nhập thành công");
-      if (responseLogin.type.endsWith("fulfilled") && responseLogin?.payload?.data?.status) {
+      if (
+        responseLogin.type.endsWith("fulfilled") &&
+        responseLogin?.payload?.data?.status
+      ) {
         const username = responseLogin?.payload?.data?.data?.user?.username;
         ShowToast("success", "Welcome back " + username);
         navigation.navigate(ScreensName.home);
@@ -126,13 +129,21 @@ function Signin({ navigation }) {
           secureTextEntry
         />
 
-        <TouchableOpacity
-          onPress={() => {
-            navigation.navigate(ScreensName.verifyEmail);
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            width: "80%",
           }}
         >
-          <Text style={styles.forgotPassword}>Forgot Password?</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              navigation.navigate(ScreensName.verifyEmail);
+            }}
+          >
+            <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          </TouchableOpacity>
+        </View>
 
         <RippleButton
           onPress={handlePress}
@@ -183,10 +194,8 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   forgotPassword: {
-    width: WIDTH * 0.85,
     textAlign: "right",
     fontWeight: "600",
-    transform: [{ translateY: -10 }],
   },
   signinButton: {
     width: WIDTH * 0.85,

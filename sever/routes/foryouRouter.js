@@ -1,11 +1,9 @@
 const express = require("express");
-const router = express.Router();
-const foryouController = require("../controllers/foryouController");
+const foryouRouter = express.Router();
+const { getForyou, getForYouDishType } = require("../controllers/foryouController");
+// Route mới: Lấy danh sách loại món ăn
+foryouRouter.get("/dish-types", getForYouDishType);
+// Route hiện có: Lấy danh sách món ăn đã lọc
+foryouRouter.get("/:userId", getForyou);
 
-// Chỉ giữ route GET / để lấy danh sách món ăn đã lọc
-router.get("/:userId", foryouController.getForyou);
-router.post("/", foryouController.createForyou);
-router.put("/:id", foryouController.updateForyou);
-router.delete("/:id", foryouController.deleteForyou);
-
-module.exports = router;
+module.exports = foryouRouter;
