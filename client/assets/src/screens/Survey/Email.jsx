@@ -54,8 +54,12 @@ const Email = ({ navigation }) => {
             <AntDesignIcon name="left" size={18} color={"#40B491"} />
           </TouchableOpacity>
           <View className="flex-1 items-center">
-            <Text className="text-2xl font-bold text-center mt-4 text-custom-green">Email</Text>
-            <Text className="text-base text-gray-600 mt-1">Please enter your email</Text>
+            <Text className="text-2xl font-bold text-center mt-4 text-custom-green">
+              Email Contact
+            </Text>
+            <Text className="text-base text-gray-600 mt-1">
+              Please enter your email can contact
+            </Text>
           </View>
           <View className="w-10" />
         </View>

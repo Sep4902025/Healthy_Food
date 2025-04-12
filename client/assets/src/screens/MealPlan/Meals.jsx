@@ -33,6 +33,13 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
 
   const dataLoaded = useRef(false);
 
+  // Thêm disableActionsReason
+  const disableActionsReason = isMealPlanExpired
+    ? "Meal plan has expired"
+    : isMealPlanPaused
+    ? "Meal plan is paused"
+    : null;
+
   useEffect(() => {
     const fetchData = async () => {
       if (!dataLoaded.current) {
@@ -136,6 +143,10 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
 
   const handleRemoveMealFromDay = (mealId) => {
     if (!mealId) return;
+    if (isMealPlanExpired || isMealPlanPaused) {
+      ShowToast("error", `❌ Cannot delete meal: ${disableActionsReason}`);
+      return;
+    }
     setMealToDelete(mealId);
     setShowConfirmDialog(true);
   };
@@ -194,8 +205,7 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
 
   const handleOpenAddDishModal = () => {
     if (isMealPlanExpired || isMealPlanPaused) {
-      ShowToast("error", "❌ Cannot add dish: MealPlan is expired or paused.");
-      return;
+      return; // Không mở modal, lý do được hiển thị qua disableActionsReason
     }
     setIsAddingDish(true);
     setShowAddDishModal(true);
@@ -203,8 +213,7 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
 
   const handleOpenAddMealModal = () => {
     if (isMealPlanExpired || isMealPlanPaused) {
-      ShowToast("error", "❌ Cannot add meal: MealPlan is expired or paused.");
-      return;
+      return; // Không mở modal, lý do được hiển thị qua disableActionsReason
     }
     setShowAddMealModal(true);
   };
@@ -345,15 +354,20 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
                 <Text className="text-blue-600 ml-2">Back</Text>
               </TouchableOpacity>
               {mealPlanType === "custom" && (
-                <TouchableOpacity
-                  className={`px-4 py-2 rounded ${
-                    isMealPlanExpired || isMealPlanPaused ? "bg-gray-400" : "bg-blue-600"
-                  }`}
-                  onPress={handleOpenAddMealModal}
-                  disabled={isMealPlanExpired || isMealPlanPaused}
-                >
-                  <Text className="text-white">Add Meal</Text>
-                </TouchableOpacity>
+                <View className="flex-row items-center">
+                  {(isMealPlanExpired || isMealPlanPaused) && (
+                    <Text className="text-red-500 text-xs mr-2">{disableActionsReason}</Text>
+                  )}
+                  <TouchableOpacity
+                    className={`px-4 py-2 rounded ${
+                      isMealPlanExpired || isMealPlanPaused ? "bg-gray-400" : "bg-blue-600"
+                    }`}
+                    onPress={handleOpenAddMealModal}
+                    disabled={isMealPlanExpired || isMealPlanPaused}
+                  >
+                    <Text className="text-white">Add Meal</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
             <Text className="text-xl font-semibold mb-4">Meals on {date}</Text>
@@ -376,17 +390,22 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
                 <Ionicons name="arrow-back" size={16} color="#2563eb" />
                 <Text className="text-blue-600 ml-2">Back</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                className={`${
-                  isAddingDish || isMealPlanExpired || isMealPlanPaused
-                    ? "bg-gray-400"
-                    : "bg-blue-600"
-                } px-4 py-2 rounded`}
-                onPress={handleOpenAddDishModal}
-                disabled={isAddingDish || isMealPlanExpired || isMealPlanPaused}
-              >
-                <Text className="text-white">{isAddingDish ? "Adding..." : "Add Dish"}</Text>
-              </TouchableOpacity>
+              <View className="flex-row items-center">
+                {(isMealPlanExpired || isMealPlanPaused) && !isAddingDish && (
+                  <Text className="text-red-500 text-xs mr-2">{disableActionsReason}</Text>
+                )}
+                <TouchableOpacity
+                  className={`${
+                    isAddingDish || isMealPlanExpired || isMealPlanPaused
+                      ? "bg-gray-400"
+                      : "bg-blue-600"
+                  } px-4 py-2 rounded`}
+                  onPress={handleOpenAddDishModal}
+                  disabled={isAddingDish || isMealPlanExpired || isMealPlanPaused}
+                >
+                  <Text className="text-white">{isAddingDish ? "Adding..." : "Add Dish"}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <View className="mb-4">
               <Text className="text-xl font-semibold">Meal {selectedMeal.mealName}</Text>
@@ -396,7 +415,12 @@ const Meals = ({ mealPlanId, mealDayId, onBack, onNutritionChange, date }) => {
             <FlatList
               data={selectedMeal.dishes}
               renderItem={({ item }) => (
-                <DishCard dish={item} onDelete={handleDeleteDish} deletingDishId={deletingDishId} />
+                <DishCard
+                  dish={item}
+                  onDelete={handleDeleteDish}
+                  deletingDishId={deletingDishId}
+                  disableDelete={isMealPlanExpired || isMealPlanPaused} // Truyền disableDelete
+                />
               )}
               keyExtractor={(item, index) => index.toString()}
               contentContainerStyle={{ paddingBottom: 80 }}

@@ -1,9 +1,27 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
+
 import { useTheme } from "../contexts/ThemeContext";
+
+import { ScreensName } from "../constants/ScreensName";
+import { useSelector } from "react-redux";
+import { userSelector } from "../redux/selectors/selector";
 
 const SurveyScreen = ({ navigation }) => {
   const { theme } = useTheme();
+  const user = useSelector(userSelector);
+
+  // Kiểm tra userPreferenceId và điều hướng nếu đã tồn tại
+  useEffect(() => {
+    if (user?.userPreferenceId) {
+      navigation.navigate(ScreensName.forYou); // Sử dụng replace thay vì navigate để tránh quay lại SurveyScreen
+    }
+  }, [user, navigation]);
+
+  // Nếu user đã có userPreferenceId, không render form khảo sát
+  if (user?.userPreferenceId) {
+    return null; // Trả về null để không render gì trong khi đang điều hướng
+  }
 
   const handleStartSurveyScreen = () => {
     navigation.navigate("Name");
@@ -25,8 +43,8 @@ const SurveyScreen = ({ navigation }) => {
           style={{ color: theme.textColor }}
           className="text-lg font-medium text-center leading-7"
         >
-          Take a quick survey to help us personalize your recommendations.It also helps us calculate
-          nutrition targets tailored just for you.
+          Take a quick survey to help us personalize your recommendations. It also helps us
+          calculate nutrition targets tailored just for you.
         </Text>
       </View>
       <Text

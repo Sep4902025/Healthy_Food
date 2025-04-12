@@ -243,10 +243,8 @@ const MealPlanAimChart = ({
       </View>
       <Modal visible={showModal} transparent animationType="fade">
         <View className="flex-1 justify-center items-center bg-black/50">
-          <View className="bg-surface dark:bg-dark-surface p-6 rounded-lg max-w-md shadow-lg">
-            <Text className="text-lg font-semibold text-text dark:text-dark-text mb-4">
-              Goal Information
-            </Text>
+          <View className="bg-white dark:bg-dark-surface p-6 rounded-lg max-w-md shadow-lg">
+            <Text className="text-lg font-bold text-custom-green mb-4">Goal Information</Text>
             <View className="space-y-3">
               <View>
                 <Text className="text-text dark:text-dark-text">
@@ -267,7 +265,7 @@ const MealPlanAimChart = ({
               {weightToLose > 0 && (
                 <Text className="text-text dark:text-dark-text">
                   To achieve your goal of losing {weightToLose} kg, maintain a proper diet for about{" "}
-                  <Text className="font-bold">{weeksToGoal} weeks</Text>.
+                  <Text className="font-bold text-blue-500">{weeksToGoal} weeks</Text>.
                 </Text>
               )}
               <Text className="text-text dark:text-dark-text">
@@ -277,24 +275,28 @@ const MealPlanAimChart = ({
               <View>
                 <Text className="font-bold text-text dark:text-dark-text">Nutrition Targets:</Text>
                 <Text className="text-text dark:text-dark-text">
-                  Calories: {nutritionTargets.calories.target} kcal (±10%)
+                  <Text className="font-bold">Calories: </Text>
+                  {nutritionTargets.calories.target} kcal (±10%)
                 </Text>
                 <Text className="text-text dark:text-dark-text">
-                  Protein: {nutritionTargets.protein.target}g (±15g)
+                  <Text className="font-bold text-red-500">Protein: </Text>
+                  {nutritionTargets.protein.target}g (±15g)
                 </Text>
                 <Text className="text-text dark:text-dark-text">
-                  Carbs: {nutritionTargets.carbs.target}g (±15g)
+                  <Text className="font-bold text-blue-500">Carbs: </Text>
+                  {nutritionTargets.carbs.target}g (±15g)
                 </Text>
                 <Text className="text-text dark:text-dark-text">
-                  Fat: {nutritionTargets.fat.target}g (±10g)
+                  <Text className="font-bold text-yellow-500">Fat: </Text>
+                  {nutritionTargets.fat.target}g (±10g)
                 </Text>
               </View>
             </View>
             <TouchableOpacity
-              className="mt-4 bg-primary dark:bg-dark-primary py-3 rounded-lg"
+              className="mt-4 bg-custom-green w-full px-4 py-2 rounded-lg mx-auto"
               onPress={handleCloseModal}
             >
-              <Text className="text-white text-center font-medium">Close</Text>
+              <Text className="text-white text-center font-semibold">Close</Text>
             </TouchableOpacity>
           </View>
         </View>

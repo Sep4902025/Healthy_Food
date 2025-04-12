@@ -32,11 +32,10 @@ function Home({ navigation }) {
   const [loading, setLoading] = useState({ initial: true, more: false });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const limit = 10; 
+  const limit = 10;
 
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
-  console.log("USEREDUC", user);
 
   const dispatch = useDispatch();
   const season = useCurrentSeason() || "spring";

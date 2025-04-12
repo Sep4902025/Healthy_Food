@@ -229,24 +229,39 @@ class MealPlanService {
   }
 
   static async getUnpaidMealPlanForUser(userId) {
-    const mealPlans = await MealPlan.find({
-      userId,
-      isBlock: true,
-      isDelete: false,
-    });
+    try {
+      const mealPlans = await MealPlan.find({
+        userId,
+        isBlock: true,
+        isDelete: false,
+      });
 
-    if (!mealPlans || mealPlans.length === 0) {
-      throw new AppError("No unpaid meal plans found for this user", 404);
+      // Trả về mảng rỗng nếu không tìm thấy
+      if (mealPlans.length === 0) {
+        return {
+          status: "success",
+          data: [],
+        };
+      }
+
+      // Map dữ liệu trả về
+      const result = mealPlans.map((mealPlan) => ({
+        _id: mealPlan._id,
+        title: mealPlan.title,
+        price: mealPlan.price,
+        duration: mealPlan.duration,
+        startDate: mealPlan.startDate,
+        isBlock: mealPlan.isBlock,
+      }));
+
+      return {
+        status: "success",
+        data: result,
+      };
+    } catch (error) {
+      // Xử lý lỗi bất ngờ
+      throw new AppError(error.message || "Failed to fetch unpaid meal plans", error.status || 500);
     }
-
-    return mealPlans.map((mealPlan) => ({
-      _id: mealPlan._id,
-      title: mealPlan.title,
-      price: mealPlan.price,
-      duration: mealPlan.duration,
-      startDate: mealPlan.startDate,
-      isBlock: mealPlan.isBlock,
-    }));
   }
 
   static async getMealPlanDetails(mealPlanId) {

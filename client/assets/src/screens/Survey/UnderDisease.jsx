@@ -145,7 +145,7 @@ const UnderDisease = ({ navigation }) => {
           className="w-full bg-custom-green py-3 rounded-lg mt-6"
           onPress={handleNext}
         >
-          <Text className="text-white text-lg font-semibold text-center">Tiếp theo</Text>
+          <Text className="text-white text-lg font-semibold text-center">Next</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

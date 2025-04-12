@@ -46,7 +46,7 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
 
   return (
     <Modal visible={isOpen} transparent animationType="slide">
-      <View className="flex-1 justify-center bg-black/50">
+      <View className="flex-1 items-center justify-center bg-black/50">
         <View className="bg-surface dark:bg-dark-surface p-4 m-4 rounded-lg max-w-md">
           <Text className="text-xl font-bold text-text dark:text-dark-text mb-4">
             Nutrition Advice

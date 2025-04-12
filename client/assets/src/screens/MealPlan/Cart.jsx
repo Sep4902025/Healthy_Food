@@ -35,25 +35,13 @@ const Cart = ({ visible, onClose, mealPlanCount }) => {
         setLoading(true);
         try {
           const response = await mealPlanService.getUnpaidMealPlanForUser(user._id);
-          console.log("Response from getUnpaidMealPlanForUser:", response);
           if (response.success) {
             setMealPlans(response.data);
           } else {
             setMealPlans([]);
-            Toast.show({
-              type: "error",
-              text1: "Error",
-              text2: "Failed to load meal plans",
-            });
           }
         } catch (error) {
-          console.error("Error fetching unpaid meal plans:", error);
           setMealPlans([]);
-          Toast.show({
-            type: "error",
-            text1: "Error",
-            text2: "Failed to load meal plans",
-          });
         } finally {
           setLoading(false);
         }
@@ -64,25 +52,14 @@ const Cart = ({ visible, onClose, mealPlanCount }) => {
       if (user && visible) {
         try {
           const response = await mealPlanService.getPaymentHistory(user._id, 1, 5);
-          console.log("Response from getPaymentHistory:", response);
           if (response.success) {
             setPaymentHistory(response.data);
           } else {
             setPaymentHistory([]);
-            Toast.show({
-              type: "error",
-              text1: "Error",
-              text2: "Failed to load payment history",
-            });
           }
         } catch (error) {
           console.error("Error fetching payment history:", error);
           setPaymentHistory([]);
-          Toast.show({
-            type: "error",
-            text1: "Error",
-            text2: "Failed to load payment history",
-          });
         }
       }
     };

@@ -172,16 +172,12 @@ const MealPlan = ({ navigation }) => {
                   <View className="flex-row items-center gap-2">
                     <View
                       className={`px-3 py-1 rounded-full ${
-                        userMealPlan.isPause
-                          ? "bg-inactive-status-bg dark:bg-dark-inactive-status-bg"
-                          : "bg-active-status-bg dark:bg-dark-active-status-bg"
+                        userMealPlan.isPause ? "bg-yellow-400" : "bg-custom-green"
                       }`}
                     >
                       <Text
                         className={`text-sm font-medium ${
-                          userMealPlan.isPause
-                            ? "text-inactive-status-text dark:text-dark-inactive-status-text"
-                            : "text-active-status-text dark:text-dark-active-status-text"
+                          userMealPlan.isPause ? "text-red-400" : "text-white"
                         }`}
                       >
                         {userMealPlan.isPause ? "Inactive" : "Active"}
@@ -208,12 +204,12 @@ const MealPlan = ({ navigation }) => {
                     <TouchableOpacity
                       onPress={handleDeleteMealPlan}
                       disabled={processingAction}
-                      className={`px-3 py-2 rounded-lg flex-row items-center gap-1 bg-red-600 dark:bg-red-700 ${
+                      className={`px-3 py-2 rounded-lg flex-row items-center gap-1 bg-red-500 dark:bg-red-700 ${
                         processingAction ? "opacity-50" : "opacity-100"
                       }`}
                     >
-                      <MaterialIcons name="delete" size={14} color="white" />
-                      <Text className="text-white text-xs">Delete</Text>
+                      {/* <MaterialIcons name="delete" size={14} color="white" /> */}
+                      <Text className="text-white text-xs">🗑️ Delete</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
