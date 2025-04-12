@@ -42,6 +42,7 @@ import PhoneNumber from "../screens/Survey/PhoneNumber";
 import Name from "../screens/Survey/Name";
 import SurveyScreen from "../screens/SurveyScreen";
 import PaymentScreen from "../screens/MealPlan/PaymentScreen";
+import PaymentStatusScreen from "../screens/MealPlan/PaymentStatusScreen";
 
 export const ScreensMap = [
   {
@@ -332,6 +333,13 @@ export const ScreensMap = [
   {
     name: ScreensName.payment,
     component: PaymentScreen,
+    options: {
+      tabBarButton: () => null,
+    },
+  },
+  {
+    name: ScreensName.paymentStatus,
+    component: PaymentStatusScreen,
     options: {
       tabBarButton: () => null,
     },

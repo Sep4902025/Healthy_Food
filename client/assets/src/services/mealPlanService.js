@@ -253,17 +253,16 @@ const mealPlanService = {
   },
 
   // Tạo yêu cầu thanh toán cho meal plan
-  createMealPlanPayment: async (userId, mealPlanId, amount, clientType = "web") => {
+  createMealPlanPayment: async (userId, mealPlanId, amount) => {
     try {
-      const response = await axiosInstance.post(`/payment/vnpay/pay`, {
+      const response = await axiosInstance.post(`/payment/vnpay/app/pay`, {
         userId,
         mealPlanId,
         amount,
-        clientType, // Thêm clientType vào body
       });
       return response.data;
     } catch (error) {
-      console.error("Error in createMealPlanPayment:", error);
+      console.error("Error in createMealPlanPayment:", error.response?.data || error.message);
       return { success: false, message: error.message };
     }
   },
@@ -271,15 +270,27 @@ const mealPlanService = {
   // Kiểm tra trạng thái thanh toán của meal plan
   checkPaymentStatus: async (paymentId) => {
     try {
+      console.log(`Fetching payment status for paymentId: ${paymentId}`);
       const response = await axiosInstance.get(`/payment/status/${paymentId}`);
       console.log(`Response for payment ${paymentId}:`, response.data);
+
       if (response.data.status === "success") {
         const paymentData = response.data.data;
         console.log("🔍 Trạng thái thanh toán:", paymentData);
-        if (!paymentData.status || !paymentData.paymentDate || !paymentData.amount) {
+
+        // Kiểm tra các trường bắt buộc
+        if (!paymentData.status || !paymentData.amount) {
           console.warn("⚠️ Payment data thiếu trường cần thiết:", paymentData);
+          return {
+            success: false,
+            message: "Dữ liệu thanh toán không hợp lệ",
+          };
         }
-        return { success: true, data: paymentData };
+
+        return {
+          success: true,
+          data: paymentData,
+        };
       } else {
         return {
           success: false,
@@ -294,6 +305,29 @@ const mealPlanService = {
       return {
         success: false,
         message: "Không thể kiểm tra trạng thái thanh toán!",
+      };
+    }
+  },
+  // Hàm mới: Gọi vnp_ReturnUrl_App để lấy kết quả thanh toán
+  checkPaymentReturnUrl: async (returnUrl) => {
+    try {
+      const response = await axiosInstance.get(returnUrl, {
+        responseType: "text", // Vì backend trả về HTML
+      });
+      console.log(`Response from vnp_ReturnUrl_App:`, response.data);
+      // Kiểm tra HTML trả về để xác định trạng thái
+      const isSuccess = response.data.includes("Thành công");
+      return {
+        success: isSuccess,
+        message: isSuccess
+          ? "Thanh toán hoàn tất. Đang quay lại..."
+          : "Thanh toán không thành công.",
+      };
+    } catch (error) {
+      console.error("❌ Lỗi khi gọi vnp_ReturnUrl_App:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: "Không thể kiểm tra kết quả thanh toán.",
       };
     }
   },

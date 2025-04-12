@@ -44,8 +44,8 @@ exports.getAllPayments = async () => {
 
   return { totalRevenue, paymentStats, revenueByYear, revenueByMonth };
 };
-
-exports.createPaymentUrl = async (userId, mealPlanId, amount, clientIp, clientType = "web") => {
+// Helper function for common payment validation and creation
+const createPayment = async (userId, mealPlanId, amount) => {
   if (!userId || !mealPlanId || !amount) {
     throw Object.assign(new Error("Thiếu userId, mealPlanId hoặc amount"), { status: 400 });
   }
@@ -85,10 +85,11 @@ exports.createPaymentUrl = async (userId, mealPlanId, amount, clientIp, clientTy
     await payment.save();
   }
 
-  // Chọn vnp_ReturnUrl dựa trên clientType
-  const vnp_ReturnUrl =
-    clientType === "app" ? VNPAY_CONFIG.vnp_ReturnUrl_App : VNPAY_CONFIG.vnp_ReturnUrl_Web;
+  return payment;
+};
 
+// Helper function for generating VNPAY payment URL
+const generatePaymentUrl = (payment, amount, clientIp, vnp_ReturnUrl, mealPlanId) => {
   const vnp_Params = {
     vnp_Version: "2.1.0",
     vnp_Command: "pay",
@@ -99,7 +100,7 @@ exports.createPaymentUrl = async (userId, mealPlanId, amount, clientIp, clientTy
     vnp_OrderInfo: `Thanh toán MealPlan: ${mealPlanId}`,
     vnp_OrderType: "180000",
     vnp_Locale: "vn",
-    vnp_ReturnUrl: `${vnp_ReturnUrl}?clientType=${clientType}`, // Thêm clientType vào query
+    vnp_ReturnUrl, // Use the provided vnp_ReturnUrl directly
     vnp_IpAddr: clientIp,
     vnp_CreateDate: moment().format("YYYYMMDDHHmmss"),
   };
@@ -117,17 +118,14 @@ exports.createPaymentUrl = async (userId, mealPlanId, amount, clientIp, clientTy
     .digest("hex");
 
   sortedParams["vnp_SecureHash"] = secureHash;
-  const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(sortedParams).toString()}`;
-
-  return { paymentUrl, paymentId: payment._id };
+  return `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(sortedParams).toString()}`;
 };
 
-exports.vnpayReturn = async (vnp_Params) => {
+// Helper function for handling VNPAY return logic WEB
+const handleVnpayReturn = async (vnp_Params, baseUrl) => {
   const secureHash = vnp_Params["vnp_SecureHash"];
-  const clientType = vnp_Params["clientType"] || "web"; // Lấy clientType từ query
   delete vnp_Params["vnp_SecureHash"];
   delete vnp_Params["vnp_SecureHashType"];
-  delete vnp_Params["clientType"]; // Xóa clientType khỏi params để không ảnh hưởng đến hash
 
   const sortedParams = Object.fromEntries(
     Object.entries(vnp_Params)
@@ -140,9 +138,8 @@ exports.vnpayReturn = async (vnp_Params) => {
     .update(Buffer.from(signData, "utf-8"))
     .digest("hex");
 
-  const baseUrl = clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
   if (secureHash !== signed) {
-    return `${baseUrl}?status=error&message=Invalid+signature`;
+    return `${baseUrl}/mealplan?status=error&message=Invalid+signature`;
   }
 
   const transactionNo = vnp_Params["vnp_TransactionNo"];
@@ -156,7 +153,7 @@ exports.vnpayReturn = async (vnp_Params) => {
     { new: true }
   );
   if (!payment) {
-    return `${baseUrl}?status=error&message=Payment+not+found`;
+    return `${baseUrl}/mealplan?status=error&message=Payment+not+found`;
   }
 
   if (status === "success") {
@@ -166,7 +163,7 @@ exports.vnpayReturn = async (vnp_Params) => {
       { new: true }
     );
     if (!updatedMealPlan) {
-      return `${baseUrl}?status=error&message=MealPlan+not+found`;
+      return `${baseUrl}/mealplan?status=error&message=MealPlan+not+found`;
     }
 
     const oldUserMealPlan = await UserMealPlan.findOne({ userId: payment.userId });
@@ -189,9 +186,282 @@ exports.vnpayReturn = async (vnp_Params) => {
     });
   }
 
-  return `${baseUrl}?status=${status}&message=${
+  return `${baseUrl}/mealplan?status=${status}&message=${
     status === "success" ? "Thanh+toán+thành+công" : "Thanh+toán+thất+bại"
   }`;
+};
+// Helper function for handling VNPAY return logic for APP
+exports.handleVnpayReturnApp = async (vnp_Params) => {
+  try {
+    console.log("vnp_Params in handleVnpayReturnApp:", vnp_Params);
+
+    if (!vnp_Params || typeof vnp_Params !== "object") {
+      throw new Error("Invalid VNPay parameters");
+    }
+
+    const secureHash = vnp_Params["vnp_SecureHash"];
+    if (!secureHash) {
+      throw new Error("vnp_SecureHash is missing");
+    }
+
+    delete vnp_Params["vnp_SecureHash"];
+    delete vnp_Params["vnp_SecureHashType"];
+
+    const sortedParams = Object.fromEntries(
+      Object.entries(vnp_Params)
+        .map(([key, value]) => [key, String(value || "").trim()])
+        .sort()
+    );
+    const signData = new URLSearchParams(sortedParams).toString();
+    console.log("Sign data:", signData);
+
+    const signed = crypto
+      .createHmac("sha512", VNPAY_CONFIG.vnp_HashSecret)
+      .update(Buffer.from(signData, "utf-8"))
+      .digest("hex");
+    console.log("Computed secureHash:", signed);
+    console.log("Provided secureHash:", secureHash);
+
+    if (secureHash !== signed) {
+      throw new Error("Invalid signature");
+    }
+
+    const transactionNo = vnp_Params["vnp_TransactionNo"];
+    const paymentId = vnp_Params["vnp_TxnRef"];
+    const responseCode = vnp_Params["vnp_ResponseCode"];
+    const status = responseCode === "00" ? "success" : "failed";
+
+    const payment = await Payment.findByIdAndUpdate(
+      paymentId,
+      { transactionNo, status, paymentDate: new Date(), paymentDetails: vnp_Params },
+      { new: true }
+    );
+    if (!payment) {
+      throw new Error(`Payment not found for paymentId: ${paymentId}`);
+    }
+
+    if (status === "success") {
+      const updatedMealPlan = await MealPlan.findByIdAndUpdate(
+        payment.mealPlanId,
+        { paymentId: payment._id, isBlock: false },
+        { new: true }
+      );
+      if (!updatedMealPlan) {
+        throw new Error(`MealPlan not found for mealPlanId: ${payment.mealPlanId}`);
+      }
+
+      const oldUserMealPlan = await UserMealPlan.findOne({ userId: payment.userId });
+      if (oldUserMealPlan) {
+        oldUserMealPlan.mealPlanId = payment.mealPlanId;
+        oldUserMealPlan.startDate = new Date();
+        await oldUserMealPlan.save();
+      } else {
+        await UserMealPlan.create({
+          userId: payment.userId,
+          mealPlanId: payment.mealPlanId,
+          startDate: new Date(),
+        });
+      }
+
+      await Payment.deleteMany({
+        _id: { $ne: payment._id },
+        mealPlanId: payment.mealPlanId,
+        status: "pending",
+      });
+    }
+
+    return {
+      success: true,
+      status: status,
+      message:
+        status === "success"
+          ? "Thanh toán thành công! Vui lòng quay lại ứng dụng để tiếp tục."
+          : "Thanh toán thất bại. Vui lòng quay lại ứng dụng và thử lại.",
+    };
+  } catch (error) {
+    console.error("Error in handleVnpayReturnApp:", error);
+    return {
+      success: false,
+      status: "error",
+      message: error.message || "Đã có lỗi xảy ra khi xử lý thanh toán.",
+    };
+  }
+};
+// Web-specific payment services
+exports.createPaymentUrlWeb = async (userId, mealPlanId, amount, clientIp) => {
+  const payment = await createPayment(userId, mealPlanId, amount);
+  const paymentUrl = generatePaymentUrl(
+    payment,
+    amount,
+    clientIp,
+    VNPAY_CONFIG.vnp_ReturnUrl_Web, // e.g., http://localhost:8080/api/v1/payment/vnpay/return
+    mealPlanId
+  );
+  return { paymentUrl, paymentId: payment._id };
+};
+
+exports.vnpayReturnWeb = async (vnp_Params) => {
+  return handleVnpayReturn(vnp_Params, process.env.ADMIN_WEB_URL); // e.g., http://localhost:3000
+};
+
+// App-specific payment services
+exports.createPaymentUrlApp = async (userId, mealPlanId, amount, clientIp) => {
+  const payment = await createPayment(userId, mealPlanId, amount);
+  const paymentUrl = generatePaymentUrl(
+    payment,
+    amount,
+    clientIp,
+    VNPAY_CONFIG.vnp_ReturnUrl_App, // e.g., http://192.168.1.70:8080/api/v1/payment/vnpay/app/return
+    mealPlanId
+  );
+  return { paymentUrl, paymentId: payment._id };
+};
+// xử lí view trên trình duyệt
+exports.vnpayReturnApp = async (req, res) => {
+  const vnp_Params = req.query && Object.keys(req.query).length > 0 ? req.query : req.body;
+  console.log("Received VNPay callback:", vnp_Params);
+
+  if (!vnp_Params || Object.keys(vnp_Params).length === 0) {
+    console.error("No parameters received from VNPay");
+    return res.status(400).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment Error</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            text-align: center;
+          }
+          .container {
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          }
+          h1 {
+            color: #dc3545;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Lỗi</h1>
+          <p>Không nhận được tham số từ VNPay. Vui lòng thử lại.</p>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+
+  try {
+    const result = await handleVnpayReturnApp(vnp_Params);
+    console.log("Result from handleVnpayReturnApp:", result);
+
+    if (!result || typeof result !== "object") {
+      throw new Error("Invalid result from handleVnpayReturnApp");
+    }
+
+    const { status, message } = result; // Dòng 329: Lỗi xảy ra tại đây
+
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment Result</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            text-align: center;
+          }
+          .container {
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          }
+          h1 {
+            color: ${status === "success" ? "#28a745" : "#dc3545"};
+          }
+          button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+          }
+          button:hover {
+            background-color: #0056b3;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>${status === "success" ? "Thành công!" : "Thất bại"}</h1>
+          <p>${message}</p>
+          <button onclick="window.location.href='healthyfood://payment'">Quay lại ứng dụng</button>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error("Error in vnpayReturnApp:", error);
+    res.status(500).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment Error</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            text-align: center;
+          }
+          .container {
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          }
+          h1 {
+            color: #dc3545;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Lỗi</h1>
+          <p>Đã có lỗi xảy ra: ${error.message}. Vui lòng quay lại ứng dụng và thử lại.</p>
+        </div>
+      </body>
+      </html>
+    `);
+  }
 };
 
 exports.getPaymentHistory = async (userId, page, limit) => {
@@ -226,21 +496,39 @@ exports.getPaymentHistory = async (userId, page, limit) => {
     pagination: { total: totalPayments, page, limit, totalPages: Math.ceil(totalPayments / limit) },
   };
 };
-
+//FIX APP
 exports.checkPaymentStatus = async (paymentId) => {
-  const payment = await Payment.findById(paymentId);
-  if (!payment) {
-    throw Object.assign(new Error("Payment not found"), { status: 404 });
+  try {
+    console.log("Checking payment status for paymentId:", paymentId);
+    const payment = await Payment.findById(paymentId).populate("mealPlanId");
+    console.log("Payment found:", payment);
+
+    if (!payment) {
+      throw Object.assign(new Error("Payment not found"), { status: 404 });
+    }
+
+    if (!payment.status) {
+      console.warn("Payment status is missing for payment:", payment);
+      payment.status = "pending"; // Gán giá trị mặc định nếu thiếu
+      await payment.save();
+    }
+
+    const paymentData = {
+      paymentId: payment._id.toString(), // Đảm bảo là string để FE dễ xử lý
+      status: payment.status, // "pending", "success", hoặc "failed"
+      amount: payment.amount, // Số tiền
+      mealPlanId: payment.mealPlanId?._id?.toString() || payment.mealPlanId?.toString() || null, // Đảm bảo mealPlanId là string hoặc null
+      mealPlanName: payment.mealPlanId?.title || payment.mealPlanName || "Untitled Meal Plan", // Đảm bảo luôn có tên
+      createdAt: payment.createdAt, // Thời gian tạo
+      paymentDate: payment.paymentDate || null, // Thời gian thanh toán, có thể là null
+    };
+
+    console.log("Payment data prepared:", paymentData);
+    return paymentData;
+  } catch (error) {
+    console.error("Error in checkPaymentStatus:", error);
+    throw error; // Ném lỗi để controller xử lý
   }
-  return {
-    paymentId: payment._id,
-    status: payment.status,
-    amount: payment.amount,
-    mealPlanId: payment.mealPlanId,
-    mealPlanName: payment.mealPlanName,
-    createdAt: payment.createdAt,
-    paymentDate: payment.paymentDate,
-  };
 };
 
 exports.getPaymentById = async (paymentId, userId) => {

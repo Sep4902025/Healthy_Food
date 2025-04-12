@@ -41,32 +41,6 @@ export default function App() {
     Aleo_700Bold_Italic,
   });
 
-  const handleDeepLink = (event) => {
-    const { path, queryParams } = Linking.parse(event.url);
-    console.log("Deep link received:", event.url, path, queryParams);
-
-    if (path === "payment") {
-      const { status, message } = queryParams;
-      Toast.show({
-        type: status === "success" ? "success" : "error",
-        text1: status === "success" ? "Payment Successful" : "Payment Failed",
-        text2: message || "Please try again.",
-      });
-    }
-  };
-
-  useEffect(() => {
-    Linking.addEventListener("url", handleDeepLink);
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleDeepLink({ url });
-      }
-    });
-    return () => {
-      Linking.removeEventListener("url", handleDeepLink);
-    };
-  }, []);
-
   const toastConfig = {
     success: ({ text1, text2, props }) => (
       <View style={{ backgroundColor: "green", padding: 10, borderRadius: 5 }}>

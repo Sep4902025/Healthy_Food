@@ -7,9 +7,9 @@ exports.createDish = async (req, res) => {
     const newDish = await dishService.createDish(req.body);
     res.status(201).json({ status: "success", data: newDish });
   } catch (error) {
-    res.status(error.status || 400).json({ 
-      status: "fail", 
-      message: error.message 
+    res.status(error.status || 400).json({
+      status: "fail",
+      message: error.message,
     });
   }
 };
@@ -31,6 +31,26 @@ exports.getAllDishes = async (req, res) => {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
+// getDishesBySeason
+exports.getDishesBySeason = async (req, res) => {
+  try {
+    const validSeasons = ["Spring", "Summer", "Fall", "Winter"];
+    const { season } = req.query;
+
+    // Validate season parameter
+    if (!season || !validSeasons.includes(season)) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Invalid or missing season. Must be one of: Spring, Summer, Fall, Winter",
+      });
+    }
+
+    const result = await dishService.getDishesBySeason(req.query);
+    res.status(200).json({ status: "success", data: result });
+  } catch (error) {
+    res.status(500).json({ status: "fail", message: error.message });
+  }
+};
 
 exports.getAllDishesForNutri = async (req, res) => {
   try {
@@ -44,7 +64,9 @@ exports.getAllDishesForNutri = async (req, res) => {
     const user = await UserModel.findById(decoded.id);
 
     if (!user || user.role !== "nutritionist") {
-      return res.status(403).json({ status: "fail", message: "Access restricted to nutritionists only" });
+      return res
+        .status(403)
+        .json({ status: "fail", message: "Access restricted to nutritionists only" });
     }
 
     const result = await dishService.getAllDishesForNutri(req.query);
@@ -86,7 +108,9 @@ const Dish = require("../models/Dish");
 exports.deleteDish = async (req, res) => {
   try {
     const updatedDish = await dishService.deleteDish(req.params.dishId);
-    res.status(200).json({ status: "success", message: "Dish has been soft deleted", data: updatedDish });
+    res
+      .status(200)
+      .json({ status: "success", message: "Dish has been soft deleted", data: updatedDish });
   } catch (error) {
     res.status(error.status || 500).json({ status: "fail", message: error.message });
   }

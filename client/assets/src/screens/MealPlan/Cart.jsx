@@ -115,14 +115,12 @@ const Cart = ({ visible, onClose, mealPlanCount }) => {
         userId: user._id,
         mealPlanId: mealPlan._id,
         amount: mealPlan.price,
-        clientType: "app",
       });
 
       const response = await mealPlanService.createMealPlanPayment(
         user._id,
         mealPlan._id,
-        mealPlan.price,
-        "app"
+        mealPlan.price
       );
 
       console.log("Response from createMealPlanPayment:", response);
@@ -135,6 +133,7 @@ const Cart = ({ visible, onClose, mealPlanCount }) => {
         });
 
         const paymentId = response.paymentId;
+        console.log("Payment URL:", response.paymentUrl); // Debug the payment URL
 
         const supported = await Linking.canOpenURL(response.paymentUrl);
         if (supported) {
@@ -149,8 +148,9 @@ const Cart = ({ visible, onClose, mealPlanCount }) => {
         }
 
         onClose();
-        navigation.navigate("PaymentStatus", { paymentId });
+        navigation.navigate(ScreensName.paymentStatus, { paymentId });
       } else {
+        console.error("Payment initiation failed:", response);
         Toast.show({
           type: "error",
           text1: "Error",

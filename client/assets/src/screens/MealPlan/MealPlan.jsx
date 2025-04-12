@@ -138,25 +138,6 @@ const MealPlan = ({ navigation }) => {
     navigation.navigate(ScreensName.survey);
   };
 
-  const handlePayment = async () => {
-    try {
-      const response = await createPayment(
-        user?._id,
-        userMealPlan?._id,
-        userMealPlan?.price || 150000
-      );
-      if (response.status === 200) {
-        Linking.openURL(response?.data?.paymentUrl).catch((err) =>
-          ShowToast("error", "❌ Couldn't load payment page")
-        );
-      } else {
-        ShowToast("error", "❌ Failed to initiate payment");
-      }
-    } catch (error) {
-      ShowToast("error", "❌ An error occurred during payment");
-    }
-  };
-
   if (loading) {
     return (
       <MainLayoutWrapper>
@@ -237,20 +218,7 @@ const MealPlan = ({ navigation }) => {
                   </View>
                 </View>
               </View>
-              {!userMealPlan.paymentId && (
-                <TouchableOpacity
-                  onPress={handlePayment}
-                  disabled={userMealPlan.isPause || isMealPlanExpired}
-                  className={`my-4 py-3 px-6 rounded-lg shadow-sm flex-row items-center justify-center gap-2 ${
-                    userMealPlan.isPause || isMealPlanExpired
-                      ? "bg-gray-400"
-                      : "bg-primary dark:bg-dark-primary"
-                  }`}
-                >
-                  <FontAwesomeIcon name="credit-card" size={16} color="white" />
-                  <Text className="text-white text-base font-bold">Checkout & Purchase Plan</Text>
-                </TouchableOpacity>
-              )}
+
               {userMealPlan._id && (
                 <View className="mb-4 pt-4">
                   {user.userPreferenceId ? (

@@ -37,7 +37,6 @@ function Header() {
             setMealPlanCount(0);
           }
         } catch (error) {
-          console.error("Error fetching unpaid meal plans:", error);
           setMealPlanCount(0);
         }
       };
