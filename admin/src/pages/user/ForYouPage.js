@@ -4,7 +4,6 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
-import { DarkModeContext } from "../context/DarkModeContext";
 import UserService from "../../services/user.service";
 import { useSelector } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
@@ -38,7 +37,6 @@ const FALLBACK_IMAGES = {
 
 const ForYouPage = () => {
   const sliderRef = useRef(null);
-  const { darkMode } = useContext(DarkModeContext);
   const user = useSelector(selectUser);
   const userId = user?._id;
   const navigate = useNavigate();

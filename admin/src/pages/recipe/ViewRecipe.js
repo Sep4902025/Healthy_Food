@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
+import { Card } from "../../components/ui/card";
 import { useParams } from "react-router-dom";
-import RecipeService from "../../services/recipe.service";
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
-import commentService from "./../../services/comment.service";
 import IngredientService from "../../services/nutritionist/ingredientsServices";
 import DishService from "../../services/nutritionist/dishesServices";
-import { toast } from "react-toastify";
-import Salad from "../../assets/images/Salad.png";
-import FemaleUser from "../../assets/images/FemaleUser.png";
-import { CheckCircle, Timer } from "lucide-react";
-import CommentSection from "./CommentSection";
-import RatingSection from "./RatingSection";
+
+import {Timer } from "lucide-react";
+
 import ReviewSection from "./ReviewSection";
 import recipesService from "../../services/nutritionist/recipesServices";
 

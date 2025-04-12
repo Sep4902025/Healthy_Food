@@ -4,7 +4,6 @@ import { selectAuth } from "../../../store/selectors/authSelectors";
 import mealPlanService from "../../../services/mealPlanServices";
 import MealDays from "./MealDays";
 import CreateMealPlanForm from "./CreateMealPlanForm";
-import ReminderNotification from "../../../components/Reminder/ReminderNotifiaction";
 import MealPlanAimChart from "./MealPlanAimChart";
 
 const MealPlan = () => {
