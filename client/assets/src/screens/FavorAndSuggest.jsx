@@ -29,6 +29,8 @@ import { getIngredient } from "../services/ingredient";
 import commentService from "./../services/commentService";
 import { useNavigation } from "@react-navigation/native";
 import RatingModal from "../components/common/RatingModal";
+import styles from "./../css/FavorAndSuggestCss";
+import { Heart } from "lucide-react-native";
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
 
@@ -46,7 +48,8 @@ function FavorAndSuggest({ route }) {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const navigation = useNavigation();
-  const [comment, setComment] = useState("");
+  const [comment, setComment] = useState([]);
+  const [commentList, setCommentList] = useState([]);
 
   // Load dish from route params
   useEffect(() => {
@@ -63,14 +66,19 @@ function FavorAndSuggest({ route }) {
       setLoginModalVisible(true);
       return;
     }
-  
+
     try {
-      var comment = await commentService.addComment(dish._id,commentText,user._id);
-      if (!comment.success) {
-        Alert.alert("Error", comment.message || "Failed to submit comment.");
+      const res = await commentService.addComment(
+        dish._id,
+        commentText,
+        user._id
+      );
+      if (!res.success) {
+        Alert.alert("Error", res.message || "Failed to submit comment.");
         return;
       }
-      console.log("Comment submitted:", comment);
+      const newComment = res.data;
+      setCommentList((prev) => [newComment, ...prev]);
       setComment("");
       Alert.alert("Success", "Your comment has been submitted!");
     } catch (error) {
@@ -78,7 +86,66 @@ function FavorAndSuggest({ route }) {
       Alert.alert("Error", "Failed to submit comment. Please try again.");
     }
   };
-  
+
+  useEffect(() => {
+    const fetchComments = async () => {
+      if (!dish?._id) return;
+
+      setLoading(true);
+      try {
+        const res = await commentService.getCommentsByDishId(dish._id);
+        let cmtList = res?.data;
+
+        if (Array.isArray(cmtList)) {
+          cmtList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+          // ✅ Gán thêm isLiked cho mỗi comment
+          const commentsWithIsLiked = cmtList.map((comment) => ({
+            ...comment,
+            isLiked: comment.likedBy?.includes(user?._id),
+          }));
+
+          setCommentList(commentsWithIsLiked);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách comment:", error);
+      }
+
+      setLoading(false);
+    };
+
+    fetchComments();
+  }, [dish, user?._id]); // nhớ thêm `user._id` để refetch đúng khi user thay đổi
+
+  const handleLike = async (commentId) => {
+    try {
+      if (!user?._id || !user) {
+        setLoginModalVisible(true);
+        return;
+      }
+
+      const res = await commentService.toggleLikeComment(commentId, user._id);
+
+      if (res.success) {
+        const updatedComments = commentList.map((item) =>
+          item._id === commentId
+            ? {
+                ...item,
+                isLiked: !item.isLiked,
+                likeCount: item.isLiked
+                  ? item.likeCount - 1
+                  : item.likeCount + 1,
+              }
+            : item
+        );
+        setCommentList(updatedComments);
+      } else {
+        console.warn("Toggle like failed:", res.message);
+      }
+    } catch (error) {
+      console.log("Like error", error);
+    }
+  };
 
   const fetchRating = async () => {
     if (!recipe?._id || !user?._id) return;
@@ -241,6 +308,7 @@ function FavorAndSuggest({ route }) {
     const [routes] = useState([
       { key: "ingredient", title: "Ingredient" },
       { key: "instructions", title: "Instructions" },
+      { key: "comments", title: "Comments" },
     ]);
 
     const IngredientsRoute = () => (
@@ -393,9 +461,83 @@ function FavorAndSuggest({ route }) {
       );
     };
 
+    const CommentRatingRoute = () => (
+      <ScrollView
+        style={styles.tabContent}
+        nestedScrollEnabled={true}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>
+          All Comments
+        </Text>
+
+        {/* Danh sách bình luận */}
+        {commentList.length > 0 ? (
+          commentList.map((comment, index) => (
+            <View key={index} style={styles.commentBox}>
+              {/* Avatar + tên người dùng + đánh giá sao */}
+              <View style={styles.commentHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      ...styles.commentUser,
+                      color: theme.greyTextColor,
+                    }}
+                  >
+                    {comment.userId.email || "Anonymous"}
+                  </Text>
+                  {comment.star !== undefined && (
+                    <Text
+                      style={{
+                        ...styles.commentRating,
+                        color: theme.greyTextColor,
+                      }}
+                    >
+                      Rating: {comment.star} ★
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Nội dung bình luận */}
+              <Text
+                style={{ ...styles.commentText, color: theme.greyTextColor }}
+              >
+                {comment.text}
+              </Text>
+
+              {/* Nút like + số lượt like */}
+              <View style={styles.commentFooter}>
+                <TouchableOpacity
+                  style={styles.likeButton}
+                  onPress={() => handleLike(comment._id)}
+                >
+                  <Heart
+                    size={20}
+                    color={comment.isLiked ? "red" : "gray"}
+                    fill={comment.isLiked ? "red" : "none"}
+                  />
+                  <Text style={styles.likeCount}>{comment.likeCount || 0}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
+            No comments yet. Be the first to share your thoughts!
+          </Text>
+        )}
+      </ScrollView>
+    );
+
+    if (loading) {
+      return <Text style={{ padding: 16 }}>Đang tải dữ liệu...</Text>;
+    }
+
     const renderScene = SceneMap({
       ingredient: IngredientsRoute,
       instructions: InstructionsRoute,
+      comments: CommentRatingRoute,
     });
 
     const renderTabBar = (props) => (
@@ -404,7 +546,7 @@ function FavorAndSuggest({ route }) {
         indicatorStyle={{
           backgroundColor: "#4CAF50",
           height: "80%",
-          width: "45%",
+          width: "30%",
           borderRadius: 8,
           marginHorizontal: "2.5%",
           marginVertical: "10%",
@@ -517,7 +659,7 @@ function FavorAndSuggest({ route }) {
                   }}
                 >
                   <Text style={{ fontSize: 16, marginBottom: 10 }}>
-                    You need to sign in to rate this recipe
+                    You need to sign in to do this action.
                   </Text>
 
                   <TouchableOpacity
@@ -552,7 +694,6 @@ function FavorAndSuggest({ route }) {
               handleRate={handleRate}
               submitComment={submitComment}
             />
-
           </View>
           <Text
             style={{ ...styles.recipeDescription, color: theme.greyTextColor }}
@@ -592,7 +733,7 @@ function FavorAndSuggest({ route }) {
               navigationState={{ index, routes }}
               renderScene={renderScene}
               onIndexChange={setIndex}
-              initialLayout={{ width: WIDTH - 32 }}
+              initialLayout={{ width: WIDTH - 16 }}
               renderTabBar={renderTabBar}
               style={styles.tabView}
             />
@@ -615,169 +756,5 @@ function FavorAndSuggest({ route }) {
     </MainLayoutWrapper>
   );
 }
-
-// Styles remain the same
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  recipeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  recipeImage: {
-    width: "100%",
-    height: 200,
-    resizeMode: "cover",
-  },
-  heartIcon: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    borderRadius: 20,
-    padding: 8,
-  },
-  cardContent: {
-    padding: 16,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    transform: [{ translateY: -10 }],
-  },
-  recipeHeader: {
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  recipeName: {
-    width: "50%",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
-    color: "#263238",
-  },
-  recipeRate: {
-    width: "50%",
-    alignItems: "flex-end",
-    paddingRight: 12,
-  },
-  recipeDescription: {
-    fontSize: 14,
-    color: "#546E7A",
-    marginBottom: 16,
-  },
-  nutritionInfo: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 16,
-  },
-  nutritionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 16,
-    marginBottom: 8,
-  },
-  nutritionText: {
-    fontSize: 12,
-    color: "#78909C",
-    marginLeft: 4,
-  },
-  tabViewContainer: {
-    paddingHorizontal: 16,
-  },
-  tabView: {
-    marginTop: 8,
-    minHeight: 300,
-  },
-  tabContent: {
-    paddingTop: 16,
-    paddingHorizontal: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 12,
-    color: "#37474F",
-  },
-  ingredientRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ECEFF1",
-    marginBottom: 8,
-  },
-  ingredientImage: {
-    resizeMode: "contain",
-    height: "100%",
-    width: "30%",
-    marginRight: 10,
-    borderRadius: 12,
-  },
-  ingredientInfo: {
-    flex: 1,
-    marginRight: 10,
-  },
-  ingredientName: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#455A64",
-  },
-  ingredientDetail: {
-    fontSize: 12,
-    color: "#78909C",
-    marginTop: 2,
-  },
-  ingredientQuantity: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#263238",
-  },
-  instructionRow: {
-    marginBottom: 12,
-  },
-  instructionStep: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#455A64",
-    marginBottom: 4,
-  },
-  instructionText: {
-    fontSize: 14,
-    color: "#455A64",
-    lineHeight: 20,
-  },
-  videoContainer: {
-    marginBottom: 16,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  videoLink: {
-    backgroundColor: "#4CAF50",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  videoLinkText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  noDataText: {
-    fontSize: 14,
-    color: "#78909C",
-    textAlign: "center",
-  },
-
-});
 
 export default FavorAndSuggest;
