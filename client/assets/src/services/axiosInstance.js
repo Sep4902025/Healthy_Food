@@ -19,10 +19,8 @@ const axiosInstance = axios.create({
 });
 console.log(process.env.EXPO_PUBLIC_API_URL);
 
-
 axiosInstance.interceptors.request.use(
   async (config) => {
-
     const accessToken = await AsyncStorage.getItem("accessToken");
 
     if (accessToken) {
@@ -37,7 +35,6 @@ axiosInstance.interceptors.request.use(
 );
 
 axiosInstance.interceptors.response.use(
-
   (response) => {
     return response;
   },
@@ -52,7 +49,7 @@ axiosInstance.interceptors.response.use(
       // Điều hướng về màn hình SignIn
       navigate(ScreensName.signin);
     } else {
-      ShowToast("error", error?.response?.data?.message || "Something went wrong.");
+      //ShowToast("error", error?.response?.data?.message || "Something went wrong.");
     }
 
     return Promise.reject(error);

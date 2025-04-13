@@ -35,12 +35,16 @@ const Cart = ({ visible, onClose, mealPlanCount }) => {
         setLoading(true);
         try {
           const response = await mealPlanService.getUnpaidMealPlanForUser(user._id);
+          console.log("Response from getUnpaidMealPlanForUser:", response);
           if (response.success) {
-            setMealPlans(response.data);
+            const plans = response.data.data || [];
+            setMealPlans(plans);
+            console.log("Updated mealPlans:", plans);
           } else {
             setMealPlans([]);
           }
         } catch (error) {
+          console.error("Error fetching unpaid meal plans:", error);
           setMealPlans([]);
         } finally {
           setLoading(false);
@@ -110,7 +114,7 @@ const Cart = ({ visible, onClose, mealPlanCount }) => {
         });
 
         const paymentId = response.paymentId;
-        console.log("Payment URL:", response.paymentUrl); // Debug the payment URL
+        console.log("Payment URL:", response.paymentUrl);
 
         const supported = await Linking.canOpenURL(response.paymentUrl);
         if (supported) {
@@ -234,7 +238,7 @@ const Cart = ({ visible, onClose, mealPlanCount }) => {
                     activeTab === "mealPlan" ? "text-green-600" : "text-gray-600"
                   }`}
                 >
-                  Meal Plans ({mealPlanCount})
+                  Meal Plans ({mealPlans.length})
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
