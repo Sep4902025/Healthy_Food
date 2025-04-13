@@ -580,7 +580,12 @@ function FavorAndSuggest({ route }) {
           <View style={styles.recipeHeader}>
             <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>{dish.name}</Text>
             <View style={styles.recipeRate}>
-              <Text style={{ fontSize: 14, marginBottom: 4 }}>Average Rating:</Text>
+              <Text
+                style={{ fontSize: 14, marginBottom: 4 }}
+                className="text-yellow-500 font-semibold"
+              >
+                Average Rating:
+              </Text>
 
               <Rating rate={averageRating ?? 0} size={WIDTH * 0.06} disabled />
 
@@ -594,9 +599,8 @@ function FavorAndSuggest({ route }) {
                 }}
                 style={styles.openModal}
               >
-                <Text style={{ fontSize: 14, color: "#333" }}>Rating now</Text>
+                <Text style={{ fontSize: 14, color: "#40B491" }}>Rating now</Text>
               </TouchableOpacity>
-              <Rating rate={personalRate?.star ?? 0} starClick={handleRate} size={WIDTH * 0.06} />
             </View>
 
             <Modal
@@ -706,7 +710,7 @@ function FavorAndSuggest({ route }) {
   );
 }
 
-// Styles remain the same
+//Styles remain the same
 // const styles = StyleSheet.create({
 //   container: {
 //     flex: 1,

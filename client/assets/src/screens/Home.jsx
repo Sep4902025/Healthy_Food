@@ -78,7 +78,6 @@ function Home({ navigation }) {
   };
 
   const loadDishes = async (pageNum, isRefresh = false) => {
-    // Validate season before making API call
     if (!validSeasons.includes(season)) {
       setIsSeasonValid(false);
       return;
@@ -88,7 +87,17 @@ function Home({ navigation }) {
       const response = await HomeService.getDishBySeason(season, pageNum, limit);
       if (response.success) {
         const newDishes = response.data.items;
-        setSeasonalDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+
+        // Loại bỏ các món ăn trùng lặp dựa trên _id
+        setSeasonalDishes((prev) => {
+          const existingIds = new Set(isRefresh ? [] : prev.map((dish) => dish._id));
+          const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));
+
+          // Nếu là refresh thì chỉ lấy dữ liệu mới, nếu không thì nối dữ liệu mới vào dữ liệu cũ
+          const updatedDishes = isRefresh ? filteredNewDishes : [...prev, ...filteredNewDishes];
+          return updatedDishes;
+        });
+
         setPage(pageNum);
         setHasMore(pageNum < response.data.totalPages);
       } else {

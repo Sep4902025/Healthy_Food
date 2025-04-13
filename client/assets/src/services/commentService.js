@@ -66,17 +66,21 @@ const commentService = {
   getCommentsByDishId: async (dishId) => {
     try {
       const response = await axiosInstance.get(`/comment/${dishId}/comment`);
-      console.log("RECOMNET", response.data);
+      console.log("COMMENTS", response.data);
 
       const data = response.data;
 
       if (data.status === "success") {
+        // Nếu không có data thì trả mảng rỗng
         return { success: true, data: data.data || [] };
       } else {
-        return { success: false, message: data.message || "Không thể tải bình luận" };
+        // Nếu không phải lỗi thực sự (ví dụ status không phải 'success' nhưng không phải lỗi hệ thống)
+        return { success: true, data: [] };
       }
     } catch (error) {
       console.error("Lỗi khi lấy danh sách bình luận:", error.response?.data || error.message);
+
+      // Chỉ trả lỗi nếu thực sự có lỗi (ví dụ request thất bại, server lỗi...)
       return {
         success: false,
         message: error.response?.data?.message || "Lỗi server: Không thể tải bình luận",
