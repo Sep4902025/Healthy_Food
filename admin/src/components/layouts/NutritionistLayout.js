@@ -10,7 +10,7 @@ import {
   HeartPulseIcon,
   MessageSquareIcon,
   ChevronDownIcon,
-  CalendarHeart
+  CalendarHeart,
 } from "lucide-react";
 
 const menuItems = [
@@ -21,10 +21,10 @@ const menuItems = [
   },
   {
     icon: <CalendarHeart size={20} />,
-    name: "Meal Plans Management", // Đổi tên từ "Meal Plan" thành "Meal Plans Management"
+    name: "Meal Plans Management",
     submenus: [
-      { name: "View Meal Plans", path: "/nutritionist/mealPlan" }, // Submenu mới
-      { name: "Meal Plans Analytics", path: "/nutritionist/mealPlan/analytics" }, // Submenu mới
+      { name: "View Meal Plans", path: "/nutritionist/mealPlan" },
+      { name: "Meal Plans Analytics", path: "/nutritionist/mealPlan/analytics" },
     ],
   },
   {
@@ -94,7 +94,7 @@ const NutritionistLayout = () => {
       {/* Main Content and Sidebar */}
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r p-4 flex flex-col">
+        <aside className="w-64 bg-white border-r p-4 flex flex-col h-full">
           <div className="flex items-center mb-6">
             <HomeIcon size={24} className="text-green-600 mr-2" />
             <span className="text-xl font-bold text-green-700">Nutritionist</span>

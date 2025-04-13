@@ -34,14 +34,56 @@ const FinanceManagement = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
+  // Gộp fetchSalaryHistory và fetchFinanceData vào một hàm để tránh gọi API trùng lặp
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      const [historyResult, financeResult] = await Promise.all([
+        paymentService.getSalaryHistoryByMonthYear(selectedMonth, selectedYear, 1, 1000),
+        mealPlanService.getAllNutritionistsWithMealPlans(
+          currentPage + 1,
+          limit,
+          selectedMonth,
+          selectedYear
+        ),
+      ]);
+
+      // Xử lý dữ liệu từ fetchSalaryHistory
+      if (historyResult.success) {
+        console.log("Updated Salary History:", historyResult.data);
+        setSalaryHistory(historyResult.data || []);
+      } else {
+        toast.error(historyResult.message || "Failed to fetch salary history");
+      }
+
+      // Xử lý dữ liệu từ fetchFinanceData
+      if (financeResult.success) {
+        console.log("Updated Nutritionists:", financeResult.data.nutritionists);
+        setNutritionists(financeResult.data.nutritionists || []);
+        setTotalItems(financeResult.total || 0);
+        setTotalPages(financeResult.totalPages || 1);
+      } else {
+        setError(financeResult.message || "Failed to load finance data");
+        setNutritionists([]);
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      toast.error("Error fetching data");
+      setError("Failed to load data");
+      setNutritionists([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch dữ liệu khi các dependency thay đổi
   useEffect(() => {
     if (user?.role === "admin") {
-      fetchFinanceData();
-      fetchSalaryHistory();
+      fetchAllData();
     }
   }, [user, currentPage, limit, selectedMonth, selectedYear]);
 
-  // Handle redirect from VNPay
+  // Xử lý redirect từ VNPay
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const status = query.get("status");
@@ -49,8 +91,7 @@ const FinanceManagement = () => {
     if (status && message) {
       if (status === "success") {
         toast.success(message.replace(/\+/g, " "));
-        fetchSalaryHistory();
-        fetchFinanceData();
+        fetchAllData(); // Gọi lại dữ liệu để cập nhật UI
       } else {
         toast.error(message.replace(/\+/g, " "));
       }
@@ -100,10 +141,7 @@ const FinanceManagement = () => {
     }
   };
 
-  const fetchSalaryHistoryForModal = async (
-    page = historyPage,
-    limit = historyLimit
-  ) => {
+  const fetchSalaryHistoryForModal = async (page = historyPage, limit = historyLimit) => {
     try {
       const result = await paymentService.getSalaryHistoryByMonthYear(
         selectedMonth,
@@ -147,12 +185,21 @@ const FinanceManagement = () => {
 
   const handleViewHistory = () => {
     setHistoryModalOpen(true);
-    fetchSalaryHistoryForModal(1, historyLimit); // Fetch the first page when opening the modal
+    fetchSalaryHistoryForModal(1, historyLimit);
   };
 
   const handleAcceptSalary = async () => {
-    if (!selectedNutri) return;
+    console.log("AccEPT");
+    console.log("Selected Nutritionist:", selectedNutri);
+
+    if (!selectedNutri) {
+      toast.error("No nutritionist selected");
+      return;
+    }
+
     const salary = calculateSalary(selectedNutri);
+    console.log("Salary:", salary);
+
     try {
       const paymentResult = await paymentService.acceptSalary(
         selectedNutri.id,
@@ -160,17 +207,26 @@ const FinanceManagement = () => {
         selectedMonth,
         selectedYear
       );
-      if (paymentResult.status === "success") {
-        toast.success("Redirecting to payment gateway...");
-        window.open(paymentResult.data.paymentUrl, "_blank");
+      console.log("Payment Result:", paymentResult);
+
+      if (paymentResult.success) {
+        const paymentUrl = paymentResult.data.paymentUrl;
+        console.log("Payment URL:", paymentUrl);
+
+        if (paymentUrl) {
+          toast.success("Redirecting to payment gateway...");
+          window.location.href = paymentUrl; // Chuyển hướng trong cùng tab
+        } else {
+          toast.error("Payment URL not provided by the server");
+        }
       } else {
-        toast.error(paymentResult.message);
+        console.log("Payment failed:", paymentResult.message);
+        toast.error(paymentResult.message || "Failed to process payment");
       }
     } catch (err) {
+      console.error("Error in handleAcceptSalary:", err);
       toast.error(err.message || "Failed to process payment");
     } finally {
-      await fetchSalaryHistory();
-      await fetchFinanceData();
       setSalaryModalOpen(false);
     }
   };
@@ -184,9 +240,7 @@ const FinanceManagement = () => {
   };
 
   const formatPrice = (price) => {
-    return price !== undefined && price !== null
-      ? price.toLocaleString("en-US") + " VND"
-      : "N/A";
+    return price !== undefined && price !== null ? price.toLocaleString("en-US") + " VND" : "N/A";
   };
 
   const isPaidForMonth = (nutriId) => {
@@ -413,9 +467,7 @@ const FinanceManagement = () => {
   if (user?.role !== "admin") {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-red-500 text-lg font-semibold">
-          Access Denied: Admin Only
-        </p>
+        <p className="text-red-500 text-lg font-semibold">Access Denied: Admin Only</p>
       </div>
     );
   }
@@ -465,14 +517,13 @@ const FinanceManagement = () => {
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                 className="border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] focus:border-custom-green"
               >
-                {Array.from(
-                  { length: 5 },
-                  (_, i) => new Date().getFullYear() - 2 + i
-                ).map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(
+                  (year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  )
+                )}
               </select>
             </div>
           </div>
@@ -504,10 +555,7 @@ const FinanceManagement = () => {
           <div className="divide-y divide-gray-200">
             {nutritionists.length > 0 ? (
               nutritionists.map((nutri, index) => (
-                <div
-                  key={nutri.id}
-                  className="grid grid-cols-7 gap-4 p-4 hover:bg-gray-50"
-                >
+                <div key={nutri.id} className="grid grid-cols-7 gap-4 p-4 hover:bg-gray-50">
                   <div>{currentPage * limit + index + 1}</div>
                   <div>{nutri.name}</div>
                   <div>{nutri.mealPlanCount}</div>
@@ -554,9 +602,7 @@ const FinanceManagement = () => {
                 </div>
               ))
             ) : (
-              <div className="p-6 text-center text-gray-500">
-                No nutritionists found.
-              </div>
+              <div className="p-6 text-center text-gray-500">No nutritionists found.</div>
             )}
           </div>
           <div className="p-4 bg-gray-50">
@@ -579,8 +625,7 @@ const FinanceManagement = () => {
             {selectedNutri && (
               <>
                 <h2 className="text-2xl font-bold text-[#40B491] mb-4">
-                  Meal Plans for {selectedNutri.name} (Month {selectedMonth}/
-                  {selectedYear})
+                  Meal Plans for {selectedNutri.name} (Month {selectedMonth}/{selectedYear})
                 </h2>
                 <div className="overflow-x-auto">
                   <div className="grid grid-cols-7 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
@@ -593,16 +638,11 @@ const FinanceManagement = () => {
                     <div>User</div>
                   </div>
                   {selectedNutri.mealPlans.map((mp, idx) => (
-                    <div
-                      key={mp._id}
-                      className="grid grid-cols-7 gap-4 p-4 border-b"
-                    >
+                    <div key={mp._id} className="grid grid-cols-7 gap-4 p-4 border-b">
                       <div>{idx + 1}</div>
                       <div>{mp.title}</div>
                       <div>{formatPrice(mp.price)}</div>
-                      <div>
-                        {new Date(mp.startDate).toLocaleDateString("en-US")}
-                      </div>
+                      <div>{new Date(mp.startDate).toLocaleDateString("en-US")}</div>
                       <div>{mp.duration} days</div>
                       <div>
                         <span
@@ -640,8 +680,7 @@ const FinanceManagement = () => {
             {selectedNutri && (
               <>
                 <h2 className="text-2xl font-bold text-[#40B491] mb-4">
-                  Salary for {selectedNutri.name} (Month {selectedMonth}/
-                  {selectedYear})
+                  Salary for {selectedNutri.name} (Month {selectedMonth}/{selectedYear})
                 </h2>
                 <div className="space-y-2">
                   <p>Base Salary: {formatPrice(5000000)}</p>
@@ -683,8 +722,7 @@ const FinanceManagement = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl max-h-[80vh] overflow-y-auto">
             <>
               <h2 className="text-2xl font-bold text-[#40B491] mb-4">
-                Salary Payment History for Nutritionists (Month {selectedMonth}/
-                {selectedYear})
+                Salary Payment History for Nutritionists (Month {selectedMonth}/{selectedYear})
               </h2>
               <div className="overflow-x-auto">
                 <div className="grid grid-cols-7 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
@@ -698,10 +736,7 @@ const FinanceManagement = () => {
                 </div>
                 {salaryHistory.length > 0 ? (
                   salaryHistory.map((payment, idx) => (
-                    <div
-                      key={payment._id}
-                      className="grid grid-cols-7 gap-4 p-4 border-b"
-                    >
+                    <div key={payment._id} className="grid grid-cols-7 gap-4 p-4 border-b">
                       <div>{(historyPage - 1) * historyLimit + idx + 1}</div>
                       <div>{payment.userId?.username || "Unknown"}</div>
                       <div>{formatPrice(payment.amount)}</div>
@@ -718,9 +753,7 @@ const FinanceManagement = () => {
                       </div>
                       <div>
                         {payment.paymentDate
-                          ? new Date(payment.paymentDate).toLocaleDateString(
-                              "en-US"
-                            )
+                          ? new Date(payment.paymentDate).toLocaleDateString("en-US")
                           : "N/A"}
                       </div>
                       <div>{`${payment.month}/${payment.year}`}</div>
