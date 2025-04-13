@@ -1,7 +1,10 @@
 // medicalConditionRouter.js
 const express = require("express");
 const medicalConditionRouter = express.Router();
-const { isAuthenticated, isNutritionist } = require("../middlewares/isAuthenticated");
+const {
+  isAuthenticated,
+  isNutritionist,
+} = require("../middlewares/isAuthenticated");
 
 const {
   createMedicalCondition,
@@ -18,7 +21,12 @@ medicalConditionRouter.get("/search", searchMedicalConditionByName);
 medicalConditionRouter.get("/:conditionId", getMedicalConditionById);
 
 // Protected routes (yêu cầu authentication và role nutritionist)
-medicalConditionRouter.post("/", isAuthenticated, isNutritionist, createMedicalCondition);
+medicalConditionRouter.post(
+  "/",
+  isAuthenticated,
+  isNutritionist,
+  createMedicalCondition
+);
 
 medicalConditionRouter.put(
   "/:conditionId",
