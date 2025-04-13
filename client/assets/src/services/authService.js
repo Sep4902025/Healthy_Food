@@ -80,6 +80,8 @@ export const changePassword = async ({ email, password, passwordConfirm }) => {
 
 export const updateUser = async (user) => {
   try {
+    console.log(user);
+    
     const response = await axiosInstance.put(`/users/${user?._id}`, user);
     return response;
   } catch (error) {

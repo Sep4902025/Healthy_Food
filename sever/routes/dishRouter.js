@@ -6,14 +6,20 @@ const {
   updateDish,
   getDishById,
   getAllDishes,
+  getAllDishesForNutri,
   deleteDish,
   getDishByType,
   createManyDishes,
-  hideDish, // Nếu bạn đã thêm hideDish vào dishController
+  hideDish,
+  getDishesBySeason, // Nếu bạn đã thêm hideDish vào dishController
 } = require("../controllers/dishController");
 
 // Routes cho Dish
 dishRouter.get("/", getAllDishes);
+// In dishRouter.js
+dishRouter.get("/by-season", getDishesBySeason);
+dishRouter.get("/nutritionist", getAllDishesForNutri);
+
 dishRouter.post("/", isAuthenticated, isNutritionist, createDish);
 dishRouter.post("/multiple", isAuthenticated, isNutritionist, createManyDishes);
 dishRouter.put("/:dishId", isAuthenticated, isNutritionist, updateDish);

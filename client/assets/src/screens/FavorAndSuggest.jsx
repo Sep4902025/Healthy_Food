@@ -51,7 +51,6 @@ function FavorAndSuggest({ route }) {
   const [comment, setComment] = useState([]);
   const [commentList, setCommentList] = useState([]);
 
-  // Load dish from route params
   useEffect(() => {
     if (route?.params?.dish) {
       setDish(route.params.dish);
@@ -203,7 +202,6 @@ function FavorAndSuggest({ route }) {
     loadRecipe();
   }, [dish]);
 
-  // Fetch ingredient details when recipe changes
   useEffect(() => {
     const fetchIngredientDetails = async () => {
       if (!recipe?.ingredients?.length) {
@@ -216,12 +214,11 @@ function FavorAndSuggest({ route }) {
         const detailsObj = [];
 
         const promises = recipe.ingredients.map(async (ingredient) => {
-          console.log("Ingredient:", ingredient); // Debug log
-          console.log("Ingredient ID:", ingredient?.ingredientId); // Debug log
+          console.log("Ingredient:", ingredient);
+          console.log("Ingredient ID:", ingredient?.ingredientId);
 
           if (!ingredient?.ingredientId) return;
 
-          // Ensure ingredientId is a string
           const ingredientId =
             typeof ingredient.ingredientId === "object" &&
             ingredient.ingredientId?._id

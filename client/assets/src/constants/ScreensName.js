@@ -15,5 +15,7 @@ export const ScreensName = {
   notification: "notification",
   message: "message",
   mealPlan: "mealPlan",
+  payment: "payment",
+  paymentStatus: "paymentStatus",
   profile: "profile",
 };

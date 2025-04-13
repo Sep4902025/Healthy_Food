@@ -20,7 +20,7 @@ import {
 } from "../services/ingredient";
 import { DishType } from "../constants/DishType";
 import { getDishes } from "../services/dishes";
-// import CustomToast from "../components/common/CustomToast";
+
 import ShowToast from "../components/common/CustomToast";
 import { getSearchHistory } from "../utils/common";
 import { useTheme } from "../contexts/ThemeContext";
@@ -50,13 +50,12 @@ const CategoryButton = ({ title, isActive = false, onclick }) => (
 
 const SearchScreen = ({ route }) => {
   const [searchResults, setSearchResults] = useState([]);
-  const [searchMode, setSearchMode] = useState("initial"); // 'initial', 'results'
+  const [searchMode, setSearchMode] = useState("initial");
   const [searchQuery, setSearchQuery] = useState("");
   const [history, setHistory] = useState([]);
-  const [sortType, setSortType] = useState(""); // Sorting state
+  const [sortType, setSortType] = useState("");
   const { theme } = useTheme();
 
-  // const showToast = CustomToast();
   const loadHistory = async () => {
     const savedHistory = await getSearchHistory();
     setHistory(savedHistory);
@@ -84,12 +83,7 @@ const SearchScreen = ({ route }) => {
   }, [searchResults]);
 
   const handleSearch = async (searchString) => {
-    // loadHistory();
-    // const response = await getIngredientByName(searchString);
-    // if (response.status === 200) {
-    //   setSearchResults(response.data?.data);
-    //   setSearchMode("results");
-    // }
+   
     const response = await getDishes();
     if (response.status === 200) {
       const resultList = response.data?.data?.filter((item) =>
@@ -120,11 +114,6 @@ const SearchScreen = ({ route }) => {
     }
     loadHistory();
 
-    // const response = await getIngredientByType(type);
-    // if (response.status === 200) {
-    //   setSearchResults(response.data?.data);
-    //   setSearchMode("results");
-    // }
   };
 
   const handleClear = () => {
@@ -172,15 +161,7 @@ const SearchScreen = ({ route }) => {
       <View style={styles.browseSection}>
         <Text style={styles.sectionTitle}>Browse by category</Text>
         <View style={styles.categoriesGrid}>
-          {/* {categories.map((category) => (
-            <CategoryCard
-              key={category.id}
-              category={category}
-              onPress={() => handleSearchByCategory(category.title)}
-              // cardWidth={"30%"}
-              // imageSize={WIDTH * 0.2}
-            />
-          ))} */}
+        
           {Object.values(DishType).map((category, key) => (
             <CategoryCard
               key={key}

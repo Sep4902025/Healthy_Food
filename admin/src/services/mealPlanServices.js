@@ -261,7 +261,7 @@ const mealPlanService = {
     }
   },
 
-  // Tạo yêu cầu thanh toán cho meal plan
+  // // Tạo yêu cầu thanh toán cho meal plan
   createMealPlanPayment: async (userId, mealPlanId, amount) => {
     try {
       const response = await api.post(`/payment/vnpay/pay`, {

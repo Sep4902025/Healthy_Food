@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   resultTitleContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    // alignItems: "center",
+    
   },
   resultTitle: {
     fontSize: 16,

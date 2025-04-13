@@ -3,6 +3,8 @@ import ingredientService from "../../../services/nutritionist/ingredientsService
 import UploadComponent from "../../../components/UploadComponent";
 import uploadFile from "../../../helpers/uploadFile";
 import imageCompression from "browser-image-compression";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 const TYPE_OPTIONS = [
   "Meat & Seafood",
@@ -15,7 +17,8 @@ const TYPE_OPTIONS = [
 ];
 
 const AddIngredient = ({ onIngredientAdded = () => {} }) => {
-  const [formData, setFormData] = useState({
+    const navigate = useNavigate();
+    const [formData, setFormData] = useState({
     name: "",
     description: "",
     imageFile: null,
@@ -33,12 +36,19 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState("");
   const [isValidImageUrl, setIsValidImageUrl] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Added loading state
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.name.trim()) newErrors.name = "Name is required!";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.name)) {
+      newErrors.name = "Input must not contain special characters.";
+    }
     if (!formData.description.trim()) newErrors.description = "Description is required!";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.description)) {
+      newErrors.description = "Input must not contain special characters.";
+    }
     if (!formData.imageFile && !formData.imageUrl.trim())
       newErrors.imageUrl = "Image (file or URL) is required!";
     else if (formData.imageUrl && !isValidImageUrl)
@@ -164,9 +174,11 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      alert("Please fill in all required fields correctly!");
+      toast.error("Please fill in all required fields correctly!");
       return;
     }
+
+    setIsLoading(true); // Set loading true when submission starts
 
     let imageUrl = formData.imageUrl;
     if (formData.imageFile) {
@@ -177,7 +189,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
         });
         imageUrl = uploadedImage.secure_url;
       } catch (error) {
-        alert("Image upload failed!");
+        setIsLoading(false); // Reset loading on error
+        toast.error("Image upload failed!");
         console.error("Upload error:", error);
         return;
       }
@@ -189,8 +202,11 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
       type: formData.type === "Others" ? formData.customType : formData.type,
     };
     const response = await ingredientService.createIngredient(finalData);
+    
+    setIsLoading(false); // Reset loading after response
+
     if (response.success) {
-      alert("Ingredient added successfully!");
+      toast.success("Ingredient added successfully!");
       setFormData({
         name: "",
         description: "",
@@ -210,8 +226,9 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
       setImagePreview("");
       setIsValidImageUrl(false);
       onIngredientAdded();
+      navigate("/nutritionist/ingredients");
     } else {
-      alert("Failed to add ingredient: " + response.message);
+      toast.error(response.message);
     }
   };
 
@@ -224,7 +241,14 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   }, [imagePreview]);
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="container mx-auto px-6 py-8 relative">
+      {isLoading && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
+          <div className="loader"></div>
+          <p className="mt-4 text-white text-lg">Loading...</p>
+        </div>
+      )}
+
       <div className="flex items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
           Add New Ingredient
@@ -232,9 +256,12 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
         <div className="ml-auto">
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+            disabled={isLoading}
+            className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+              isLoading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            Save Ingredient
+            {isLoading ? "Saving..." : "Save Ingredient"}
           </button>
         </div>
       </div>
@@ -252,6 +279,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               className={`w-full border ${
                 errors.name ? "border-red-500" : "border-gray-300"
               } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              disabled={isLoading}
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
           </div>
@@ -272,6 +300,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   className={`w-full border ${
                     errors.calories ? "border-red-500" : "border-gray-300"
                   } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">kcal</span>
               </div>
@@ -286,6 +315,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                 className={`w-full border ${
                   errors.type ? "border-red-500" : "border-gray-300"
                 } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                disabled={isLoading}
               >
                 <option value="">Select Type</option>
                 {TYPE_OPTIONS.map((type) => (
@@ -306,6 +336,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                     className={`w-full border ${
                       errors.customType ? "border-red-500" : "border-gray-300"
                     } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    disabled={isLoading}
                   />
                   {errors.customType && (
                     <p className="text-red-500 text-sm mt-1">{errors.customType}</p>
@@ -331,6 +362,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   className={`w-full border ${
                     errors.protein ? "border-red-500" : "border-gray-300"
                   } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">g</span>
               </div>
@@ -351,6 +383,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   className={`w-full border ${
                     errors.carbs ? "border-red-500" : "border-gray-300"
                   } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">g</span>
               </div>
@@ -374,6 +407,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   className={`w-full border ${
                     errors.fat ? "border-red-500" : "border-gray-300"
                   } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">g</span>
               </div>
@@ -388,6 +422,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                 className={`w-full border ${
                   errors.season ? "border-red-500" : "border-gray-300"
                 } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                disabled={isLoading}
               >
                 <option value="">Select Season</option>
                 {["All Season", "Spring", "Summer", "Fall", "Winter"].map((season) => (
@@ -409,6 +444,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               className={`w-full border ${
                 errors.unit ? "border-red-500" : "border-gray-300"
               } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              disabled={isLoading}
             >
               <option value="">Select unit of measurement</option>
               <option value="ml">ml</option>
@@ -424,6 +460,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               <UploadComponent
                 onFileSelect={handleFileSelect}
                 reset={formData.imageFile === null && !formData.imageUrl}
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -437,6 +474,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                 className={`w-full border ${
                   errors.imageUrl ? "border-red-500" : "border-gray-300"
                 } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                disabled={isLoading}
               />
               {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
             </div>
@@ -463,6 +501,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               className={`w-full border ${
                 errors.description ? "border-red-500" : "border-gray-300"
               } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              disabled={isLoading}
             />
             {errors.description && (
               <p className="text-red-500 text-sm mt-1">{errors.description}</p>

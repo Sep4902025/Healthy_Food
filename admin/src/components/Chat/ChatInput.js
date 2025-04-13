@@ -48,7 +48,7 @@ const ChatInput = ({
   };
 
   return (
-    <div className="h-full w-full p-2">
+    <div className="w-full p-2 max-h-[150px] overflow-y-auto">
       {isUploading && (
         <div className="mb-2">
           <div className="w-full bg-gray-200 rounded-full h-2">

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Healthy-Food-App",
     "slug": "healthy-food-app",
-    "scheme": "com.tructht.HealthyFoodApp",
+    "scheme": "healthyfood",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

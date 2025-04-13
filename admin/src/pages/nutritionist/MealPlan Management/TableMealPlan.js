@@ -284,7 +284,7 @@ const TableMealPlan = () => {
                         {mealPlan.type === "fixed" ? "Fixed" : "Custom"}
                       </td>
                       <td className="px-4 py-3 text-gray-700 text-sm w-[10%]">
-                        {mealPlan.price ? `$${mealPlan.price.toLocaleString()}` : "N/A"}
+                        {mealPlan.price ? `${mealPlan.price.toLocaleString()} ₫` : "N/A"}
                       </td>
                       <td className="px-4 py-3 text-gray-700 text-sm w-[10%] h-full">
                         <div className="flex items-center gap-2">

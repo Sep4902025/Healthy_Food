@@ -211,11 +211,9 @@ exports.getRecipeByDishId = async (recipeId) => {
     .populate("dishId")
     .populate("ingredients.ingredientId")
     .lean();
-
   if (!recipe) throw Object.assign(new Error("Recipe not found"), { status: 404 });
   if (recipe.dishId?.isDelete || !recipe.dishId?.isVisible) {
     throw Object.assign(new Error("Associated dish is deleted or hidden"), { status: 404 });
   }
-
   return recipe;
 };

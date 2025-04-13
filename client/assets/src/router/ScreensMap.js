@@ -41,6 +41,8 @@ import Email from "../screens/Survey/Email";
 import PhoneNumber from "../screens/Survey/PhoneNumber";
 import Name from "../screens/Survey/Name";
 import SurveyScreen from "../screens/SurveyScreen";
+import PaymentScreen from "../screens/MealPlan/PaymentScreen";
+import PaymentStatusScreen from "../screens/MealPlan/PaymentStatusScreen";
 
 export const ScreensMap = [
   {
@@ -108,6 +110,16 @@ export const ScreensMap = [
     hiddenBottomTab: true,
   },
   {
+    name: ScreensName.survey,
+    component: SurveyScreen,
+    options: {
+      tabBarIcon: ({ color, focused }) => <AntDesignIcon name="calendar" size={28} color={color} />,
+      iconStyles: { transform: [{ translateX: 25 }] },
+      requireAuthen: true,
+    },
+    hiddenBottomTab: true,
+  },
+  {
     name: ScreensName.mealPlan,
     component: MealPlan,
     options: {
@@ -130,7 +142,6 @@ export const ScreensMap = [
           </View>
         );
       },
-      iconStyles: { transform: [{ translateX: 25 }] },
       requireAuthen: true,
     },
   },
@@ -139,20 +150,9 @@ export const ScreensMap = [
     name: ScreensName.profile,
     component: Profile,
     options: {
-      tabBarIcon: ({ color, focused }) => <AntDesignIcon name="setting" size={28} color={color} />,
-      requireAuthen: true,
-    },
-    hiddenBottomTab: true,
-  },
-  // Thêm các màn hình khảo sát
-  {
-    name: ScreensName.survey,
-    component: SurveyScreen, // Màn hình đầu tiên của khảo sát
-    options: {
       tabBarButton: () => null,
       requireAuthen: true,
     },
-    hiddenBottomTab: true,
   },
   {
     name: ScreensName.setting,
@@ -196,7 +196,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "PhoneNumber",
@@ -204,7 +203,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "Email",
@@ -212,7 +210,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "Weight",
@@ -220,7 +217,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "Height",
@@ -228,7 +224,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "WeightGoal",
@@ -236,7 +231,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "Gender",
@@ -244,7 +238,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "Age",
@@ -252,7 +245,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "Goal",
@@ -260,7 +252,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "SleepTime",
@@ -268,7 +259,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "ActivityLevel",
@@ -276,7 +266,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "WaterDrink",
@@ -284,7 +273,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "Diet",
@@ -292,7 +280,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "MealNumber",
@@ -300,7 +287,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "LongOfPlan",
@@ -308,7 +294,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "EatHabit",
@@ -316,7 +301,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "UnderDisease",
@@ -324,7 +308,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "Favorite",
@@ -332,7 +315,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: "Hate",
@@ -340,7 +322,6 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
   },
   {
     name: ScreensName.forYou,
@@ -348,6 +329,19 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
     },
-    hiddenBottomTab: true,
+  },
+  {
+    name: ScreensName.payment,
+    component: PaymentScreen,
+    options: {
+      tabBarButton: () => null,
+    },
+  },
+  {
+    name: ScreensName.paymentStatus,
+    component: PaymentStatusScreen,
+    options: {
+      tabBarButton: () => null,
+    },
   },
 ];

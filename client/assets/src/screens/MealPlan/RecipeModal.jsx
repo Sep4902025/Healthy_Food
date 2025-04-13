@@ -16,7 +16,7 @@ const RecipeModal = ({ dishId, recipeId, onClose }) => {
     const fetchRecipe = async () => {
       try {
         // Lấy thông tin recipe
-        const recipeResponse = await dishesService.getRecipeByRecipeId(dishId, recipeId);
+        const recipeResponse = await dishesService.getRecipeByRecipeId(recipeId);
         if (!recipeResponse.success || !recipeResponse.data) {
           throw new Error("Failed to fetch recipe");
         }

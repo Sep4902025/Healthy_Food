@@ -127,7 +127,9 @@ const MealPlan = () => {
   return (
     <div className="w-full mx-auto p-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-semibold text-green-600">Meal Plan</h1>
+        <h1 className="text-3xl font-semibold" style={{ color: '#40B491' }}>
+          Meal Plan
+        </h1>
       </div>
       {userMealPlan ? (
         <div className="bg-white p-6 rounded-lg shadow-md mt-6">
@@ -169,8 +171,9 @@ const MealPlan = () => {
                   Status:
                   <span
                     className={`font-medium ml-1 ${
-                      userMealPlan.isPause ? "text-yellow-500" : "text-green-500"
+                      userMealPlan.isPause ? "text-yellow-500" : ""
                     }`}
+                    style={{ color: userMealPlan.isPause ? undefined : '#40B491' }}
                   >
                     {userMealPlan.isPause ? "Inactive" : "Active"}
                   </span>
@@ -192,9 +195,12 @@ const MealPlan = () => {
                     disabled={processingAction}
                     className={`px-4 py-2 rounded text-white ${
                       userMealPlan.isPause
-                        ? "bg-green-500 hover:bg-green-600"
-                        : "bg-yellow-500 hover:bg-yellow-600"
+                        ? ""
+                        : "hover:bg-[#35977A]"
                     } ${processingAction ? "opacity-50 cursor-not-allowed" : ""}`}
+                    style={{
+                      backgroundColor: userMealPlan.isPause ? '#40B491' : '#40B491',
+                    }}
                   >
                     {userMealPlan.isPause ? "▶️ Continue" : "⏸️ Pause"}
                   </button>
@@ -218,7 +224,8 @@ const MealPlan = () => {
           {!showCreateForm ? (
             <button
               onClick={handleCreateNewPlanClick}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+              className="text-white px-4 py-2 rounded hover:bg-[#35977A]"
+              style={{ backgroundColor: '#40B491' }}
             >
               ✏️ Create New Meal Plan
             </button>
