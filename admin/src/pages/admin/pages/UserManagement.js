@@ -22,8 +22,11 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("users");
   const [selectedApplication, setSelectedApplication] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
   useEffect(() => {
+    console.log("Current users:", users); // Add this log
     const fetchData = async () => {
       setLoading(true);
       const userResponse = await UserService.getAllUsers(
@@ -31,13 +34,9 @@ const UserManagement = () => {
         usersPerPage
       );
       if (userResponse.success) {
-        const nonAdminUsers = userResponse.users.filter(
-          (user) => user.role !== "admin"
-        );
-        setUsers(nonAdminUsers);
-        setFilteredUsers(nonAdminUsers);
-
-        setTotalItems(nonAdminUsers.length);
+        setUsers(userResponse.users);
+        setFilteredUsers(userResponse.users);
+        setTotalItems(userResponse.total);
       } else {
         setError(userResponse.message);
       }
@@ -97,9 +96,46 @@ const UserManagement = () => {
     setModalOpen(false);
   };
 
-  const handleDeleteUser = (_id) => {
-    setUsers((prev) => prev.filter((u) => u._id !== _id));
-    setFilteredUsers((prev) => prev.filter((u) => u._id !== _id));
+  const handleDeleteUser = (userId) => {
+    const user = users.find((u) => u._id === userId);
+    setUserToDelete(user);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (
+      !userToDelete ||
+      !userToDelete._id ||
+      typeof userToDelete._id !== "string"
+    ) {
+      toast.error("ID người dùng không hợp lệ.");
+      setDeleteModalOpen(false);
+      setUserToDelete(null);
+      return;
+    }
+
+    console.log("Deleting user with ID:", userToDelete._id); // Log the ID
+    const result = await UserService.deleteUser(userToDelete._id);
+    if (result.success) {
+      toast.success("Xóa người dùng thành công!");
+      const userResponse = await UserService.getAllUsers(
+        currentPage,
+        usersPerPage
+      );
+      if (userResponse.success) {
+        setUsers(userResponse.users);
+        setFilteredUsers(userResponse.users);
+        setTotalItems(userResponse.total);
+      }
+    } else {
+      toast.error(
+        result.message === "No user found with that ID"
+          ? "Người dùng không tồn tại hoặc đã bị xóa trước đó."
+          : `Xóa user thất bại: ${result.message}`
+      );
+    }
+    setDeleteModalOpen(false);
+    setUserToDelete(null);
   };
 
   const handleReviewApplication = async (userId, action) => {
@@ -548,6 +584,38 @@ const UserManagement = () => {
         </div>
       )}
 
+      {/* Modal for Delete Confirmation */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-4 text-[#40B491]">
+              Confirm Delete
+            </h2>
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to delete this user? This action cannot be
+              undone.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setUserToDelete(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                onClick={confirmDeleteUser}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal for Application Review */}
       {selectedApplication && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
@@ -590,6 +658,25 @@ const UserManagement = () => {
                     <strong>Address:</strong>{" "}
                     {selectedApplication.nutritionistApplication.personalInfo
                       .address || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Certificate Link:</strong>{" "}
+                    {selectedApplication.nutritionistApplication
+                      .certificateLink ? (
+                      <a
+                        href={
+                          selectedApplication.nutritionistApplication
+                            .certificateLink
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        View Certificate
+                      </a>
+                    ) : (
+                      "N/A"
+                    )}
                   </p>
                 </div>
               </div>

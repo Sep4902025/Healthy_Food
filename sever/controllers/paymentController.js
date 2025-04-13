@@ -3,7 +3,13 @@ const crypto = require("crypto");
 const moment = require("moment");
 const VNPAY_CONFIG = require("../config/vnpay");
 const Payment = require("../models/Payment");
-const { MealPlan, UserMealPlan, MealDay, Meal, MealTracking } = require("../models/MealPlan");
+const {
+  MealPlan,
+  UserMealPlan,
+  MealDay,
+  Meal,
+  MealTracking,
+} = require("../models/MealPlan");
 const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
 const UserModel = require("../models/UserModel");
@@ -89,12 +95,16 @@ exports.createPaymentUrl = async (req, res) => {
     }
 
     if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ status: "error", message: "Amount phải là số dương" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Amount phải là số dương" });
     }
 
     const mealPlan = await MealPlan.findById(mealPlanId);
     if (!mealPlan) {
-      return res.status(400).json({ status: "error", message: "MealPlan không tồn tại" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "MealPlan không tồn tại" });
     }
 
     const successPayment = await Payment.findOne({
@@ -102,7 +112,9 @@ exports.createPaymentUrl = async (req, res) => {
       status: "success",
     });
     if (successPayment) {
-      return res.status(400).json({ status: "error", message: "MealPlan này đã được thanh toán" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "MealPlan này đã được thanh toán" });
     }
 
     let payment = await Payment.findOne({
@@ -130,7 +142,10 @@ exports.createPaymentUrl = async (req, res) => {
     }
 
     const clientIp =
-      req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.ip || "127.0.0.1";
+      req.headers["x-forwarded-for"] ||
+      req.connection.remoteAddress ||
+      req.ip ||
+      "127.0.0.1";
 
     let vnp_Params = {
       vnp_Version: "2.1.0",
@@ -172,11 +187,15 @@ exports.createPaymentUrl = async (req, res) => {
 
     sortedParams["vnp_SecureHash"] = secureHash;
 
-    const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(sortedParams).toString()}`;
+    const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(
+      sortedParams
+    ).toString()}`;
 
     return res.json({ status: "success", paymentUrl, paymentId: payment._id });
   } catch (error) {
-    return res.status(500).json({ status: "error", message: "Lỗi tạo URL thanh toán" });
+    return res
+      .status(500)
+      .json({ status: "error", message: "Lỗi tạo URL thanh toán" });
   }
 };
 
@@ -202,10 +221,14 @@ exports.vnpayReturn = async (req, res) => {
 
     const clientType = req.query.clientType || "web";
     const baseUrl =
-      clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
+      clientType === "app"
+        ? process.env.MOBILE_CLIENT_URL
+        : process.env.ADMIN_WEB_URL;
 
     if (secureHash !== signed) {
-      return res.status(400).redirect(`${baseUrl}/mealplan?status=error&message=Invalid+signature`);
+      return res
+        .status(400)
+        .redirect(`${baseUrl}/mealplan?status=error&message=Invalid+signature`);
     }
 
     const transactionNo = vnp_Params["vnp_TransactionNo"];
@@ -225,7 +248,9 @@ exports.vnpayReturn = async (req, res) => {
     );
 
     if (!payment) {
-      return res.status(404).redirect(`${baseUrl}/mealplan?status=error&message=Payment+not+found`);
+      return res
+        .status(404)
+        .redirect(`${baseUrl}/mealplan?status=error&message=Payment+not+found`);
     }
 
     if (status === "success") {
@@ -238,7 +263,9 @@ exports.vnpayReturn = async (req, res) => {
       if (!updatedMealPlan) {
         return res
           .status(404)
-          .redirect(`${baseUrl}/mealplan?status=error&message=MealPlan+not+found`);
+          .redirect(
+            `${baseUrl}/mealplan?status=error&message=MealPlan+not+found`
+          );
       }
 
       const oldUserMealPlan = await UserMealPlan.findOne({
@@ -264,7 +291,9 @@ exports.vnpayReturn = async (req, res) => {
         });
       }
 
-      console.log(`✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`);
+      console.log(
+        `✅ User ${payment.userId} has switched to new MealPlan: ${payment.mealPlanId}`
+      );
 
       // Dọn dẹp các payment pending khác
       const cleanupResult = await Payment.deleteMany({
@@ -281,8 +310,12 @@ exports.vnpayReturn = async (req, res) => {
   } catch (error) {
     const clientType = req.query.clientType || "web";
     const baseUrl =
-      clientType === "app" ? process.env.MOBILE_CLIENT_URL : process.env.ADMIN_WEB_URL;
-    res.redirect(`${baseUrl}/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`);
+      clientType === "app"
+        ? process.env.MOBILE_CLIENT_URL
+        : process.env.ADMIN_WEB_URL;
+    res.redirect(
+      `${baseUrl}/mealplan?status=error&message=Lỗi+xử+lý+phản+hồi+VNPAY`
+    );
   }
 };
 
@@ -309,7 +342,9 @@ exports.getPaymentHistory = async (req, res) => {
 
     const paymentDetails = await Promise.all(
       payments.map(async (payment) => {
-        const mealPlan = await MealPlan.findById(payment.mealPlanId).select("title").lean();
+        const mealPlan = await MealPlan.findById(payment.mealPlanId)
+          .select("title")
+          .lean();
         return {
           _id: payment._id,
           mealPlanName: mealPlan ? mealPlan.title : "N/A",
@@ -349,7 +384,9 @@ exports.checkPaymentStatus = async (req, res) => {
 
     const payment = await Payment.findById(paymentId);
     if (!payment) {
-      return res.status(404).json({ status: "error", message: "Payment not found" });
+      return res
+        .status(404)
+        .json({ status: "error", message: "Payment not found" });
     }
 
     return res.json({
@@ -365,7 +402,9 @@ exports.checkPaymentStatus = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ status: "error", message: "Error checking payment status" });
+    return res
+      .status(500)
+      .json({ status: "error", message: "Error checking payment status" });
   }
 };
 
@@ -445,7 +484,9 @@ exports.getPaymentHistoryForNutritionist = async (req, res) => {
     const mealPlans = await MealPlan.find().lean();
 
     if (!mealPlans || mealPlans.length === 0) {
-      return res.status(200).json({ success: true, data: [], message: "Không có meal plans nào" });
+      return res
+        .status(200)
+        .json({ success: true, data: [], message: "Không có meal plans nào" });
     }
 
     const payments = await Payment.find().lean();
@@ -469,7 +510,10 @@ exports.calculateSalary = catchAsync(async (req, res, next) => {
   }
 
   // Lấy tất cả meal plans của nutritionist
-  const mealPlans = await MealPlan.find({ createdBy: nutriId }).populate("userId", "username");
+  const mealPlans = await MealPlan.find({ createdBy: nutriId }).populate(
+    "userId",
+    "username"
+  );
 
   // Lấy tất cả payments liên quan đến meal plans này
   const mealPlanIds = mealPlans.map((mp) => mp._id);
@@ -482,7 +526,9 @@ exports.calculateSalary = catchAsync(async (req, res, next) => {
   const commission = payments
     .filter((payment) => payment.status === "success")
     .reduce((sum, payment) => {
-      const mealPlan = mealPlans.find((mp) => mp._id.toString() === payment.mealPlanId.toString());
+      const mealPlan = mealPlans.find(
+        (mp) => mp._id.toString() === payment.mealPlanId.toString()
+      );
       return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
     }, 0);
 
@@ -544,15 +590,23 @@ exports.getSalaryHistoryByMonthYear = async (req, res) => {
       });
     }
 
-    if (isNaN(yearNum) || yearNum < 2000 || yearNum > new Date().getFullYear() + 1) {
+    if (
+      isNaN(yearNum) ||
+      yearNum < 2000 ||
+      yearNum > new Date().getFullYear() + 1
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid year",
       });
     }
 
-    // Query salary payments for the specified month and year
-    const query = { month: monthNum, year: yearNum };
+    // Query salary payments with valid userId
+    const query = {
+      month: monthNum,
+      year: yearNum,
+      userId: { $ne: null, $exists: true }, // Chỉ lấy các bản ghi có userId
+    };
     const salaryHistory = await SalaryPayment.find(query)
       .populate("userId", "username")
       .sort({ paymentDate: -1 })
@@ -577,6 +631,7 @@ exports.getSalaryHistoryByMonthYear = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 // Thanh toán lương cho nutritionist Admin
 exports.acceptSalary = catchAsync(async (req, res, next) => {
   const { userId, amount, month, year } = req.body;
@@ -595,7 +650,9 @@ exports.acceptSalary = catchAsync(async (req, res, next) => {
     status: "success",
   });
   if (existingPayment) {
-    return next(new AppError(`Salary for ${month}/${year} has already been paid`, 400));
+    return next(
+      new AppError(`Salary for ${month}/${year} has already been paid`, 400)
+    );
   }
 
   // Tính lương cho tháng được chọn
@@ -615,7 +672,9 @@ exports.acceptSalary = catchAsync(async (req, res, next) => {
 
   const baseSalary = 5000000;
   const commission = payments.reduce((sum, payment) => {
-    const mealPlan = mealPlans.find((mp) => mp._id.toString() === payment.mealPlanId.toString());
+    const mealPlan = mealPlans.find(
+      (mp) => mp._id.toString() === payment.mealPlanId.toString()
+    );
     return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
   }, 0);
   const totalSalary = baseSalary + commission;
@@ -643,7 +702,10 @@ exports.acceptSalary = catchAsync(async (req, res, next) => {
 
   // Tạo URL thanh toán VNPay
   const clientIp =
-    req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.ip || "127.0.0.1";
+    req.headers["x-forwarded-for"] ||
+    req.connection.remoteAddress ||
+    req.ip ||
+    "127.0.0.1";
 
   let vnp_Params = {
     vnp_Version: "2.1.0",
@@ -674,7 +736,9 @@ exports.acceptSalary = catchAsync(async (req, res, next) => {
 
   sortedParams["vnp_SecureHash"] = secureHash;
 
-  const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(sortedParams).toString()}`;
+  const paymentUrl = `${VNPAY_CONFIG.vnp_Url}?${new URLSearchParams(
+    sortedParams
+  ).toString()}`;
 
   res.status(200).json({
     status: "success",
@@ -750,7 +814,9 @@ exports.vnpayAdminReturn = catchAsync(async (req, res, next) => {
 
     const baseSalary = 5000000;
     const commission = payments.reduce((sum, payment) => {
-      const mealPlan = mealPlans.find((mp) => mp._id.toString() === payment.mealPlanId.toString());
+      const mealPlan = mealPlans.find(
+        (mp) => mp._id.toString() === payment.mealPlanId.toString()
+      );
       return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
     }, 0);
     const totalSalary = baseSalary + commission;
@@ -786,7 +852,10 @@ exports.vnpayAdminReturn = catchAsync(async (req, res, next) => {
       });
       console.log(`Salary email sent to ${nutritionist.email}`);
     } catch (emailError) {
-      console.error(`Failed to send email to ${nutritionist.email}:`, emailError);
+      console.error(
+        `Failed to send email to ${nutritionist.email}:`,
+        emailError
+      );
     }
 
     // Redirect to the frontend with success message
@@ -800,6 +869,8 @@ exports.vnpayAdminReturn = catchAsync(async (req, res, next) => {
     await payment.save();
 
     // Redirect to the frontend with error message
-    res.redirect(`${baseUrl}/admin/financemanagement?status=error&message=Salary+payment+failed`);
+    res.redirect(
+      `${baseUrl}/admin/financemanagement?status=error&message=Salary+payment+failed`
+    );
   }
 });

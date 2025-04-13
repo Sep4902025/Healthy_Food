@@ -7,17 +7,17 @@ const sendEmail = require("../utils/email");
 
 // 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  // Lấy các query parameters từ request
-  const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
-  const limit = parseInt(req.query.limit) || 10; // Mặc định 10 users mỗi trang
-  const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
 
   const currentAdminId = req.user?._id;
 
-  // Điều kiện lọc: không bao gồm người dùng đã xóa và không phải admin đang đăng nhập
+  // Điều kiện lọc: không bao gồm người dùng đã xóa, không phải admin, và không phải admin đang đăng nhập
   const query = {
     isDelete: false,
-    _id: { $ne: currentAdminId }, // Loại trừ admin đang đăng nhập
+    _id: { $ne: currentAdminId },
+    role: { $ne: "admin" }, // Loại trừ tất cả người dùng có role admin
   };
 
   // Đếm tổng số người dùng thỏa mãn điều kiện
@@ -107,19 +107,27 @@ exports.updateUserById = catchAsync(async (req, res, next) => {
   });
 });
 
-// 📌 Xóa người dùng (Soft Delete) - chỉ xóa nếu user chưa bị xóa trước đó
 exports.deleteUser = catchAsync(async (req, res, next) => {
-  const user = await UserModel.findByIdAndUpdate(
-    req.params.id,
+  const userId = req.params.id;
 
-    { isDelete: true },
-
-    { new: true }
-  );
+  // Find the user to delete
+  const user = await UserModel.findById(userId);
 
   if (!user) {
-    return next(new AppError("User not found or has been deleted", 404));
+    return next(new AppError("No user found with that ID", 404));
   }
+
+  // Prevent deleting the current admin
+  if (!req.user) {
+    return next(new AppError("Authentication required", 401)); // This is triggering
+  }
+
+  if (user._id.toString() === req.user._id.toString()) {
+    return next(new AppError("You cannot delete your own account", 403));
+  }
+
+  // Permanent delete: Remove user from database
+  await UserModel.findByIdAndDelete(userId);
 
   res.status(200).json({
     status: "success",
@@ -201,7 +209,8 @@ exports.createUser = catchAsync(async (req, res, next) => {
 
 // 📌 Nộp CV để trở thành Nutritionist
 exports.submitNutritionistApplication = catchAsync(async (req, res, next) => {
-  const { personalInfo, profileImage, introduction } = req.body;
+  const { personalInfo, profileImage, introduction, certificateLink } =
+    req.body;
 
   if (!req.user || !req.user._id) {
     return next(new AppError("Unauthorized: No user found in request", 401));
@@ -225,6 +234,7 @@ exports.submitNutritionistApplication = catchAsync(async (req, res, next) => {
           personalInfo,
           profileImage,
           introduction,
+          certificateLink,
           status: "pending",
           submittedAt: new Date(),
         },
@@ -236,10 +246,7 @@ exports.submitNutritionistApplication = catchAsync(async (req, res, next) => {
     return next(new AppError("Failed to submit application", 500));
   }
 
-  // Lấy lại user để trả về response
   const updatedUserDoc = await UserModel.findById(userId);
-
-  // await user.save({ validateBeforeSave: false });
 
   res.status(200).json({
     status: "success",

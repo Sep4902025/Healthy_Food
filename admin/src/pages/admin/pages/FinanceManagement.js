@@ -85,10 +85,11 @@ const FinanceManagement = () => {
       const result = await paymentService.getSalaryHistoryByMonthYear(
         selectedMonth,
         selectedYear,
-        1, // Fetch only the first page for the table
-        1000 // Use a large limit to ensure we get all relevant records for the table
+        1,
+        1000
       );
       if (result.success) {
+        console.log("Salary History:", result.data); // Kiểm tra dữ liệu
         setSalaryHistory(result.data || []);
       } else {
         toast.error(result.message || "Failed to fetch salary history");
@@ -191,6 +192,7 @@ const FinanceManagement = () => {
   const isPaidForMonth = (nutriId) => {
     return salaryHistory.some(
       (payment) =>
+        payment.userId && // Kiểm tra userId tồn tại
         payment.userId._id === nutriId &&
         payment.month === selectedMonth &&
         payment.year === selectedYear &&
@@ -201,6 +203,7 @@ const FinanceManagement = () => {
   const getPaymentStatus = (nutriId) => {
     const payment = salaryHistory.find(
       (payment) =>
+        payment.userId && // Kiểm tra userId tồn tại
         payment.userId._id === nutriId &&
         payment.month === selectedMonth &&
         payment.year === selectedYear
@@ -370,8 +373,10 @@ const FinanceManagement = () => {
     salaryHistory.forEach((payment, idx) => {
       historySheet.addRow({
         no: idx + 1,
-        nutritionist:
-          nutritionists.find((n) => n.id === payment.userId)?.name || "Unknown",
+        nutritionist: payment.userId // Kiểm tra userId tồn tại
+          ? nutritionists.find((n) => n.id === payment.userId._id)?.name ||
+            "Unknown"
+          : "Unknown",
         amount: payment.amount,
         status: payment.status,
         date: payment.paymentDate
