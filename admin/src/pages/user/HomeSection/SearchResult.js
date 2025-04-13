@@ -5,11 +5,15 @@ import { toast } from "react-toastify";
 import HomeService from "../../../services/home.service";
 import useFoodData from "../../../helpers/useFoodData";
 import DefaultImg from "../../../assets/images/default.jpg";
+import useAuthCheck from "../../../helpers/useAuthCheck";
 
 const SearchResult = ({ userId, dishes = [] }) => {
   const navigate = useNavigate();
   const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, dishes);
   const [showAll, setShowAll] = useState(false);
+
+  const { checkLogin } = useAuthCheck(userId);
+
 
   const handleFoodClick = (dishId, recipeId) => {
     if (!recipeId) return;
@@ -17,13 +21,7 @@ const SearchResult = ({ userId, dishes = [] }) => {
   };
 
   const handleLike = async (dishId) => {
-    if (!userId) {
-      toast.info("You need to login to like dish!", {
-        autoClose: 3000,
-        onClose: () => navigate("/signin"),
-      });
-      return;
-    }
+    if (!checkLogin()) return;
 
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
     const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;

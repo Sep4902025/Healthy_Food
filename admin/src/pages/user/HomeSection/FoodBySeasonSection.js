@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import useFoodData from "../../../helpers/useFoodData";
 import HomeService from "../../../services/home.service";
+import useAuthCheck from "../../../helpers/useAuthCheck";
 
 const FoodBySeasonSection = ({ userId, selectedSeason }) => {
   const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, []);
@@ -16,6 +17,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
   const navigate = useNavigate();
   const observer = useRef();
   const limit = 6; // Align with initial display limit
+  const { checkLogin } = useAuthCheck(userId);
 
   useEffect(() => {
     setDisplayedDishes([]);
@@ -89,9 +91,10 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
   );
 
   const handleLike = async (dishId) => {
+    if (!checkLogin()) return; 
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
     const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
-
+    
     const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId, isCurrentlyLiked);
 
     setLikedFoods((prev) => {
