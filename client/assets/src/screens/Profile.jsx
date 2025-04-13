@@ -8,6 +8,7 @@ import {
   Switch,
   Dimensions,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { userSelector } from "../redux/selectors/selector";
@@ -267,149 +268,159 @@ function Profile({ navigation }) {
   return (
     <NonBottomTabWrapper headerHidden={true}>
       {/* Header section */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            dispatch(toggleVisible());
-          }}
-          style={styles.backButton}
-        >
-          <Ionicons name="reorder-three" size={24} color={theme.textColor} />
-        </TouchableOpacity>
-        <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
-          My Profile
-        </Text>
-      </View>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => {
+              dispatch(toggleVisible());
+            }}
+            style={styles.backButton}
+          >
+            <Ionicons name="reorder-three" size={24} color={theme.textColor} />
+          </TouchableOpacity>
+          <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
+            My Profile
+          </Text>
+        </View>
 
-      {/* Profile section */}
-      <View style={styles.profileSection}>
-        <Image
-          source={
-            user?.avatarUrl
-              ? { uri: user.avatarUrl }
-              : require("../../assets/image/Profile.png")
-          }
-          style={styles.profileImage}
-        />
-        <View style={styles.profileInfoContainer}>
-          <Text style={{ ...styles.profileName, color: theme.textColor }}>
-            {user?.username}
-          </Text>
-          <Text style={{ ...styles.profileEmail, color: theme.textColor }}>
-            {user?.email}
-          </Text>
-          <View style={styles.editButtonContainer}>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => {
-                setModalVisible({
-                  ...modalVisible,
-                  EditProfileModal: true,
-                });
-              }}
-            >
-              <Text style={{ ...styles.editButtonText, color: "white" }}>
-                Edit Profile
-              </Text>
-            </TouchableOpacity>
+        {/* Profile section */}
+        <View style={styles.profileSection}>
+          <Image
+            source={
+              user?.avatarUrl
+                ? { uri: user.avatarUrl }
+                : require("../../assets/image/Profile.png")
+            }
+            style={styles.profileImage}
+          />
+          <View style={styles.profileInfoContainer}>
+            <Text style={{ ...styles.profileName, color: theme.textColor }}>
+              {user?.username}
+            </Text>
+            <Text style={{ ...styles.profileEmail, color: theme.textColor }}>
+              {user?.email}
+            </Text>
+            <View style={styles.editButtonContainer}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => {
+                  setModalVisible({
+                    ...modalVisible,
+                    EditProfileModal: true,
+                  });
+                }}
+              >
+                <Text style={{ ...styles.editButtonText, color: "white" }}>
+                  Edit Profile
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
 
-      {/* Menu Items */}
-      <View style={styles.menuContainer}>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => {
-            navigation.navigate(ScreensName.favorList);
-          }}
-        >
-          <Ionicons name="heart-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Favorites
-          </Text>
-          <Ionicons name="chevron-forward" size={24} color="#999" />
-        </TouchableOpacity>
+        {/* Menu Items */}
+        <View style={styles.menuContainer}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              navigation.navigate(ScreensName.favorList);
+            }}
+          >
+            <Ionicons name="heart-outline" size={24} color={theme.textColor} />
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>
+              Favorites
+            </Text>
+            <Ionicons name="chevron-forward" size={24} color="#999" />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => {
-            setModalVisible({
-              ...modalVisible,
-              EditHealthModal: true,
-            });
-          }}
-        >
-          <Ionicons name="body-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Health Information
-          </Text>
-          <Ionicons name="chevron-forward" size={24} color="#999" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              setModalVisible({
+                ...modalVisible,
+                EditHealthModal: true,
+              });
+            }}
+          >
+            <Ionicons name="body-outline" size={24} color={theme.textColor} />
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>
+              Health Information
+            </Text>
+            <Ionicons name="chevron-forward" size={24} color="#999" />
+          </TouchableOpacity>
 
-        <View
-          style={{ ...styles.separator, backgroundColor: theme.textColor }}
-        />
+          <View
+            style={{ ...styles.separator, backgroundColor: theme.textColor }}
+          />
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => {
-            navigation.navigate(ScreensName.changePassword, {
-              type: "changePassword",
-            });
-          }}
-        >
-          <FontAwesomeIcon name="edit" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Change password
-          </Text>
-          <Ionicons name="chevron-forward" size={24} color="#999" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              navigation.navigate(ScreensName.changePassword, {
+                type: "changePassword",
+              });
+            }}
+          >
+            <FontAwesomeIcon name="edit" size={24} color={theme.textColor} />
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>
+              Change password
+            </Text>
+            <Ionicons name="chevron-forward" size={24} color="#999" />
+          </TouchableOpacity>
 
-        <View style={styles.menuItem}>
-          <Ionicons name="contrast-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Dark/Light
-          </Text>
-          <Switch
-            value={themeMode === "dark"}
-            onValueChange={changeLightMode}
-            trackColor={{ false: "#ccc", true: "#75a57f" }}
+          <View style={styles.menuItem}>
+            <Ionicons
+              name="contrast-outline"
+              size={24}
+              color={theme.textColor}
+            />
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>
+              Dark/Light
+            </Text>
+            <Switch
+              value={themeMode === "dark"}
+              onValueChange={changeLightMode}
+              trackColor={{ false: "#ccc", true: "#75a57f" }}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              setModalVisible({
+                ...modalVisible,
+                ConfirmDeleteModal: true,
+              });
+            }}
+          >
+            <Ionicons
+              name="trash-bin-outline"
+              size={24}
+              color={theme.textColor}
+            />
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>
+              Delete Account
+            </Text>
+            <Text style={{ color: theme.textColor }}>YES</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+            <Ionicons
+              name="log-out-outline"
+              size={24}
+              color={theme.textColor}
+            />
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>
+              Logout
+            </Text>
+            <Text style={{ color: theme.textColor }}>YES</Text>
+          </TouchableOpacity>
+
+          <View
+            style={{ ...styles.separator, backgroundColor: theme.textColor }}
           />
         </View>
-
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => {
-            setModalVisible({
-              ...modalVisible,
-              ConfirmDeleteModal: true,
-            });
-          }}
-        >
-          <Ionicons
-            name="trash-bin-outline"
-            size={24}
-            color={theme.textColor}
-          />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Delete Account
-          </Text>
-          <Text style={{ color: theme.textColor }}>YES</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={theme.textColor} />
-          <Text style={{ ...styles.menuText, color: theme.textColor }}>
-            Logout
-          </Text>
-          <Text style={{ color: theme.textColor }}>YES</Text>
-        </TouchableOpacity>
-
-        <View
-          style={{ ...styles.separator, backgroundColor: theme.textColor }}
-        />
-      </View>
+      </ScrollView>
 
       {/* Loading indicator when an action is in progress */}
       {loading && (
@@ -470,6 +481,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
+  scrollView: {
+    marginBottom: 48,
+  },
   header: {
     position: "relative",
     flexDirection: "row",
@@ -504,6 +518,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd", // Placeholder color
   },
   profileInfoContainer: {
+    maxWidth: "85%",
     alignItems: "flex-start",
   },
   profileName: {

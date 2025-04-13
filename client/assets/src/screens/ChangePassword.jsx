@@ -9,6 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  PixelRatio,
+  ScrollView,
 } from "react-native";
 
 import SafeAreaWrapper from "../components/layout/SafeAreaWrapper";
@@ -18,10 +20,8 @@ import ShowToast from "../components/common/CustomToast";
 import { changePassword } from "../services/authService";
 import { ScreensName } from "../constants/ScreensName";
 import { useTheme } from "../contexts/ThemeContext";
-import { Feather } from "@expo/vector-icons"; // Assuming you're using Expo
-
-const WIDTH = Dimensions.get("window").width;
-const HEIGHT = Dimensions.get("window").height;
+import { Feather } from "@expo/vector-icons";
+import { normalize } from "../utils/common";
 
 function ChangePassword({ navigation, route }) {
   const email = route.params?.email;
@@ -33,6 +33,14 @@ function ChangePassword({ navigation, route }) {
   const [showPresentPassword, setShowPresentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Track whether fields have been touched/modified
+  const [touched, setTouched] = useState({
+    presentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+
   const [errors, setErrors] = useState({
     presentPassword: "",
     newPassword: "",
@@ -111,7 +119,22 @@ function ChangePassword({ navigation, route }) {
     return isValid;
   };
 
+  // Handle field touch state
+  const handleFieldTouch = (field) => {
+    setTouched((prev) => ({
+      ...prev,
+      [field]: true,
+    }));
+  };
+
   const handleResetPassword = async () => {
+    // Mark all fields as touched when attempting to submit
+    setTouched({
+      presentPassword: true,
+      newPassword: true,
+      confirmPassword: true,
+    });
+
     if (!validateForm()) {
       ShowToast("error", "Complete form to change password");
       return;
@@ -128,7 +151,11 @@ function ChangePassword({ navigation, route }) {
       console.log("Password reset:", newPassword);
       navigation.navigate(ScreensName.signin);
     } else {
-      ShowToast("error", response.message || "Failed to change password");
+
+      ShowToast(
+        "error",
+        response?.response?.data?.message || "Failed to change password"
+      );
     }
   };
 
@@ -139,131 +166,165 @@ function ChangePassword({ navigation, route }) {
           ...styles.container,
           backgroundColor: theme.editModalbackgroundColor,
         }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? normalize(64) : 0}
       >
-        <View style={styles.card}>
-          <Text style={{ ...styles.title, color: theme.textColor }}>
-            Change Password
-          </Text>
-          <Text style={{ ...styles.subtitle, color: theme.greyTextColor }}>
-            Enter a different password from{"\n"}your previous one
-          </Text>
-
-          <View style={styles.inputContainer}>
-            <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-              Current Password
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.card}>
+            <Text style={[styles.title, { color: theme.textColor }]}>
+              Change Password
             </Text>
-            <View
-              style={[
-                styles.inputWrapper,
-                errors.presentPassword ? styles.inputError : null,
-              ]}
-            >
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••••••"
-                placeholderTextColor="#666"
-                value={presentPassword}
-                onChangeText={setPresentPassword}
-                secureTextEntry={!showPresentPassword}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowPresentPassword(!showPresentPassword)}
-              >
-                <Feather
-                  name={showPresentPassword ? "eye" : "eye-off"}
-                  size={24}
-                  color="#666"
-                />
-              </TouchableOpacity>
-            </View>
-            {errors.presentPassword ? (
-              <Text style={styles.errorText}>{errors.presentPassword}</Text>
-            ) : null}
-
-            <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-              New Password
+            <Text style={[styles.subtitle, { color: theme.greyTextColor }]}>
+              Enter a different password from{"\n"}your previous one
             </Text>
-            <View
-              style={[
-                styles.inputWrapper,
-                errors.newPassword ? styles.inputError : null,
-              ]}
-            >
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••••••"
-                placeholderTextColor="#666"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry={!showNewPassword}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowNewPassword(!showNewPassword)}
-              >
-                <Feather
-                  name={showNewPassword ? "eye" : "eye-off"}
-                  size={24}
-                  color="#666"
-                />
-              </TouchableOpacity>
-            </View>
-            {errors.newPassword ? (
-              <Text style={styles.errorText}>{errors.newPassword}</Text>
-            ) : null}
 
-            <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-              Confirm Password
-            </Text>
-            <View
-              style={[
-                styles.inputWrapper,
-                errors.confirmPassword ? styles.inputError : null,
-              ]}
-            >
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••••••"
-                placeholderTextColor="#666"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: theme.greyTextColor }]}>
+                Current Password
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  touched.presentPassword && errors.presentPassword
+                    ? styles.inputError
+                    : null,
+                ]}
               >
-                <Feather
-                  name={showConfirmPassword ? "eye" : "eye-off"}
-                  size={24}
-                  color="#666"
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••••••"
+                  placeholderTextColor="#666"
+                  value={presentPassword}
+                  onChangeText={(text) => {
+                    setPresentPassword(text);
+                    if (!touched.presentPassword) {
+                      handleFieldTouch("presentPassword");
+                    }
+                  }}
+                  secureTextEntry={!showPresentPassword}
+                  onBlur={() => handleFieldTouch("presentPassword")}
                 />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPresentPassword(!showPresentPassword)}
+                >
+                  <Feather
+                    name={showPresentPassword ? "eye" : "eye-off"}
+                    size={normalize(24)}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
+              {touched.presentPassword && errors.presentPassword ? (
+                <Text style={styles.errorText}>{errors.presentPassword}</Text>
+              ) : null}
+
+              <Text style={[styles.label, { color: theme.greyTextColor }]}>
+                New Password
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  touched.newPassword && errors.newPassword
+                    ? styles.inputError
+                    : null,
+                ]}
+              >
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••••••"
+                  placeholderTextColor="#666"
+                  value={newPassword}
+                  onChangeText={(text) => {
+                    setNewPassword(text);
+                    if (!touched.newPassword) {
+                      handleFieldTouch("newPassword");
+                    }
+                  }}
+                  secureTextEntry={!showNewPassword}
+                  onBlur={() => handleFieldTouch("newPassword")}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <Feather
+                    name={showNewPassword ? "eye" : "eye-off"}
+                    size={normalize(24)}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
+              {touched.newPassword && errors.newPassword ? (
+                <Text style={styles.errorText}>{errors.newPassword}</Text>
+              ) : null}
+
+              <Text style={[styles.label, { color: theme.greyTextColor }]}>
+                Confirm Password
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  touched.confirmPassword && errors.confirmPassword
+                    ? styles.inputError
+                    : null,
+                ]}
+              >
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••••••"
+                  placeholderTextColor="#666"
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (!touched.confirmPassword) {
+                      handleFieldTouch("confirmPassword");
+                    }
+                  }}
+                  secureTextEntry={!showConfirmPassword}
+                  onBlur={() => handleFieldTouch("confirmPassword")}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Feather
+                    name={showConfirmPassword ? "eye" : "eye-off"}
+                    size={normalize(24)}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
+              {touched.confirmPassword && errors.confirmPassword ? (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              ) : null}
             </View>
-            {errors.confirmPassword ? (
-              <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-            ) : null}
+
+            <View style={styles.illustrationContainer}>
+              <Image source={proundCactusIcon} style={styles.cactusIcon} />
+              <View style={styles.decorations}>
+                <View style={[styles.star, styles.starOrange]} />
+                <View style={[styles.star, styles.starYellow]} />
+                <View style={[styles.dot]} />
+              </View>
+            </View>
+
+            <RippleButton
+              // buttonStyle={[
+              //   styles.submitButton,
+              //   !isFormValid ? styles.disabledButton : null,
+              // ]}
+              buttonStyle={{ ...styles.submitButton }}
+              buttonText="Change Password"
+              textStyle={styles.buttonText}
+              onPress={handleResetPassword}
+              disabled={!isFormValid}
+            />
           </View>
-
-          <View style={styles.illustrationContainer}>
-            <Image source={proundCactusIcon} style={styles.cactusIcon} />
-            <View style={styles.decorations}>
-              <View style={[styles.star, styles.starOrange]} />
-              <View style={[styles.star, styles.starYellow]} />
-              <View style={[styles.dot]} />
-            </View>
-          </View>
-
-          <RippleButton
-            buttonStyle={{ ...styles.submitButton }}
-            buttonText="Change Password"
-            textStyle={styles.buttonText}
-            onPress={handleResetPassword}
-            disabled={!isFormValid}
-          />
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaWrapper>
   );
@@ -273,48 +334,51 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: WIDTH * 0.075,
-    paddingVertical: 30,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: normalize(24),
+    paddingVertical: normalize(20),
   },
   card: {
     width: "100%",
     alignItems: "center",
   },
   title: {
-    fontSize: 24,
+    fontSize: normalize(24),
     fontFamily: "Aleo_700Bold",
     color: "#191C32",
-    marginBottom: 10,
+    marginBottom: normalize(10),
     alignSelf: "flex-start",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: normalize(16),
     fontFamily: "Aleo_400Regular",
     color: "#666",
-    marginBottom: 30,
-    lineHeight: 22,
+    marginBottom: normalize(24),
+    lineHeight: normalize(22),
     alignSelf: "flex-start",
   },
   inputContainer: {
     width: "100%",
-    marginBottom: 20,
+    marginBottom: normalize(16),
   },
   label: {
-    fontSize: 16,
+    fontSize: normalize(16),
     fontFamily: "Aleo_400Regular",
     color: "#666",
-    marginBottom: 8,
+    marginBottom: normalize(8),
   },
   inputWrapper: {
     width: "100%",
-    height: 50,
+    height: normalize(50),
     backgroundColor: "#F5F5F5",
-    borderRadius: 12,
+    borderRadius: normalize(12),
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "transparent",
-    marginBottom: 5,
+    marginBottom: normalize(5),
   },
   inputError: {
     borderColor: "#FF6B6B",
@@ -322,30 +386,32 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    paddingHorizontal: 15,
-    fontSize: 16,
+    paddingHorizontal: normalize(15),
+    fontSize: normalize(16),
     fontFamily: "Aleo_400Regular",
   },
   eyeIcon: {
-    paddingHorizontal: 15,
+    paddingHorizontal: normalize(15),
     height: "100%",
     justifyContent: "center",
   },
   errorText: {
     color: "#FF6B6B",
-    fontSize: 12,
+    fontSize: normalize(12),
     fontFamily: "Aleo_400Regular",
-    marginBottom: 15,
+    marginBottom: normalize(15),
   },
   illustrationContainer: {
     position: "relative",
     width: "100%",
-    height: HEIGHT * 0.25,
-    marginBottom: 20,
+    aspectRatio: 2, // Maintain a consistent aspect ratio
+    marginVertical: normalize(16),
+    alignItems: "center",
+    justifyContent: "center",
   },
   cactusIcon: {
-    width: "100%",
-    height: "100%",
+    width: "80%", // Adjust based on screen size
+    height: "80%",
     resizeMode: "contain",
   },
   decorations: {
@@ -355,9 +421,9 @@ const styles = StyleSheet.create({
   },
   star: {
     position: "absolute",
-    width: 20,
-    height: 20,
-    borderRadius: 4,
+    width: normalize(20),
+    height: normalize(20),
+    borderRadius: normalize(4),
     transform: [{ rotate: "45deg" }],
   },
   starOrange: {
@@ -372,9 +438,9 @@ const styles = StyleSheet.create({
   },
   dot: {
     position: "absolute",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: normalize(10),
+    height: normalize(10),
+    borderRadius: normalize(5),
     backgroundColor: "#4CAF50",
     right: "25%",
     top: "25%",
@@ -382,9 +448,9 @@ const styles = StyleSheet.create({
   submitButton: {
     width: "100%",
     backgroundColor: "#32B768",
-    padding: 15,
-    borderRadius: 12,
-    marginTop: 25,
+    padding: normalize(15),
+    borderRadius: normalize(12),
+    marginTop: normalize(16),
   },
   disabledButton: {
     backgroundColor: "#A5D6A7",
@@ -392,7 +458,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: normalize(18),
     fontFamily: "Aleo_700Bold",
     textAlign: "center",
   },

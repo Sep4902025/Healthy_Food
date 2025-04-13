@@ -24,6 +24,8 @@ import { useTheme } from "../contexts/ThemeContext";
 import YoutubePlayer from "react-native-youtube-iframe";
 import HomeService from "../services/HomeService";
 import { getIngredient } from "../services/ingredient";
+import { getRatingsByRecipeId, rateRecipe } from "../services/commentService";
+import ShowToast from "../components/common/CustomToast";
 
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
@@ -32,6 +34,7 @@ function FavorAndSuggest({ route }) {
   const [dish, setDish] = useState(null);
   const [recipe, setRecipe] = useState(null);
   const [ingredientDetails, setIngredientDetails] = useState([]);
+  const [personalRate, setPersonalRate] = useState({});
   const [loading, setLoading] = useState(true);
 
   const dispatch = useDispatch();
@@ -57,6 +60,7 @@ function FavorAndSuggest({ route }) {
       return;
     }
     loadRecipe();
+    loadRate();
   }, [dish]);
 
   // Fetch ingredient details when recipe changes
@@ -72,12 +76,12 @@ function FavorAndSuggest({ route }) {
         const detailsObj = [];
 
         const promises = recipe.ingredients.map(async (ingredient) => {
-
           if (!ingredient?.ingredientId) return;
 
           // Ensure ingredientId is a string
           const ingredientId =
-            typeof ingredient.ingredientId === "object" && ingredient.ingredientId?._id
+            typeof ingredient.ingredientId === "object" &&
+            ingredient.ingredientId?._id
               ? ingredient.ingredientId._id
               : ingredient.ingredientId;
 
@@ -108,11 +112,28 @@ function FavorAndSuggest({ route }) {
     fetchIngredientDetails();
   }, [recipe]);
 
+  const loadRate = async () => {
+    const response = await getRatingsByRecipeId(dish.recipeId);
+    if (response?.status === 200) {
+      const findRate = response?.data?.data?.find(
+        (item) => item?.userId?._id === user?._id
+      );
+      if (findRate) {
+        setPersonalRate(findRate);
+      }
+    } else {
+      console.log(response?.response?.data);
+    }
+  };
+
   const loadRecipe = async () => {
     setLoading(true);
 
     try {
-      const response = await HomeService.getRecipeByRecipeId(dish._id, dish.recipeId);
+      const response = await HomeService.getRecipeByRecipeId(
+        dish._id,
+        dish.recipeId
+      );
       if (response.success) {
         setRecipe(response.data);
       } else {
@@ -145,8 +166,22 @@ function FavorAndSuggest({ route }) {
     }
   };
 
-  const handleRate = (ratePoint) => {
-    setRecipe((prev) => ({ ...prev, rate: ratePoint }));
+  const handleRate = async (ratePoint) => {
+    if (!user) {
+      ShowToast("error", "Login to rating");
+      return;
+    }
+
+    const response = await rateRecipe(dish?.recipeId, user?._id, ratePoint);
+    
+    if (response?.status === 201) {
+      setPersonalRate((prev) => ({...prev, star: ratePoint}));
+    } else {
+      ShowToast(
+        "error",
+        response?.response?.data?.message || "Rating recipe fail"
+      );
+    }
   };
 
   const getYouTubeVideoId = (url) => {
@@ -174,7 +209,9 @@ function FavorAndSuggest({ route }) {
           <SpinnerLoading />
         ) : (
           <>
-            <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>
+            <Text
+              style={{ ...styles.sectionTitle, color: theme.greyTextColor }}
+            >
               {ingredientDetails.length} Ingredients
             </Text>
             {ingredientDetails.length > 0 ? (
@@ -186,7 +223,10 @@ function FavorAndSuggest({ route }) {
                   }
                   return (
                     <View key={idx} style={styles.ingredientRow}>
-                      <Image source={{ uri: ingredient.imageUrl }} style={styles.ingredientImage} />
+                      <Image
+                        source={{ uri: ingredient.imageUrl }}
+                        style={styles.ingredientImage}
+                      />
                       <View style={styles.ingredientInfo}>
                         <Text
                           style={{
@@ -230,7 +270,9 @@ function FavorAndSuggest({ route }) {
                 })
                 .filter(Boolean)
             ) : (
-              <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
+              <Text
+                style={{ ...styles.noDataText, color: theme.greyTextColor }}
+              >
                 Failed to load ingredients. Please try again later.
               </Text>
             )}
@@ -254,7 +296,9 @@ function FavorAndSuggest({ route }) {
                 height={200}
                 play={false}
                 videoId={videoId}
-                onError={(error) => console.error("YouTube Player Error:", error)}
+                onError={(error) =>
+                  console.error("YouTube Player Error:", error)
+                }
               />
             </View>
           ) : dish?.videoUrl ? (
@@ -348,11 +392,18 @@ function FavorAndSuggest({ route }) {
     return (
       <View style={styles.recipeCard}>
         <Image source={{ uri: dish?.imageUrl }} style={styles.recipeImage} />
-        <TouchableOpacity style={styles.heartIcon} onPress={() => handleOnSavePress(dish)}>
+        <TouchableOpacity
+          style={styles.heartIcon}
+          onPress={() => handleOnSavePress(dish)}
+        >
           {favorite.isLoading ? (
             <ActivityIndicator size={24} color="#FC8019" />
           ) : isFavorite(dish._id) ? (
-            <MaterialCommunityIcons name="heart-multiple" size={24} color="#FF8A65" />
+            <MaterialCommunityIcons
+              name="heart-multiple"
+              size={24}
+              color="#FF8A65"
+            />
           ) : (
             <Ionicons name="heart-outline" size={24} color="#FF8A65" />
           )}
@@ -367,31 +418,47 @@ function FavorAndSuggest({ route }) {
           }}
         >
           <View style={styles.recipeHeader}>
-            <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>{dish.name}</Text>
+            <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>
+              {dish.name}
+            </Text>
             <View style={styles.recipeRate}>
-              <Rating rate={recipe?.rate ?? 0} starClick={handleRate} size={WIDTH * 0.06} />
+              <Rating
+                rate={personalRate?.star ?? 0}
+                starClick={handleRate}
+                size={WIDTH * 0.06}
+              />
             </View>
           </View>
-          <Text style={{ ...styles.recipeDescription, color: theme.greyTextColor }}>
+          <Text
+            style={{ ...styles.recipeDescription, color: theme.greyTextColor }}
+          >
             {dish.description}
           </Text>
 
           <View style={styles.nutritionInfo}>
             <View style={styles.nutritionItem}>
               <Ionicons name="restaurant-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalCarbs ?? 0} carbs</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalCarbs ?? 0} carbs
+              </Text>
             </View>
             <View style={styles.nutritionItem}>
               <Ionicons name="fitness-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalProtein ?? 0} proteins</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalProtein ?? 0} proteins
+              </Text>
             </View>
             <View style={styles.nutritionItem}>
               <Ionicons name="flame-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalCalories ?? 0} Kcal</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalCalories ?? 0} Kcal
+              </Text>
             </View>
             <View style={styles.nutritionItem}>
               <Ionicons name="water-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalFat ?? 0} fats</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalFat ?? 0} fats
+              </Text>
             </View>
           </View>
 
@@ -413,7 +480,10 @@ function FavorAndSuggest({ route }) {
   return (
     <MainLayoutWrapper>
       <View style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+        >
           {renderRecipeCard()}
         </ScrollView>
       </View>

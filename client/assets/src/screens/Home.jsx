@@ -8,6 +8,7 @@ import {
   Dimensions,
   RefreshControl,
   ActivityIndicator,
+  PixelRatio,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import SearchBar from "../components/common/SearchBar";
@@ -21,9 +22,7 @@ import { loadFavorites } from "../redux/actions/favoriteThunk";
 import { favorSelector, userSelector } from "../redux/selectors/selector";
 import SpinnerLoading from "../components/common/SpinnerLoading";
 import HomeService from "../services/HomeService";
-
-const WIDTH = Dimensions.get("window").width;
-const HEIGHT = Dimensions.get("window").height;
+import { normalize } from "../utils/common";
 
 function Home({ navigation }) {
   const [seasonalDishes, setSeasonalDishes] = useState([]);
@@ -38,11 +37,14 @@ function Home({ navigation }) {
   const user = useSelector(userSelector);
 
   const dispatch = useDispatch();
-  const season = useCurrentSeason() || "spring";
+  const season = useCurrentSeason() || "unknown";
 
   useEffect(() => {
-    loadInitialDishes();
-  }, []);
+    const validSeasons = ["Spring", "Summer", "Fall", "Winter"];
+    if (validSeasons.includes(season)) {
+      loadInitialDishes();
+    }
+  }, [season]);
 
   useEffect(() => {
     loadFavoritesData();
@@ -69,20 +71,19 @@ function Home({ navigation }) {
 
   const loadDishes = async (pageNum, isRefresh = false) => {
     try {
-      const response = await HomeService.getAllDishes(pageNum, limit);
-      if (response?.success) {
-        const newDishes = response.data.items.filter(
-          (dish) => dish.season && typeof dish.season === "string"
-        );
+      const response = await HomeService.getDishesBySeason(season);
+      if (response?.status === "success") {
+        const newDishes = response.data.items;
 
-        setSeasonalDishes((prev) =>
-          isRefresh ? newDishes : [...prev, ...newDishes]
-        );
+        // setSeasonalDishes((prev) =>
+        //   isRefresh ? newDishes : [...prev, ...newDishes]
+        // );=
 
-        setPage(pageNum);
-        setHasMore(pageNum < response.data.totalPages);
+        // setPage(pageNum);
+        // setHasMore(pageNum < response.data.totalPages);
+        setSeasonalDishes(newDishes);
       } else {
-        console.error("Failed to load dishes:", response?.message);
+        console.error("Failed to load dishes:", response);
         setHasMore(false);
       }
     } catch (error) {
@@ -115,7 +116,7 @@ function Home({ navigation }) {
   const handleScroll = useCallback(
     ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-      const paddingToBottom = 20;
+      const paddingToBottom = normalize(20);
       if (
         layoutMeasurement.height + contentOffset.y >=
         contentSize.height - paddingToBottom
@@ -131,7 +132,7 @@ function Home({ navigation }) {
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
+        // onScroll={handleScroll}
         scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -155,8 +156,7 @@ function Home({ navigation }) {
                 onPress={() =>
                   navigation.navigate(ScreensName.search, { category })
                 }
-                cardWidth={"40%"}
-                // style={{ marginRight: "4%" }}
+                style={styles.categoryCard}
               />
             ))}
           </View>
@@ -208,41 +208,45 @@ function Home({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: normalize(16),
   },
   categoriesSection: {
-    marginTop: 16,
+    marginTop: normalize(16),
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: normalize(16),
     color: "#38B2AC",
     fontWeight: "500",
-    marginBottom: 16,
+    marginBottom: normalize(16),
   },
   categoriesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
+    marginTop: normalize(40), // Add space for category images that are positioned absolute
+  },
+  categoryCard: {
+    marginBottom: normalize(24),
   },
   seasonalSection: {
-    marginVertical: 16,
+    marginVertical: normalize(16),
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    marginBottom: normalize(16),
   },
   viewAllText: {
     color: "#38B2AC",
-    fontSize: 14,
+    fontSize: normalize(14),
   },
   noResultsText: {
-    fontSize: 16,
+    fontSize: normalize(16),
     textAlign: "center",
+    padding: normalize(20),
   },
   loadingMore: {
-    marginVertical: 20,
+    marginVertical: normalize(20),
   },
 });
 

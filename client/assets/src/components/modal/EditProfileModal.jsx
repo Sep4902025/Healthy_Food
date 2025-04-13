@@ -20,6 +20,7 @@ import { userSelector } from "../../redux/selectors/selector";
 import { useTheme } from "../../contexts/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary } from "../../services/cloundaryService";
+import { normalize } from "../../utils/common";
 
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
@@ -39,7 +40,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
     avtChange: false,
     ...user,
   });
-  
+
   // State to track which fields are currently editable
   const [editableFields, setEditableFields] = useState({
     username: false,
@@ -49,7 +50,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
     height: false,
     weightGoal: false,
   });
-  
+
   // State to track validation errors
   const [validationErrors, setValidationErrors] = useState({
     username: "",
@@ -62,9 +63,9 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
 
   // Toggle edit mode for a specific field
   const toggleEditMode = (fieldName) => {
-    setEditableFields(prev => ({
+    setEditableFields((prev) => ({
       ...prev,
-      [fieldName]: !prev[fieldName]
+      [fieldName]: !prev[fieldName],
     }));
   };
 
@@ -92,7 +93,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
   // Handle field change with validation
   const handleFieldChange = (fieldName, value) => {
     let error = "";
-    
+
     // Validate based on field type
     switch (fieldName) {
       case "username":
@@ -109,7 +110,8 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
         break;
       case "phoneNumber":
         if (!validateVietnamesePhone(value)) {
-          error = "Số điện thoại không hợp lệ (Việt Nam: 10 số, bắt đầu bằng số 0)";
+          error =
+            "Số điện thoại không hợp lệ (Việt Nam: 10 số, bắt đầu bằng số 0)";
         }
         break;
       case "weight":
@@ -124,25 +126,27 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
       default:
         break;
     }
-    
+
     // Update validation errors
-    setValidationErrors(prev => ({
+    setValidationErrors((prev) => ({
       ...prev,
-      [fieldName]: error
+      [fieldName]: error,
     }));
-    
+
     // Update profile state
-    setProfile(prev => ({
+    setProfile((prev) => ({
       ...prev,
-      [fieldName]: value
+      [fieldName]: value,
     }));
   };
 
   const handleSave = async () => {
     // Check for validation errors before saving
-    const hasErrors = Object.values(validationErrors).some(error => error !== "");
+    const hasErrors = Object.values(validationErrors).some(
+      (error) => error !== ""
+    );
     const hasEmptyRequiredFields = !profile.username || !profile.email;
-    
+
     if (hasErrors || hasEmptyRequiredFields) {
       Alert.alert(
         "Lỗi",
@@ -151,7 +155,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
       );
       return;
     }
-    
+
     const response = profile?.avtChange
       ? await uploadToCloudinary(profile?.avatarUrl)
       : profile.avatarUrl;
@@ -161,7 +165,9 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Xin lỗi, chúng tôi cần quyền truy cập thư viện ảnh để thực hiện tính năng này!");
+      Alert.alert(
+        "Xin lỗi, chúng tôi cần quyền truy cập thư viện ảnh để thực hiện tính năng này!"
+      );
       return;
     }
 
@@ -183,7 +189,13 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
   };
 
   // Renders input field with edit button
-  const renderEditableField = (label, fieldName, placeholder, keyboardType = "default") => {
+  const renderEditableField = (
+    label,
+    fieldName,
+    placeholder,
+    keyboardType = "default",
+    edittable = true
+  ) => {
     return (
       <>
         <Text style={{ ...styles.label, color: theme.greyTextColor }}>
@@ -193,7 +205,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
           <TextInput
             style={[
               styles.editableInput,
-              !editableFields[fieldName] && styles.disabledInput
+              !editableFields[fieldName] && styles.disabledInput,
             ]}
             value={profile[fieldName]}
             onChangeText={(text) => handleFieldChange(fieldName, text)}
@@ -201,14 +213,16 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
             keyboardType={keyboardType}
             editable={editableFields[fieldName]}
           />
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.editFieldButton}
-            onPress={() => toggleEditMode(fieldName)}
+            onPress={() => {
+              edittable && toggleEditMode(fieldName);
+            }}
           >
-            <Ionicons 
-              name={editableFields[fieldName] ? "checkmark" : "pencil"} 
-              size={20} 
-              color="#40B491" 
+            <Ionicons
+              name={editableFields[fieldName] ? "checkmark" : "pencil"}
+              size={20}
+              color="#40B491"
             />
           </TouchableOpacity>
         </View>
@@ -263,8 +277,14 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
           <ScrollView style={styles.scrollContent}>
             <View style={styles.formContainer}>
               {renderEditableField("Họ và tên", "username", "Nhập họ và tên")}
-              
-              {renderEditableField("Email", "email", "Nhập địa chỉ email", "email-address")}
+
+              {renderEditableField(
+                "Email",
+                "email",
+                "Nhập địa chỉ email",
+                "email-address",
+                false
+              )}
 
               <Text style={{ ...styles.label, color: theme.greyTextColor }}>
                 Số điện thoại
@@ -276,34 +296,53 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
                 <TextInput
                   style={[
                     styles.phoneInput,
-                    !editableFields.phoneNumber && styles.disabledInput
+                    !editableFields.phoneNumber && styles.disabledInput,
                   ]}
                   value={profile.phoneNumber}
-                  onChangeText={(text) => handleFieldChange("phoneNumber", text)}
+                  onChangeText={(text) =>
+                    handleFieldChange("phoneNumber", text)
+                  }
                   placeholder="Nhập số điện thoại"
                   keyboardType="phone-pad"
                   editable={editableFields.phoneNumber}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.editPhoneButton}
                   onPress={() => toggleEditMode("phoneNumber")}
                 >
-                  <Ionicons 
-                    name={editableFields.phoneNumber ? "checkmark" : "pencil"} 
-                    size={20} 
-                    color="#40B491" 
+                  <Ionicons
+                    name={editableFields.phoneNumber ? "checkmark" : "pencil"}
+                    size={20}
+                    color="#40B491"
                   />
                 </TouchableOpacity>
               </View>
               {validationErrors.phoneNumber ? (
-                <Text style={styles.errorText}>{validationErrors.phoneNumber}</Text>
+                <Text style={styles.errorText}>
+                  {validationErrors.phoneNumber}
+                </Text>
               ) : null}
 
-              {renderEditableField("Cân nặng (kg)", "weight", "Nhập cân nặng (kg)", "numeric")}
-              
-              {renderEditableField("Chiều cao (cm)", "height", "Nhập chiều cao (cm)", "numeric")}
-              
-              {renderEditableField("Mục tiêu cân nặng (kg)", "weightGoal", "Nhập mục tiêu cân nặng (kg)", "numeric")}
+              {renderEditableField(
+                "Cân nặng (kg)",
+                "weight",
+                "Nhập cân nặng (kg)",
+                "numeric"
+              )}
+
+              {renderEditableField(
+                "Chiều cao (cm)",
+                "height",
+                "Nhập chiều cao (cm)",
+                "numeric"
+              )}
+
+              {renderEditableField(
+                "Mục tiêu cân nặng (kg)",
+                "weightGoal",
+                "Nhập mục tiêu cân nặng (kg)",
+                "numeric"
+              )}
             </View>
           </ScrollView>
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -342,7 +381,7 @@ const styles = StyleSheet.create({
     bottom: "10%",
   },
   headerTitle: {
-    fontSize: 25,
+    fontSize: normalize(25),
     fontWeight: "600",
     textAlign: "center",
     marginTop: 16,
@@ -354,7 +393,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: normalize(14),
     marginBottom: 8,
     color: "#666",
   },
@@ -370,7 +409,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: "600",
   },
   formContainer: {
@@ -393,7 +432,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
   },
   countryCode: {
-    fontSize: 14,
+    fontSize: normalize(14),
   },
   phoneInput: {
     flex: 1,
@@ -402,7 +441,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     height: 44,
-    fontSize: 14,
+    fontSize: normalize(14),
     backgroundColor: "white",
   },
   profileImageContainer: {
@@ -449,7 +488,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     height: 44,
-    fontSize: 14,
+    fontSize: normalize(14),
     backgroundColor: "white",
   },
   disabledInput: {
@@ -467,7 +506,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: "red",
-    fontSize: 12,
+    fontSize: normalize(12),
     marginBottom: 8,
     marginTop: -4,
   },

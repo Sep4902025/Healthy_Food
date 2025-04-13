@@ -14,9 +14,10 @@ import { favorSelector } from "../../redux/selectors/selector";
 import { toggleFavorite } from "../../redux/actions/favoriteThunk";
 import MaterialCommunityIcons from "./VectorIcons/MaterialCommunityIcons";
 import { useTheme } from "../../contexts/ThemeContext";
+import { ScreensName } from "../../constants/ScreensName";
 const HEIGHT = Dimensions.get("window").height;
 
-const DishedFavor = ({ item }) => {
+const DishedFavor = ({ item, navigation }) => {
   const dispatch = useDispatch();
   const { theme } = useTheme();
 
@@ -29,6 +30,9 @@ const DishedFavor = ({ item }) => {
       style={{
         ...styles.dishedFavorContainer,
         backgroundColor: theme.cardBackgroundColor,
+      }}
+      onPress={() => {
+        navigation.navigate(ScreensName.favorAndSuggest, { dish: item });
       }}
     >
       <View style={styles.imageContainer}>
@@ -46,7 +50,6 @@ const DishedFavor = ({ item }) => {
           activeOpacity={0.9}
           onPress={handleOnChangeFavorite}
         >
-         
           <MaterialCommunityIcons
             name="heart-multiple"
             size={24}
@@ -57,7 +60,6 @@ const DishedFavor = ({ item }) => {
       <Text style={{ ...styles.dishTitle, color: theme.textColor }}>
         {item.name}
       </Text>
-      
     </TouchableOpacity>
   );
 };

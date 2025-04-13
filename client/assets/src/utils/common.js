@@ -1,9 +1,14 @@
+
+
 // === PHẦN 1: IMPORT ===
 import moment from "moment";
 import { SeasonType } from "../constants/SeasonType";
 import { LightContants } from "../constants/LightConstants";
 import store from "../redux/store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Dimensions, PixelRatio } from "react-native";
+const window = Dimensions.get("window");
+const scale = window.width / 375;
 
 // Import thư viện moment.js để xử lý date/time
 
@@ -125,3 +130,8 @@ export function successStatus(status = 404) {
     return false
   }
 }
+
+export const normalize = (size) => {
+  const newSize = size * scale;
+  return Math.round(PixelRatio.roundToNearestPixel(newSize));
+};

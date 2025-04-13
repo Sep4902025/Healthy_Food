@@ -18,7 +18,7 @@ import dishesService from "../services/dishService";
 
 const HEIGHT = Dimensions.get("window").height;
 
-function FavorList() {
+function FavorList({navigation}) {
   const [favoriteItems, setFavoriteItems] = useState([]);
   const [dishes, setDishes] = useState([]);
   const [loading, setLoading] = useState({ initial: true, more: false });
@@ -84,7 +84,7 @@ function FavorList() {
 
   const loadFavoriteItems = () => {
     const filteredItems = dishes.filter((item) => isFavorite(item._id));
-    
+
     setFavoriteItems(filteredItems);
   };
 
@@ -130,7 +130,7 @@ function FavorList() {
               ) : (
                 favoriteItems.map((item) => (
                   <View key={item._id} style={styles.gridItem}>
-                    <DishedFavor item={item} />
+                    <DishedFavor item={item} navigation={navigation} />
                   </View>
                 ))
               )}

@@ -56,6 +56,16 @@ const HomeService = {
     }
   },
 
+  getDishesBySeason: async (season) => {
+    try {
+      const response = await axiosInstance.get(`/dishes/by-season?season=${season}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching dishes for type ${season}:`, error);
+      throw error;
+    }
+  },
+
   // 🔹 Lấy tất cả món ăn với phân trang
   getAllDishes: async (page, limit, search = "") => {
     try {

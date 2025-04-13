@@ -303,10 +303,10 @@ const MealPlan = ({ navigation }) => {
                 {/* Chart Section */}
                 {userMealPlan._id && (
                   <View className="mb-4 border-t border-gray-200 pt-4">
-                    {user.userPreferenceId ? (
+                    {user?.userPreferenceId ? (
                       <MealPlanAimChart
                         mealPlanId={userMealPlan._id}
-                        userId={user.userPreferenceId}
+                        userId={user?.userPreferenceId}
                         duration={userMealPlan.duration || 7}
                         onNutritionTargetsCalculated={
                           handleNutritionTargetsCalculated

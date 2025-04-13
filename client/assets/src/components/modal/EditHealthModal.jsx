@@ -13,6 +13,7 @@ import {
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
 import { useTheme } from "../../contexts/ThemeContext";
+import { normalize } from "../../utils/common";
 
 const HEIGHT = Dimensions.get("window").height;
 
@@ -94,7 +95,7 @@ export const EditHealthModal = ({
       {
         label: "SleepTime",
         field: "sleepTime",
-        value: healthData.sleepTime,
+        value: healthData.sleepTime ?? "",
         keyboardType: "default",
         editable: false,
       },
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
     bottom: "10%",
   },
   headerTitle: {
-    fontSize: 25,
+    fontSize: normalize(25),
     fontWeight: "600",
     textAlign: "center",
     marginTop: 16,
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
     width: "48%",
   },
   label: {
-    fontSize: 14,
+    fontSize: normalize(14),
     marginBottom: 8,
     color: "#666",
   },
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    fontSize: 14,
+    fontSize: normalize(14),
     backgroundColor: "white",
     borderRadius: 8,
     borderWidth: 1,
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     color: "#666",
-    fontSize: 14,
+    fontSize: normalize(14),
     textAlign: "center",
   },
   saveButton: {
@@ -365,7 +366,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: "600",
   },
 });

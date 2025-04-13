@@ -11,6 +11,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Alert,
+  ScrollView,
 } from "react-native";
 
 import { LinearGradient } from "expo-linear-gradient";
@@ -104,13 +105,6 @@ function Signup({ navigation }) {
       return ShowToast("error", "Invalid email format.");
     }
 
-    // Validate password (min 6, chữ + số)
-    if (!isValidPassword(password.trim())) {
-      return ShowToast(
-        "error",
-        "Password must be at least 6 characters long and include both letters and numbers."
-      );
-    }
     if (!termAgree) {
       setFormData((prev) => ({ ...prev, loginError: "termAgreeError" }));
       return ShowToast("error", "Agree with our term to regis.");
@@ -227,118 +221,134 @@ function Signup({ navigation }) {
         <KeyboardAwareScrollView
           enableOnAndroid
           extraScrollHeight={Platform.OS === "ios" ? 20 : 40}
-          style={styles.view}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{
-            flex: 1,
-            justifyContent: "flex-end",
-            alignItems: "center",
-          }}
         >
-          <Text style={styles.title}>REGISTER</Text>
+          <ScrollView
+            style={styles.view}
+            contentContainerStyle={{
+              flex: 1,
+              justifyContent: "flex-end",
+              alignItems: "center",
+            }}
+          >
+            <Text style={styles.title}>REGISTER</Text>
 
-          <View style={styles.formContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Full name *"
-              placeholderTextColor="#666"
-              value={formData.fullName}
-              onChangeText={(text) => handleInputChange("fullName", text)}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Email *"
-              placeholderTextColor="#666"
-              keyboardType="email-address"
-              value={formData.email}
-              onChangeText={(text) => handleInputChange("email", text)}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Phone number *"
-              placeholderTextColor="#666"
-              keyboardType="phone-pad"
-              value={formData.phoneNumber}
-              onChangeText={(text) => handleInputChange("phoneNumber", text)}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Password *"
-              placeholderTextColor="#666"
-              secureTextEntry
-              value={formData.password}
-              onChangeText={(text) => handleInputChange("password", text)}
-            />
-            <View style={styles.checkbox}>
-              <Checkbox
-                value={formData.termAgree}
-                onValueChange={(selection) => {
-                  setFormData((prev) => ({ ...prev, termAgree: selection }));
-                }}
+            <View style={styles.formContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Full name *"
+                placeholderTextColor="#666"
+                value={formData.fullName}
+                onChangeText={(text) => handleInputChange("fullName", text)}
               />
-              <Text
-                style={{
-                  ...styles.checkboxText,
-                  textDecorationLine:
-                    formData.loginError === "termAgreeError" ? "underline" : "none",
+
+              <TextInput
+                style={styles.input}
+                placeholder="Email *"
+                placeholderTextColor="#666"
+                keyboardType="email-address"
+                value={formData.email}
+                onChangeText={(text) => handleInputChange("email", text)}
+              />
+              <View style={styles.checkbox}>
+                <Text
+                  style={{
+                    color: "white",
+                    textAlign: "left",
+                    transform: [{ translateY: -10 }],
+                  }}
+                >
+                  * Impotant information
+                </Text>
+              </View>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Phone number *"
+                placeholderTextColor="#666"
+                keyboardType="phone-pad"
+                value={formData.phoneNumber}
+                onChangeText={(text) => handleInputChange("phoneNumber", text)}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Password *"
+                placeholderTextColor="#666"
+                secureTextEntry
+                value={formData.password}
+                onChangeText={(text) => handleInputChange("password", text)}
+              />
+              <View style={styles.checkbox}>
+                <Checkbox
+                  value={formData.termAgree}
+                  onValueChange={(selection) => {
+                    setFormData((prev) => ({ ...prev, termAgree: selection }));
+                  }}
+                />
+                <Text
+                  style={{
+                    ...styles.checkboxText,
+                    textDecorationLine:
+                      formData.loginError === "termAgreeError"
+                        ? "underline"
+                        : "none",
+                  }}
+                >
+                  Agree to terms
+                </Text>
+              </View>
+
+              <RippleButton
+                buttonStyle={{
+                  ...styles.socialButtonStyle,
+                  backgroundColor: "#191C32",
+                  justifyContent: "center",
                 }}
-              >
-                Agree to terms
+                buttonText="Register"
+                textStyle={{ ...styles.textStyle, color: "#ffffff" }}
+                onPress={async () => await onPressRegisterButton()}
+              />
+
+              <SplitLine
+                text="or use social sign up"
+                textStyle={styles.splitTextStyle}
+                lineStyle={styles.splitLineStyle}
+              />
+
+              <RippleButton
+                buttonStyle={styles.socialButtonStyle}
+                leftButtonIcon={
+                  <Image
+                    source={googleIcon}
+                    style={{ width: 20, height: 20, ...styles.iconStyle }}
+                  />
+                }
+                buttonText="Continue with Google"
+                textStyle={styles.textStyle}
+                contentContainerStyle={{
+                  ...styles.buttonContainerStyle,
+                  width: buttonWidth,
+                }}
+                onPress={onPressGoogleButton}
+                backgroundColor={"rgba(0, 0, 0, 0.2)"}
+              />
+
+              <Text style={styles.alreadyText}>
+                Already have account?{" "}
+                <Text
+                  style={{
+                    textDecorationLine: "underline",
+                    fontSize: 16,
+                    color: "white",
+                  }}
+                  onPress={() => navigation.navigate(ScreensName.signin)}
+                >
+                  Log In
+                </Text>
               </Text>
             </View>
-
-            <RippleButton
-              buttonStyle={{
-                ...styles.socialButtonStyle,
-                backgroundColor: "#191C32",
-                justifyContent: "center",
-              }}
-              buttonText="Register"
-              textStyle={{ ...styles.textStyle, color: "#ffffff" }}
-              onPress={async () => await onPressRegisterButton()}
-            />
-
-            <SplitLine
-              text="or use social sign up"
-              textStyle={styles.splitTextStyle}
-              lineStyle={styles.splitLineStyle}
-            />
-
-            <RippleButton
-              buttonStyle={styles.socialButtonStyle}
-              leftButtonIcon={
-                <Image
-                  source={googleIcon}
-                  style={{ width: 20, height: 20, ...styles.iconStyle }}
-                />
-              }
-              buttonText="Continue with Google"
-              textStyle={styles.textStyle}
-              contentContainerStyle={{
-                ...styles.buttonContainerStyle,
-                width: buttonWidth,
-              }}
-              onPress={onPressGoogleButton}
-              backgroundColor={"rgba(0, 0, 0, 0.2)"}
-            />
-
-            <Text style={styles.alreadyText}>
-              Already have account?{" "}
-              <Text
-                style={{
-                  textDecorationLine: "underline",
-                  fontSize: 16,
-                  color: "white",
-                }}
-                onPress={() => navigation.navigate(ScreensName.signin)}
-              >
-                Log In
-              </Text>
-            </Text>
-          </View>
+          </ScrollView>
         </KeyboardAwareScrollView>
 
         <InputOtpModal
