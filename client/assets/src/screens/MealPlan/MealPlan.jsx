@@ -89,7 +89,6 @@ const MealPlan = ({ navigation }) => {
         await fetchUserMealPlan();
       } else {
         setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
-        ShowToast("error", `❌ Error: ${response.message}`);
       }
     } catch (error) {
       setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
@@ -154,7 +153,7 @@ const MealPlan = ({ navigation }) => {
       <SafeAreaView className="flex-1 bg-background dark:bg-dark-background">
         <View className="flex-1 p-4">
           {userMealPlan ? (
-            <View className="flex-1 bg-surface dark:bg-dark-surface rounded-lg shadow-md p-4">
+            <View className="flex-1 dark:bg-dark-surface rounded-lg p-4">
               <View className="mb-4">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">

@@ -8,11 +8,7 @@ import {
   ImageBackground,
   Dimensions,
 } from "react-native";
-import {
-  SafeAreaView,
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView, SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../../contexts/ThemeContext";
 
@@ -31,33 +27,26 @@ const SafeAreaWrapper = ({
   children,
 }) => {
   const { backgroundColor, textColor, height } = headerStyle;
-  const insets = useSafeAreaInsets(); 
+  const insets = useSafeAreaInsets();
 
   const { theme, themeMode } = useTheme();
 
   useFocusEffect(
     React.useCallback(() => {
-      StatusBar.setBarStyle(
-        themeMode !== "light" ? "light-content" : "dark-content",
-        true
-      );
+      StatusBar.setBarStyle(themeMode !== "light" ? "light-content" : "dark-content", true);
     }, [])
   );
 
   useEffect(() => {
-    StatusBar.setBarStyle(
-      themeMode !== "light" ? "light-content" : "dark-content",
-      true
-    );
+    StatusBar.setBarStyle(themeMode !== "light" ? "light-content" : "dark-content", true);
     if (Platform.OS === "android") {
-      StatusBar.setBackgroundColor(theme.safeAreaBackgroundColor); 
+      StatusBar.setBackgroundColor(theme.safeAreaBackgroundColor);
       StatusBar.setTranslucent(true);
     }
   }, [themeMode]);
 
   return (
     <SafeAreaProvider>
-     
       <View
         style={{
           position: "absolute",
@@ -65,12 +54,10 @@ const SafeAreaWrapper = ({
           left: 0,
           right: 0,
           height: height ?? insets.top,
-          backgroundColor: theme.safeAreaBackgroundColor, 
+          backgroundColor: theme.safeAreaBackgroundColor,
           zIndex: 2,
         }}
       />
-
-     
 
       <SafeAreaView style={styles.container}>
         {backgroundImage ? (
@@ -81,9 +68,7 @@ const SafeAreaWrapper = ({
           >
             {headerTitle ? (
               <View style={styles.header}>
-                <Text style={[styles.headerText, { color: textColor }]}>
-                  {headerTitle}
-                </Text>
+                <Text style={[styles.headerText, { color: textColor }]}>{headerTitle}</Text>
               </View>
             ) : null}
             <View style={styles.content}>{children}</View>
@@ -92,9 +77,7 @@ const SafeAreaWrapper = ({
           <>
             {headerTitle ? (
               <View style={[styles.header, { backgroundColor }]}>
-                <Text style={[styles.headerText, { color: textColor }]}>
-                  {headerTitle}
-                </Text>
+                <Text style={[styles.headerText, { color: textColor }]}>{headerTitle}</Text>
               </View>
             ) : null}
             <View style={[styles.content, backgroundStyle]}>{children}</View>

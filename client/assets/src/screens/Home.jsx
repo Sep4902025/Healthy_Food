@@ -31,6 +31,7 @@ function Home({ navigation }) {
   const [loading, setLoading] = useState({ initial: true, more: false });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [isSeasonValid, setIsSeasonValid] = useState(true); // Track if season is valid
   const limit = 10; // Số lượng món ăn mỗi trang
 
   const favor = useSelector(favorSelector);
@@ -38,11 +39,16 @@ function Home({ navigation }) {
 
   const dispatch = useDispatch();
   const season = useCurrentSeason() || "unknown";
+  const validSeasons = ["Spring", "Summer", "Fall", "Winter"];
 
   useEffect(() => {
-    const validSeasons = ["Spring", "Summer", "Fall", "Winter"];
+    // Check if season is valid on mount or when season changes
     if (validSeasons.includes(season)) {
+      setIsSeasonValid(true);
       loadInitialDishes();
+    } else {
+      setIsSeasonValid(false);
+      setLoading((prev) => ({ ...prev, initial: false }));
     }
   }, [season]);
 
@@ -58,32 +64,35 @@ function Home({ navigation }) {
 
   const loadInitialDishes = async () => {
     setLoading((prev) => ({ ...prev, initial: true }));
+    setPage(1);
+    setHasMore(true);
     await loadDishes(1, true);
     setLoading((prev) => ({ ...prev, initial: false }));
   };
 
   const loadMoreDishes = async () => {
-    if (!hasMore || loading.more) return;
+    if (!hasMore || loading.more || !isSeasonValid) return;
     setLoading((prev) => ({ ...prev, more: true }));
     await loadDishes(page + 1);
     setLoading((prev) => ({ ...prev, more: false }));
   };
 
   const loadDishes = async (pageNum, isRefresh = false) => {
+    // Validate season before making API call
+    if (!validSeasons.includes(season)) {
+      setIsSeasonValid(false);
+      return;
+    }
+
     try {
-      const response = await HomeService.getDishesBySeason(season);
-      if (response?.status === "success") {
+      const response = await HomeService.getDishBySeason(season, pageNum, limit);
+      if (response.success) {
         const newDishes = response.data.items;
-
-        // setSeasonalDishes((prev) =>
-        //   isRefresh ? newDishes : [...prev, ...newDishes]
-        // );=
-
-        // setPage(pageNum);
-        // setHasMore(pageNum < response.data.totalPages);
-        setSeasonalDishes(newDishes);
+        setSeasonalDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+        setPage(pageNum);
+        setHasMore(pageNum < response.data.totalPages);
       } else {
-        console.error("Failed to load dishes:", response);
+        console.error("Failed to load dishes:", response.message);
         setHasMore(false);
       }
     } catch (error) {
@@ -93,6 +102,12 @@ function Home({ navigation }) {
   };
 
   const onRefresh = async () => {
+    if (!validSeasons.includes(season)) {
+      setIsSeasonValid(false);
+      setRefreshing(false);
+      return;
+    }
+
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
@@ -121,7 +136,7 @@ function Home({ navigation }) {
         loadMoreDishes();
       }
     },
-    [hasMore, loading.more, page]
+    [hasMore, loading.more, page, isSeasonValid]
   );
 
   return (
@@ -129,7 +144,7 @@ function Home({ navigation }) {
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
-        // onScroll={handleScroll}
+        onScroll={handleScroll}
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
@@ -165,18 +180,18 @@ function Home({ navigation }) {
 
           {loading.initial ? (
             <SpinnerLoading />
-          ) : seasonalDishes.filter((item) =>
-              item?.season?.toLowerCase()?.includes(season?.toLowerCase())
-            ).length > 0 ? (
-            seasonalDishes
-              .filter((item) => item?.season?.toLowerCase()?.includes(season?.toLowerCase()))
-              .map((dish) => (
-                <DishedV1
-                  dish={dish}
-                  key={dish._id}
-                  onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })}
-                />
-              ))
+          ) : !isSeasonValid ? (
+            <Text style={styles.noResultsText}>
+              Invalid season. Please select a valid season (Spring, Summer, Fall, Winter).
+            </Text>
+          ) : seasonalDishes.length > 0 ? (
+            seasonalDishes.map((dish) => (
+              <DishedV1
+                dish={dish}
+                key={dish._id}
+                onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })}
+              />
+            ))
           ) : (
             <Text style={styles.noResultsText}>No seasonal dishes found</Text>
           )}

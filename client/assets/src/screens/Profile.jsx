@@ -21,10 +21,7 @@ import { ScreensName } from "../constants/ScreensName";
 import ShowToast from "../components/common/CustomToast";
 import { deleteUser, updateUser } from "../services/authService";
 import { removeUser, updateUserAct } from "../redux/reducers/userReducer";
-import {
-  createUserPreference,
-  resetUserPreference,
-} from "../services/userPreference";
+import { createUserPreference, resetUserPreference } from "../services/userPreference";
 import { useFocusEffect } from "@react-navigation/native";
 import ConfirmDeleteAccountModal from "../components/modal/ConfirmDeleteAccountModal";
 import { toggleVisible } from "../redux/reducers/drawerReducer";
@@ -38,7 +35,9 @@ const HEIGHT = Dimensions.get("window").height;
 function Profile({ navigation }) {
   const dispatch = useDispatch();
   const { themeMode, toggleTheme, theme } = useTheme();
-  const [loading, setLoading] = useState(false);
+  const [isFetchingPreferences, setIsFetchingPreferences] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [error, setError] = useState(null);
   const [modalVisible, setModalVisible] = useState({
     EditHealthModal: false,
@@ -55,70 +54,62 @@ function Profile({ navigation }) {
         ShowToast("error", "Please login first");
         navigation.navigate(ScreensName.signin);
       }
-    }, [])
+    }, [user])
   );
 
   useEffect(() => {
-    loadUserPreference();
-  }, []);
+    if (user?.userPreferenceId) {
+      loadUserPreference();
+    }
+  }, [user?.userPreferenceId]);
 
   const loadUserPreference = async () => {
-    setLoading(true);
+    if (!user) return;
+    setIsFetchingPreferences(true);
     setError(null);
 
-    if (!user?.userPreferenceId) {
-      await handleCreateUserPreference();
-      ShowToast("error", "Please login again to load user preference");
-      return;
-    }
     try {
-      // Add timeout handling
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timeout")), 15000)
-      );
+      if (!user?.userPreferenceId) {
+        await handleCreateUserPreference();
+        return;
+      }
 
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timeout")), 30000)
+      );
       const responsePromise = quizService.getUserPreferenceByUserPreferenceId(
         user?.userPreferenceId
       );
-
-      // Race between the API call and the timeout
       const response = await Promise.race([responsePromise, timeoutPromise]);
 
-      if (response && response.status === 200) {
-        setUserPreference(response?.data || {});
-      } else if (response && response.status === 401) {
-        // Handle expired token
-        ShowToast("error", "Session expired. Please login again");
-        handleLogout();
+      if (response?.data) {
+        setUserPreference(response.data || {});
       } else {
         throw new Error("Failed to load user preferences");
       }
     } catch (err) {
-      setError(
-        err.message ||
-          "Unable to load profile information. Please try again later."
-      );
+      setError(err.message || "Unable to load profile information. Please try again later.");
       ShowToast(
         "error",
-        err.message ||
-          "Unable to load profile information. Please try again later."
+        err.message || "Unable to load profile information. Please try again later."
       );
+      setUserPreference({});
     } finally {
-      setLoading(false);
+      setIsFetchingPreferences(false);
     }
   };
 
   const handleCreateUserPreference = async () => {
     const emptyUserPreferenceData = {
-      userId: user._id, // This should be a valid ObjectId in actual use
+      userId: user._id,
       age: "",
       diet: "",
       eatHabit: [],
-      email: user?.email, // Required field
+      email: user?.email,
       favorite: [],
       longOfPlan: "",
       mealNumber: "",
-      name: user.username, // Required field
+      name: user.username,
       goal: "",
       sleepTime: "",
       waterDrink: "",
@@ -136,8 +127,16 @@ function Profile({ navigation }) {
       theme: false,
       isDelete: false,
     };
-    const response = await createUserPreference(emptyUserPreferenceData);
-    if (response.status === 201) {
+    try {
+      const response = await createUserPreference(emptyUserPreferenceData);
+      if (response.status === 201) {
+        dispatch(updateUserAct({ ...user, userPreferenceId: response.data._id }));
+        await loadUserPreference();
+      } else {
+        ShowToast("error", "Failed to create user preferences");
+      }
+    } catch (err) {
+      ShowToast("error", "Unable to create user preferences. Please try again.");
     }
   };
 
@@ -146,7 +145,6 @@ function Profile({ navigation }) {
   };
 
   const handleEditHealth = async (data) => {
-    setLoading(true);
     try {
       const response = await resetUserPreference(user?.userPreferenceId);
 
@@ -154,19 +152,12 @@ function Profile({ navigation }) {
         ShowToast("success", "Health information reset successfully");
         await loadUserPreference();
         navigation.navigate(ScreensName.survey);
-      } else if (response.status === 401) {
-        ShowToast("error", "Session expired. Please login again");
-        handleLogout();
       } else {
         ShowToast("error", "Failed to reset health information");
       }
     } catch (err) {
-      ShowToast(
-        "error",
-        "Unable to reset health information. Please try again later."
-      );
+      ShowToast("error", "Unable to reset health information. Please try again later.");
     } finally {
-      setLoading(false);
       setModalVisible({
         ...modalVisible,
         EditHealthModal: false,
@@ -175,23 +166,20 @@ function Profile({ navigation }) {
   };
 
   const handleEditProfile = async (data) => {
-    setLoading(true);
+    setIsUpdatingProfile(true);
     try {
       const response = await updateUser(data);
 
       if (response.status === 200) {
         ShowToast("success", "Profile updated successfully");
         dispatch(updateUserAct(response.data?.data?.user || {}));
-      } else if (response.status === 401) {
-        ShowToast("error", "Session expired. Please login again");
-        handleLogout();
       } else {
         ShowToast("error", "Failed to update profile");
       }
     } catch (err) {
       ShowToast("error", "Unable to update profile. Please try again later.");
     } finally {
-      setLoading(false);
+      setIsUpdatingProfile(false);
       setModalVisible({
         ...modalVisible,
         EditProfileModal: false,
@@ -207,25 +195,21 @@ function Profile({ navigation }) {
   };
 
   const handleDeleteAccount = async () => {
-    setLoading(true);
+    setIsDeletingAccount(true);
     try {
       const response = await deleteUser(user?._id);
 
       if (response.status === 200) {
         ShowToast("success", "Account deleted successfully");
         handleLogout();
-      } else if (response.status === 401) {
-        ShowToast("error", "Session expired. Please login again");
-        handleLogout();
       } else {
-        const message =
-          response?.response?.data?.message || "Something went wrong";
+        const message = response?.response?.data?.message || "Something went wrong";
         ShowToast("error", message);
       }
     } catch (err) {
       ShowToast("error", "Unable to delete account. Please try again later.");
     } finally {
-      setLoading(false);
+      setIsDeletingAccount(false);
       setModalVisible({
         ...modalVisible,
         ConfirmDeleteModal: false,
@@ -238,27 +222,24 @@ function Profile({ navigation }) {
     navigation.navigate(ScreensName.signin);
   };
 
-  if (loading && !user) {
+  if (
+    isFetchingPreferences &&
+    Object.keys(userPreference).length === 0 &&
+    !user?.userPreferenceId
+  ) {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#3592E7" />
-        <Text style={{ marginTop: 10, color: theme.textColor }}>
-          Loading profile...
-        </Text>
+        <Text style={{ marginTop: 10, color: theme.textColor }}>Loading profile...</Text>
       </View>
     );
   }
 
-  if (error && !user) {
+  if (error && Object.keys(userPreference).length === 0 && !user?.userPreferenceId) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <Text style={{ color: "red", textAlign: "center", marginBottom: 20 }}>
-          {error}
-        </Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={loadUserPreference}
-        >
+        <Text style={{ color: "red", textAlign: "center", marginBottom: 20 }}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadUserPreference}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -267,8 +248,7 @@ function Profile({ navigation }) {
 
   return (
     <NonBottomTabWrapper headerHidden={true}>
-      {/* Header section */}
-      <ScrollView style={styles.scrollView}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 48 }} style={styles.scrollView}>
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => {
@@ -278,28 +258,19 @@ function Profile({ navigation }) {
           >
             <Ionicons name="reorder-three" size={24} color={theme.textColor} />
           </TouchableOpacity>
-          <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
-            My Profile
-          </Text>
+          <Text style={{ ...styles.headerTitle, color: theme.textColor }}>My Profile</Text>
         </View>
 
-        {/* Profile section */}
         <View style={styles.profileSection}>
           <Image
             source={
-              user?.avatarUrl
-                ? { uri: user.avatarUrl }
-                : require("../../assets/image/Profile.png")
+              user?.avatarUrl ? { uri: user.avatarUrl } : require("../../assets/image/Profile.png")
             }
             style={styles.profileImage}
           />
           <View style={styles.profileInfoContainer}>
-            <Text style={{ ...styles.profileName, color: theme.textColor }}>
-              {user?.username}
-            </Text>
-            <Text style={{ ...styles.profileEmail, color: theme.textColor }}>
-              {user?.email}
-            </Text>
+            <Text style={{ ...styles.profileName, color: theme.textColor }}>{user?.username}</Text>
+            <Text style={{ ...styles.profileEmail, color: theme.textColor }}>{user?.email}</Text>
             <View style={styles.editButtonContainer}>
               <TouchableOpacity
                 style={styles.editButton}
@@ -310,15 +281,12 @@ function Profile({ navigation }) {
                   });
                 }}
               >
-                <Text style={{ ...styles.editButtonText, color: "white" }}>
-                  Edit Profile
-                </Text>
+                <Text style={{ ...styles.editButtonText, color: "white" }}>Edit Profile</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {/* Menu Items */}
         <View style={styles.menuContainer}>
           <TouchableOpacity
             style={styles.menuItem}
@@ -327,9 +295,7 @@ function Profile({ navigation }) {
             }}
           >
             <Ionicons name="heart-outline" size={24} color={theme.textColor} />
-            <Text style={{ ...styles.menuText, color: theme.textColor }}>
-              Favorites
-            </Text>
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>Favorites</Text>
             <Ionicons name="chevron-forward" size={24} color="#999" />
           </TouchableOpacity>
 
@@ -343,15 +309,11 @@ function Profile({ navigation }) {
             }}
           >
             <Ionicons name="body-outline" size={24} color={theme.textColor} />
-            <Text style={{ ...styles.menuText, color: theme.textColor }}>
-              Health Information
-            </Text>
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>Health Information</Text>
             <Ionicons name="chevron-forward" size={24} color="#999" />
           </TouchableOpacity>
 
-          <View
-            style={{ ...styles.separator, backgroundColor: theme.textColor }}
-          />
+          <View style={{ ...styles.separator, backgroundColor: theme.textColor }} />
 
           <TouchableOpacity
             style={styles.menuItem}
@@ -362,21 +324,13 @@ function Profile({ navigation }) {
             }}
           >
             <FontAwesomeIcon name="edit" size={24} color={theme.textColor} />
-            <Text style={{ ...styles.menuText, color: theme.textColor }}>
-              Change password
-            </Text>
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>Change password</Text>
             <Ionicons name="chevron-forward" size={24} color="#999" />
           </TouchableOpacity>
 
           <View style={styles.menuItem}>
-            <Ionicons
-              name="contrast-outline"
-              size={24}
-              color={theme.textColor}
-            />
-            <Text style={{ ...styles.menuText, color: theme.textColor }}>
-              Dark/Light
-            </Text>
+            <Ionicons name="contrast-outline" size={24} color={theme.textColor} />
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>Dark/Light</Text>
             <Switch
               value={themeMode === "dark"}
               onValueChange={changeLightMode}
@@ -393,43 +347,27 @@ function Profile({ navigation }) {
               });
             }}
           >
-            <Ionicons
-              name="trash-bin-outline"
-              size={24}
-              color={theme.textColor}
-            />
-            <Text style={{ ...styles.menuText, color: theme.textColor }}>
-              Delete Account
-            </Text>
+            <Ionicons name="trash-bin-outline" size={24} color={theme.textColor} />
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>Delete Account</Text>
             <Text style={{ color: theme.textColor }}>YES</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-            <Ionicons
-              name="log-out-outline"
-              size={24}
-              color={theme.textColor}
-            />
-            <Text style={{ ...styles.menuText, color: theme.textColor }}>
-              Logout
-            </Text>
+            <Ionicons name="log-out-outline" size={24} color={theme.textColor} />
+            <Text style={{ ...styles.menuText, color: theme.textColor }}>Logout</Text>
             <Text style={{ color: theme.textColor }}>YES</Text>
           </TouchableOpacity>
 
-          <View
-            style={{ ...styles.separator, backgroundColor: theme.textColor }}
-          />
+          <View style={{ ...styles.separator, backgroundColor: theme.textColor }} />
         </View>
       </ScrollView>
 
-      {/* Loading indicator when an action is in progress */}
-      {loading && (
+      {(isFetchingPreferences || isUpdatingProfile || isDeletingAccount) && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#3592E7" />
         </View>
       )}
 
-      {/* Modals */}
       <EditHealthModal
         visible={modalVisible.EditHealthModal}
         onClose={() => {
@@ -457,7 +395,7 @@ function Profile({ navigation }) {
         onSave={(data) => {
           handleEditProfile(data);
         }}
-        readOnly={true} // Add readOnly mode by default
+        readOnly={false} // Allow editing unless specified otherwise
       />
       <ConfirmDeleteAccountModal
         visible={modalVisible.ConfirmDeleteModal}
@@ -515,7 +453,7 @@ const styles = StyleSheet.create({
     width: WIDTH * 0.25,
     height: WIDTH * 0.25,
     borderRadius: WIDTH,
-    backgroundColor: "#ddd", // Placeholder color
+    backgroundColor: "#ddd",
   },
   profileInfoContainer: {
     maxWidth: "85%",

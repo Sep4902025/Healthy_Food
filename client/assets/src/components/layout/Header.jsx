@@ -46,7 +46,7 @@ function Header() {
     return () => {
       RemindService.disconnect();
     };
-  }, [user, token]); // Chạy lại khi user hoặc token thay đổi
+  }, [user, token]);
 
   const checkAuth = () => {
     if (user) {
@@ -75,7 +75,6 @@ function Header() {
         backgroundColor: theme.headerBackgroundColor,
       }}
     >
-      {/* Nút Drawer */}
       <TouchableOpacity style={styles.backIcon} onPress={onDrawerPress}>
         <Ionicons name="reorder-three" size={32} color={theme.backButtonColor} />
       </TouchableOpacity>

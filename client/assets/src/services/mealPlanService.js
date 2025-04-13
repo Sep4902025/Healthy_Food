@@ -171,8 +171,6 @@ const mealPlanService = {
   getUnpaidMealPlanForUser: async (userId) => {
     try {
       const response = await axiosInstance.get(`/mealPlan/users/${userId}/unpaid`);
-      console.log("RS", response);
-
       if (response.data.status === "success") {
         return {
           success: true,

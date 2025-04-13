@@ -29,7 +29,7 @@ import { getIngredient } from "../services/ingredient";
 import commentService from "./../services/commentService";
 import { useNavigation } from "@react-navigation/native";
 import RatingModal from "../components/common/RatingModal";
-//import styles from "./../css/FavorAndSuggestCss";
+import styles from "./../css/FavorAndSuggestCss";
 import { Heart } from "lucide-react-native";
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
@@ -707,168 +707,168 @@ function FavorAndSuggest({ route }) {
 }
 
 // Styles remain the same
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  recipeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  recipeImage: {
-    width: "100%",
-    height: 200,
-    resizeMode: "cover",
-  },
-  heartIcon: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    borderRadius: 20,
-    padding: 8,
-  },
-  cardContent: {
-    height: "90%",
-    padding: 16,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    transform: [{ translateY: -10 }],
-  },
-  recipeHeader: {
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  recipeName: {
-    width: "50%",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
-    color: "#263238",
-  },
-  recipeRate: {
-    width: "50%",
-    alignItems: "flex-end",
-    paddingRight: 12,
-  },
-  recipeDescription: {
-    fontSize: 14,
-    color: "#546E7A",
-    marginBottom: 16,
-  },
-  nutritionInfo: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 16,
-  },
-  nutritionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 16,
-    marginBottom: 8,
-  },
-  nutritionText: {
-    fontSize: 12,
-    color: "#78909C",
-    marginLeft: 4,
-  },
-  tabViewContainer: {
-    height: "65%",
-    paddingHorizontal: 16,
-  },
-  tabView: {
-    marginTop: 8,
-    minHeight: 300,
-  },
-  tabContent: {
-    paddingTop: 16,
-    paddingHorizontal: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 12,
-    color: "#37474F",
-  },
-  ingredientRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ECEFF1",
-    marginBottom: 8,
-  },
-  ingredientImage: {
-    resizeMode: "contain",
-    height: "100%",
-    width: "30%",
-    marginRight: 10,
-    borderRadius: 12,
-  },
-  ingredientInfo: {
-    flex: 1,
-    marginRight: 10,
-  },
-  ingredientName: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#455A64",
-  },
-  ingredientDetail: {
-    fontSize: 12,
-    color: "#78909C",
-    marginTop: 2,
-  },
-  ingredientQuantity: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#263238",
-  },
-  instructionRow: {
-    marginBottom: 12,
-  },
-  instructionStep: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#455A64",
-    marginBottom: 4,
-  },
-  instructionText: {
-    fontSize: 14,
-    color: "#455A64",
-    lineHeight: 20,
-  },
-  videoContainer: {
-    marginBottom: 16,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  videoLink: {
-    backgroundColor: "#4CAF50",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  videoLinkText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  noDataText: {
-    fontSize: 14,
-    color: "#78909C",
-    textAlign: "center",
-  },
-});
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//   },
+//   recipeCard: {
+//     backgroundColor: "#FFFFFF",
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     marginBottom: 20,
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 4,
+//     elevation: 3,
+//   },
+//   recipeImage: {
+//     width: "100%",
+//     height: 200,
+//     resizeMode: "cover",
+//   },
+//   heartIcon: {
+//     position: "absolute",
+//     top: 16,
+//     right: 16,
+//     backgroundColor: "rgba(255, 255, 255, 0.8)",
+//     borderRadius: 20,
+//     padding: 8,
+//   },
+//   cardContent: {
+//     height: "90%",
+//     padding: 16,
+//     borderTopLeftRadius: 12,
+//     borderTopRightRadius: 12,
+//     transform: [{ translateY: -10 }],
+//   },
+//   recipeHeader: {
+//     flexDirection: "row",
+//     gap: 12,
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//   },
+//   recipeName: {
+//     width: "50%",
+//     fontSize: 18,
+//     fontWeight: "bold",
+//     marginBottom: 4,
+//     color: "#263238",
+//   },
+//   recipeRate: {
+//     width: "50%",
+//     alignItems: "flex-end",
+//     paddingRight: 12,
+//   },
+//   recipeDescription: {
+//     fontSize: 14,
+//     color: "#546E7A",
+//     marginBottom: 16,
+//   },
+//   nutritionInfo: {
+//     flexDirection: "row",
+//     flexWrap: "wrap",
+//     marginBottom: 16,
+//   },
+//   nutritionItem: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     marginRight: 16,
+//     marginBottom: 8,
+//   },
+//   nutritionText: {
+//     fontSize: 12,
+//     color: "#78909C",
+//     marginLeft: 4,
+//   },
+//   tabViewContainer: {
+//     height: "65%",
+//     paddingHorizontal: 16,
+//   },
+//   tabView: {
+//     marginTop: 8,
+//     minHeight: 300,
+//   },
+//   tabContent: {
+//     paddingTop: 16,
+//     paddingHorizontal: 12,
+//   },
+//   sectionTitle: {
+//     fontSize: 16,
+//     fontWeight: "500",
+//     marginBottom: 12,
+//     color: "#37474F",
+//   },
+//   ingredientRow: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     paddingVertical: 8,
+//     borderBottomWidth: 1,
+//     borderBottomColor: "#ECEFF1",
+//     marginBottom: 8,
+//   },
+//   ingredientImage: {
+//     resizeMode: "contain",
+//     height: "100%",
+//     width: "30%",
+//     marginRight: 10,
+//     borderRadius: 12,
+//   },
+//   ingredientInfo: {
+//     flex: 1,
+//     marginRight: 10,
+//   },
+//   ingredientName: {
+//     fontSize: 16,
+//     fontWeight: "500",
+//     color: "#455A64",
+//   },
+//   ingredientDetail: {
+//     fontSize: 12,
+//     color: "#78909C",
+//     marginTop: 2,
+//   },
+//   ingredientQuantity: {
+//     fontSize: 14,
+//     fontWeight: "bold",
+//     color: "#263238",
+//   },
+//   instructionRow: {
+//     marginBottom: 12,
+//   },
+//   instructionStep: {
+//     fontSize: 14,
+//     fontWeight: "bold",
+//     color: "#455A64",
+//     marginBottom: 4,
+//   },
+//   instructionText: {
+//     fontSize: 14,
+//     color: "#455A64",
+//     lineHeight: 20,
+//   },
+//   videoContainer: {
+//     marginBottom: 16,
+//     borderRadius: 8,
+//     overflow: "hidden",
+//   },
+//   videoLink: {
+//     backgroundColor: "#4CAF50",
+//     padding: 10,
+//     borderRadius: 8,
+//     alignItems: "center",
+//     marginBottom: 16,
+//   },
+//   videoLinkText: {
+//     color: "#FFFFFF",
+//     fontSize: 14,
+//     fontWeight: "500",
+//   },
+//   noDataText: {
+//     fontSize: 14,
+//     color: "#78909C",
+//     textAlign: "center",
+//   },
+// });
 
 export default FavorAndSuggest;
