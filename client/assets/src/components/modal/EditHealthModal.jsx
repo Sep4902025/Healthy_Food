@@ -14,6 +14,7 @@ import {
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
 import { useTheme } from "../../contexts/ThemeContext";
+import { normalize } from "../../utils/common";
 
 const HEIGHT = Dimensions.get("window").height;
 
@@ -24,15 +25,17 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
   });
   const [bmi, setBmi] = useState(null);
 
+  // Update healthData when userPreference changes
   useEffect(() => {
     setHealthData(userPreference);
     calculateBMI(userPreference.weight, userPreference.height);
     calculateBMI(userPreference.weight, userPreference.height);
   }, [userPreference]);
 
+  // Calculate BMI
   const calculateBMI = (weight, height) => {
     const w = parseFloat(weight);
-    const h = parseFloat(height) / 100;
+    const h = parseFloat(height) / 100; // Convert from cm to m
     if (w && h && !isNaN(w) && !isNaN(h) && h > 0) {
       const bmiValue = (w / (h * h)).toFixed(1);
       setBmi(bmiValue);
@@ -43,6 +46,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     }
   };
 
+  // Handle input changes
   const handleInputChange = (field, value) => {
     setHealthData((prev) => {
       const updatedData = { ...prev, [field]: value };
@@ -88,7 +92,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
       {
         label: "SleepTime",
         field: "sleepTime",
-        value: healthData.sleepTime,
+        value: healthData.sleepTime ?? "",
         keyboardType: "default",
         editable: false,
       },
@@ -96,14 +100,14 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     [
       {
         label: "Goal",
-        field: "goal",
+        field: "goal", // Keep field as is, but label is Goal
         value: healthData.goal ?? "",
         keyboardType: "default",
         editable: false,
       },
       {
         label: "LongOfPlan",
-        field: "longOfPlan",
+        field: "longOfPlan", // Keep field as is, but label is LongOfPlan
         value: healthData.longOfPlan ?? "",
         keyboardType: "default",
         editable: false,
@@ -112,14 +116,14 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     [
       {
         label: "Diet",
-        field: "diet",
+        field: "diet", // Keep field as is, but label is Diet
         value: healthData.diet ?? "",
-        keyboardType: "default",
+        keyboardType: "default", // Changed to default for age ranges
         editable: false,
       },
       {
         label: "MealNumber",
-        field: "mealNumber",
+        field: "mealNumber", // Keep field as is, but label is MealNumber
         value: healthData.mealNumber ?? "",
         keyboardType: "default",
         editable: false,
@@ -128,7 +132,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     [
       {
         label: "UnderDisease",
-        field: "underDisease",
+        field: "underDisease", // Keep field as is, but label is UnderDisease
         value: "",
         keyboardType: "default",
         editable: false,
@@ -140,26 +144,27 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     {
       label: "EatHabit",
       field: "eatHabit",
-      value: healthData.eatHabit || [],
+      value: healthData.eatHabit || [], // Make sure this is an array
       keyboardType: "default",
       editable: false,
     },
     {
       label: "RecommendedFoods",
       field: "recommendedFoods",
-      value: healthData.recommendedFoods || [],
+      value: healthData.recommendedFoods || [], // Make sure this is an array
       keyboardType: "default",
       editable: false,
     },
     {
       label: "Hate",
       field: "hate",
-      value: healthData.hate || [],
+      value: healthData.hate || [], // Make sure this is an array
       keyboardType: "default",
       editable: false,
     },
   ];
 
+  // Render input field based on field config
   const renderInputField = (fieldConfig) => {
     if (!fieldConfig) return <View style={styles.formItem} />;
 
@@ -185,6 +190,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
 
     const { label, field, value, keyboardType, editable } = fieldConfig;
 
+    // Assuming value is an array of strings
     const items = Array.isArray(value) ? value : [];
 
     return (
@@ -261,7 +267,7 @@ const styles = StyleSheet.create({
     bottom: "10%",
   },
   headerTitle: {
-    fontSize: 25,
+    fontSize: normalize(25),
     fontWeight: "600",
     textAlign: "center",
     marginTop: 16,
@@ -283,7 +289,7 @@ const styles = StyleSheet.create({
     width: "48%",
   },
   label: {
-    fontSize: 14,
+    fontSize: normalize(14),
     marginBottom: 8,
     color: "#666",
   },
@@ -298,7 +304,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    fontSize: 14,
+    fontSize: normalize(14),
     backgroundColor: "white",
     borderRadius: 8,
     borderWidth: 1,
@@ -326,7 +332,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     color: "#666",
-    fontSize: 14,
+    fontSize: normalize(14),
     textAlign: "center",
   },
   saveButton: {
@@ -340,7 +346,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: "600",
   },
 });

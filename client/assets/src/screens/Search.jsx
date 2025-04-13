@@ -20,10 +20,11 @@ import {
 } from "../services/ingredient";
 import { DishType } from "../constants/DishType";
 import { getDishes } from "../services/dishes";
-
+// import CustomToast from "../components/common/CustomToast";
 import ShowToast from "../components/common/CustomToast";
-import { getSearchHistory } from "../utils/common";
+import { getSearchHistory, successStatus } from "../utils/common";
 import { useTheme } from "../contexts/ThemeContext";
+import { ScreensName } from "../constants/ScreensName";
 
 const WIDTH = Dimensions.get("window").width;
 
@@ -48,14 +49,15 @@ const CategoryButton = ({ title, isActive = false, onclick }) => (
   </TouchableOpacity>
 );
 
-const SearchScreen = ({ route }) => {
+const SearchScreen = ({ route, navigation }) => {
   const [searchResults, setSearchResults] = useState([]);
-  const [searchMode, setSearchMode] = useState("initial");
+  const [searchMode, setSearchMode] = useState("initial"); // 'initial', 'results'
   const [searchQuery, setSearchQuery] = useState("");
   const [history, setHistory] = useState([]);
-  const [sortType, setSortType] = useState("");
+  const [sortType, setSortType] = useState(""); // Sorting state
   const { theme } = useTheme();
 
+  // const showToast = CustomToast();
   const loadHistory = async () => {
     const savedHistory = await getSearchHistory();
     setHistory(savedHistory);
@@ -83,10 +85,16 @@ const SearchScreen = ({ route }) => {
   }, [searchResults]);
 
   const handleSearch = async (searchString) => {
-   
+    // loadHistory();
+    // const response = await getIngredientByName(searchString);
+    // if (response.status === 200) {
+    //   setSearchResults(response.data?.data);
+    //   setSearchMode("results");
+    // }
     const response = await getDishes();
-    if (response.status === 200) {
-      const resultList = response.data?.data?.filter((item) =>
+
+    if (successStatus(response.status)) {
+      const resultList = response.data?.data?.items?.filter((item) =>
         item.name.toLowerCase().includes(searchString.toLowerCase())
       );
       if (resultList.length === 0) {
@@ -104,9 +112,10 @@ const SearchScreen = ({ route }) => {
 
     setSearchQuery(type.name);
     if (response.status === 200) {
-      const resultList = response.data?.data?.filter(
+      const resultList = response.data?.data?.items?.filter(
         (item) => item.type == type.name
       );
+
       if (resultList.length === 0) {
         ShowToast("error", "No results found");
       }
@@ -114,6 +123,11 @@ const SearchScreen = ({ route }) => {
     }
     loadHistory();
 
+    // const response = await getIngredientByType(type);
+    // if (response.status === 200) {
+    //   setSearchResults(response.data?.data);
+    //   setSearchMode("results");
+    // }
   };
 
   const handleClear = () => {
@@ -161,7 +175,15 @@ const SearchScreen = ({ route }) => {
       <View style={styles.browseSection}>
         <Text style={styles.sectionTitle}>Browse by category</Text>
         <View style={styles.categoriesGrid}>
-        
+          {/* {categories.map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              onPress={() => handleSearchByCategory(category.title)}
+              // cardWidth={"30%"}
+              // imageSize={WIDTH * 0.2}
+            />
+          ))} */}
           {Object.values(DishType).map((category, key) => (
             <CategoryCard
               key={key}
@@ -190,7 +212,15 @@ const SearchScreen = ({ route }) => {
       </View>
 
       {filterResult.length > 0 ? (
-        filterResult.map((item) => <DishedV2 key={item._id} item={item} />)
+        filterResult.map((item) => (
+          <DishedV2
+            key={item._id}
+            item={item}
+            onPress={() =>
+              navigation.navigate(ScreensName.favorAndSuggest, { dish: item })
+            }
+          />
+        ))
       ) : (
         <Text style={styles.noResultsText}>No results found</Text>
       )}

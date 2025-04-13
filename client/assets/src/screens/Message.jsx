@@ -38,14 +38,14 @@ function Message({ navigation }) {
 
   const [messages, setMessages] = useState([]);
   const [conversation, setConversation] = useState({});
-  const [screenState, setScreenState] = useState("chat"); 
+  const [screenState, setScreenState] = useState("chat"); // onboarding
   const [inputText, setInputText] = useState("");
   const [visible, setVisible] = useState({ inputTopic: false });
   const [selectedImages, setSelectedImages] = useState([]);
   const { theme, themeMode } = useTheme();
   const flatListRef = useRef(null);
 
-
+  // Add these states for the image viewer modal
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedViewImage, setSelectedViewImage] = useState(null);
 
@@ -59,14 +59,14 @@ function Message({ navigation }) {
       const messageToReceived = {
         id: message._id,
         text: message.text,
-        sender: message.senderId === user?._id ? "me" : "other",
+        sender: message.senderId === user?._id ? "me" : "other", // Check senderId to determine if it's the user's message
         timestamp: message.updatedAt,
         imageUrl: message.imageUrl || [],
       };
 
       setMessages((previousMessages) => {
         if (previousMessages.some((msg) => msg.id === messageToReceived.id)) {
-          return previousMessages;
+          return previousMessages; // Skip adding the duplicate message
         }
         return [...previousMessages, messageToReceived];
       });
@@ -127,15 +127,15 @@ function Message({ navigation }) {
     }
   };
 
-
+  // Function to handle image press - open the image viewer
   const handleImagePress = (imageUrl) => {
     setSelectedViewImage(imageUrl);
     setImageViewerVisible(true);
   };
 
-
+  // Hàm để chọn ảnh từ thư viện
   const pickImages = async () => {
-
+    // Yêu cầu quyền truy cập thư viện ảnh
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
@@ -158,16 +158,16 @@ function Message({ navigation }) {
     }
   };
 
-
+  // Hàm để xóa ảnh đã chọn
   const removeImage = (index) => {
     const newImages = [...selectedImages];
     newImages.splice(index, 1);
     setSelectedImages(newImages);
   };
 
-  
+  // Gọi hàm uploadImages từ file khác để upload ảnh lên DB
   const handleUploadImages = async () => {
- 
+    // Nếu có ảnh được chọn, gọi hàm upload
     if (selectedImages.length > 0) {
       const imageFiles = selectedImages.map((img) => ({
         uri: img.uri,
@@ -176,7 +176,7 @@ function Message({ navigation }) {
       }));
 
       const uploadedImages = await uploadImages(imageFiles);
-      return uploadedImages; 
+      return uploadedImages; // Trả về mảng URL hoặc thông tin ảnh đã upload
     }
     return [];
   };
@@ -185,7 +185,7 @@ function Message({ navigation }) {
     if (inputText.trim() === "" && selectedImages.length === 0) return;
 
     try {
-  
+      // Upload ảnh trước khi gửi tin nhắn
       const uploadedImages = await handleUploadImages();
       console.log("Receive Message : ", {
         conversationId: conversation._id,
@@ -196,7 +196,7 @@ function Message({ navigation }) {
         createdAt: new Date(),
       });
 
-   
+      // Gửi tin nhắn với cả text và ảnh
       messageSocket.emit("send_message", {
         conversationId: conversation._id,
         senderId: user?._id,
@@ -288,7 +288,7 @@ function Message({ navigation }) {
               <Text
                 style={{
                   ...styles.introduceText,
-                 
+                  // backgroundColor: theme.editModalbackgroundColor,
                 }}
               >
                 {item}
@@ -302,14 +302,22 @@ function Message({ navigation }) {
 
   return (
     <MainLayoutWrapper headerHidden={true}>
-     
+      {/* <Image
+        source={
+          themeMode === "light"
+            ? require("../../assets/image/ChatBG.png")
+            : require("../../assets/image/ChatBG-dark.png")
+        }
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      /> */}
       {screenState === "onboarding" ? (
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
           style={{
             ...styles.messagesList,
-            
+            // marginTop: HEIGHT * 0.6,
             paddingTop: HEIGHT * 0.05,
             alignItems: "center",
           }}
@@ -525,7 +533,7 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     flex: 1,
-   
+    // marginTop: HEIGHT * 0.06,
     borderTopRightRadius: 24,
     borderTopLeftRadius: 24,
   },
@@ -652,7 +660,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: 10,
   },
-
+  // Image viewer modal styles
   imageViewerContainer: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.9)",

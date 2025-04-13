@@ -41,6 +41,8 @@ import Email from "../screens/Survey/Email";
 import PhoneNumber from "../screens/Survey/PhoneNumber";
 import Name from "../screens/Survey/Name";
 import SurveyScreen from "../screens/SurveyScreen";
+import { resetPassword } from "../services/authService";
+import ResetPassword from "../screens/ResetPassword";
 import PaymentScreen from "../screens/MealPlan/PaymentScreen";
 import PaymentStatusScreen from "../screens/MealPlan/PaymentStatusScreen";
 
@@ -88,6 +90,14 @@ export const ScreensMap = [
     },
     hiddenBottomTab: true,
   },
+  {
+    name: ScreensName.resetPassword,
+    component: ResetPassword,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
+  },
 
   {
     name: ScreensName.favorList,
@@ -111,7 +121,7 @@ export const ScreensMap = [
   },
   {
     name: ScreensName.survey,
-    component: SurveyScreen,
+    component: SurveyScreen, // Màn hình đầu tiên của khảo sát
     options: {
       tabBarIcon: ({ color, focused }) => <AntDesignIcon name="calendar" size={28} color={color} />,
       iconStyles: { transform: [{ translateX: 25 }] },

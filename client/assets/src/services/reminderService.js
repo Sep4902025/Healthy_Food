@@ -5,6 +5,7 @@ const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL;
 let socket = null;
 
 const RemindService = {
+  // Kết nối socket với userId
   connectSocket: async (userId) => {
     if (!userId) {
       console.error("❌ Không có userId để kết nối socket!");
