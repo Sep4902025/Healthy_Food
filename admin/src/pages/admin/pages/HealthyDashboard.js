@@ -13,11 +13,14 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
+
+import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import mealPlanService from "../../../services/mealPlanServices";
 import dishService from "../../../services/nutritionist/dishesServices";
 import userService from "../../../services/user.service";
+import paymentService from "../../../services/payment.service";
 
 const HealthyDashboard = () => {
   const [summaryStats, setSummaryStats] = useState({
@@ -51,9 +54,7 @@ const HealthyDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         const mealPlanResponse = await mealPlanService.getAllMealPlanAdmin();
-        const paymentResponse = await axios.get("http://localhost:8080/api/v1/payment/", {
-          withCredentials: true,
-        });
+        const paymentResponse = await paymentService.getPaymentDashboardData();
         const dishResponse = await dishService.getAllDishes();
         const userResponse = await userService.getAllUsers();
 
@@ -119,19 +120,25 @@ const HealthyDashboard = () => {
   }, []);
 
   useEffect(() => {
-    axios
-      .get("http://localhost:8080/api/v1/payment/")
-      .then((response) => {
-        setTotalRevenue(response.data.totalRevenue || 0);
-        setPaymentStats(response.data.paymentStats || {});
-        setRevenueByYear(response.data.revenueByYear || {});
-        setPaymentStatusDatas([
-          { name: "Paid", value: response.data.paymentStats?.paid || 0 },
-          { name: "Unpaid", value: response.data.paymentStats?.unpaid || 0 },
-        ]);
-        setRevenueByMonth(response.data.revenueByMonth || {});
-      })
-      .catch((error) => console.error("Lỗi tải dữ liệu Payment:", error));
+    const fetchPaymentData = async () => {
+      try {
+        const response = await paymentService.getPaymentDashboardData();
+
+        if (response.success) {
+          setTotalRevenue(response.data.totalRevenue);
+          setPaymentStats(response.data.paymentStats);
+          setRevenueByYear(response.data.revenueByYear);
+          setPaymentStatusDatas([
+            { name: "Paid", value: response.data.paymentStats?.paid || 0 },
+            { name: "Unpaid", value: response.data.paymentStats?.unpaid || 0 },
+          ]);
+          setRevenueByMonth(response.data.revenueByMonth);
+        }
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu Payment:", error);
+      }
+    };
+    fetchPaymentData();
   }, []);
 
   const revenueDatas =
@@ -141,131 +148,220 @@ const HealthyDashboard = () => {
       revenue: revenueByMonth[yearFilters][month],
     }));
 
-  const exportToWord = () => {
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: [
-            new Paragraph({
-              text: "Healthy Dashboard Statistics Report",
-              heading: HeadingLevel.TITLE,
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 400 },
-            }),
-            new Paragraph({
-              text: `Generated on: ${new Date().toLocaleDateString("en-US", {
-                month: "long",
-                day: "2-digit",
-                year: "numeric",
-              })}`,
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 300 },
-            }),
-            new Paragraph({
-              text: "Summary Statistics",
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              children: [
-                new TextRun(`Total Meal Plans: ${summaryStats.totalMealPlans}`),
-                new TextRun({
-                  text: `\nUnpaid Meal Plans: ${summaryStats.unpaidMealPlans}`,
-                  break: 1,
-                }),
-                new TextRun({
-                  text: `\nActive Meal Plans: ${summaryStats.activeMealPlans}`,
-                  break: 1,
-                }),
-              ],
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              text: "System Overview",
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              children: [
-                new TextRun(`Total Dishes: ${systemOverview.totalDishes}`),
-                new TextRun({
-                  text: `\nTotal Users: ${systemOverview.totalUsers}`,
-                  break: 1,
-                }),
-              ],
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              text: "Payment Status",
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              children: [
-                new TextRun(`Paid: ${paymentStatusDatas[0]?.value || 0}`),
-                new TextRun({
-                  text: `\nUnpaid: ${paymentStatusDatas[1]?.value || 0}`,
-                  break: 1,
-                }),
-              ],
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              text: "Plan Types",
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              children: planTypeData.map(
-                (plan) => new TextRun({ text: `${plan.name}: ${plan.value}`, break: 1 })
-              ),
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              text: `Revenue Statistics (${yearFilters})`,
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 200 },
-            }),
-            ...(revenueDatas?.map(
-              (data) =>
-                new Paragraph({
-                  children: [
-                    new TextRun(
-                      `Month ${data.month.slice(2)}: ${data.revenue.toLocaleString()} VND`
-                    ),
-                  ],
-                  spacing: { after: 100 },
-                })
-            ) || []),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `Total Revenue (${yearFilters}): ${totalRevenue.toLocaleString()} VND`,
-                  bold: true,
-                }),
-              ],
-              spacing: { before: 200 },
-            }),
-          ],
-        },
-      ],
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Healthy Dashboard";
+    workbook.created = new Date();
+
+    // Sheet 1: Summary Statistics
+    const summarySheet = workbook.addWorksheet("Summary", {
+      properties: { tabColor: { argb: "FF00FF00" } }, // Màu tab xanh lá
     });
 
-    Packer.toBlob(doc).then((blob) => {
-      saveAs(blob, "Healthy_Dashboard_Stats.docx");
+    summarySheet.columns = [
+      { header: "Category", key: "category", width: 30 },
+      { header: "Value", key: "value", width: 20 },
+    ];
+
+    summarySheet.addRow(["Healthy Dashboard Statistics Report"]).font = {
+      size: 16,
+      bold: true,
+    };
+    summarySheet.addRow([
+      `Generated on: ${new Date().toLocaleDateString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      })}`,
+    ]);
+    summarySheet.addRow([]);
+    summarySheet.addRow(["Summary Statistics"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    summarySheet.getRow(4).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" }, // Màu nền xanh phù hợp giao diện
+    };
+
+    const summaryData = [
+      ["Total Meal Plans", summaryStats.totalMealPlans],
+      ["Unpaid Meal Plans", summaryStats.unpaidMealPlans],
+      ["Active Meal Plans", summaryStats.activeMealPlans],
+    ];
+
+    summaryData.forEach(([category, value]) => {
+      summarySheet.addRow({ category, value });
     });
+
+    // Định dạng bảng (bao gồm tiêu đề)
+    summarySheet.getRows(4, summaryData.length + 1).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+    });
+
+    // Sheet 2: System Overview
+    const systemSheet = workbook.addWorksheet("System Overview");
+    systemSheet.columns = [
+      { header: "Category", key: "category", width: 30 },
+      { header: "Value", key: "value", width: 20 },
+    ];
+
+    systemSheet.addRow(["System Overview"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    systemSheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+    systemSheet.addRow(["Total Dishes", systemOverview.totalDishes]);
+    systemSheet.addRow(["Total Users", systemOverview.totalUsers]);
+
+    systemSheet.getRows(1, 3).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+    });
+
+    // Sheet 3: Payment Status
+    const paymentSheet = workbook.addWorksheet("Payment Status");
+    paymentSheet.columns = [
+      { header: "Status", key: "status", width: 30 },
+      { header: "Value", key: "value", width: 20 },
+    ];
+
+    paymentSheet.addRow(["Payment Status"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    paymentSheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+    paymentSheet.addRow(["Paid", paymentStatusDatas[0]?.value || 0]);
+    paymentSheet.addRow(["Unpaid", paymentStatusDatas[1]?.value || 0]);
+
+    paymentSheet.getRows(1, 3).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+    });
+
+    // Sheet 4: Plan Types
+    const planSheet = workbook.addWorksheet("Plan Types");
+    planSheet.columns = [
+      { header: "Plan Type", key: "name", width: 30 },
+      { header: "Value", key: "value", width: 20 },
+    ];
+
+    planSheet.addRow(["Plan Types"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    planSheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+    planTypeData.forEach((plan) => {
+      planSheet.addRow(plan);
+    });
+
+    planSheet.getRows(1, planTypeData.length + 1).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+    });
+
+    // Sheet 5: Revenue Statistics
+    const revenueSheet = workbook.addWorksheet("Revenue");
+    revenueSheet.columns = [
+      { header: "Month", key: "month", width: 20 },
+      { header: "Revenue (VND)", key: "revenue", width: 25 },
+    ];
+
+    revenueSheet.addRow([`Revenue Statistics (${yearFilters})`]).font = {
+      bold: true,
+    };
+    revenueSheet.addRow(["Month", "Revenue (VND)"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    revenueSheet.getRow(2).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    revenueDatas?.forEach((data) => {
+      revenueSheet.addRow({
+        month: `Month ${data.month.slice(2)}`,
+        revenue: data.revenue,
+      });
+    });
+
+    revenueSheet.addRow(["Total Revenue", totalRevenue]).font = { bold: true };
+
+    // Định dạng bảng (bao gồm cả hàng tổng cộng)
+    revenueSheet.getRows(2, (revenueDatas?.length || 0) + 2).forEach((row) => {
+      // +2 để bao gồm tiêu đề và tổng cộng
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+        if (cell.value && typeof cell.value === "number") {
+          cell.numFmt = "#,##0"; // Định dạng số với dấu phân cách hàng nghìn
+        }
+      });
+    });
+
+    // Lưu file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "Healthy_Dashboard_Stats.xlsx");
   };
 
   return (
     <div className="flex h-screen">
       <div className="flex-grow flex flex-col">
         <div className="flex justify-end mr-6 mt-6">
-          <button
-            onClick={exportToWord}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Export to Word
+          <button onClick={exportToExcel} className="bg-custom-green text-white px-4 py-2 rounded">
+            Export to Excel
           </button>
         </div>
 

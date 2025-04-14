@@ -78,7 +78,7 @@ const commentService = {
         return { success: true, data: [] };
       }
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách bình luận:", error.response?.data || error.message);
+      //console.error("Lỗi khi lấy danh sách bình luận:", error.response?.data || error.message);
 
       // Chỉ trả lỗi nếu thực sự có lỗi (ví dụ request thất bại, server lỗi...)
       return {

@@ -355,7 +355,6 @@ const mealPlanService = {
       const response = await axiosInstance.get(`/mealPlan/users/${userId}`);
       return response.data;
     } catch (error) {
-      console.error("Lỗi lấy meal plan của user:", error);
       throw error;
     }
   },

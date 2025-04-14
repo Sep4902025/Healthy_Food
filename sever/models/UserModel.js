@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
     passwordConfirm: {
       type: String,
       required: function () {
-        return !this.googleId && this.isModified("password"); 
+        return !this.googleId && this.isModified("password");
       },
       validate: {
         validator: function (el) {
@@ -95,6 +95,18 @@ const userSchema = new mongoose.Schema(
         },
         profileImage: { type: String },
         introduction: { type: String },
+        certificateLink: {
+          // Thêm trường mới
+          type: String,
+          default: null,
+          validate: {
+            validator: function (v) {
+              // Kiểm tra định dạng URL hợp lệ nếu có giá trị
+              return v ? validator.isURL(v) : true;
+            },
+            message: "Please provide a valid URL for the certificate link",
+          },
+        },
         status: {
           type: String,
           enum: ["pending", "approved", "rejected"],

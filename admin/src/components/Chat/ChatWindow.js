@@ -222,7 +222,7 @@ const ChatWindow = ({ conversation, setCurrentConversation }) => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-[490px] w-full">
       {renderHeader()}
       {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
       <div

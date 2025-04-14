@@ -53,7 +53,6 @@ const MealPlan = ({ navigation }) => {
         setIsMealPlanExpired(false);
       }
     } catch (error) {
-      console.log("❌ Error fetching MealPlan:", error.message);
       setUserMealPlan(null);
       setShowCreateForm(true);
       setIsMealPlanExpired(false);
@@ -100,6 +99,7 @@ const MealPlan = ({ navigation }) => {
 
   const handleDeleteMealPlan = async () => {
     if (!userMealPlan) return;
+
     const confirmed = await new Promise((resolve) => {
       Alert.alert(
         "Confirm Deletion",
@@ -110,14 +110,17 @@ const MealPlan = ({ navigation }) => {
         ]
       );
     });
+
     if (!confirmed) return;
+
     try {
       setProcessingAction(true);
       const response = await mealPlanService.deleteMealPlan(userMealPlan._id);
+
       if (response.success) {
         setUserMealPlan(null);
-        setShowCreateForm(true);
-        setIsMealPlanExpired(false);
+        setShowCreateForm(true); // Show form immediately after deletion
+        await fetchUserMealPlan(); // Refresh data
         ShowToast("success", "🗑️ MealPlan deleted successfully!");
       } else {
         ShowToast("error", `❌ Error: ${response.message}`);
