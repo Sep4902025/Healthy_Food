@@ -10,6 +10,11 @@ class MessageSocket {
       return;
     }
 
+    if (!data?.token || !data?.userId) {
+      console.error("Missing token or userId for socket initialization");
+      return;
+    }
+
     this.socket = io(SOCKET_URL, {
       transports: ["websocket"],
       reconnection: true,
@@ -17,13 +22,20 @@ class MessageSocket {
       reconnectionAttempts: 10,
       withCredentials: true,
       auth: {
-        token: data?.token,
+        token: data.token,
       },
     });
 
     this.socket.on("connect", () => {
-      console.log("Connected to server: ", data?.userId);
-      data?.userId && socket.emit("join", data?.userId);
+      console.log("Connected to server:", data.userId);
+      this.socket.emit("join", data.userId);
+      // Thêm join conversationId nếu có
+      if (data.conversationId) {
+        this.socket.emit("join_room", {
+          conversationId: data.conversationId,
+          userId: data.userId,
+        });
+      }
     });
 
     this.socket.on("disconnect", () => {
@@ -47,11 +59,24 @@ class MessageSocket {
   };
 
   emit = (event, data) => {
-    if (this.socket) {
-      this.socket.emit(event, data);
-    } else {
+    if (!this.socket) {
       console.warn("Socket not initialized");
+      return;
     }
+    if (!this.isConnected()) {
+      console.warn("Socket not connected, retrying...");
+      this.socket.connect();
+      setTimeout(() => {
+        if (this.isConnected()) {
+          this.socket.emit(event, data);
+        } else {
+          console.error("Failed to reconnect socket");
+        }
+      }, 1000);
+      return;
+    }
+    console.log(`Emitting event ${event} with data:`, data);
+    this.socket.emit(event, data);
   };
 
   on = (event, callback) => {

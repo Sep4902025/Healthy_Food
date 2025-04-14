@@ -12,6 +12,9 @@ import {
   Dimensions,
   ScrollView,
   Modal,
+  ActivityIndicator,
+  Linking,
+  Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
@@ -29,19 +32,20 @@ import { useTheme } from "../contexts/ThemeContext";
 import ShowToast from "../components/common/CustomToast";
 import { arrayToString, stringToArray } from "../utils/common";
 import { uploadImages } from "../services/cloundaryService";
+import MessageService from "../services/messageService";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
 
 function Message({ navigation }) {
   const user = useSelector(userSelector);
-
   const [messages, setMessages] = useState([]);
   const [conversation, setConversation] = useState({});
   const [screenState, setScreenState] = useState("chat");
   const [inputText, setInputText] = useState("");
   const [visible, setVisible] = useState({ inputTopic: false });
   const [selectedImages, setSelectedImages] = useState([]);
+  const [isSending, setIsSending] = useState(false);
   const { theme, themeMode } = useTheme();
   const flatListRef = useRef(null);
 
@@ -49,26 +53,45 @@ function Message({ navigation }) {
   const [selectedViewImage, setSelectedViewImage] = useState(null);
 
   useEffect(() => {
-    messageSocket.init({ userId: user?._id, token: user?.accessToken });
+    if (!user?._id || !user?.accessToken) return;
+
+    messageSocket.init({
+      userId: user._id,
+      token: user.accessToken,
+      conversationId: conversation?._id,
+    });
+
     loadConversation();
 
     const handleReceiveMessage = (message) => {
-      console.log("Receive Message : ", message);
-
-      const messageToReceived = {
-        id: message._id,
-        text: message.text,
-        sender: message.senderId === user?._id ? "me" : "other",
-        timestamp: message.updatedAt,
-        imageUrl: message.imageUrl || [],
-      };
-
-      setMessages((previousMessages) => {
-        if (previousMessages.some((msg) => msg.id === messageToReceived.id)) {
-          return previousMessages;
+      console.log("Receive Message:", message);
+      // Chỉ xử lý tin nhắn từ người khác
+      if (message.conversationId === conversation._id && message.senderId !== user._id) {
+        let adjustedType = message.type || "text";
+        if (message.imageUrl && !message.videoUrl && adjustedType === "text") {
+          adjustedType = "image";
+        } else if (message.videoUrl && adjustedType === "text") {
+          adjustedType = "video";
         }
-        return [...previousMessages, messageToReceived];
-      });
+
+        const messageToReceived = {
+          id: message._id,
+          text: message.text,
+          sender: "other",
+          timestamp: message.updatedAt,
+          imageUrl: message.imageUrl || null,
+          type: adjustedType,
+        };
+
+        setMessages((previousMessages) => {
+          // Kiểm tra trùng lặp dựa trên id
+          if (previousMessages.some((msg) => msg.id === messageToReceived.id)) {
+            console.log("Duplicate message detected:", messageToReceived);
+            return previousMessages;
+          }
+          return [...previousMessages, messageToReceived];
+        });
+      }
     };
 
     messageSocket.on("receive_message", handleReceiveMessage);
@@ -77,52 +100,76 @@ function Message({ navigation }) {
       messageSocket.disconnect();
       messageSocket.off("receive_message", handleReceiveMessage);
     };
-  }, [user?._id, user?.accessToken]);
+  }, [user?._id, user?.accessToken, conversation?._id]);
 
   const loadConversation = async () => {
-    const response = await getUserConversations(user?._id);
-    if (response.status === 200) {
-      if (response.data?.data[0]) {
-        setConversation(response.data?.data[0]);
-        if (response.data?.data[0]?._id) {
-          loadMessgageHistory(response.data?.data[0]._id);
-        }
+    try {
+      const response = await getUserConversations(user?._id);
+      if (response.status === 200 && response.data?.data[0]) {
+        setConversation(response.data.data[0]);
+        loadMessgageHistory(response.data.data[0]._id);
       } else {
         handleCreateConversation("defaultTopic");
       }
-    } else {
-      handleCreateConversation("defaultTopic");
+    } catch (error) {
+      console.error("Load conversation error:", error);
+      ShowToast("error", "Không thể tải cuộc trò chuyện");
     }
   };
 
   const loadMessgageHistory = async (conversationId) => {
-    const response = await getConversationMessage(conversationId);
-    if (response.status === 200) {
-      setMessages(
-        response.data?.data?.map((item) => ({
-          ...item,
-          id: item._id,
-          sender: item.senderId === user?._id ? "me" : "other",
-        }))
-      );
+    try {
+      const response = await getConversationMessage(conversationId);
+      if (response.status === 200) {
+        const newMessages = response.data?.data?.map((item) => {
+          let adjustedType = item.type || "text";
+          if (item.imageUrl && !item.videoUrl && adjustedType === "text") {
+            adjustedType = "image";
+          } else if (item.videoUrl && adjustedType === "text") {
+            adjustedType = "video";
+          }
+          return {
+            ...item,
+            id: item._id,
+            sender: item.senderId === user?._id ? "me" : "other",
+            type: adjustedType,
+          };
+        });
+
+        setMessages((prevMessages) => {
+          // Chỉ thêm tin nhắn mới, tránh trùng lặp
+          const existingIds = new Set(prevMessages.map((msg) => msg.id));
+          const filteredMessages = newMessages.filter((msg) => !existingIds.has(msg.id));
+          return [...prevMessages, ...filteredMessages];
+        });
+      }
+    } catch (error) {
+      console.error("Load message history error:", error);
+      ShowToast("error", "Không thể tải lịch sử tin nhắn");
     }
   };
 
   const getStarted = () => {
     if (conversation) {
       setScreenState("chat");
-      ShowToast("success", "Topic : " + conversation.topic);
+      ShowToast("success", "Topic: " + conversation.topic);
     } else {
       setVisible({ ...visible, inputTopic: true });
     }
   };
 
   const handleCreateConversation = async (topic) => {
-    const response = await createConversation(user?._id, topic);
-    if (response.status === 200) {
-      setScreenState("chat");
-      setConversation(response.data?.data);
-      setVisible({ ...visible, inputTopic: false });
+    try {
+      const response = await MessageService.createConversation(user?._id, topic);
+      if (response.status === 200) {
+        setScreenState("chat");
+        setConversation(response.data?.data);
+        setVisible({ ...visible, inputTopic: false });
+        ShowToast("success", "Cuộc trò chuyện đã được tạo");
+      }
+    } catch (error) {
+      console.error("Create conversation error:", error);
+      ShowToast("error", "Không thể tạo cuộc trò chuyện");
     }
   };
 
@@ -132,73 +179,123 @@ function Message({ navigation }) {
   };
 
   const pickImages = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Quyền truy cập bị từ chối",
+          "Ứng dụng cần quyền truy cập vào thư viện ảnh để chọn ảnh. Vui lòng cấp quyền trong cài đặt.",
+          [
+            { text: "Hủy", style: "cancel" },
+            { text: "Mở Cài đặt", onPress: () => Linking.openSettings() },
+          ],
+          { cancelable: false }
+        );
+        ShowToast("error", "Cần quyền truy cập vào thư viện ảnh để sử dụng tính năng này");
+        return;
+      }
 
-    if (status !== "granted") {
-      ShowToast("error", "Cần quyền truy cập vào thư viện ảnh để sử dụng tính năng này");
-      return;
-    }
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
 
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setSelectedImages(result.assets);
+      if (!result.canceled) {
+        setSelectedImages(result.assets);
+      }
+    } catch (error) {
+      console.error("Error in pickImages:", error);
+      ShowToast("error", "Có lỗi xảy ra khi chọn ảnh. Vui lòng thử lại.");
     }
   };
 
   const removeImage = (index) => {
-    const newImages = [...selectedImages];
-    newImages.splice(index, 1);
-    setSelectedImages(newImages);
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleUploadImages = async () => {
-    if (selectedImages.length > 0) {
-      const imageFiles = selectedImages.map((img) => ({
-        uri: img.uri,
-        type: "image/jpeg",
-        name: `image_${Date.now()}.jpg`,
-      }));
+    if (selectedImages.length === 0) return [];
 
+    const imageFiles = selectedImages.map((img) => ({
+      uri: img.uri,
+      type: "image/jpeg",
+      name: `image_${Date.now()}.jpg`,
+    }));
+
+    try {
       const uploadedImages = await uploadImages(imageFiles);
       return uploadedImages;
+    } catch (error) {
+      console.error("Upload images error:", error);
+      throw error;
     }
-    return [];
   };
 
   const onSend = async () => {
     if (inputText.trim() === "" && selectedImages.length === 0) return;
+    if (isSending) return;
+
+    setIsSending(true);
 
     try {
-      const uploadedImages = await handleUploadImages();
-      console.log("Receive Message : ", {
-        conversationId: conversation._id,
-        senderId: user?._id,
-        receiverId: "",
-        text: inputText,
-        imageUrl: arrayToString(uploadedImages.map((item) => item.url)),
-        createdAt: new Date(),
-      });
+      let messageData;
 
-      messageSocket.emit("send_message", {
-        conversationId: conversation._id,
-        senderId: user?._id,
-        receiverId: "",
-        text: inputText,
-        imageUrl: arrayToString(uploadedImages.map((item) => item.url)),
-        createdAt: new Date(),
-      });
+      if (selectedImages.length > 0) {
+        const uploadedImages = await handleUploadImages();
+        const imageUrl = arrayToString(uploadedImages.map((item) => item.url));
+
+        messageData = {
+          conversationId: conversation._id,
+          senderId: user._id,
+          text: "",
+          imageUrl: imageUrl || null,
+          videoUrl: null,
+          type: "image",
+        };
+      } else {
+        messageData = {
+          conversationId: conversation._id,
+          senderId: user._id,
+          text: inputText,
+          imageUrl: null,
+          videoUrl: null,
+          type: "text",
+        };
+      }
+      //#####GỬI TIN NHẮN MỚI#####
+      const response = await MessageService.sendMessage(conversation._id, messageData);
+      if (response.status === 201 && response.data?.data) {
+        const newMessage = response.data.data;
+
+        setMessages((previousMessages) => {
+          // Kiểm tra trùng lặp trước khi thêm
+          if (previousMessages.some((msg) => msg.id === newMessage._id)) {
+            return previousMessages;
+          }
+
+          return [
+            ...previousMessages,
+            {
+              id: newMessage._id,
+              text: newMessage.text,
+              sender: "me",
+              timestamp: newMessage.updatedAt,
+              imageUrl: newMessage.imageUrl || null,
+              type: newMessage.type,
+            },
+          ];
+        });
+      }
 
       setInputText("");
       setSelectedImages([]);
     } catch (error) {
       console.error("Send message error:", error);
       ShowToast("error", "Có lỗi xảy ra khi gửi tin nhắn");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -210,10 +307,11 @@ function Message({ navigation }) {
         style={[styles.messageBubble, isMyMessage ? styles.myMessage : styles.otherMessage]}
         key={index}
       >
-        <Text style={[styles.messageSender, isMyMessage && styles.mySender]}>{item.text}</Text>
+        {item.type === "text" && item.text && (
+          <Text style={[styles.messageSender, isMyMessage && styles.mySender]}>{item.text}</Text>
+        )}
 
-        {/* Hiển thị các ảnh trong tin nhắn */}
-        {item.imageUrl && (
+        {item.type === "image" && item.imageUrl && (
           <View style={styles.messageImageContainer}>
             {stringToArray(item.imageUrl).map((image, imgIndex) => (
               <TouchableOpacity
@@ -254,25 +352,17 @@ function Message({ navigation }) {
         nestedScrollEnabled={true}
         showsHorizontalScrollIndicator={false}
       >
-        {introduceText.map((item, key) => {
-          return (
-            <TouchableOpacity
-              style={{ margin: 6 }}
-              onPress={() => {
-                setInputText(item);
-              }}
-              key={key}
-            >
-              <Text
-                style={{
-                  ...styles.introduceText,
-                }}
-              >
-                {item}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        {introduceText.map((item, key) => (
+          <TouchableOpacity
+            style={{ margin: 6 }}
+            onPress={() => {
+              setInputText(item);
+            }}
+            key={key}
+          >
+            <Text style={{ ...styles.introduceText }}>{item}</Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     );
   };
@@ -285,7 +375,6 @@ function Message({ navigation }) {
           keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
           style={{
             ...styles.messagesList,
-
             paddingTop: HEIGHT * 0.05,
             alignItems: "center",
           }}
@@ -305,13 +394,7 @@ function Message({ navigation }) {
             ref={flatListRef}
             data={messages}
             renderItem={renderMessage}
-            keyExtractor={(item) => {
-              if (!item.id) {
-                console.warn("Message missing id:", item);
-                return `temp-${Date.now()}-${Math.random()}`;
-              }
-              return item.id;
-            }}
+            keyExtractor={(item) => item.id || `temp-${Date.now()}-${Math.random()}`}
             style={{
               ...styles.messagesList,
               backgroundColor: theme.editModalbackgroundColor,
@@ -321,7 +404,6 @@ function Message({ navigation }) {
             onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
           />
 
-          {/* Hiển thị ảnh đã chọn */}
           {selectedImages.length > 0 && (
             <View
               style={{
@@ -357,8 +439,12 @@ function Message({ navigation }) {
                 borderTopWidth: themeMode === "light" ? 1 : 0,
               }}
             >
-              <TouchableOpacity style={styles.attachButton} onPress={pickImages}>
-                <Ionicons name="image-outline" size={24} color="#999" />
+              <TouchableOpacity
+                style={[styles.attachButton, isSending ? styles.attachButtonDisabled : {}]}
+                onPress={pickImages}
+                disabled={isSending}
+              >
+                <Ionicons name="image-outline" size={24} color={isSending ? "#ccc" : "#999"} />
               </TouchableOpacity>
 
               <TextInput
@@ -367,26 +453,30 @@ function Message({ navigation }) {
                 onChangeText={setInputText}
                 placeholder="Type a message..."
                 multiline
+                editable={!isSending}
               />
 
               <TouchableOpacity
                 style={[
                   styles.sendButton,
-                  inputText.trim() === "" &&
-                    selectedImages.length === 0 &&
-                    styles.sendButtonDisabled,
+                  (inputText.trim() === "" && selectedImages.length === 0) || isSending
+                    ? styles.sendButtonDisabled
+                    : {},
                 ]}
                 onPress={onSend}
-                disabled={inputText.trim() === "" && selectedImages.length === 0}
+                disabled={(inputText.trim() === "" && selectedImages.length === 0) || isSending}
               >
-                <Text style={styles.sendButtonText}>Send</Text>
+                {isSending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.sendButtonText}>Send</Text>
+                )}
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
         </>
       )}
 
-      {/* Image Viewer Modal */}
       <Modal
         visible={imageViewerVisible}
         transparent={true}
@@ -481,7 +571,6 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     flex: 1,
-
     borderTopRightRadius: 24,
     borderTopLeftRadius: 24,
   },
@@ -587,6 +676,9 @@ const styles = StyleSheet.create({
     width: 40,
     marginRight: 5,
   },
+  attachButtonDisabled: {
+    opacity: 0.5,
+  },
   selectedImagesContainer: {
     padding: 10,
     borderTopWidth: 1,
@@ -608,7 +700,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: 10,
   },
-
   imageViewerContainer: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.9)",
