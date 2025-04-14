@@ -14,7 +14,7 @@ import {
   Modal,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
-import { TabView, SceneMap, TabBar } from "react-native-tab-view";
+import { TabView, SceneMap, TabBar, TabBarItem } from "react-native-tab-view";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { favorSelector, userSelector } from "../redux/selectors/selector";
@@ -68,7 +68,11 @@ function FavorAndSuggest({ route }) {
     }
 
     try {
-      const res = await commentService.addComment(dish._id, commentText, user._id);
+      const res = await commentService.addComment(
+        dish._id,
+        commentText,
+        user._id
+      );
       if (!res.success) {
         Alert.alert("Error", res.message || "Failed to submit comment.");
         return;
@@ -128,7 +132,9 @@ function FavorAndSuggest({ route }) {
             ? {
                 ...item,
                 isLiked: !item.isLiked,
-                likeCount: item.isLiked ? item.likeCount - 1 : item.likeCount + 1,
+                likeCount: item.isLiked
+                  ? item.likeCount - 1
+                  : item.likeCount + 1,
               }
             : item
         );
@@ -149,7 +155,8 @@ function FavorAndSuggest({ route }) {
       const ratings = response?.data;
       if (ratings && Array.isArray(ratings)) {
         const myRating = ratings.find(
-          (rating) => rating.userId._id === user._id && rating.recipeId === recipe._id
+          (rating) =>
+            rating.userId._id === user._id && rating.recipeId === recipe._id
         );
         const total = ratings.reduce((sum, r) => sum + r.star, 0);
         const average = ratings.length > 0 ? total / ratings.length : 0;
@@ -167,7 +174,11 @@ function FavorAndSuggest({ route }) {
   const handleRate = async (ratePoint) => {
     setRecipe((prev) => ({ ...prev, rate: ratePoint }));
     try {
-      const res = await commentService.rateRecipe(dish.recipeId, user._id, ratePoint);
+      const res = await commentService.rateRecipe(
+        dish.recipeId,
+        user._id,
+        ratePoint
+      );
 
       console.log("⭐️ Đánh giá thành công:", res);
 
@@ -212,7 +223,8 @@ function FavorAndSuggest({ route }) {
           if (!ingredient?.ingredientId) return;
 
           const ingredientId =
-            typeof ingredient.ingredientId === "object" && ingredient.ingredientId?._id
+            typeof ingredient.ingredientId === "object" &&
+            ingredient.ingredientId?._id
               ? ingredient.ingredientId._id
               : ingredient.ingredientId;
 
@@ -246,7 +258,9 @@ function FavorAndSuggest({ route }) {
   const loadRate = async () => {
     const response = await getRatingsByRecipeId(dish.recipeId);
     if (response?.status === 200) {
-      const findRate = response?.data?.data?.find((item) => item?.userId?._id === user?._id);
+      const findRate = response?.data?.data?.find(
+        (item) => item?.userId?._id === user?._id
+      );
       if (findRate) {
         setPersonalRate(findRate);
       }
@@ -259,7 +273,10 @@ function FavorAndSuggest({ route }) {
     setLoading(true);
 
     try {
-      const response = await HomeService.getRecipeByRecipeId(dish._id, dish.recipeId);
+      const response = await HomeService.getRecipeByRecipeId(
+        dish._id,
+        dish.recipeId
+      );
       if (response.success) {
         setRecipe(response.data);
       } else {
@@ -318,7 +335,9 @@ function FavorAndSuggest({ route }) {
           <SpinnerLoading />
         ) : (
           <>
-            <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>
+            <Text
+              style={{ ...styles.sectionTitle, color: theme.greyTextColor }}
+            >
               {ingredientDetails.length} Ingredients
             </Text>
             {ingredientDetails.length > 0 ? (
@@ -330,7 +349,10 @@ function FavorAndSuggest({ route }) {
                   }
                   return (
                     <View key={idx} style={styles.ingredientRow}>
-                      <Image source={{ uri: ingredient.imageUrl }} style={styles.ingredientImage} />
+                      <Image
+                        source={{ uri: ingredient.imageUrl }}
+                        style={styles.ingredientImage}
+                      />
                       <View style={styles.ingredientInfo}>
                         <Text
                           style={{
@@ -374,7 +396,9 @@ function FavorAndSuggest({ route }) {
                 })
                 .filter(Boolean)
             ) : (
-              <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
+              <Text
+                style={{ ...styles.noDataText, color: theme.greyTextColor }}
+              >
                 Failed to load ingredients. Please try again later.
               </Text>
             )}
@@ -398,7 +422,9 @@ function FavorAndSuggest({ route }) {
                 height={200}
                 play={false}
                 videoId={videoId}
-                onError={(error) => console.error("YouTube Player Error:", error)}
+                onError={(error) =>
+                  console.error("YouTube Player Error:", error)
+                }
               />
             </View>
           ) : dish?.videoUrl ? (
@@ -455,7 +481,9 @@ function FavorAndSuggest({ route }) {
         nestedScrollEnabled={true}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>All Comments</Text>
+        <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>
+          All Comments
+        </Text>
 
         {/* Danh sách bình luận */}
         {commentList.length > 0 ? (
@@ -486,13 +514,18 @@ function FavorAndSuggest({ route }) {
               </View>
 
               {/* Nội dung bình luận */}
-              <Text style={{ ...styles.commentText, color: theme.greyTextColor }}>
+              <Text
+                style={{ ...styles.commentText, color: theme.greyTextColor }}
+              >
                 {comment.text}
               </Text>
 
               {/* Nút like + số lượt like */}
               <View style={styles.commentFooter}>
-                <TouchableOpacity style={styles.likeButton} onPress={() => handleLike(comment._id)}>
+                <TouchableOpacity
+                  style={styles.likeButton}
+                  onPress={() => handleLike(comment._id)}
+                >
                   <Heart
                     size={20}
                     color={comment.isLiked ? "red" : "gray"}
@@ -526,14 +559,20 @@ function FavorAndSuggest({ route }) {
         {...props}
         indicatorStyle={{
           backgroundColor: "#4CAF50",
-          height: "100%",
-          width: "45%",
+          height: "80%",
+          width: "28%",
           borderRadius: 8,
           marginHorizontal: "2.5%",
           marginVertical: "10%",
         }}
-        style={{ backgroundColor: "#C4F9D7", borderRadius: 8 }}
-        labelStyle={{ color: "#000000", fontSize: 14, textTransform: "none" }}
+        style={{ backgroundColor: "#C4F9D7", borderRadius: 8, fontSize: 8 }}
+        renderTabBarItem={({ key, ...props }) => (
+          <TabBarItem
+            key={key}
+            {...props}
+            labelStyle={{ fontSize: 12 }} // Set your desired font size here
+          />
+        )}
         activeColor="#ffffff"
         inactiveColor="#000000"
         pressColor="rgba(76, 175, 80, 0.1)"
@@ -559,17 +598,21 @@ function FavorAndSuggest({ route }) {
     return (
       <View style={styles.recipeCard}>
         <Image source={{ uri: dish?.imageUrl }} style={styles.recipeImage} />
-        <TouchableOpacity style={styles.heartIcon} onPress={() => handleOnSavePress(dish)}>
+        <TouchableOpacity
+          style={styles.heartIcon}
+          onPress={() => handleOnSavePress(dish)}
+        >
           {favorite.isLoading ? (
             <ActivityIndicator size={24} color="#FC8019" />
           ) : isFavorite(dish._id) ? (
-            <MaterialCommunityIcons name="heart-multiple" size={24} color="#FF8A65" />
+            <MaterialCommunityIcons
+              name="heart-multiple"
+              size={24}
+              color="#FF8A65"
+            />
           ) : (
             <Ionicons name="heart-outline" size={24} color="#FF8A65" />
           )}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.playIcon} onPress={() => handleOnPlayPress(dish)}>
-          <MaterialCommunityIcons name="play-circle-outline" size={24} color="#FF8A65" />
         </TouchableOpacity>
         <View
           style={{
@@ -578,7 +621,9 @@ function FavorAndSuggest({ route }) {
           }}
         >
           <View style={styles.recipeHeader}>
-            <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>{dish.name}</Text>
+            <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>
+              {dish.name}
+            </Text>
             <View style={styles.recipeRate}>
               <Text
                 style={{ fontSize: 14, marginBottom: 4 }}
@@ -599,7 +644,9 @@ function FavorAndSuggest({ route }) {
                 }}
                 style={styles.openModal}
               >
-                <Text style={{ fontSize: 14, color: "#40B491" }}>Rating now</Text>
+                <Text style={{ fontSize: 14, color: "#40B491" }}>
+                  Rating now
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -637,7 +684,9 @@ function FavorAndSuggest({ route }) {
                     }}
                     style={styles.loginButton}
                   >
-                    <Text style={{ color: "#fff", fontWeight: "bold" }}>Sign In</Text>
+                    <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                      Sign In
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -661,26 +710,36 @@ function FavorAndSuggest({ route }) {
               submitComment={submitComment}
             />
           </View>
-          <Text style={{ ...styles.recipeDescription, color: theme.greyTextColor }}>
+          <Text
+            style={{ ...styles.recipeDescription, color: theme.greyTextColor }}
+          >
             {dish.description}
           </Text>
 
           <View style={styles.nutritionInfo}>
             <View style={styles.nutritionItem}>
               <Ionicons name="restaurant-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalCarbs ?? 0} carbs</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalCarbs ?? 0} carbs
+              </Text>
             </View>
             <View style={styles.nutritionItem}>
               <Ionicons name="fitness-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalProtein ?? 0} proteins</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalProtein ?? 0} proteins
+              </Text>
             </View>
             <View style={styles.nutritionItem}>
               <Ionicons name="flame-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalCalories ?? 0} Kcal</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalCalories ?? 0} Kcal
+              </Text>
             </View>
             <View style={styles.nutritionItem}>
               <Ionicons name="water-outline" size={16} color="#78909C" />
-              <Text style={styles.nutritionText}>{recipe?.totalFat ?? 0} fats</Text>
+              <Text style={styles.nutritionText}>
+                {recipe?.totalFat ?? 0} fats
+              </Text>
             </View>
           </View>
 
@@ -702,7 +761,10 @@ function FavorAndSuggest({ route }) {
   return (
     <MainLayoutWrapper>
       <View style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+        >
           {renderRecipeCard()}
         </ScrollView>
       </View>

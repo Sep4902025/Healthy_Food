@@ -30,7 +30,9 @@ function Header() {
       // Fetch unpaid meal plans for badge count
       const fetchUnpaidMealPlans = async () => {
         try {
-          const response = await mealPlanService.getUnpaidMealPlanForUser(user._id);
+          const response = await mealPlanService.getUnpaidMealPlanForUser(
+            user._id
+          );
           if (response.success) {
             setMealPlanCount(response.data.length);
           } else {
@@ -76,28 +78,37 @@ function Header() {
       }}
     >
       <TouchableOpacity style={styles.backIcon} onPress={onDrawerPress}>
-        <Ionicons name="reorder-three" size={32} color={theme.backButtonColor} />
+        <Ionicons
+          name="reorder-three"
+          size={32}
+          color={theme.backButtonColor}
+        />
       </TouchableOpacity>
 
       <View style={styles.rightContainer}>
-        {user ? (
-          <ReminderNotification userId={user?._id} />
-        ) : (
-          <TouchableOpacity onPress={() => navigation.navigate(ScreensName.signin)}>
-            <Text style={{ fontSize: 32, color: theme.backButtonColor }}>🔔</Text>
-          </TouchableOpacity>
-        )}
+        {user && <ReminderNotification userId={user?._id} />}
+
+        {/* <TouchableOpacity
+          onPress={() => navigation.navigate(ScreensName.signin)}
+        >
+          <Text style={{ fontSize: 32, color: theme.backButtonColor }}>🔔</Text>
+        </TouchableOpacity> */}
 
         {/* Cart Icon */}
-        <TouchableOpacity onPress={toggleCart} style={styles.cartContainer}>
-          <Ionicons name="cart-outline" size={32} color={theme.backButtonColor} />
-          {mealPlanCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{mealPlanCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
+        {user && (
+          <TouchableOpacity onPress={toggleCart} style={styles.cartContainer}>
+            <Ionicons
+              name="cart-outline"
+              size={32}
+              color={theme.backButtonColor}
+            />
+            {mealPlanCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{mealPlanCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
         {/* Profile Icon */}
         <TouchableOpacity onPress={checkAuth}>
           {user?.avatarUrl ? (
@@ -107,7 +118,11 @@ function Header() {
               style={[styles.profileImage, styles.avtImage]}
             />
           ) : (
-            <MaterialIcons name="account-circle" size={40} color={theme.backButtonColor} />
+            <MaterialIcons
+              name="account-circle"
+              size={40}
+              color={theme.backButtonColor}
+            />
           )}
         </TouchableOpacity>
       </View>

@@ -25,12 +25,20 @@ const WIDTH = Dimensions.get("window").width;
 
 const CategoryButton = ({ title, isActive = false, onclick }) => (
   <TouchableOpacity
-    style={[styles.categoryButton, { backgroundColor: isActive ? "#38B2AC" : "#F8E1D4" }]}
+    style={[
+      styles.categoryButton,
+      { backgroundColor: isActive ? "#38B2AC" : "#F8E1D4" },
+    ]}
     onPress={() => {
       onclick && onclick();
     }}
   >
-    <Text style={[styles.categoryButtonText, { color: isActive ? "white" : "#FF6B00" }]}>
+    <Text
+      style={[
+        styles.categoryButtonText,
+        { color: isActive ? "white" : "#FF6B00" },
+      ]}
+    >
       {title}
     </Text>
   </TouchableOpacity>
@@ -91,15 +99,22 @@ const SearchScreen = ({ route, navigation }) => {
         sort: "createdAt",
         order: "desc",
       };
+      setSearchQuery(params.name);
       const response = await dishService.searchDishByName(params);
 
       if (response.status === "success") {
         const newDishes = response.data.items;
 
         setSearchResults((prev) => {
-          const existingIds = new Set(isRefresh ? [] : prev.map((dish) => dish._id));
-          const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));
-          return isRefresh ? filteredNewDishes : [...prev, ...filteredNewDishes];
+          const existingIds = new Set(
+            isRefresh ? [] : prev.map((dish) => dish._id)
+          );
+          const filteredNewDishes = newDishes.filter(
+            (dish) => !existingIds.has(dish._id)
+          );
+          return isRefresh
+            ? filteredNewDishes
+            : [...prev, ...filteredNewDishes];
         });
 
         setPage(pageNum);
@@ -118,11 +133,15 @@ const SearchScreen = ({ route, navigation }) => {
     loadHistory();
   };
 
-  const handleSearchByCategory = async (typeName, pageNum = 1, isRefresh = false) => {
+  const handleSearchByCategory = async (
+    typeName,
+    pageNum = 1,
+    isRefresh = false
+  ) => {
     setLoading((prev) => ({ ...prev, initial: isRefresh }));
     setSearchType("category");
     setCategory(typeName);
-
+    setSearchQuery(typeName);
     try {
       const params = {
         page: pageNum,
@@ -136,9 +155,15 @@ const SearchScreen = ({ route, navigation }) => {
         const newDishes = response.data.items;
 
         setSearchResults((prev) => {
-          const existingIds = new Set(isRefresh ? [] : prev.map((dish) => dish._id));
-          const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));
-          return isRefresh ? filteredNewDishes : [...prev, ...filteredNewDishes];
+          const existingIds = new Set(
+            isRefresh ? [] : prev.map((dish) => dish._id)
+          );
+          const filteredNewDishes = newDishes.filter(
+            (dish) => !existingIds.has(dish._id)
+          );
+          return isRefresh
+            ? filteredNewDishes
+            : [...prev, ...filteredNewDishes];
         });
 
         setPage(pageNum);
@@ -200,7 +225,10 @@ const SearchScreen = ({ route, navigation }) => {
     ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
       const paddingToBottom = 20;
-      if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+      if (
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+      ) {
         loadMoreResults();
       }
     },
@@ -256,13 +284,19 @@ const SearchScreen = ({ route, navigation }) => {
       </View>
 
       {loading.initial ? (
-        <ActivityIndicator size="large" color="#38B2AC" style={styles.loading} />
+        <ActivityIndicator
+          size="large"
+          color="#38B2AC"
+          style={styles.loading}
+        />
       ) : filterResult.length > 0 ? (
         filterResult.map((item) => (
           <DishedV2
             key={item._id}
             item={item}
-            onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish: item })}
+            onPress={() =>
+              navigation.navigate(ScreensName.favorAndSuggest, { dish: item })
+            }
           />
         ))
       ) : (
@@ -270,7 +304,11 @@ const SearchScreen = ({ route, navigation }) => {
       )}
 
       {loading.more && (
-        <ActivityIndicator size="large" color="#38B2AC" style={styles.loadingMore} />
+        <ActivityIndicator
+          size="large"
+          color="#38B2AC"
+          style={styles.loadingMore}
+        />
       )}
     </View>
   );
@@ -291,7 +329,9 @@ const SearchScreen = ({ route, navigation }) => {
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
-          {searchMode === "initial" ? renderInitialContent() : renderResultsContent()}
+          {searchMode === "initial"
+            ? renderInitialContent()
+            : renderResultsContent()}
         </ScrollView>
       </View>
     </MainLayoutWrapper>
