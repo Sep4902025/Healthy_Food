@@ -7,6 +7,7 @@ const NutritionistApplicationForm = () => {
     personalInfo: { fullName: "", phoneNumber: "", address: "" },
     profileImage: "",
     introduction: "",
+    certificateLink: "", // Thêm trường mới
   });
 
   const handleChange = (e) => {
@@ -84,6 +85,19 @@ const NutritionistApplicationForm = () => {
           />
         </div>
         <div>
+          <label className="block mb-1">
+            Certificate Link (e.g., Google Drive URL)
+          </label>
+          <input
+            type="url"
+            name="certificateLink"
+            value={formData.certificateLink}
+            onChange={handleChange}
+            className="w-full p-2 border rounded"
+            placeholder="https://drive.google.com/..."
+          />
+        </div>
+        <div>
           <label className="block mb-1">Introduction</label>
           <textarea
             name="introduction"
@@ -136,6 +150,21 @@ const NutritionistApplicationForm = () => {
               <p>
                 <strong>Address:</strong>{" "}
                 {formData.personalInfo.address || "N/A"}
+              </p>
+              <p>
+                <strong>Certificate Link:</strong>{" "}
+                {formData.certificateLink ? (
+                  <a
+                    href={formData.certificateLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    View Certificate
+                  </a>
+                ) : (
+                  "N/A"
+                )}
               </p>
             </div>
           </div>

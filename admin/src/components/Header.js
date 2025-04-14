@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import logo from "../assets/images/Logo.png";
 import mealPlanService from "../services/mealPlanServices";
 import { FaSearch, FaSignOutAlt } from "react-icons/fa";
-import { RiShoppingBag4Line } from "react-icons/ri";
 import { selectUser } from "../store/selectors/authSelectors";
 import { logoutUser } from "../store/actions/authActions";
 import { DarkModeContext } from "../pages/context/DarkModeContext";
@@ -14,7 +13,9 @@ import PreviewModal from "../pages/user/MealPlan/PreviewModal";
 import HomeService from "../services/home.service";
 import ReminderNotification from "./Reminder/ReminderNotifiaction";
 
-import {useSearch } from "../pages/context/SearchContext";
+import { useSearch } from "../pages/context/SearchContext";
+import Cart from "../pages/user/MealPlan/Cart";
+
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,29 +29,47 @@ const Header = () => {
   const { darkMode, toggleDarkMode } = useContext(DarkModeContext);
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
   const [mealPlans, setMealPlans] = useState([]);
+  console.log("MLU", mealPlans);
+
+  const [isLoadingMealPlans, setIsLoadingMealPlans] = useState(false); // New loading state
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [activeTab, setActiveTab] = useState("mealPlan");
-  const [cartViewed, setCartViewed] = useState(false); // New state to track if cart is viewed
+  const [cartViewed, setCartViewed] = useState(false);
   const userMenuRef = useRef(null);
   const cartMenuRef = useRef(null);
   const { setSearchTerm } = useSearch();
   const [inputValue, setInputValue] = useState("");
   const [debounceTimer, setDebounceTimer] = useState(null);
 
+  // Debug user changes
+  useEffect(() => {
+    console.log("User changed:", user);
+  }, [user]);
+
+  // Debug mealPlans state changes
+  useEffect(() => {
+    console.log("mealPlans state updated:", mealPlans);
+  }, [mealPlans]);
+
+  // Debug activeTab changes
+  useEffect(() => {
+    console.log("activeTab changed:", activeTab);
+  }, [activeTab]);
+
+  // Debounce search input
   useEffect(() => {
     if (debounceTimer) clearTimeout(debounceTimer);
 
     const timer = setTimeout(() => {
       setSearchTerm(inputValue);
-    }, 500); // debounce 500ms
+    }, 500);
 
     setDebounceTimer(timer);
 
     return () => clearTimeout(timer);
   }, [inputValue]);
-
 
   // Check query parameters to display toast
   useEffect(() => {
@@ -64,7 +83,6 @@ const Header = () => {
       } else {
         toast.error(message);
       }
-      // Remove query parameters after displaying toast
       navigate(location.pathname, { replace: true });
     }
   }, [location, navigate]);
@@ -78,6 +96,7 @@ const Header = () => {
     [location.pathname]
   );
 
+  // Check user preference
   useEffect(() => {
     console.log("user data", user);
     if (user?.userPreferenceId) {
@@ -87,31 +106,39 @@ const Header = () => {
     }
   }, [user]);
 
+  // Fetch unpaid meal plans
   useEffect(() => {
     const fetchUnpaidMealPlans = async () => {
       if (user) {
+        setIsLoadingMealPlans(true); // Set loading state
         try {
           const response = await mealPlanService.getUnpaidMealPlanForUser(user._id);
+          console.log("API Response for unpaid meal plans:", response);
           if (response.success) {
             console.log("List of unpaid meal plans:", response.data);
             setMealPlans(response.data);
           } else {
+            console.log("No meal plans found:", response.message);
             setMealPlans([]);
           }
         } catch (error) {
           console.error("Error fetching unpaid meal plans:", error);
           setMealPlans([]);
+        } finally {
+          setIsLoadingMealPlans(false); // Clear loading state
         }
       }
     };
     fetchUnpaidMealPlans();
   }, [user]);
 
+  // Fetch payment history
   useEffect(() => {
     const fetchPaymentHistory = async () => {
       if (user) {
         try {
           const response = await mealPlanService.getPaymentHistory(user._id, 1, 5);
+          console.log("Payment history response:", response);
           if (response.success) {
             setPaymentHistory(response.data);
           } else {
@@ -129,14 +156,13 @@ const Header = () => {
   // Handle clicking "Profile"
   const handleProfileClick = () => {
     if (user?.role === "admin") {
-      // If admin, redirect to admin profile page
       navigate(`/admin/adminprofile/${user._id}`, { state: { user } });
     } else {
-      // If not admin, redirect to regular user page
       navigate("/user");
     }
   };
 
+  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -151,6 +177,7 @@ const Header = () => {
     fetchCategories();
   }, []);
 
+  // Fetch dish types
   useEffect(() => {
     const fetchDishTypes = async () => {
       try {
@@ -165,6 +192,7 @@ const Header = () => {
     fetchDishTypes();
   }, []);
 
+  // Handle click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".dropdown-container")) {
@@ -196,7 +224,7 @@ const Header = () => {
     e.stopPropagation();
     setCartMenuOpen(!cartMenuOpen);
     if (!cartViewed && mealPlans.length > 0) {
-      setCartViewed(true); // Mark cart as viewed when opened
+      setCartViewed(true);
     }
   };
 
@@ -276,7 +304,6 @@ const Header = () => {
           )}
           {user?.role === "user" && (
             <>
-              {/* If userPreferenceId exists, show "For You" instead of "Survey" */}
               {user?.userPreferenceId ? (
                 <a
                   href="/foryou"
@@ -328,113 +355,20 @@ const Header = () => {
           {/* Icons & Auth */}
           {user ? (
             <div className="flex items-center space-x-4">
-              {/* Cart Dropdown */}
-              <div className="relative" ref={cartMenuRef}>
-                <div className="relative inline-block">
-                  <RiShoppingBag4Line
-                    className="cursor-pointer w-[16px] h-[16px]"
-                    onClick={toggleCartMenu}
-                  />
-                  {!cartViewed && mealPlans.length > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-custom-green text-white text-xs font-bold rounded-full w-[15px] h-[15px] flex items-center justify-center">
-                      {mealPlans.length}
-                    </span>
-                  )}
-                </div>
-                {cartMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-60 bg-white border rounded-lg shadow-lg z-10">
-                    {/* Tabs */}
-                    <div className="flex border-b px-2">
-                      <button
-                        className={`flex-1 py-2 text-center ${
-                          activeTab === "mealPlan"
-                            ? "border-b-2 border-green-500 text-green-600"
-                            : "text-gray-600"
-                        }`}
-                        onClick={() => setActiveTab("mealPlan")}
-                      >
-                        Meal Plans
-                      </button>
-                      <button
-                        className={`flex py-2 text-center ${
-                          activeTab === "history"
-                            ? "border-b-2 border-green-500 text-green-600"
-                            : "text-gray-600"
-                        }`}
-                        onClick={() => setActiveTab("history")}
-                      >
-                        Payment History
-                      </button>
-                    </div>
-
-                    {/* Tab Content */}
-                    <div className="flex flex-col justify-center items-center max-h-48 overflow-y-auto">
-                      {activeTab === "mealPlan" ? (
-                        mealPlans.length > 0 ? (
-                          <div className="">
-                            {mealPlans.map((mealPlan) => (
-                              <div key={mealPlan._id} className="border-b py-2 last:border-b-0">
-                                <p className="font-medium text-gray-700">Name: {mealPlan.title}</p>
-                                <p className="text-sm text-gray-600">
-                                  Start: {new Date(mealPlan.startDate).toLocaleDateString()}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  Price: {(mealPlan.price || 1500000).toLocaleString()} VND
-                                </p>
-                                <div className="mt-2 flex space-x-2">
-                                  <button
-                                    onClick={() => handlePayMealPlan(mealPlan)}
-                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-md text-xs font-medium"
-                                  >
-                                    Pay Now
-                                  </button>
-                                  <button
-                                    onClick={() => handlePreviewMealPlan(mealPlan)}
-                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded-md text-xs font-medium"
-                                  >
-                                    Preview
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-500">No meal plans to pay.</p>
-                        )
-                      ) : (
-                        <div>
-                          {paymentHistory.length > 0 ? (
-                            <div className="max-h-48 overflow-y-auto">
-                              {paymentHistory.map((payment) => (
-                                <div
-                                  key={payment._id}
-                                  className="border-b py-2 text-sm text-gray-600"
-                                >
-                                  <p>
-                                    <strong>Meal Plan:</strong> {payment.mealPlanName || "N/A"}
-                                  </p>
-                                  <p>
-                                    <strong>Amount:</strong> {payment.amount.toLocaleString()} VND
-                                  </p>
-                                  <p>
-                                    <strong>Status:</strong> {payment.status}
-                                  </p>
-                                  <p>
-                                    <strong>Date:</strong>{" "}
-                                    {new Date(payment.createdAt).toLocaleDateString()}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-500">No payment history.</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Cart Component */}
+              <Cart
+                cartMenuOpen={cartMenuOpen}
+                toggleCartMenu={toggleCartMenu}
+                cartMenuRef={cartMenuRef}
+                cartViewed={cartViewed}
+                mealPlans={mealPlans.data}
+                isLoadingMealPlans={isLoadingMealPlans}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                paymentHistory={paymentHistory}
+                handlePayMealPlan={handlePayMealPlan}
+                handlePreviewMealPlan={handlePreviewMealPlan}
+              />
 
               {/* ReminderNotification */}
               <ReminderNotification userId={user?._id} />

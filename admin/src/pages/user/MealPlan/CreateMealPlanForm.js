@@ -106,10 +106,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
 
       const response = await mealPlanService.createMealPlan(mealPlanData);
       if (response.success) {
-        toast.success("🎉 Meal Plan created successfully!", {
-          position: "top-right",
-          autoClose: 3000,
-        });
+        toast.success("🎉 Meal Plan created successfully!");
         onSuccess();
       } else {
         toast.error(`❌ Error: ${response.message}`, {

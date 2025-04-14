@@ -2,16 +2,17 @@ const UserModel = require("../models/UserModel");
 const AppError = require("../utils/appError");
 const sendEmail = require("../utils/email");
 
-// 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
+// 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa và role admin)
 exports.getAllUsers = async (query, currentAdminId) => {
   const page = parseInt(query.page) || 1; // Mặc định là trang 1
   const limit = parseInt(query.limit) || 10; // Mặc định 10 users mỗi trang
   const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
 
-  // Điều kiện lọc: không bao gồm người dùng đã xóa và không phải admin đang đăng nhập
+  // Điều kiện lọc: không bao gồm người dùng đã xóa, không phải admin đang đăng nhập, và không có role admin
   const filter = {
     isDelete: false,
     _id: { $ne: currentAdminId }, // Loại trừ admin đang đăng nhập
+    role: { $ne: "admin" }, // Loại trừ người dùng có role admin
   };
 
   // Đếm tổng số người dùng thỏa mãn điều kiện
