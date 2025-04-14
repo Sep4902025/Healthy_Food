@@ -27,7 +27,7 @@ const ForYou = ({ navigation }) => {
   const [hasMore, setHasMore] = useState(true);
   const limit = 10;
   const user = useSelector(userSelector);
-  const userId = user._id; // Thay bằng userId thực tế, có thể lấy từ context hoặc props
+  const userId = user?._id; // Thay bằng userId thực tế, có thể lấy từ context hoặc props
 
   const loadForYouDishes = useCallback(
     async (pageNum, isRefresh = false) => {

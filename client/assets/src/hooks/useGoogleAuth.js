@@ -1,193 +1,71 @@
-
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
-import { Platform, Modal, View, StyleSheet } from "react-native";
-import { WebView } from "react-native-webview";
-
+import { makeRedirectUri, ResponseType } from "expo-auth-session";
+import { loginGoogle } from "../services/authService";
+import { useDispatch } from "react-redux";
+import { loginGoogleThunk } from "../redux/actions/userThunk";
 
 WebBrowser.maybeCompleteAuthSession();
 
-
-const googleConfig = {
-
-  androidClientId:
-    "155145337295-8k2hph51rqh94qmi1lpp93ro72vg1kva.apps.googleusercontent.com",
-
-  iosClientId:
-    "155145337295-voo79g6h7n379738rce0ipoo4qoj1dom.apps.googleusercontent.com",
-  scopes: ["openid", "profile", "email"],
-};
-
 export const useGoogleAuth = () => {
-
   const [userInfo, setUserInfo] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [authUrl, setAuthUrl] = useState("");
-
+  const dispatch = useDispatch()
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    ...googleConfig,
-    selectAccount: true,
-    usePKCE: true,
-    responseType: "code",
-    redirectUri: "com.tructht.HealthyFoodApp://",
+    androidClientId: '155145337295-8k2hph51rqh94qmi1lpp93ro72vg1kva.apps.googleusercontent.com',
+    iosClientId: '155145337295-voo79g6h7n379738rce0ipoo4qoj1dom.apps.googleusercontent.com',
+    expoClientId: '155145337295-9479lepiisp13mebfporopgbcdpe64hi.apps.googleusercontent.com',
+    redirectUri: makeRedirectUri({ native: 'com.tructht.healthyfoodapp:/oauthredirect' }),
+    scopes: ['openid', 'profile', 'email'],
+    responseType: ResponseType.Code,  // Chỉnh sửa tại đây
+    usePKCE: true,  // Bật PKCE nếu sử dụng responseType.Code
   });
-
-
   useEffect(() => {
     if (response?.type === "success") {
-      const { authentication } = response;
-      handleSuccessfulLogin(authentication.accessToken);
-      setShowModal(false);
+      const idToken = response?.authentication?.idToken
+      if (idToken) getUserDataByIdtoken(idToken);
     } else if (response?.type === "error") {
-      setError(response.error?.message || "Authentication failed");
-      setShowModal(false);
+      setError("Authentication failed");
     }
   }, [response]);
-
-
-  const handleSuccessfulLogin = async (accessToken) => {
-    try {
-
-      const userInfoResponse = await fetch(
-        "https://www.googleapis.com/userinfo/v2/me",
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-      const userData = await userInfoResponse.json();
-
-
-      await AsyncStorage.setItem("userData", JSON.stringify(userData));
-      await AsyncStorage.setItem("googleToken", accessToken);
-
-      setUserInfo(userData);
-    } catch (err) {
-      setError("Failed to fetch user info");
-      console.error(err);
-    }
-  };
-
-
-  const handleNavigationStateChange = (navState) => {
-
-    if (navState.url.includes("access_token=")) {
-      const accessToken = navState.url.split("access_token=")[1].split("&")[0];
-      handleSuccessfulLogin(accessToken);
-      setShowModal(false);
-    }
-
-    if (navState.url.includes("error=")) {
-      setShowModal(false);
-      setError("Authentication cancelled");
-    }
-  };
 
 
   const signIn = async () => {
     setLoading(true);
     setError(null);
     try {
-
-      const authUrlResult = await promptAsync({
-        useProxy: false,
-        showInRecents: false,
-        returnUrl: false,
-      });
-      console.log(authUrlResult);
-
-      if (authUrlResult?.url) {
-        setAuthUrl(authUrlResult.url);
-        setShowModal(true);
-      }
+      await promptAsync({ useProxy: false });
     } catch (err) {
       setError(err.message);
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
+  const getUserDataByIdtoken = async (idtoken) => {
+    const credentials = {
+      idToken: idtoken,
+    };
+    dispatch(loginGoogleThunk(credentials))
+  }
 
   const signOut = async () => {
-    try {
-
-      await AsyncStorage.removeItem("userData");
-      await AsyncStorage.removeItem("googleToken");
-      setUserInfo(null);
-    } catch (error) {
-      setError(error.message);
-    }
+    await AsyncStorage.multiRemove(["userData", "googleToken"]);
+    setUserInfo(null);
   };
-
-
-  const AuthModal = () => (
-    <Modal
-      visible={showModal}
-      onRequestClose={() => setShowModal(false)}
-      animationType="slide"
-      transparent={true}
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <WebView
-            source={{ uri: authUrl }}
-            onNavigationStateChange={handleNavigationStateChange}
-            style={styles.webview}
-            incognito={true}
-            sharedCookiesEnabled={false}
-          />
-        </View>
-      </View>
-    </Modal>
-  );
-
 
   useEffect(() => {
-    const checkExistingSession = async () => {
-      try {
-        const storedUserData = await AsyncStorage.getItem("userData");
-        if (storedUserData) {
-          setUserInfo(JSON.parse(storedUserData));
-        }
-      } catch (error) {
-        console.error("Error checking existing session:", error);
-      }
+    const loadUser = async () => {
+      const data = await AsyncStorage.getItem("userData");
+      if (data) setUserInfo(JSON.parse(data));
     };
-    checkExistingSession();
+    loadUser();
   }, []);
 
-
-  return {
-    signIn,
-    signOut,
-    userInfo,
-    loading,
-    error,
-    AuthModal,
-  };
+  return { signIn, signOut, userInfo, loading, error };
 };
-
-
-const styles = StyleSheet.create({
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    width: "90%",
-    height: "80%",
-    backgroundColor: "white",
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  webview: {
-    flex: 1,
-  },
-});

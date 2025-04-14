@@ -37,7 +37,7 @@ const MealPlan = ({ navigation }) => {
   const fetchUserMealPlan = async () => {
     try {
       setLoading(true);
-      const response = await mealPlanService.getUserMealPlan(user._id);
+      const response = await mealPlanService.getUserMealPlan(user?._id);
       if (response.success && response.data) {
         const mealPlan = response.data;
         setUserMealPlan(mealPlan);
@@ -216,10 +216,10 @@ const MealPlan = ({ navigation }) => {
 
               {userMealPlan._id && (
                 <View className="mb-4 pt-4">
-                  {user.userPreferenceId ? (
+                  {user?.userPreferenceId ? (
                     <MealPlanAimChart
                       mealPlanId={userMealPlan._id}
-                      userId={user.userPreferenceId}
+                      userId={user?.userPreferenceId}
                       duration={userMealPlan.duration || 7}
                       onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
                       isMealPlanExpired={isMealPlanExpired}
@@ -255,8 +255,8 @@ const MealPlan = ({ navigation }) => {
                     Create New Meal Plan
                   </Text>
                   <CreateMealPlanForm
-                    userId={user._id}
-                    userRole={user.role}
+                    userId={user?._id}
+                    userRole={user?.role}
                     onSuccess={handleCreateSuccess}
                   />
                 </View>

@@ -31,24 +31,18 @@ function Home({ navigation }) {
   const [loading, setLoading] = useState({ initial: true, more: false });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [isSeasonValid, setIsSeasonValid] = useState(true); // Track if season is valid
   const limit = 10; // Số lượng món ăn mỗi trang
 
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
 
   const dispatch = useDispatch();
-  const season = useCurrentSeason() || "unknown";
-  const validSeasons = ["Spring", "Summer", "Fall", "Winter"];
+  const season = useCurrentSeason();
 
   useEffect(() => {
-    // Check if season is valid on mount or when season changes
+    const validSeasons = ["Spring", "Summer", "Fall", "Winter"];
     if (validSeasons.includes(season)) {
-      setIsSeasonValid(true);
       loadInitialDishes();
-    } else {
-      setIsSeasonValid(false);
-      setLoading((prev) => ({ ...prev, initial: false }));
     }
   }, [season]);
 
@@ -64,44 +58,39 @@ function Home({ navigation }) {
 
   const loadInitialDishes = async () => {
     setLoading((prev) => ({ ...prev, initial: true }));
-    setPage(1);
-    setHasMore(true);
     await loadDishes(1, true);
     setLoading((prev) => ({ ...prev, initial: false }));
   };
 
   const loadMoreDishes = async () => {
-    if (!hasMore || loading.more || !isSeasonValid) return;
+    if (!hasMore || loading.more) return;
     setLoading((prev) => ({ ...prev, more: true }));
     await loadDishes(page + 1);
     setLoading((prev) => ({ ...prev, more: false }));
   };
 
   const loadDishes = async (pageNum, isRefresh = false) => {
-    if (!validSeasons.includes(season)) {
-      setIsSeasonValid(false);
-      return;
-    }
-
     try {
-      const response = await HomeService.getDishBySeason(season, pageNum, limit);
-      if (response.success) {
+      if (!season) return;
+
+      const response = await HomeService.getDishBySeason(
+        season,
+        pageNum,
+        limit
+      );
+      console.log(response);
+
+      if (response?.success) {
         const newDishes = response.data.items;
 
-        // Loại bỏ các món ăn trùng lặp dựa trên _id
-        setSeasonalDishes((prev) => {
-          const existingIds = new Set(isRefresh ? [] : prev.map((dish) => dish._id));
-          const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));
-
-          // Nếu là refresh thì chỉ lấy dữ liệu mới, nếu không thì nối dữ liệu mới vào dữ liệu cũ
-          const updatedDishes = isRefresh ? filteredNewDishes : [...prev, ...filteredNewDishes];
-          return updatedDishes;
-        });
+        setSeasonalDishes((prev) =>
+          isRefresh ? newDishes : [...prev, ...newDishes]
+        );
 
         setPage(pageNum);
         setHasMore(pageNum < response.data.totalPages);
       } else {
-        console.error("Failed to load dishes:", response.message);
+        console.error("Failed to load dishes:", response);
         setHasMore(false);
       }
     } catch (error) {
@@ -111,12 +100,6 @@ function Home({ navigation }) {
   };
 
   const onRefresh = async () => {
-    if (!validSeasons.includes(season)) {
-      setIsSeasonValid(false);
-      setRefreshing(false);
-      return;
-    }
-
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
@@ -141,11 +124,14 @@ function Home({ navigation }) {
     ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
       const paddingToBottom = normalize(20);
-      if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+      if (
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+      ) {
         loadMoreDishes();
       }
     },
-    [hasMore, loading.more, page, isSeasonValid]
+    [hasMore, loading.more, page]
   );
 
   return (
@@ -155,7 +141,9 @@ function Home({ navigation }) {
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <SearchBar
           placeholder="What do you need?"
@@ -172,7 +160,9 @@ function Home({ navigation }) {
               <CategoryCard
                 key={key}
                 category={{ id: key, ...category }}
-                onPress={() => navigation.navigate(ScreensName.search, { category })}
+                onPress={() =>
+                  navigation.navigate(ScreensName.search, { category })
+                }
                 style={styles.categoryCard}
               />
             ))}
@@ -189,24 +179,32 @@ function Home({ navigation }) {
 
           {loading.initial ? (
             <SpinnerLoading />
-          ) : !isSeasonValid ? (
-            <Text style={styles.noResultsText}>
-              Invalid season. Please select a valid season (Spring, Summer, Fall, Winter).
-            </Text>
-          ) : seasonalDishes.length > 0 ? (
-            seasonalDishes.map((dish) => (
-              <DishedV1
-                dish={dish}
-                key={dish._id}
-                onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })}
-              />
-            ))
+          ) : seasonalDishes.filter((item) =>
+              item?.season?.toLowerCase()?.includes(season?.toLowerCase())
+            ).length > 0 ? (
+            seasonalDishes
+              .filter((item) =>
+                item?.season?.toLowerCase()?.includes(season?.toLowerCase())
+              )
+              .map((dish, index) => (
+                <DishedV1
+                  dish={dish}
+                  key={dish._id + index}
+                  onPress={() =>
+                    navigation.navigate(ScreensName.favorAndSuggest, { dish })
+                  }
+                />
+              ))
           ) : (
             <Text style={styles.noResultsText}>No seasonal dishes found</Text>
           )}
 
           {loading.more && (
-            <ActivityIndicator size="large" color="#38B2AC" style={styles.loadingMore} />
+            <ActivityIndicator
+              size="large"
+              color="#38B2AC"
+              style={styles.loadingMore}
+            />
           )}
         </View>
       </ScrollView>

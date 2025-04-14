@@ -108,12 +108,12 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
           error = "Định dạng email không hợp lệ";
         }
         break;
-      case "phoneNumber":
-        if (!validateVietnamesePhone(value)) {
-          error =
-            "Số điện thoại không hợp lệ (Việt Nam: 10 số, bắt đầu bằng số 0)";
-        }
-        break;
+      // case "phoneNumber":
+      //   if (!validateVietnamesePhone(value)) {
+      //     error =
+      //       "Số điện thoại không hợp lệ (Việt Nam: 10 số, bắt đầu bằng số 0)";
+      //   }
+      //   break;
       case "weight":
         error = validateNumericField(value, "Cân nặng");
         break;
@@ -213,18 +213,20 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
             keyboardType={keyboardType}
             editable={editableFields[fieldName]}
           />
-          <TouchableOpacity
-            style={styles.editFieldButton}
-            onPress={() => {
-              edittable && toggleEditMode(fieldName);
-            }}
-          >
-            <Ionicons
-              name={editableFields[fieldName] ? "checkmark" : "pencil"}
-              size={20}
-              color="#40B491"
-            />
-          </TouchableOpacity>
+          {edittable && (
+            <TouchableOpacity
+              style={styles.editFieldButton}
+              onPress={() => {
+                edittable && toggleEditMode(fieldName);
+              }}
+            >
+              <Ionicons
+                name={editableFields[fieldName] ? "checkmark" : "pencil"}
+                size={20}
+                color="#40B491"
+              />
+            </TouchableOpacity>
+          )}
         </View>
         {validationErrors[fieldName] ? (
           <Text style={styles.errorText}>{validationErrors[fieldName]}</Text>

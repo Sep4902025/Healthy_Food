@@ -14,6 +14,19 @@ export const login = async ({ email, password }) => {
   }
 };
 
+export const loginGoogle = async ({ idToken }) => {
+  try {
+    const data = {
+      idToken: idToken,
+    };
+    const response = await axiosInstance.post(`/users/login-google`, data);
+    return response;
+  } catch (error) {
+    console.log("login in service/auth error : ", error);
+    return error;
+  }
+};
+
 export const signup = async ({ email, password, passwordConfirm, username }) => {
   try {
     const data = { email, password, passwordConfirm, username };

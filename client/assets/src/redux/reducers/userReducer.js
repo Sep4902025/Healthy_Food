@@ -1,7 +1,7 @@
 // PHẦN 1: IMPORTS
 import { createSlice } from "@reduxjs/toolkit";
 // ↑ Import createSlice từ Redux Toolkit để tạo reducer và actions
-import { loginThunk } from "../actions/userThunk";
+import { loginGoogleThunk, loginThunk } from "../actions/userThunk";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 // ↑ Import action creator xử lý đăng nhập đã tạo trước đó
 
@@ -47,6 +47,24 @@ const userSlice = createSlice({
       })
       // Khi API đăng nhập thất bại
       .addCase(loginThunk.rejected, (state, action) => {
+        state.error = action.payload; // Lưu thông tin lỗi
+        state.loading = false; // Tắt loading
+      })
+       // Khi bắt đầu gọi API đăng nhập
+       .addCase(loginGoogleThunk.pending, (state) => {
+        state.loading = true; // Set loading
+        state.error = null; // Reset error
+      })
+      // Khi API đăng nhập thành công
+      .addCase(loginGoogleThunk.fulfilled, (state, action) => {
+        state.user = {
+          ...action.payload?.data?.data?.user,
+          accessToken: action.payload?.data?.token,
+        }; // Lưu thông tin user
+        state.loading = false; // Tắt loading
+      })
+      // Khi API đăng nhập thất bại
+      .addCase(loginGoogleThunk.rejected, (state, action) => {
         state.error = action.payload; // Lưu thông tin lỗi
         state.loading = false; // Tắt loading
       });
