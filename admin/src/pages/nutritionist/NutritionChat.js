@@ -110,12 +110,17 @@ const NutritionChat = () => {
 
   const handleAcceptChat = async (conversationId) => {
     try {
-      await ChatService.acceptConversation(conversationId, user._id);
+      const response = await ChatService.acceptConversation(conversationId, user._id);
       await loadConversations();
       setActiveTab("active");
       const updatedConversation = conversations.find((conv) => conv._id === conversationId);
       if (updatedConversation) {
         setSelectedConversation({ ...updatedConversation, status: "active" });
+        const socket = ChatService.connectSocket(user._id);
+        socket.emit("conversation_status_changed", {
+          conversationId,
+          status: "active",
+        });
       }
     } catch (error) {
       console.error("Error accepting chat:", error);
@@ -200,14 +205,14 @@ const NutritionChat = () => {
             )}
           </div>
         </div>
-
-        <div className="flex-1 flex flex-col bg-white h-[calc(100vh-60px)]">
+        <div className="flex-1 flex flex-col bg-white h-[550px]">
           {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
           <div className="flex-1 overflow-hidden">
             {selectedConversation ? (
               <ChatWindow
                 conversation={selectedConversation}
                 setCurrentConversation={handleUpdateConversation}
+                role="nutritionist"
               />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500 text-sm">
