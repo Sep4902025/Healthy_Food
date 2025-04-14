@@ -11,6 +11,7 @@ import {
   Wheat,
   Droplet,
   EditIcon,
+  PlusIcon,
   Utensils,
   TrashIcon,
 } from "lucide-react";
@@ -82,7 +83,7 @@ const TableRecipes = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingInstruction, setIsEditingInstruction] = useState(null);
-  const [newInstructionStep, setNewInstructionStep] = useState({ step: "", description: "" });
+  const [newInstructionStep, setNewInstructionStep] = useState({ step: "", direction: "" });
 
   // Debounced search
   const debouncedSearch = useCallback(
@@ -110,18 +111,20 @@ const TableRecipes = () => {
         dishService.getAllDishes(currentPage, itemsPerPage, searchTerm),
         ingredientService.getAllIngredients(1, 1000),
       ]);
-  
+
       if (dishesResponse?.success) {
         let dishesData = dishesResponse.data.items || [];
-        // If recipeId is a string, fetch the full recipe data
+        // Fetch full recipe data but keep recipeId as string
         for (let dish of dishesData) {
           if (dish.recipeId && typeof dish.recipeId === "string") {
             const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
             if (recipeResponse.success) {
-              dish.recipeId = recipeResponse.data; // Assign full recipe object
+              dish.recipe = recipeResponse.data; // Store full recipe data in a new property
             } else {
-              dish.recipeId = null; // Set to null if fetch fails to avoid errors
+              dish.recipe = null;
             }
+          } else {
+            dish.recipe = null; // Ensure recipe is null if no recipeId
           }
         }
         setDishes(dishesData);
@@ -131,7 +134,7 @@ const TableRecipes = () => {
         setDishes([]);
         toast.error("Failed to load dish list: " + dishesResponse.message);
       }
-  
+
       if (ingredientsResponse?.success) {
         setAvailableIngredients(ingredientsResponse.data.items || []);
       } else {
@@ -145,7 +148,6 @@ const TableRecipes = () => {
     }
     setIsLoading(false);
   };
-  
 
   useEffect(() => {
     if (filterType === "all") {
@@ -197,18 +199,17 @@ const TableRecipes = () => {
   const handleAddRecipeClick = async (dish) => {
     setSelectedDish(dish);
     setErrors({});
-    setNewInstructionStep({ step: "", description: "" });
+    setNewInstructionStep({ step: "", direction: "" });
     setIsEditingInstruction(null);
-  
+
     try {
       let recipeData = null;
-  
-      // Kiểm tra xem dish.recipeId là object hay chuỗi
-      if (dish.recipeId && typeof dish.recipeId === "object") {
-        // Nếu dish.recipeId đã là object đầy đủ, sử dụng trực tiếp
-        recipeData = dish.recipeId;
+
+      if (dish.recipe) {
+        // Use the full recipe data if available
+        recipeData = dish.recipe;
       } else if (dish.recipeId && typeof dish.recipeId === "string") {
-        // Nếu dish.recipeId là chuỗi ID, gọi API để lấy dữ liệu công thức
+        // Fetch recipe data if only ID is available
         const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
         if (recipeResponse.success) {
           recipeData = recipeResponse.data;
@@ -216,15 +217,15 @@ const TableRecipes = () => {
           toast.error("Could not load existing recipe: " + recipeResponse.message);
         }
       }
-  
+
       if (recipeData) {
         const existingIngredients = recipeData.ingredients?.map((ing) => ({
-          _id: ing.ingredientId._id || ing.ingredientId, // Xử lý trường hợp ingredientId là object hoặc ID
+          _id: ing.ingredientId._id || ing.ingredientId,
           name: ing.ingredientId.name || "Unknown",
           quantity: ing.quantity || "",
           unit: ing.unit || "",
         })) || [];
-  
+
         setNewRecipeData({
           ingredients: existingIngredients,
           instruction: recipeData.instruction || [],
@@ -232,7 +233,6 @@ const TableRecipes = () => {
           totalServing: recipeData.totalServing || "",
         });
       } else {
-        // Nếu không có recipeId hoặc không lấy được dữ liệu, reset về mặc định
         setNewRecipeData({
           ingredients: [],
           instruction: [],
@@ -254,18 +254,23 @@ const TableRecipes = () => {
 
   const handleAddInstruction = () => {
     const step = newInstructionStep.step;
-    const description = newInstructionStep.description.trim();
+    const direction = newInstructionStep.direction.trim();
 
-    if (!step && !description) {
-      setErrors({ ...errors, instruction: "Please enter both step number and description!" });
+    if (!step && !direction) {
+      setErrors({ ...errors, instruction: "Please enter both step number and direction!" });
       return;
     }
     if (!step) {
       setErrors({ ...errors, instruction: "Please enter a step number!" });
       return;
     }
-    if (!description) {
-      setErrors({ ...errors, instruction: "Please enter a description!" });
+    if (!direction) {
+      setErrors({ ...errors, instruction: "Please enter a direction!" });
+      return;
+    }
+
+    if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(direction)) {
+      setErrors({ ...errors, instruction: "Direction contains invalid characters!" });
       return;
     }
 
@@ -281,27 +286,32 @@ const TableRecipes = () => {
       ...newRecipeData,
       instruction: [
         ...newRecipeData.instruction,
-        { step: parseInt(step), description },
+        { step: parseInt(step), direction },
       ].sort((a, b) => a.step - b.step),
     });
-    setNewInstructionStep({ step: "", description: "" });
+    setNewInstructionStep({ step: "", direction: "" });
     setErrors({ ...errors, instruction: "" });
   };
 
   const handleSaveInstruction = (index) => {
     const step = newInstructionStep.step;
-    const descripción = newInstructionStep.description.trim();
+    const direction = newInstructionStep.direction.trim();
 
-    if (!step && !descripción) {
-      setErrors({ ...errors, instruction: "Please enter both step number and description!" });
+    if (!step && !direction) {
+      setErrors({ ...errors, instruction: "Please enter both step number and direction!" });
       return;
     }
     if (!step) {
       setErrors({ ...errors, instruction: "Please enter a step number!" });
       return;
     }
-    if (!descripción) {
-      setErrors({ ...errors, instruction: "Please enter a description!" });
+    if (!direction) {
+      setErrors({ ...errors, instruction: "Please enter a direction!" });
+      return;
+    }
+
+    if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(direction)) {
+      setErrors({ ...errors, instruction: "Direction contains invalid characters!" });
       return;
     }
 
@@ -314,13 +324,13 @@ const TableRecipes = () => {
     }
 
     const updatedInstructions = [...newRecipeData.instruction];
-    updatedInstructions[index] = { step: parseInt(step), description: descripción };
+    updatedInstructions[index] = { step: parseInt(step), direction };
     setNewRecipeData({
       ...newRecipeData,
       instruction: updatedInstructions.sort((a, b) => a.step - b.step),
     });
     setIsEditingInstruction(null);
-    setNewInstructionStep({ step: "", description: "" });
+    setNewInstructionStep({ step: "", direction: "" });
     setErrors({ ...errors, instruction: "" });
   };
 
@@ -386,7 +396,7 @@ const TableRecipes = () => {
     try {
       let response;
       const dishId = selectedDish._id;
-      const recipeId = selectedDish.recipeId?._id || selectedDish.recipeId;
+      const recipeId = selectedDish.recipeId;
 
       if (recipeId) {
         response = await recipesService.updateRecipe(dishId, recipeId, updatedRecipe);
@@ -461,10 +471,10 @@ const TableRecipes = () => {
     if (!confirmDelete) return;
 
     try {
-      const response = await recipesService.deleteRecipe(dish._id, dish.recipeId);
+      const response = await recipesService.deleteRecipe(dish._id, dish.recipeId); // Use dish.recipeId (string)
       if (response.success) {
         toast.success(`The recipe for "${dish.name}" has been deleted!`);
-        fetchData();
+        fetchData(); // Refresh data after deletion
         if (dishes.length === 1 && currentPage > 1) {
           setCurrentPage(currentPage - 1);
         }
@@ -483,7 +493,6 @@ const TableRecipes = () => {
     }
   };
 
-  // Reset newRecipeData when the modal is closed
   useEffect(() => {
     if (!isAddRecipeModalOpen) {
       setNewRecipeData({
@@ -493,7 +502,7 @@ const TableRecipes = () => {
         totalServing: "",
       });
       setSelectedDish(null);
-      setNewInstructionStep({ step: "", description: "" });
+      setNewInstructionStep({ step: "", direction: "" });
       setIsEditingInstruction(null);
       setErrors({});
     }
@@ -547,7 +556,7 @@ const TableRecipes = () => {
               filteredDishes.map((dish) => (
                 <div
                   key={dish._id}
-                  className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
+                  className="bg-white rounded-2xl shadow-md overflow-hidden.relative transition duration-200 hover:shadow-lg"
                 >
                   <img
                     src={dish.imageUrl || "https://via.placeholder.com/300"}
@@ -564,7 +573,7 @@ const TableRecipes = () => {
                           <div className="flex items-center">
                             <Clock className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs">
-                              Time: {dish.recipeId?.cookingTime || "N/A"} m
+                              Time: {dish.recipe?.cookingTime || "N/A"} m
                             </span>
                           </div>
                           <div className="flex items-center">
@@ -621,8 +630,17 @@ const TableRecipes = () => {
                         onClick={() => handleAddRecipeClick(dish)}
                         className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition whitespace-nowrap"
                       >
-                        <EditIcon className="w-4 h-4 mr-1" />
-                        Edit Recipe
+                        {dish.recipeId ? (
+                          <>
+                            <EditIcon className="w-4 h-4 mr-1" />
+                            Edit Recipe
+                          </>
+                        ) : (
+                          <>
+                            <PlusIcon className="w-4 h-4 mr-1" />
+                            Add Recipe
+                          </>
+                        )}
                       </button>
                       {dish.recipeId && (
                         <>
@@ -694,7 +712,7 @@ const TableRecipes = () => {
                       totalServing: "",
                     });
                     setSelectedDish(null);
-                    setNewInstructionStep({ step: "", description: "" });
+                    setNewInstructionStep({ step: "", direction: "" });
                     setIsEditingInstruction(null);
                     setErrors({});
                     setIsAddRecipeModalOpen(false);
@@ -809,11 +827,11 @@ const TableRecipes = () => {
                               />
                               <textarea
                                 className="flex-1 min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
-                                value={newInstructionStep.description}
+                                value={newInstructionStep.direction}
                                 onChange={(e) => {
                                   setNewInstructionStep({
                                     ...newInstructionStep,
-                                    description: e.target.value,
+                                    direction: e.target.value,
                                   });
                                   setErrors({ ...errors, instruction: "" });
                                 }}
@@ -830,7 +848,7 @@ const TableRecipes = () => {
                                   className="text-gray-500 hover:text-gray-700"
                                   onClick={() => {
                                     setIsEditingInstruction(null);
-                                    setNewInstructionStep({ step: "", description: "" });
+                                    setNewInstructionStep({ step: "", direction: "" });
                                     setErrors({ ...errors, instruction: "" });
                                   }}
                                 >
@@ -841,7 +859,7 @@ const TableRecipes = () => {
                           ) : (
                             <>
                               <span className="flex-1">
-                                Step {step.step}: {step.description}
+                                Step {step.step}: {step.direction}
                               </span>
                               <div className="space-x-2">
                                 <button
@@ -849,7 +867,7 @@ const TableRecipes = () => {
                                   onClick={() => {
                                     setNewInstructionStep({
                                       step: step.step,
-                                      description: step.description,
+                                      direction: step.direction,
                                     });
                                     setIsEditingInstruction(index);
                                   }}
@@ -905,9 +923,9 @@ const TableRecipes = () => {
                       />
                       <textarea
                         className="flex-1 min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
-                        value={newInstructionStep.description}
+                        value={newInstructionStep.direction}
                         onChange={(e) => {
-                          setNewInstructionStep({ ...newInstructionStep, description: e.target.value });
+                          setNewInstructionStep({ ...newInstructionStep, direction: e.target.value });
                           setErrors({ ...errors, instruction: "" });
                         }}
                         placeholder="Enter direction"
@@ -1135,7 +1153,6 @@ const IngredientSelectionModal = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
 
-  // Reset when modal opens
   useEffect(() => {
     if (isOpen) {
       setTempSelectedIngredients([]);
@@ -1153,7 +1170,6 @@ const IngredientSelectionModal = ({
     onClose();
   };
 
-  // Filter and paginate ingredients
   const filteredIngredients = availableIngredients.filter((ing) => {
     const matchesSearch = ing.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === "all" || ing.type === filterType;
@@ -1167,7 +1183,7 @@ const IngredientSelectionModal = ({
 
   const handleIngredientClick = (ingredient) => {
     const isAlreadyAdded = selectedIngredients.some((selected) => selected._id === ingredient._id);
-    if (isAlreadyAdded) return; // Prevent selecting already added ingredients
+    if (isAlreadyAdded) return;
 
     const isSelected = tempSelectedIngredients.some((item) => item._id === ingredient._id);
     if (isSelected) {
@@ -1204,8 +1220,7 @@ const IngredientSelectionModal = ({
           <div className="ml-auto flex space-x-3">
             <button
               onClick={handleConfirm}
-              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${tempSelectedIngredients.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${tempSelectedIngredients.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
               disabled={tempSelectedIngredients.length === 0}
             >
               Confirm
@@ -1226,10 +1241,7 @@ const IngredientSelectionModal = ({
                 setFilterType("all");
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold ${filterType === "all" ? "bg-[#40B491] text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"} transition duration-200`}
             >
               All
             </button>
@@ -1240,10 +1252,7 @@ const IngredientSelectionModal = ({
                   setFilterType(type);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  } transition duration-200`}
+                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type ? "bg-[#40B491] text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"} transition duration-200`}
               >
                 {type}
               </button>
@@ -1274,8 +1283,7 @@ const IngredientSelectionModal = ({
                 return (
                   <div
                     key={ing._id}
-                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"
-                      } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"} ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => !isAlreadyAdded && handleIngredientClick(ing)}
                   >
                     <div className="relative h-40 bg-gray-200">

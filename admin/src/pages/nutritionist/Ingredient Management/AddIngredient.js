@@ -16,9 +16,9 @@ const TYPE_OPTIONS = [
   "Others",
 ];
 
-const AddIngredient = ({ onIngredientAdded = () => {} }) => {
-    const navigate = useNavigate();
-    const [formData, setFormData] = useState({
+const AddIngredient = ({ onIngredientAdded = () => { } }) => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
     name: "",
     description: "",
     imageFile: null,
@@ -202,7 +202,7 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
       type: formData.type === "Others" ? formData.customType : formData.type,
     };
     const response = await ingredientService.createIngredient(finalData);
-    
+
     setIsLoading(false); // Reset loading after response
 
     if (response.success) {
@@ -257,9 +257,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
           <button
             onClick={handleSubmit}
             disabled={isLoading}
-            className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
-              isLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
           >
             {isLoading ? "Saving..." : "Save Ingredient"}
           </button>
@@ -276,9 +275,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Name of ingredient"
-              className={`w-full border ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               disabled={isLoading}
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
@@ -286,35 +284,13 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Calories *</label>
-              <div className="flex items-center">
-                <input
-                  type="number"
-                  name="calories"
-                  value={formData.calories}
-                  onChange={handleCaloriesChange}
-                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
-                  placeholder="Enter calories"
-                  min="0"
-                  max="1000"
-                  className={`w-full border ${
-                    errors.calories ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
-                  disabled={isLoading}
-                />
-                <span className="ml-2 text-sm text-gray-500">kcal</span>
-              </div>
-              {errors.calories && <p className="text-red-500 text-sm mt-1">{errors.calories}</p>}
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
               <select
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                className={`w-full border ${
-                  errors.type ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                 disabled={isLoading}
               >
                 <option value="">Select Type</option>
@@ -333,9 +309,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                     value={formData.customType}
                     onChange={handleChange}
                     placeholder="Enter custom type"
-                    className={`w-full border ${
-                      errors.customType ? "border-red-500" : "border-gray-300"
-                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${errors.customType ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     disabled={isLoading}
                   />
                   {errors.customType && (
@@ -343,6 +318,26 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   )}
                 </div>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Calories *</label>
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  name="calories"
+                  value={formData.calories}
+                  onChange={handleCaloriesChange}
+                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
+                  placeholder="Enter calories"
+                  min="0"
+                  max="1000"
+                  className={`w-full border ${errors.calories ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  disabled={isLoading}
+                />
+                <span className="ml-2 text-sm text-gray-500">kcal</span>
+              </div>
+              {errors.calories && <p className="text-red-500 text-sm mt-1">{errors.calories}</p>}
             </div>
           </div>
 
@@ -359,9 +354,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   placeholder="Enter protein"
                   min="0"
                   max="100"
-                  className={`w-full border ${
-                    errors.protein ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  className={`w-full border ${errors.protein ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">g</span>
@@ -380,9 +374,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   placeholder="Enter carbs"
                   min="0"
                   max="100"
-                  className={`w-full border ${
-                    errors.carbs ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  className={`w-full border ${errors.carbs ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">g</span>
@@ -404,9 +397,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                   placeholder="Enter fat"
                   min="0"
                   max="100"
-                  className={`w-full border ${
-                    errors.fat ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  className={`w-full border ${errors.fat ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">g</span>
@@ -419,9 +411,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                 name="season"
                 value={formData.season}
                 onChange={handleChange}
-                className={`w-full border ${
-                  errors.season ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${errors.season ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                 disabled={isLoading}
               >
                 <option value="">Select Season</option>
@@ -441,9 +432,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               name="unit"
               value={formData.unit}
               onChange={handleChange}
-              className={`w-full border ${
-                errors.unit ? "border-red-500" : "border-gray-300"
-              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${errors.unit ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               disabled={isLoading}
             >
               <option value="">Select unit of measurement</option>
@@ -471,9 +461,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                 value={formData.imageUrl}
                 onChange={handleImageUrlChange}
                 placeholder="Enter image URL"
-                className={`w-full border ${
-                  errors.imageUrl ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                 disabled={isLoading}
               />
               {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
@@ -498,9 +487,8 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               value={formData.description}
               onChange={handleChange}
               placeholder="Enter description"
-              className={`w-full border ${
-                errors.description ? "border-red-500" : "border-gray-300"
-              } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               disabled={isLoading}
             />
             {errors.description && (
