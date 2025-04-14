@@ -135,7 +135,10 @@ function Message({ navigation }) {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
-      ShowToast("error", "Cần quyền truy cập vào thư viện ảnh để sử dụng tính năng này");
+      ShowToast(
+        "error",
+        "Cần quyền truy cập vào thư viện ảnh để sử dụng tính năng này"
+      );
       return;
     }
 
@@ -179,7 +182,7 @@ function Message({ navigation }) {
       console.log("Receive Message : ", {
         conversationId: conversation._id,
         senderId: user?._id,
-        receiverId: "",
+        receiverId: conversation?.nutritionistId ?? "",
         text: inputText,
         imageUrl: arrayToString(uploadedImages.map((item) => item.url)),
         createdAt: new Date(),
@@ -188,7 +191,7 @@ function Message({ navigation }) {
       messageSocket.emit("send_message", {
         conversationId: conversation._id,
         senderId: user?._id,
-        receiverId: "",
+        receiverId: conversation?.nutritionistId ?? "",
         text: inputText,
         imageUrl: arrayToString(uploadedImages.map((item) => item.url)),
         createdAt: new Date(),
@@ -207,10 +210,15 @@ function Message({ navigation }) {
 
     return (
       <View
-        style={[styles.messageBubble, isMyMessage ? styles.myMessage : styles.otherMessage]}
+        style={[
+          styles.messageBubble,
+          isMyMessage ? styles.myMessage : styles.otherMessage,
+        ]}
         key={index}
       >
-        <Text style={[styles.messageSender, isMyMessage && styles.mySender]}>{item.text}</Text>
+        <Text style={[styles.messageSender, isMyMessage && styles.mySender]}>
+          {item.text}
+        </Text>
 
         {/* Hiển thị các ảnh trong tin nhắn */}
         {item.imageUrl && (
@@ -242,7 +250,12 @@ function Message({ navigation }) {
   };
 
   const renderIntroduce = () => {
-    const introduceText = ["Hello", "I need some help", "Healthy food", "Dishes for today"];
+    const introduceText = [
+      "Hello",
+      "I need some help",
+      "Healthy food",
+      "Dishes for today",
+    ];
 
     return (
       <ScrollView
@@ -290,12 +303,17 @@ function Message({ navigation }) {
             alignItems: "center",
           }}
         >
-          <Text style={styles.onboardingTitle}>Chatting App That Connects People</Text>
-          <Text style={styles.onboardingDescription}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore.
+          <Text style={styles.onboardingTitle}>
+            Chatting App That Connects People
           </Text>
-          <TouchableOpacity style={styles.getStartedButton} onPress={getStarted}>
+          <Text style={styles.onboardingDescription}>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            eiusmod tempor incididunt ut labore.
+          </Text>
+          <TouchableOpacity
+            style={styles.getStartedButton}
+            onPress={getStarted}
+          >
             <Text style={styles.getStartedButtonText}>Get Started</Text>
           </TouchableOpacity>
         </KeyboardAvoidingView>
@@ -317,8 +335,12 @@ function Message({ navigation }) {
               backgroundColor: theme.editModalbackgroundColor,
             }}
             contentContainerStyle={styles.messagesListContent}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            onContentSizeChange={() =>
+              flatListRef.current?.scrollToEnd({ animated: true })
+            }
+            onLayout={() =>
+              flatListRef.current?.scrollToEnd({ animated: true })
+            }
           />
 
           {/* Hiển thị ảnh đã chọn */}
@@ -332,7 +354,10 @@ function Message({ navigation }) {
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {selectedImages.map((image, index) => (
                   <View key={index} style={styles.selectedImageWrapper}>
-                    <Image source={{ uri: image.uri }} style={styles.selectedImage} />
+                    <Image
+                      source={{ uri: image.uri }}
+                      style={styles.selectedImage}
+                    />
                     <TouchableOpacity
                       style={styles.removeImageButton}
                       onPress={() => removeImage(index)}
@@ -357,7 +382,10 @@ function Message({ navigation }) {
                 borderTopWidth: themeMode === "light" ? 1 : 0,
               }}
             >
-              <TouchableOpacity style={styles.attachButton} onPress={pickImages}>
+              <TouchableOpacity
+                style={styles.attachButton}
+                onPress={pickImages}
+              >
                 <Ionicons name="image-outline" size={24} color="#999" />
               </TouchableOpacity>
 
@@ -377,7 +405,9 @@ function Message({ navigation }) {
                     styles.sendButtonDisabled,
                 ]}
                 onPress={onSend}
-                disabled={inputText.trim() === "" && selectedImages.length === 0}
+                disabled={
+                  inputText.trim() === "" && selectedImages.length === 0
+                }
               >
                 <Text style={styles.sendButtonText}>Send</Text>
               </TouchableOpacity>
@@ -394,7 +424,10 @@ function Message({ navigation }) {
         onRequestClose={() => setImageViewerVisible(false)}
       >
         <View style={styles.imageViewerContainer}>
-          <TouchableOpacity style={styles.closeButton} onPress={() => setImageViewerVisible(false)}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setImageViewerVisible(false)}
+          >
             <Ionicons name="close" size={30} color="#fff" />
           </TouchableOpacity>
 
