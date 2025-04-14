@@ -100,11 +100,6 @@ function Signup({ navigation }) {
     if (!phoneNumber.trim())
       return ShowToast("error", "Phone number is required.");
 
-    // Validate email format
-    if (!isValidEmail(email.trim())) {
-      return ShowToast("error", "Invalid email format.");
-    }
-
     if (!termAgree) {
       setFormData((prev) => ({ ...prev, loginError: "termAgreeError" }));
       return ShowToast("error", "Agree with our term to regis.");
@@ -119,27 +114,29 @@ function Signup({ navigation }) {
       });
 
       if (response.status === 200) {
-        const credentials = {
-          email,
-          password,
-        };
+        navigation.navigate(ScreensName.signin);
 
-        const responseLogin = await dispatch(loginThunk(credentials));
+        // const credentials = {
+        //   email,
+        //   password,
+        // };
 
-        if (responseLogin.type.endsWith("fulfilled")) {
-          setIsOpen({ ...isOpen, otpModal: true });
+        // const responseLogin = await dispatch(loginThunk(credentials));
 
-          ShowToast(
-            "success",
-            "Register successfully! Please check your email to verify your account."
-          );
-        } else {
-          ShowToast("error", "Login failed after registration.");
-        }
+        // if (responseLogin.type.endsWith("fulfilled")) {
+        //   setIsOpen({ ...isOpen, otpModal: true });
+
+        //   ShowToast(
+        //     "success",
+        //     "Register successfully! Please check your email to verify your account."
+        //   );
+        // } else {
+        //   ShowToast("error", "Login failed after registration.");
+        // }
       } else {
         ShowToast(
           "error",
-          response?.response?.data?.error?.message || "Registration failed."
+          response?.response?.data?.message || "Registration failed."
         );
       }
     } catch (error) {
