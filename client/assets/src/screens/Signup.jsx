@@ -87,23 +87,47 @@ function Signup({ navigation }) {
   const onPressRegisterButton = async () => {
     const { email, fullName, password, phoneNumber, termAgree } = formData;
 
+    // Email validation
     const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!email.trim()) {
+      return ShowToast("error", "Email is required.");
+    }
+    if (!isValidEmail(email.trim())) {
+      return ShowToast("error", "Please enter a valid email address.");
+    }
 
+    // Full name validation
+    if (!fullName.trim()) {
+      return ShowToast("error", "Full name is required.");
+    }
+
+    // Password validation - updated with stronger requirements
     const isValidPassword = (password) =>
-      /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/.test(password);
-    // Ít nhất 6 ký tự, gồm chữ và số
+      /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/.test(
+        password
+      );
 
-    // Check các trường bắt buộc
-    if (!email.trim()) return ShowToast("error", "Email is required.");
-    if (!fullName.trim()) return ShowToast("error", "Full name is required.");
-    if (!password.trim()) return ShowToast("error", "Password is required.");
-    if (!phoneNumber.trim())
+    if (!password.trim()) {
+      return ShowToast("error", "Password is required.");
+    }
+    if (!isValidPassword(password.trim())) {
+      return ShowToast(
+        "error",
+        "Password is too weak. Must be at least 8 characters with upper, lower, number & special char."
+      );
+    }
+
+    // Phone number validation
+    if (!phoneNumber.trim()) {
       return ShowToast("error", "Phone number is required.");
+    }
 
+    // Terms agreement validation
     if (!termAgree) {
       setFormData((prev) => ({ ...prev, loginError: "termAgreeError" }));
       return ShowToast("error", "Agree with our term to regis.");
     }
+
     try {
       const response = await signup({
         username: fullName.trim(),
@@ -115,17 +139,13 @@ function Signup({ navigation }) {
 
       if (response.status === 200) {
         navigation.navigate(ScreensName.signin);
-
         // const credentials = {
         //   email,
         //   password,
         // };
-
         // const responseLogin = await dispatch(loginThunk(credentials));
-
         // if (responseLogin.type.endsWith("fulfilled")) {
         //   setIsOpen({ ...isOpen, otpModal: true });
-
         //   ShowToast(
         //     "success",
         //     "Register successfully! Please check your email to verify your account."
