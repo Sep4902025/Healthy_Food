@@ -268,9 +268,10 @@ const UserService = {
     }
   },
 
-  // Xóa mềm user (Chỉ admin)
+  // Xóa user (Chỉ admin)
   deleteUser: async (userId) => {
     try {
+      console.log("Sending delete request for userId:", userId); // Add this log
       await axiosInstance.delete(`/users/${userId}`);
       return {
         success: true,

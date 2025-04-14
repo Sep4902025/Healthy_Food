@@ -56,6 +56,41 @@ const HomeService = {
     }
   },
 
+  // 🔹 Lấy danh sách món ăn theo mùa với phân trang và sắp xếp
+  getDishBySeason: async (season, page = 1, limit = 10, sort = "createdAt", order = "desc") => {
+    try {
+      const response = await axiosInstance.get("/dishes/by-season", {
+        params: {
+          season, // Mùa (Spring, Summer, Fall, Winter)
+          page, // Trang hiện tại
+          limit, // Số món ăn mỗi trang
+          sort, // Trường để sắp xếp
+          order, // Thứ tự sắp xếp (asc/desc)
+        },
+      });
+      console.log(`🔍 Danh sách món ăn theo mùa ${season} từ API:`, response.data);
+      return {
+        success: true,
+        data: {
+          items: response.data.data.items || [],
+          total: response.data.data.total || 0,
+          currentPage: response.data.data.currentPage || page,
+          totalPages: response.data.data.totalPages || 1,
+          message: response.data.data.message || "", // Thông báo nếu không có món ăn
+        },
+      };
+    } catch (error) {
+      console.error(
+        `❌ Lỗi khi lấy món ăn theo mùa ${season}:`,
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: error.response?.data?.message || "Lỗi khi tải danh sách món ăn theo mùa",
+      };
+    }
+  },
+
   // 🔹 Lấy tất cả món ăn với phân trang
   getAllDishes: async (page, limit, search = "") => {
     try {
@@ -94,8 +129,7 @@ const HomeService = {
 
   getRecipeByRecipeId: async (dishId, recipeId) => {
     try {
-      const response = await axiosInstance.get(`/dishes/${dishId}/recipes/${recipeId}`);
-      console.log("Fetched Recipes:", response.data);
+      const response = await axiosInstance.get(`/recipes/${dishId}/${recipeId}`);
       return {
         success: true,
         data: response.data?.data || response.data || {},

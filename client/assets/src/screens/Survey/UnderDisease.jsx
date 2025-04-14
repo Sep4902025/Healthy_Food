@@ -9,7 +9,9 @@ import { userSelector } from "../../redux/selectors/selector";
 import medicalConditionService from "../../services/medicalConditionService";
 
 const UnderDisease = ({ navigation }) => {
-  const { accessToken } = useSelector(userSelector);
+  const user = useSelector(userSelector);
+  console.log("UsrA", user.accessToken);
+
   const [selectedItems, setSelectedItems] = useState([]);
   const [medicalConditions, setMedicalConditions] = useState([]);
   const [error, setError] = useState(null);
@@ -19,7 +21,7 @@ const UnderDisease = ({ navigation }) => {
   useEffect(() => {
     const fetchMedicalConditions = async () => {
       try {
-        if (!accessToken) {
+        if (!user.accessToken) {
           throw new Error("Không tìm thấy accessToken. Vui lòng đăng nhập lại.");
         }
         const result = await medicalConditionService.getAllMedicalConditions(1, 6);
@@ -55,7 +57,7 @@ const UnderDisease = ({ navigation }) => {
       }
     };
     loadData();
-  }, [accessToken]);
+  }, [user.accessToken]);
 
   const toggleItemSelection = (id) => {
     setSelectedItems((prev) => {
@@ -145,7 +147,7 @@ const UnderDisease = ({ navigation }) => {
           className="w-full bg-custom-green py-3 rounded-lg mt-6"
           onPress={handleNext}
         >
-          <Text className="text-white text-lg font-semibold text-center">Tiếp theo</Text>
+          <Text className="text-white text-lg font-semibold text-center">Next</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

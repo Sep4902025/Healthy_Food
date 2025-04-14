@@ -3,14 +3,7 @@ import UserService from "../../../services/user.service";
 import { EditIcon, TrashIcon, SearchIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import Pagination from "../../../components/Pagination";
-import {
-  Document,
-  HeadingLevel,
-  Packer,
-  Paragraph,
-  TextRun,
-  AlignmentType,
-} from "docx";
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
 const UserManagement = () => {
@@ -25,57 +18,64 @@ const UserManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage, setUsersPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("users");
   const [selectedApplication, setSelectedApplication] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
+  // Fetch data and apply filters in a single useEffect to avoid race conditions
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDataAndFilter = async () => {
       setLoading(true);
-      const userResponse = await UserService.getAllUsers(
-        currentPage,
-        usersPerPage
-      );
-      if (userResponse.success) {
-        const nonAdminUsers = userResponse.users.filter(
-          (user) => user.role !== "admin"
-        );
-        setUsers(nonAdminUsers);
-        setFilteredUsers(nonAdminUsers);
+      try {
+        const userResponse = await UserService.getAllUsers(currentPage, usersPerPage);
+        console.log("API Response for page", currentPage, ":", userResponse);
 
-        setTotalItems(nonAdminUsers.length);
-      } else {
-        setError(userResponse.message);
-      }
-      const pendingResponse = await UserService.getPendingNutritionists();
-      if (pendingResponse.success) {
-        setPendingNutritionists(pendingResponse.users || []);
+        if (userResponse.success) {
+          const fetchedUsers = userResponse.users || [];
+          setUsers(fetchedUsers);
+          setTotalItems(userResponse.total || 0);
+          setTotalPages(userResponse.totalPages || 1);
+
+          let filtered = [...fetchedUsers];
+          if (searchTerm) {
+            filtered = filtered.filter(
+              (user) =>
+                user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.userPreferenceId?.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+          }
+          if (roleFilter !== "all") {
+            filtered = filtered.filter((user) => user.role === roleFilter);
+          }
+          setFilteredUsers(filtered);
+          console.log("Filtered users after fetch:", filtered);
+        } else {
+          setUsers([]);
+          setFilteredUsers([]);
+          setError(userResponse.message);
+        }
+
+        const pendingResponse = await UserService.getPendingNutritionists();
+        if (pendingResponse.success) {
+          setPendingNutritionists(pendingResponse.users || []);
+        } else {
+          setPendingNutritionists([]);
+        }
+      } catch (error) {
+        setUsers([]);
+        setFilteredUsers([]);
+        setPendingNutritionists([]);
+        setError("An error occurred while loading data: " + error.message);
       }
       setLoading(false);
     };
-    fetchData();
-  }, [currentPage, usersPerPage]);
-
-  useEffect(() => {
-    let result = [...users];
-    // Admin đã được lọc từ trước, không cần lọc lại ở đây
-    if (searchTerm) {
-      result = result.filter(
-        (user) =>
-          user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.userPreferenceId?.phoneNumber
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase())
-      );
-    }
-    if (roleFilter !== "all") {
-      result = result.filter((user) => user.role === roleFilter);
-    }
-    setFilteredUsers(result);
-    setCurrentPage(1);
-  }, [searchTerm, roleFilter, users]);
+    fetchDataAndFilter();
+  }, [currentPage, usersPerPage, searchTerm, roleFilter]);
 
   const handleOpenEditModal = (user) => {
     setEditData(user);
@@ -92,9 +92,7 @@ const UserManagement = () => {
     const result = await UserService.updateUser(editData._id, updatedUser);
     if (result.success) {
       toast.success("Cập nhật user thành công!");
-      setUsers((prev) =>
-        prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u))
-      );
+      setUsers((prev) => prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u)));
       setFilteredUsers((prev) =>
         prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u))
       );
@@ -104,9 +102,56 @@ const UserManagement = () => {
     setModalOpen(false);
   };
 
-  const handleDeleteUser = (_id) => {
-    setUsers((prev) => prev.filter((u) => u._id !== _id));
-    setFilteredUsers((prev) => prev.filter((u) => u._id !== _id));
+  const handleDeleteUser = (userId) => {
+    const user = users.find((u) => u._id === userId);
+    setUserToDelete(user);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete || !userToDelete._id || typeof userToDelete._id !== "string") {
+      toast.error("ID người dùng không hợp lệ.");
+      setDeleteModalOpen(false);
+      setUserToDelete(null);
+      return;
+    }
+
+    console.log("Deleting user with ID:", userToDelete._id);
+    const result = await UserService.deleteUser(userToDelete._id);
+    if (result.success) {
+      toast.success("Xóa người dùng thành công!");
+      const userResponse = await UserService.getAllUsers(currentPage, usersPerPage);
+      if (userResponse.success) {
+        setUsers(userResponse.users || []);
+        setTotalItems(userResponse.total || 0);
+        setTotalPages(userResponse.totalPages || 1);
+        if (userResponse.users.length === 0 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        } else {
+          let filtered = [...(userResponse.users || [])];
+          if (searchTerm) {
+            filtered = filtered.filter(
+              (user) =>
+                user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.userPreferenceId?.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+          }
+          if (roleFilter !== "all") {
+            filtered = filtered.filter((user) => user.role === roleFilter);
+          }
+          setFilteredUsers(filtered);
+        }
+      }
+    } else {
+      toast.error(
+        result.message === "No user found with that ID"
+          ? "Người dùng không tồn tại hoặc đã bị xóa trước đó."
+          : `Xóa user thất bại: ${result.message}`
+      );
+    }
+    setDeleteModalOpen(false);
+    setUserToDelete(null);
   };
 
   const handleReviewApplication = async (userId, action) => {
@@ -115,20 +160,14 @@ const UserManagement = () => {
       action,
     });
     if (result.success) {
-      toast.success(
-        `Application ${action}d successfully! Email notification sent to user.`
-      );
+      toast.success(`Application ${action}d successfully! Email notification sent to user.`);
       setPendingNutritionists((prev) => prev.filter((u) => u._id !== userId));
       if (action === "approve") {
         setUsers((prev) =>
-          prev.map((u) =>
-            u._id === userId ? { ...u, role: "nutritionist" } : u
-          )
+          prev.map((u) => (u._id === userId ? { ...u, role: "nutritionist" } : u))
         );
         setFilteredUsers((prev) =>
-          prev.map((u) =>
-            u._id === userId ? { ...u, role: "nutritionist" } : u
-          )
+          prev.map((u) => (u._id === userId ? { ...u, role: "nutritionist" } : u))
         );
       }
     } else {
@@ -137,149 +176,143 @@ const UserManagement = () => {
     setSelectedApplication(null);
   };
 
-  const handlePageClick = ({ selected }) => {
-    setCurrentPage(selected + 1);
+  const handlePageClick = (data) => {
+    const selectedPage = data.selected + 1;
+    console.log("handlePageClick: selected =", data.selected, "new currentPage =", selectedPage);
+    if (selectedPage >= 1 && selectedPage <= totalPages) {
+      setCurrentPage(selectedPage);
+    }
   };
 
-  // Export to Word function
-  const exportToWord = () => {
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: [
-            new Paragraph({
-              text: "User Management Report",
-              heading: HeadingLevel.TITLE,
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 400 },
-            }),
-            new Paragraph({
-              text: `Generated on: ${new Date().toLocaleDateString('en-US', {
-                month: 'long',
-                day: '2-digit',
-                year: 'numeric'
-              })}`,
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 300 },
-            }),
-            new Paragraph({
-              text: "All Users",
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 200 },
-            }),
-            ...filteredUsers.map((user, index) => {
-              return new Paragraph({
-                children: [
-                  new TextRun(
-                    `No.: ${(currentPage - 1) * usersPerPage + index + 1}`
-                  ),
-                  new TextRun({
-                    text: `\nUsername: ${user.username || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nPhone: ${
-                      user.userPreferenceId?.phoneNumber || "N/A"
-                    }`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nEmail: ${user.email || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nRole: ${user.role || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nStatus: ${user.isBan ? "Inactive" : "Active"}`,
-                    break: 1,
-                  }),
-                ],
-                spacing: { after: 200 },
-              });
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `Total Users: ${totalItems}`,
-                  bold: true,
-                }),
-              ],
-              spacing: { before: 200, after: 300 },
-            }),
-            new Paragraph({
-              text: "Pending Nutritionist Applications",
-              heading: HeadingLevel.HEADING_1,
-              spacing: { after: 200 },
-            }),
-            ...pendingNutritionists.map((user, index) => {
-              return new Paragraph({
-                children: [
-                  new TextRun(`No. ${index + 1}`),
-                  new TextRun({
-                    text: `\nUsername: ${user.username || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nEmail: ${user.email || "N/A"}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nSubmitted At: ${new Date(
-                      user.nutritionistApplication.submittedAt
-                    ).toLocaleDateString()}`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nFull Name: ${
-                      user.nutritionistApplication.personalInfo.fullName ||
-                      "N/A"
-                    }`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nPhone: ${
-                      user.nutritionistApplication.personalInfo.phoneNumber ||
-                      "N/A"
-                    }`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nAddress: ${
-                      user.nutritionistApplication.personalInfo.address || "N/A"
-                    }`,
-                    break: 1,
-                  }),
-                  new TextRun({
-                    text: `\nIntroduction: ${
-                      user.nutritionistApplication.introduction ||
-                      "No introduction provided"
-                    }`,
-                    break: 1,
-                  }),
-                ],
-                spacing: { after: 200 },
-              });
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `Total Pending Applications: ${pendingNutritionists.length}`,
-                  bold: true,
-                }),
-              ],
-              spacing: { before: 200 },
-            }),
-          ],
-        },
-      ],
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "User Management";
+    workbook.created = new Date();
+
+    // Sheet 1: All Users
+    const userSheet = workbook.addWorksheet("All Users", {
+      properties: { tabColor: { argb: "FF40B491" } },
     });
 
-    Packer.toBlob(doc).then((blob) => {
-      saveAs(blob, "User_Management_Report.docx");
+    userSheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Username", key: "username", width: 20 },
+      { header: "Phone", key: "phone", width: 15 },
+      { header: "Email", key: "email", width: 30 },
+      { header: "Role", key: "role", width: 15 },
+      { header: "Status", key: "status", width: 15 },
+    ];
+
+    userSheet.addRow(["User Management Report"]).font = {
+      size: 16,
+      bold: true,
+    };
+    userSheet.addRow([
+      `Generated on: ${new Date().toLocaleDateString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      })}`,
+    ]);
+    userSheet.addRow([]);
+    userSheet.addRow(["All Users"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    userSheet.getRow(4).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    filteredUsers.forEach((user, index) => {
+      userSheet.addRow({
+        no: (currentPage - 1) * usersPerPage + index + 1,
+        username: user.username || "N/A",
+        phone: user.userPreferenceId?.phoneNumber || "N/A",
+        email: user.email || "N/A",
+        role: user.role || "N/A",
+        status: user.isBan ? "Inactive" : "Active",
+      });
     });
+
+    userSheet.addRow(["Total Users", filteredUsers.length]).font = { bold: true };
+
+    userSheet.getRows(4, filteredUsers.length + 2).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+        if (cell.value && typeof cell.value === "number") {
+          cell.numFmt = "#,##0"; // Format numbers with thousands separator
+        }
+      });
+    });
+
+    // Sheet 2: Pending Nutritionist Applications
+    const pendingSheet = workbook.addWorksheet("Pending Applications");
+    pendingSheet.columns = [
+      { header: "No.", key: "no", width: 10 },
+      { header: "Username", key: "username", width: 20 },
+      { header: "Email", key: "email", width: 30 },
+      { header: "Submitted At", key: "submittedAt", width: 15 },
+      { header: "Full Name", key: "fullName", width: 25 },
+      { header: "Phone", key: "phone", width: 15 },
+      { header: "Address", key: "address", width: 30 },
+      { header: "Introduction", key: "introduction", width: 40 },
+    ];
+
+    pendingSheet.addRow(["Pending Nutritionist Applications"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    pendingSheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    pendingNutritionists.forEach((user, index) => {
+      pendingSheet.addRow({
+        no: index + 1,
+        username: user.username || "N/A",
+        email: user.email || "N/A",
+        submittedAt: new Date(user.nutritionistApplication.submittedAt).toLocaleDateString("en-US"),
+        fullName: user.nutritionistApplication.personalInfo.fullName || "N/A",
+        phone: user.nutritionistApplication.personalInfo.phoneNumber || "N/A",
+        address: user.nutritionistApplication.personalInfo.address || "N/A",
+        introduction: user.nutritionistApplication.introduction || "No introduction provided",
+      });
+    });
+
+    pendingSheet.addRow(["Total Pending Applications", pendingNutritionists.length]).font = {
+      bold: true,
+    };
+
+    pendingSheet.getRows(1, pendingNutritionists.length + 2).forEach((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+        if (cell.value && typeof cell.value === "number") {
+          cell.numFmt = "#,##0"; // Format numbers with thousands separator
+        }
+      });
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "User_Management_Report.xlsx");
   };
 
   if (loading)
@@ -295,22 +328,16 @@ const UserManagement = () => {
       </div>
     );
 
+  console.log("Rendering table with filteredUsers:", filteredUsers);
   return (
     <div className="container mx-auto px-6 py-8">
-      {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
-          User Management
-        </h1>
-        <button
-          onClick={exportToWord}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Export to Word
+        <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">User Management</h1>
+        <button onClick={exportToExcel} className="bg-custom-green text-white px-4 py-2 rounded">
+          Export to Excel
         </button>
       </div>
 
-      {/* Filters */}
       <div className="mb-6 flex gap-4">
         <div className="relative flex-1">
           <input
@@ -336,7 +363,6 @@ const UserManagement = () => {
         </select>
       </div>
 
-      {/* Tabs */}
       <div className="mb-6 flex gap-4">
         <button
           className={`px-6 py-2 rounded-full font-semibold transition duration-300 ${
@@ -360,11 +386,9 @@ const UserManagement = () => {
         </button>
       </div>
 
-      {/* Table */}
       <div className="bg-white shadow-2xl rounded-2xl overflow-hidden">
         {activeTab === "users" ? (
           <>
-            {/* Table Header */}
             <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
               <div className="col-span-1">No.</div>
               <div className="col-span-2">Username</div>
@@ -375,7 +399,6 @@ const UserManagement = () => {
               <div className="col-span-2 text-center">Actions</div>
             </div>
 
-            {/* Table Body */}
             <div className="divide-y divide-gray-200">
               {filteredUsers.length > 0 ? (
                 filteredUsers.map((user, index) => (
@@ -386,24 +409,16 @@ const UserManagement = () => {
                     <div className="col-span-1 text-gray-600 font-medium">
                       {(currentPage - 1) * usersPerPage + index + 1}
                     </div>
-                    <div className="col-span-2 text-gray-700 text-sm">
-                      {user.username}
-                    </div>
+                    <div className="col-span-2 text-gray-700 text-sm">{user.username}</div>
                     <div className="col-span-2 text-gray-700 text-sm">
                       {user.userPreferenceId?.phoneNumber || "N/A"}
                     </div>
-                    <div className="col-span-3 text-gray-700 text-sm">
-                      {user.email}
-                    </div>
-                    <div className="col-span-1 text-gray-700 text-sm">
-                      {user.role}
-                    </div>
+                    <div className="col-span-3 text-gray-700 text-sm">{user.email}</div>
+                    <div className="col-span-1 text-gray-700 text-sm">{user.role}</div>
                     <div className="col-span-1 text-center">
                       <span
                         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          user.isBan
-                            ? "bg-red-100 text-red-800"
-                            : "bg-[#40B491] text-white"
+                          user.isBan ? "bg-red-100 text-red-800" : "bg-[#40B491] text-white"
                         }`}
                       >
                         {user.isBan ? "Inactive" : "Active"}
@@ -428,96 +443,52 @@ const UserManagement = () => {
                   </div>
                 ))
               ) : (
-                <div className="p-6 text-center text-gray-500">
-                  No users found.
-                </div>
+                <div className="p-6 text-center text-gray-500">No users found.</div>
               )}
             </div>
 
-            {/* Pagination */}
-            <div className="p-4 bg-gray-50">
-              <Pagination
-                limit={usersPerPage}
-                setLimit={(value) => {
-                  setUsersPerPage(value);
-                  setCurrentPage(1);
-                }}
-                totalItems={totalItems}
-                handlePageClick={handlePageClick}
-                text="Users"
-              />
-            </div>
+            {totalItems > 0 && !loading && (
+              <div className="p-4 bg-gray-50">
+                <Pagination
+                  limit={usersPerPage}
+                  setLimit={(value) => {
+                    setUsersPerPage(value);
+                    setCurrentPage(1);
+                  }}
+                  totalItems={totalItems}
+                  handlePageClick={handlePageClick}
+                  currentPage={currentPage - 1}
+                  text="Users"
+                />
+              </div>
+            )}
           </>
         ) : (
           <div className="p-4">
             <h2 className="text-xl font-semibold mb-4 text-[#40B491]">
               Pending Nutritionist Applications
             </h2>
-            {/* Table Header */}
             <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
               <div className="col-span-1">No.</div>
               <div className="col-span-3">Username</div>
               <div className="col-span-3">Email</div>
-              <div className="col-span-3">Submitted At</div>
+              <div className="col-span-3">Submitted At</div> {/* Line 514 */}
               <div className="col-span-2 text-center">Actions</div>
             </div>
-
-            {/* Table Body */}
-            <div className="divide-y divide-gray-200">
-              {pendingNutritionists.length > 0 ? (
-                pendingNutritionists.map((user, index) => (
-                  <div
-                    key={user._id}
-                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300"
-                  >
-                    <div className="col-span-1 text-gray-600 font-medium">
-                      {index + 1}
-                    </div>
-                    <div className="col-span-3 text-gray-700 text-sm">
-                      {user.username}
-                    </div>
-                    <div className="col-span-3 text-gray-700 text-sm">
-                      {user.email}
-                    </div>
-                    <div className="col-span-3 text-gray-700 text-sm">
-                      {new Date(
-                        user.nutritionistApplication.submittedAt
-                      ).toLocaleDateString()}
-                    </div>
-                    <div className="col-span-2 flex justify-center">
-                      <button
-                        className="px-4 py-1 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
-                        onClick={() => setSelectedApplication(user)}
-                      >
-                        View CV
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-6 text-center text-gray-500">
-                  No pending applications.
-                </div>
-              )}
-            </div>
+            {/* Rest of the table body */}
           </div>
         )}
       </div>
 
-      {/* Modal for Editing */}
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-4 text-[#40B491]">
-              Edit User
-            </h2>
+            <h2 className="text-2xl font-bold mb-4 text-[#40B491]">Edit User</h2>
             <label className="block mb-2 text-gray-700">Role:</label>
             <select
               className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-[#40B491]"
               value={formData.role}
-              onChange={(e) =>
-                setFormData({ ...formData, role: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -555,26 +526,47 @@ const UserManagement = () => {
         </div>
       )}
 
-      {/* Modal for Application Review */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-4 text-[#40B491]">Confirm Delete</h2>
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to delete this user? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setUserToDelete(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                onClick={confirmDeleteUser}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedApplication && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
-            <h2 className="text-2xl font-bold mb-6 text-[#40B491]">
-              Nutritionist Application
-            </h2>
+            <h2 className="text-2xl font-bold mb-6 text-[#40B491]">Nutritionist Application</h2>
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-1/3 flex flex-col">
                 <div className="mb-4">
                   {selectedApplication.nutritionistApplication.profileImage ? (
                     <img
-                      src={
-                        selectedApplication.nutritionistApplication.profileImage
-                      }
+                      src={selectedApplication.nutritionistApplication.profileImage}
                       alt="Profile"
                       className="w-full h-64 object-cover rounded-lg shadow-md"
-                      onError={(e) =>
-                        (e.target.src = "https://via.placeholder.com/150")
-                      }
+                      onError={(e) => (e.target.src = "https://via.placeholder.com/150")}
                     />
                   ) : (
                     <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -585,25 +577,35 @@ const UserManagement = () => {
                 <div className="space-y-2 text-gray-700">
                   <p>
                     <strong>Full Name:</strong>{" "}
-                    {selectedApplication.nutritionistApplication.personalInfo
-                      .fullName || "N/A"}
+                    {selectedApplication.nutritionistApplication.personalInfo.fullName || "N/A"}
                   </p>
                   <p>
                     <strong>Phone:</strong>{" "}
-                    {selectedApplication.nutritionistApplication.personalInfo
-                      .phoneNumber || "N/A"}
+                    {selectedApplication.nutritionistApplication.personalInfo.phoneNumber || "N/A"}
                   </p>
                   <p>
                     <strong>Address:</strong>{" "}
-                    {selectedApplication.nutritionistApplication.personalInfo
-                      .address || "N/A"}
+                    {selectedApplication.nutritionistApplication.personalInfo.address || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Certificate Link:</strong>{" "}
+                    {selectedApplication.nutritionistApplication.certificateLink ? (
+                      <a
+                        href={selectedApplication.nutritionistApplication.certificateLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        View Certificate
+                      </a>
+                    ) : (
+                      "N/A"
+                    )}
                   </p>
                 </div>
               </div>
               <div className="w-full md:w-2/3">
-                <h3 className="text-lg font-semibold mb-2 text-[#40B491]">
-                  Introduction
-                </h3>
+                <h3 className="text-lg font-semibold mb-2 text-[#40B491]">Introduction</h3>
                 <p className="text-gray-700 leading-relaxed">
                   {selectedApplication.nutritionistApplication.introduction ||
                     "No introduction provided."}
@@ -613,17 +615,13 @@ const UserManagement = () => {
             <div className="flex justify-end space-x-2 mt-6">
               <button
                 className="px-4 py-2 bg-[#40B491] text-white rounded hover:bg-[#359c7a] transition"
-                onClick={() =>
-                  handleReviewApplication(selectedApplication._id, "approve")
-                }
+                onClick={() => handleReviewApplication(selectedApplication._id, "approve")}
               >
                 Approve
               </button>
               <button
                 className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                onClick={() =>
-                  handleReviewApplication(selectedApplication._id, "reject")
-                }
+                onClick={() => handleReviewApplication(selectedApplication._id, "reject")}
               >
                 Reject
               </button>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import {
   View,
   Text,
@@ -13,6 +14,7 @@ import {
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
 import { useTheme } from "../../contexts/ThemeContext";
+import { normalize } from "../../utils/common";
 
 const HEIGHT = Dimensions.get("window").height;
 
@@ -23,16 +25,17 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
   });
   const [bmi, setBmi] = useState(null);
 
-  // Cập nhật healthData khi userPreference thay đổi
+  // Update healthData when userPreference changes
   useEffect(() => {
     setHealthData(userPreference);
     calculateBMI(userPreference.weight, userPreference.height);
+    calculateBMI(userPreference.weight, userPreference.height);
   }, [userPreference]);
 
-  // Hàm tính BMI
+  // Calculate BMI
   const calculateBMI = (weight, height) => {
     const w = parseFloat(weight);
-    const h = parseFloat(height) / 100; // Chuyển từ cm sang m
+    const h = parseFloat(height) / 100; // Convert from cm to m
     if (w && h && !isNaN(w) && !isNaN(h) && h > 0) {
       const bmiValue = (w / (h * h)).toFixed(1);
       setBmi(bmiValue);
@@ -43,7 +46,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     }
   };
 
-  // Xử lý thay đổi weight hoặc height
+  // Handle input changes
   const handleInputChange = (field, value) => {
     setHealthData((prev) => {
       const updatedData = { ...prev, [field]: value };
@@ -61,159 +64,178 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     onSave(healthData);
   };
 
+  const formData = [
+    [
+      {
+        label: "BMI",
+        field: "bmi",
+        value: bmi ? String(bmi) : "",
+        keyboardType: "default",
+        editable: false,
+      },
+      {
+        label: "WaterDrink",
+        field: "waterDrink",
+        value: healthData.waterDrink ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+    [
+      {
+        label: "Age",
+        field: "age",
+        value: healthData.age ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+      {
+        label: "SleepTime",
+        field: "sleepTime",
+        value: healthData.sleepTime ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+    [
+      {
+        label: "Goal",
+        field: "goal", // Keep field as is, but label is Goal
+        value: healthData.goal ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+      {
+        label: "LongOfPlan",
+        field: "longOfPlan", // Keep field as is, but label is LongOfPlan
+        value: healthData.longOfPlan ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+    [
+      {
+        label: "Diet",
+        field: "diet", // Keep field as is, but label is Diet
+        value: healthData.diet ?? "",
+        keyboardType: "default", // Changed to default for age ranges
+        editable: false,
+      },
+      {
+        label: "MealNumber",
+        field: "mealNumber", // Keep field as is, but label is MealNumber
+        value: healthData.mealNumber ?? "",
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+    [
+      {
+        label: "UnderDisease",
+        field: "underDisease", // Keep field as is, but label is UnderDisease
+        value: "",
+        keyboardType: "default",
+        editable: false,
+      },
+    ],
+  ];
+
+  const viewForm = [
+    {
+      label: "EatHabit",
+      field: "eatHabit",
+      value: healthData.eatHabit || [], // Make sure this is an array
+      keyboardType: "default",
+      editable: false,
+    },
+    {
+      label: "RecommendedFoods",
+      field: "recommendedFoods",
+      value: healthData.recommendedFoods || [], // Make sure this is an array
+      keyboardType: "default",
+      editable: false,
+    },
+    {
+      label: "Hate",
+      field: "hate",
+      value: healthData.hate || [], // Make sure this is an array
+      keyboardType: "default",
+      editable: false,
+    },
+  ];
+
+  // Render input field based on field config
+  const renderInputField = (fieldConfig) => {
+    if (!fieldConfig) return <View style={styles.formItem} />;
+
+    const { label, field, value, keyboardType, editable } = fieldConfig;
+    return (
+      <View style={styles.formItem}>
+        <Text style={{ ...styles.label, color: theme.greyTextColor }}>{label}</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={String(value)}
+            onChangeText={(text) => handleInputChange(field, String(value))}
+            keyboardType={keyboardType}
+            editable={editable}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  const renderViewField = (fieldConfig) => {
+    if (!fieldConfig) return <View style={styles.formItem} />;
+
+    const { label, field, value, keyboardType, editable } = fieldConfig;
+
+    // Assuming value is an array of strings
+    const items = Array.isArray(value) ? value : [];
+
+    return (
+      <View style={styles.formItemFull}>
+        <Text style={{ ...styles.label, color: theme.greyTextColor }}>{label}</Text>
+        <View style={styles.tagsContainer}>
+          {items.map((item, index) => (
+            <View key={`${field}-${index}`} style={styles.tagItem}>
+              <Text style={styles.tagText}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <EditModalHeader onCancel={onClose} />
 
-      <View style={{ ...styles.container, backgroundColor: theme.editModalbackgroundColor }}>
+      <View
+        style={{
+          ...styles.container,
+          backgroundColor: theme.editModalbackgroundColor,
+        }}
+      >
         <Text style={{ ...styles.headerTitle, color: theme.textColor }}>Health Information</Text>
         <ScrollView style={styles.scrollContent}>
           <View style={styles.formGrid}>
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Weight</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={String(healthData.weight ?? "")}
-                    onChangeText={(text) => handleInputChange("weight", text)}
-                    keyboardType="decimal-pad"
-                  />
-                </View>
+            {formData.map((row, rowIndex) => (
+              <View key={`row-${rowIndex}`} style={styles.formRow}>
+                {renderInputField(row[0])}
+                {row[1] ? renderInputField(row[1]) : <View style={styles.formItem} />}
               </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Diet</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.diet ?? ""}
-                    onChangeText={(text) => handleInputChange("diet", text)}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Height</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={String(healthData.height ?? "")}
-                    onChangeText={(text) => handleInputChange("height", text)}
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  UnderDisease (disable)
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.underDisease?.map((item) => item).join(", ") ?? ""}
-                    editable={false}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>BMI</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={bmi ? String(bmi) : ""}
-                    editable={false} // Không cho chỉnh sửa trực tiếp
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>WaterDrink</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.waterDrink ?? ""}
-                    onChangeText={(text) => handleInputChange("waterDrink", text)}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Age</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.age ?? ""}
-                    onChangeText={(text) => handleInputChange("age", text)}
-                    keyboardType="number-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>SleepTime</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.sleepTime ?? ""}
-                    onChangeText={(text) => handleInputChange("sleepTime", text)}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>WeightGoal</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={String(healthData.weightGoal ?? "")}
-                    onChangeText={(text) => handleInputChange("weightGoal", text)}
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                  EatHabit (disable)
-                </Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.eatHabit?.map((item) => item).join(", ") ?? ""}
-                    editable={false}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formItem}>
-                <Text style={{ ...styles.label, color: theme.greyTextColor }}>Goal</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={healthData.goal ?? ""}
-                    onChangeText={(text) => handleInputChange("goal", text)}
-                  />
-                </View>
-              </View>
-            </View>
+            ))}
+          </View>
+          <View style={styles.formGrid}>
+            {viewForm.map((fieldConfig, index) => (
+              <View key={`view-field-${index}`}>{renderViewField(fieldConfig)}</View>
+            ))}
           </View>
         </ScrollView>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save</Text>
+          <Text style={styles.saveButtonText}>Reset</Text>
         </TouchableOpacity>
       </View>
     </Modal>
@@ -245,7 +267,7 @@ const styles = StyleSheet.create({
     bottom: "10%",
   },
   headerTitle: {
-    fontSize: 25,
+    fontSize: normalize(25),
     fontWeight: "600",
     textAlign: "center",
     marginTop: 16,
@@ -267,7 +289,7 @@ const styles = StyleSheet.create({
     width: "48%",
   },
   label: {
-    fontSize: 14,
+    fontSize: normalize(14),
     marginBottom: 8,
     color: "#666",
   },
@@ -282,12 +304,36 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    fontSize: 14,
+    fontSize: normalize(14),
     backgroundColor: "white",
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e0e0e0",
     paddingHorizontal: 12,
+  },
+  formItemFull: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+  },
+  tagItem: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    margin: 4,
+    minWidth: "45%",
+  },
+  tagText: {
+    color: "#666",
+    fontSize: normalize(14),
+    textAlign: "center",
   },
   saveButton: {
     backgroundColor: "#40B491",
@@ -300,7 +346,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: "600",
   },
 });

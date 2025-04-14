@@ -87,9 +87,7 @@ const quizService = {
     }
 
     try {
-      console.log("🚀 Đang lấy sở thích người dùng với userPreferenceId:", userPreferenceId);
       const response = await axiosInstance.get(`${API_URL}/userpreference/${userPreferenceId}`);
-      console.log("🚀 Phản hồi từ /userPreference:", response.data);
 
       if (response.data.success) {
         return {

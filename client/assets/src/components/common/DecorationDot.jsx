@@ -22,7 +22,7 @@ function DecorationDot({
         height: size, 
         backgroundColor, 
         opacity, 
-        
+        zIndex,
         position: "absolute", 
         top, 
         bottom, 

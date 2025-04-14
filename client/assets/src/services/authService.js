@@ -61,16 +61,28 @@ export const verifyOtp = async ({ email, otp }) => {
     const response = await axiosInstance.post("/users/verify", data);
     return response;
   } catch (error) {
+    console.log("verifyOtp error: ", error);
+    return error;
+  }
+};
+
+export const resetPassword = async ({ email, password, passwordConfirm }) => {
+  try {
+    const data = { email, password, passwordConfirm };
+
+    const response = await axiosInstance.post("/users/reset-password", data);
+    return response;
+  } catch (error) {
     console.log("resetPassword error: ", error);
     return error;
   }
 };
 
-export const changePassword = async ({ email, password, passwordConfirm }) => {
+export const changePassword = async ({ currentPassword, newPassword, newPasswordConfirm }) => {
   try {
-    const data = { email, password, passwordConfirm };
+    const data = { currentPassword, newPassword, newPasswordConfirm };
 
-    const response = await axiosInstance.post("/users/reset-password", data);
+    const response = await axiosInstance.post("/users/change-password", data);
     return response;
   } catch (error) {
     console.log("changePassword error: ", error);
@@ -80,6 +92,8 @@ export const changePassword = async ({ email, password, passwordConfirm }) => {
 
 export const updateUser = async (user) => {
   try {
+    console.log(user);
+
     const response = await axiosInstance.put(`/users/${user?._id}`, user);
     return response;
   } catch (error) {

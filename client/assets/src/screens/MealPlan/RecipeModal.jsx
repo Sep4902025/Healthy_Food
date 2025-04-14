@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons"; // For icons; install with `npm i
 
 import dishesService from "../../services/dishService";
 import ingredientsService from "../../services/ingredientService";
+import HomeService from "../../services/HomeService";
 
 const RecipeModal = ({ dishId, recipeId, onClose }) => {
   const [recipe, setRecipe] = useState(null);
@@ -16,7 +17,7 @@ const RecipeModal = ({ dishId, recipeId, onClose }) => {
     const fetchRecipe = async () => {
       try {
         // Lấy thông tin recipe
-        const recipeResponse = await dishesService.getRecipeByRecipeId(dishId, recipeId);
+        const recipeResponse = await HomeService.getRecipeByRecipeId(dishId, recipeId);
         if (!recipeResponse.success || !recipeResponse.data) {
           throw new Error("Failed to fetch recipe");
         }

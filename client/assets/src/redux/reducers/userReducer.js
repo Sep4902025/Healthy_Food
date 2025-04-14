@@ -24,7 +24,7 @@ const userSlice = createSlice({
     },
     removeUser :  (state) => {
       AsyncStorage.removeItem("accessToken");
-      // state.user = null; // Xóa thông tin user (logout)
+      state.user = null; // Xóa thông tin user (logout)
       return state
     },
   },

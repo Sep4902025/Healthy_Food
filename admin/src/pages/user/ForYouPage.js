@@ -1,10 +1,9 @@
-import React, { useRef, useContext, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
-import { DarkModeContext } from "../context/DarkModeContext";
 import UserService from "../../services/user.service";
 import { useSelector } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
@@ -38,7 +37,7 @@ const FALLBACK_IMAGES = {
 
 const ForYouPage = () => {
   const sliderRef = useRef(null);
-  const { darkMode } = useContext(DarkModeContext);
+  
   const user = useSelector(selectUser);
   const userId = user?._id;
   const navigate = useNavigate();
@@ -50,10 +49,11 @@ const ForYouPage = () => {
   const [error, setError] = useState(null);
   const [selectedType, setSelectedType] = useState("");
   const [categories, setCategories] = useState([]);
-  const [alertMessage, setAlertMessage] = useState(null);
+  const [alertMessage] = useState(null);
   const [likedFoods, setLikedFoods] = useState([]); // Thêm state để quản lý danh sách món ăn yêu thích
 
   const limit = 8;
+
 
   // Hàm lấy danh sách món ăn yêu thích từ API
   const fetchLikedFoods = useCallback(async () => {
@@ -373,7 +373,7 @@ const ForYouPage = () => {
               <div
                 className="absolute right-[-10px] bottom-[-5px] w-[55px] h-[35px] bg-[#40b491] rounded-tr-[37.50px] rounded-bl-[42.50px] flex items-center justify-center"
                 onClick={(e) => {
-                  e.stopPropagation(); // Ngăn sự kiện click lan lên thẻ cha
+                  e.stopPropagation();
                   handleLike(recipe._id);
                 }}
               >
@@ -384,6 +384,7 @@ const ForYouPage = () => {
                       ? "fill-white"
                       : "stroke-white"
                   }`}
+                  
                 />
               </div>
             </div>

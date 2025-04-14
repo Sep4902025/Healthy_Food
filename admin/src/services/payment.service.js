@@ -71,6 +71,37 @@ const paymentService = {
       };
     }
   },
+
+  // Lấy tất cả dữ liệu payment cho dashboard
+  getPaymentDashboardData: async () => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/payment`,
+        {
+          headers: getAuthHeaders(),
+          withCredentials: true
+        }
+      );
+      
+      const data = response.data;
+      return {
+        success: true,
+        data: {
+          totalRevenue: data.totalRevenue || 0,
+          paymentStats: data.paymentStats || {},
+          revenueByYear: data.revenueByYear || {},
+          revenueByMonth: data.revenueByMonth || {}
+        }
+      };
+    } catch (error) {
+      console.error("Lỗi khi lấy dữ liệu payment:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Lỗi server: Không thể lấy dữ liệu payment",
+        error: error
+      };
+    }
+  }
 };
 
 export default paymentService;

@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  TextInput,
+  Modal,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
@@ -24,7 +26,11 @@ import { useTheme } from "../contexts/ThemeContext";
 import YoutubePlayer from "react-native-youtube-iframe";
 import HomeService from "../services/HomeService";
 import { getIngredient } from "../services/ingredient";
-
+import commentService from "./../services/commentService";
+import { useNavigation } from "@react-navigation/native";
+import RatingModal from "../components/common/RatingModal";
+import styles from "./../css/FavorAndSuggestCss";
+import { Heart } from "lucide-react-native";
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
 
@@ -32,14 +38,20 @@ function FavorAndSuggest({ route }) {
   const [dish, setDish] = useState(null);
   const [recipe, setRecipe] = useState(null);
   const [ingredientDetails, setIngredientDetails] = useState([]);
+  const [personalRate, setPersonalRate] = useState({});
   const [loading, setLoading] = useState(true);
-
+  const [rating, setRating] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
   const dispatch = useDispatch();
   const favorite = useSelector(favorSelector);
   const user = useSelector(userSelector);
   const { theme } = useTheme();
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
+  const navigation = useNavigation();
+  const [comment, setComment] = useState([]);
+  const [commentList, setCommentList] = useState([]);
 
-  // Load dish from route params
   useEffect(() => {
     if (route?.params?.dish) {
       setDish(route.params.dish);
@@ -49,6 +61,127 @@ function FavorAndSuggest({ route }) {
     }
   }, [route?.params?.dish]);
 
+  const submitComment = async (commentText) => {
+    if (!user?._id) {
+      setLoginModalVisible(true);
+      return;
+    }
+
+    try {
+      const res = await commentService.addComment(dish._id, commentText, user._id);
+      if (!res.success) {
+        Alert.alert("Error", res.message || "Failed to submit comment.");
+        return;
+      }
+      const newComment = res.data;
+      setCommentList((prev) => [newComment, ...prev]);
+      setComment("");
+      Alert.alert("Success", "Your comment has been submitted!");
+    } catch (error) {
+      console.error("Submit comment error:", error);
+      Alert.alert("Error", "Failed to submit comment. Please try again.");
+    }
+  };
+
+  useEffect(() => {
+    const fetchComments = async () => {
+      if (!dish?._id) return;
+
+      setLoading(true);
+      try {
+        const res = await commentService.getCommentsByDishId(dish._id);
+        let cmtList = res?.data;
+
+        if (Array.isArray(cmtList)) {
+          cmtList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+          // ✅ Gán thêm isLiked cho mỗi comment
+          const commentsWithIsLiked = cmtList.map((comment) => ({
+            ...comment,
+            isLiked: comment.likedBy?.includes(user?._id),
+          }));
+
+          setCommentList(commentsWithIsLiked);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách comment:", error);
+      }
+
+      setLoading(false);
+    };
+
+    fetchComments();
+  }, [dish, user?._id]); // nhớ thêm `user._id` để refetch đúng khi user thay đổi
+
+  const handleLike = async (commentId) => {
+    try {
+      if (!user?._id || !user) {
+        setLoginModalVisible(true);
+        return;
+      }
+
+      const res = await commentService.toggleLikeComment(commentId, user._id);
+
+      if (res.success) {
+        const updatedComments = commentList.map((item) =>
+          item._id === commentId
+            ? {
+                ...item,
+                isLiked: !item.isLiked,
+                likeCount: item.isLiked ? item.likeCount - 1 : item.likeCount + 1,
+              }
+            : item
+        );
+        setCommentList(updatedComments);
+      } else {
+        console.warn("Toggle like failed:", res.message);
+      }
+    } catch (error) {
+      console.log("Like error", error);
+    }
+  };
+
+  const fetchRating = async () => {
+    if (!recipe?._id || !user?._id) return;
+
+    try {
+      const response = await commentService.getRatingsByRecipe(recipe._id);
+      const ratings = response?.data;
+      if (ratings && Array.isArray(ratings)) {
+        const myRating = ratings.find(
+          (rating) => rating.userId._id === user._id && rating.recipeId === recipe._id
+        );
+        const total = ratings.reduce((sum, r) => sum + r.star, 0);
+        const average = ratings.length > 0 ? total / ratings.length : 0;
+        setRating(myRating ?? null);
+        setAverageRating(average.toFixed(1));
+        console.log("⭐️ My rating:", myRating);
+      } else {
+        console.warn("Không nhận được dữ liệu từ getRatingsByRecipe");
+      }
+    } catch (error) {
+      console.error("Lỗi khi gọi getRatingsByRecipe:", error);
+    }
+  };
+
+  const handleRate = async (ratePoint) => {
+    setRecipe((prev) => ({ ...prev, rate: ratePoint }));
+    try {
+      const res = await commentService.rateRecipe(dish.recipeId, user._id, ratePoint);
+
+      console.log("⭐️ Đánh giá thành công:", res);
+
+      await fetchRating();
+    } catch (err) {
+      console.error("Lỗi khi gọi rateRecipe:", err);
+    }
+  };
+
+  // Load rating
+  useEffect(() => {
+    fetchRating();
+  }, [recipe, user]);
+
   // Load recipe when dish changes
   useEffect(() => {
     if (!dish?._id || !dish?.recipeId) {
@@ -57,6 +190,7 @@ function FavorAndSuggest({ route }) {
       return;
     }
     loadRecipe();
+    loadRate();
   }, [dish]);
 
   // Fetch ingredient details when recipe changes
@@ -72,12 +206,11 @@ function FavorAndSuggest({ route }) {
         const detailsObj = [];
 
         const promises = recipe.ingredients.map(async (ingredient) => {
-          console.log("Ingredient:", ingredient); // Debug log
-          console.log("Ingredient ID:", ingredient?.ingredientId); // Debug log
+          console.log("Ingredient:", ingredient);
+          console.log("Ingredient ID:", ingredient?.ingredientId);
 
           if (!ingredient?.ingredientId) return;
 
-          // Ensure ingredientId is a string
           const ingredientId =
             typeof ingredient.ingredientId === "object" && ingredient.ingredientId?._id
               ? ingredient.ingredientId._id
@@ -110,6 +243,18 @@ function FavorAndSuggest({ route }) {
     fetchIngredientDetails();
   }, [recipe]);
 
+  const loadRate = async () => {
+    const response = await getRatingsByRecipeId(dish.recipeId);
+    if (response?.status === 200) {
+      const findRate = response?.data?.data?.find((item) => item?.userId?._id === user?._id);
+      if (findRate) {
+        setPersonalRate(findRate);
+      }
+    } else {
+      console.log(response?.response?.data);
+    }
+  };
+
   const loadRecipe = async () => {
     setLoading(true);
 
@@ -133,22 +278,18 @@ function FavorAndSuggest({ route }) {
   };
 
   const handleOnSavePress = async (dish) => {
-    if (!user?.userId) {
+    if (!user?._id) {
       Alert.alert("Error", "Please log in to save favorites.");
       return;
     }
     try {
-      const isLiked = isFavorite(dish._id);
-      await HomeService.toggleFavoriteDish(user.userId, dish._id, isLiked);
+      // const isLiked = isFavorite(dish._id);
+      // await HomeService.toggleFavoriteDish(user.userId, dish._id, isLiked);
       dispatch(toggleFavorite({ id: dish._id }));
     } catch (error) {
       console.error("Error toggling favorite:", error);
       Alert.alert("Error", "Failed to toggle favorite.");
     }
-  };
-
-  const handleRate = (ratePoint) => {
-    setRecipe((prev) => ({ ...prev, rate: ratePoint }));
   };
 
   const getYouTubeVideoId = (url) => {
@@ -164,6 +305,7 @@ function FavorAndSuggest({ route }) {
     const [routes] = useState([
       { key: "ingredient", title: "Ingredient" },
       { key: "instructions", title: "Instructions" },
+      { key: "comments", title: "Comments" },
     ]);
 
     const IngredientsRoute = () => (
@@ -307,9 +449,76 @@ function FavorAndSuggest({ route }) {
       );
     };
 
+    const CommentRatingRoute = () => (
+      <ScrollView
+        style={styles.tabContent}
+        nestedScrollEnabled={true}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>All Comments</Text>
+
+        {/* Danh sách bình luận */}
+        {commentList.length > 0 ? (
+          commentList.map((comment, index) => (
+            <View key={index} style={styles.commentBox}>
+              {/* Avatar + tên người dùng + đánh giá sao */}
+              <View style={styles.commentHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      ...styles.commentUser,
+                      color: theme.greyTextColor,
+                    }}
+                  >
+                    {comment.userId.email || "Anonymous"}
+                  </Text>
+                  {comment.star !== undefined && (
+                    <Text
+                      style={{
+                        ...styles.commentRating,
+                        color: theme.greyTextColor,
+                      }}
+                    >
+                      Rating: {comment.star} ★
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Nội dung bình luận */}
+              <Text style={{ ...styles.commentText, color: theme.greyTextColor }}>
+                {comment.text}
+              </Text>
+
+              {/* Nút like + số lượt like */}
+              <View style={styles.commentFooter}>
+                <TouchableOpacity style={styles.likeButton} onPress={() => handleLike(comment._id)}>
+                  <Heart
+                    size={20}
+                    color={comment.isLiked ? "red" : "gray"}
+                    fill={comment.isLiked ? "red" : "none"}
+                  />
+                  <Text style={styles.likeCount}>{comment.likeCount || 0}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
+            No comments yet. Be the first to share your thoughts!
+          </Text>
+        )}
+      </ScrollView>
+    );
+
+    if (loading) {
+      return <Text style={{ padding: 16 }}>Đang tải dữ liệu...</Text>;
+    }
+
     const renderScene = SceneMap({
       ingredient: IngredientsRoute,
       instructions: InstructionsRoute,
+      comments: CommentRatingRoute,
     });
 
     const renderTabBar = (props) => (
@@ -317,7 +526,7 @@ function FavorAndSuggest({ route }) {
         {...props}
         indicatorStyle={{
           backgroundColor: "#4CAF50",
-          height: "80%",
+          height: "100%",
           width: "45%",
           borderRadius: 8,
           marginHorizontal: "2.5%",
@@ -371,8 +580,86 @@ function FavorAndSuggest({ route }) {
           <View style={styles.recipeHeader}>
             <Text style={{ ...styles.recipeName, color: theme.greyTextColor }}>{dish.name}</Text>
             <View style={styles.recipeRate}>
-              <Rating rate={recipe?.rate ?? 0} starClick={handleRate} size={WIDTH * 0.06} />
+              <Text
+                style={{ fontSize: 14, marginBottom: 4 }}
+                className="text-yellow-500 font-semibold"
+              >
+                Average Rating:
+              </Text>
+
+              <Rating rate={averageRating ?? 0} size={WIDTH * 0.06} disabled />
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (!user?._id) {
+                    setLoginModalVisible(true);
+                  } else {
+                    setRatingModalVisible(true);
+                  }
+                }}
+                style={styles.openModal}
+              >
+                <Text style={{ fontSize: 14, color: "#40B491" }}>Rating now</Text>
+              </TouchableOpacity>
             </View>
+
+            <Modal
+              visible={loginModalVisible}
+              animationType="fade"
+              transparent
+              onRequestClose={() => setLoginModalVisible(false)}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: "rgba(0,0,0,0.5)",
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: "#fff",
+                    padding: 20,
+                    borderRadius: 10,
+                    width: "80%",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontSize: 16, marginBottom: 10 }}>
+                    You need to sign in to do this action.
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setLoginModalVisible(false);
+                      navigation.navigate("signin");
+                    }}
+                    style={styles.loginButton}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "bold" }}>Sign In</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setLoginModalVisible(false)}
+                    style={{ marginTop: 10 }}
+                  >
+                    <Text style={{ color: "#888" }}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
+            <RatingModal
+              visible={ratingModalVisible}
+              onClose={() => setRatingModalVisible(false)}
+              rating={rating}
+              setRating={setRating}
+              comment={comment}
+              setComment={setComment}
+              handleRate={handleRate}
+              submitComment={submitComment}
+            />
           </View>
           <Text style={{ ...styles.recipeDescription, color: theme.greyTextColor }}>
             {dish.description}
@@ -402,7 +689,7 @@ function FavorAndSuggest({ route }) {
               navigationState={{ index, routes }}
               renderScene={renderScene}
               onIndexChange={setIndex}
-              initialLayout={{ width: WIDTH - 32 }}
+              initialLayout={{ width: WIDTH - 16 }}
               renderTabBar={renderTabBar}
               style={styles.tabView}
             />
@@ -423,167 +710,169 @@ function FavorAndSuggest({ route }) {
   );
 }
 
-// Styles remain the same
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  recipeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  recipeImage: {
-    width: "100%",
-    height: 200,
-    resizeMode: "cover",
-  },
-  heartIcon: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    borderRadius: 20,
-    padding: 8,
-  },
-  cardContent: {
-    padding: 16,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    transform: [{ translateY: -10 }],
-  },
-  recipeHeader: {
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  recipeName: {
-    width: "50%",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
-    color: "#263238",
-  },
-  recipeRate: {
-    width: "50%",
-    alignItems: "flex-end",
-    paddingRight: 12,
-  },
-  recipeDescription: {
-    fontSize: 14,
-    color: "#546E7A",
-    marginBottom: 16,
-  },
-  nutritionInfo: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 16,
-  },
-  nutritionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 16,
-    marginBottom: 8,
-  },
-  nutritionText: {
-    fontSize: 12,
-    color: "#78909C",
-    marginLeft: 4,
-  },
-  tabViewContainer: {
-    paddingHorizontal: 16,
-  },
-  tabView: {
-    marginTop: 8,
-    minHeight: 300,
-  },
-  tabContent: {
-    paddingTop: 16,
-    paddingHorizontal: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 12,
-    color: "#37474F",
-  },
-  ingredientRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ECEFF1",
-    marginBottom: 8,
-  },
-  ingredientImage: {
-    resizeMode: "contain",
-    height: "100%",
-    width: "30%",
-    marginRight: 10,
-    borderRadius: 12,
-  },
-  ingredientInfo: {
-    flex: 1,
-    marginRight: 10,
-  },
-  ingredientName: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#455A64",
-  },
-  ingredientDetail: {
-    fontSize: 12,
-    color: "#78909C",
-    marginTop: 2,
-  },
-  ingredientQuantity: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#263238",
-  },
-  instructionRow: {
-    marginBottom: 12,
-  },
-  instructionStep: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#455A64",
-    marginBottom: 4,
-  },
-  instructionText: {
-    fontSize: 14,
-    color: "#455A64",
-    lineHeight: 20,
-  },
-  videoContainer: {
-    marginBottom: 16,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  videoLink: {
-    backgroundColor: "#4CAF50",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  videoLinkText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  noDataText: {
-    fontSize: 14,
-    color: "#78909C",
-    textAlign: "center",
-  },
-});
+//Styles remain the same
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//   },
+//   recipeCard: {
+//     backgroundColor: "#FFFFFF",
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     marginBottom: 20,
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 4,
+//     elevation: 3,
+//   },
+//   recipeImage: {
+//     width: "100%",
+//     height: 200,
+//     resizeMode: "cover",
+//   },
+//   heartIcon: {
+//     position: "absolute",
+//     top: 16,
+//     right: 16,
+//     backgroundColor: "rgba(255, 255, 255, 0.8)",
+//     borderRadius: 20,
+//     padding: 8,
+//   },
+//   cardContent: {
+//     height: "90%",
+//     padding: 16,
+//     borderTopLeftRadius: 12,
+//     borderTopRightRadius: 12,
+//     transform: [{ translateY: -10 }],
+//   },
+//   recipeHeader: {
+//     flexDirection: "row",
+//     gap: 12,
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//   },
+//   recipeName: {
+//     width: "50%",
+//     fontSize: 18,
+//     fontWeight: "bold",
+//     marginBottom: 4,
+//     color: "#263238",
+//   },
+//   recipeRate: {
+//     width: "50%",
+//     alignItems: "flex-end",
+//     paddingRight: 12,
+//   },
+//   recipeDescription: {
+//     fontSize: 14,
+//     color: "#546E7A",
+//     marginBottom: 16,
+//   },
+//   nutritionInfo: {
+//     flexDirection: "row",
+//     flexWrap: "wrap",
+//     marginBottom: 16,
+//   },
+//   nutritionItem: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     marginRight: 16,
+//     marginBottom: 8,
+//   },
+//   nutritionText: {
+//     fontSize: 12,
+//     color: "#78909C",
+//     marginLeft: 4,
+//   },
+//   tabViewContainer: {
+//     height: "65%",
+//     paddingHorizontal: 16,
+//   },
+//   tabView: {
+//     marginTop: 8,
+//     minHeight: 300,
+//   },
+//   tabContent: {
+//     paddingTop: 16,
+//     paddingHorizontal: 12,
+//   },
+//   sectionTitle: {
+//     fontSize: 16,
+//     fontWeight: "500",
+//     marginBottom: 12,
+//     color: "#37474F",
+//   },
+//   ingredientRow: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     paddingVertical: 8,
+//     borderBottomWidth: 1,
+//     borderBottomColor: "#ECEFF1",
+//     marginBottom: 8,
+//   },
+//   ingredientImage: {
+//     resizeMode: "contain",
+//     height: "100%",
+//     width: "30%",
+//     marginRight: 10,
+//     borderRadius: 12,
+//   },
+//   ingredientInfo: {
+//     flex: 1,
+//     marginRight: 10,
+//   },
+//   ingredientName: {
+//     fontSize: 16,
+//     fontWeight: "500",
+//     color: "#455A64",
+//   },
+//   ingredientDetail: {
+//     fontSize: 12,
+//     color: "#78909C",
+//     marginTop: 2,
+//   },
+//   ingredientQuantity: {
+//     fontSize: 14,
+//     fontWeight: "bold",
+//     color: "#263238",
+//   },
+//   instructionRow: {
+//     marginBottom: 12,
+//   },
+//   instructionStep: {
+//     fontSize: 14,
+//     fontWeight: "bold",
+//     color: "#455A64",
+//     marginBottom: 4,
+//   },
+//   instructionText: {
+//     fontSize: 14,
+//     color: "#455A64",
+//     lineHeight: 20,
+//   },
+//   videoContainer: {
+//     marginBottom: 16,
+//     borderRadius: 8,
+//     overflow: "hidden",
+//   },
+//   videoLink: {
+//     backgroundColor: "#4CAF50",
+//     padding: 10,
+//     borderRadius: 8,
+//     alignItems: "center",
+//     marginBottom: 16,
+//   },
+//   videoLinkText: {
+//     color: "#FFFFFF",
+//     fontSize: 14,
+//     fontWeight: "500",
+//   },
+//   noDataText: {
+//     fontSize: 14,
+//     color: "#78909C",
+//     textAlign: "center",
+//   },
+// });
 
 export default FavorAndSuggest;

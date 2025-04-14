@@ -1,10 +1,19 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Image } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // For the delete icon; install with `npm install @expo/vector-icons`
-import RecipeModal from "./RecipeModal"; // Import modal
+import { Ionicons } from "@expo/vector-icons";
+import RecipeModal from "./RecipeModal";
+import ShowToast from "../../components/common/CustomToast";
 
-const DishCard = ({ dish, onDelete, deletingDishId }) => {
+const DishCard = ({ dish, onDelete, deletingDishId, disableDelete }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleDelete = () => {
+    if (disableDelete) {
+      ShowToast("error", "❌ Cannot delete dish: Meal plan is expired or paused.");
+      return;
+    }
+    onDelete(dish._id || dish.dishId);
+  };
 
   return (
     <View className="border border-gray-200 rounded-lg p-5 bg-white shadow-md mb-4 flex flex-col gap-4 relative">
@@ -17,10 +26,10 @@ const DishCard = ({ dish, onDelete, deletingDishId }) => {
         <Text className="text-xl font-semibold text-gray-800">{dish.name}</Text>
         {/* Delete Button (Top-right corner) */}
         <TouchableOpacity
-          onPress={() => onDelete(dish._id || dish.dishId)}
-          disabled={deletingDishId === (dish._id || dish.dishId)}
+          onPress={handleDelete}
+          disabled={deletingDishId === (dish._id || dish.dishId) || disableDelete}
           className={`absolute top-0 right-0 ${
-            deletingDishId === (dish._id || dish.dishId) ? "opacity-50" : ""
+            deletingDishId === (dish._id || dish.dishId) || disableDelete ? "opacity-50" : ""
           }`}
         >
           {deletingDishId === (dish._id || dish.dishId) ? (

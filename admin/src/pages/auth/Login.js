@@ -3,8 +3,14 @@ import { toast } from "react-toastify";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { GoogleLogin } from "@react-oauth/google";
-import { loginWithEmail, loginWithGoogle } from "../../store/actions/authActions";
-import { selectIsAuthenticated, selectAuthLoading } from "../../store/selectors/authSelectors";
+import {
+  loginWithEmail,
+  loginWithGoogle,
+} from "../../store/actions/authActions";
+import {
+  selectIsAuthenticated,
+  selectAuthLoading,
+} from "../../store/selectors/authSelectors";
 import { loginFailure, logout } from "../../store/slices/authSlice";
 const Login = () => {
   const navigate = useNavigate();
@@ -48,12 +54,17 @@ const Login = () => {
         navigate("/signin");
         return;
       }
-
+  
       if (response.success) {
+        const redirectPath = localStorage.getItem("redirectAfterLogin");
+        localStorage.removeItem("redirectAfterLogin");
+  
         const userRole = response.user.role;
         console.log("User role:", userRole);
-
-        if (userRole === "admin") {
+  
+        if (redirectPath) {
+          navigate(redirectPath);
+        } else if (userRole === "admin") {
           navigate("/admin");
         } else if (userRole === "nutritionist") {
           navigate("/nutritionist");
@@ -65,6 +76,7 @@ const Login = () => {
       console.error("Login error:", error);
     }
   };
+  
 
   const handleGoogleLogin = async (credentialResponse) => {
     try {
@@ -73,13 +85,17 @@ const Login = () => {
         navigate("/signin");
         return;
       }
-
+  
       toast.success("Đăng nhập Google thành công!");
-      navigate("/");
+  
+      const redirectPath = localStorage.getItem("redirectAfterLogin");
+      localStorage.removeItem("redirectAfterLogin");
+      navigate(redirectPath || "/");
     } catch (error) {
       toast.error("Đăng nhập Google thất bại");
     }
   };
+  
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
@@ -114,7 +130,9 @@ const Login = () => {
 
         {/* Tiêu đề */}
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">Sign in with email</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Sign in with email
+          </h2>
         </div>
 
         {/* Form đăng nhập */}
@@ -153,7 +171,10 @@ const Login = () => {
           </div>
 
           <div className="flex items-center justify-end">
-            <Link to="/forgot-password" className="text-sm text-pink-500 hover:text-pink-600">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-pink-500 hover:text-pink-600"
+            >
               Forgot password?
             </Link>
           </div>
@@ -194,7 +215,10 @@ const Login = () => {
           {/* Link to Signup */}
           <div className="text-center text-sm">
             <span className="text-gray-500">Don't have an account?</span>
-            <Link to="/signup" className="ml-1 text-pink-500 hover:text-pink-600">
+            <Link
+              to="/signup"
+              className="ml-1 text-pink-500 hover:text-pink-600"
+            >
               Sign up
             </Link>
           </div>

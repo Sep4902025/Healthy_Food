@@ -8,6 +8,7 @@ import {
   Dimensions,
   RefreshControl,
   ActivityIndicator,
+  PixelRatio,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import SearchBar from "../components/common/SearchBar";
@@ -21,9 +22,7 @@ import { loadFavorites } from "../redux/actions/favoriteThunk";
 import { favorSelector, userSelector } from "../redux/selectors/selector";
 import SpinnerLoading from "../components/common/SpinnerLoading";
 import HomeService from "../services/HomeService";
-
-const WIDTH = Dimensions.get("window").width;
-const HEIGHT = Dimensions.get("window").height;
+import { normalize } from "../utils/common";
 
 function Home({ navigation }) {
   const [seasonalDishes, setSeasonalDishes] = useState([]);
@@ -32,56 +31,77 @@ function Home({ navigation }) {
   const [loading, setLoading] = useState({ initial: true, more: false });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [isSeasonValid, setIsSeasonValid] = useState(true); // Track if season is valid
   const limit = 10; // Số lượng món ăn mỗi trang
 
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
-  console.log("USEREDUC", user);
 
   const dispatch = useDispatch();
-  const season = useCurrentSeason() || "spring";
+  const season = useCurrentSeason() || "unknown";
+  const validSeasons = ["Spring", "Summer", "Fall", "Winter"];
 
   useEffect(() => {
-    loadInitialDishes();
-  }, []);
+    // Check if season is valid on mount or when season changes
+    if (validSeasons.includes(season)) {
+      setIsSeasonValid(true);
+      loadInitialDishes();
+    } else {
+      setIsSeasonValid(false);
+      setLoading((prev) => ({ ...prev, initial: false }));
+    }
+  }, [season]);
 
   useEffect(() => {
     loadFavoritesData();
   }, [dispatch, user]);
 
   const loadFavoritesData = async () => {
-    if (user?.userId) {
-      dispatch(loadFavorites(user.userId));
+    if (user?._id) {
+      dispatch(loadFavorites(user._id));
     }
   };
 
   const loadInitialDishes = async () => {
     setLoading((prev) => ({ ...prev, initial: true }));
+    setPage(1);
+    setHasMore(true);
     await loadDishes(1, true);
     setLoading((prev) => ({ ...prev, initial: false }));
   };
 
   const loadMoreDishes = async () => {
-    if (!hasMore || loading.more) return;
+    if (!hasMore || loading.more || !isSeasonValid) return;
     setLoading((prev) => ({ ...prev, more: true }));
     await loadDishes(page + 1);
     setLoading((prev) => ({ ...prev, more: false }));
   };
 
   const loadDishes = async (pageNum, isRefresh = false) => {
-    try {
-      const response = await HomeService.getAllDishes(pageNum, limit);
-      if (response?.success) {
-        const newDishes = response.data.items.filter(
-          (dish) => dish.season && typeof dish.season === "string"
-        );
+    if (!validSeasons.includes(season)) {
+      setIsSeasonValid(false);
+      return;
+    }
 
-        setSeasonalDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+    try {
+      const response = await HomeService.getDishBySeason(season, pageNum, limit);
+      if (response.success) {
+        const newDishes = response.data.items;
+
+        // Loại bỏ các món ăn trùng lặp dựa trên _id
+        setSeasonalDishes((prev) => {
+          const existingIds = new Set(isRefresh ? [] : prev.map((dish) => dish._id));
+          const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));
+
+          // Nếu là refresh thì chỉ lấy dữ liệu mới, nếu không thì nối dữ liệu mới vào dữ liệu cũ
+          const updatedDishes = isRefresh ? filteredNewDishes : [...prev, ...filteredNewDishes];
+          return updatedDishes;
+        });
 
         setPage(pageNum);
         setHasMore(pageNum < response.data.totalPages);
       } else {
-        console.error("Failed to load dishes:", response?.message);
+        console.error("Failed to load dishes:", response.message);
         setHasMore(false);
       }
     } catch (error) {
@@ -91,6 +111,12 @@ function Home({ navigation }) {
   };
 
   const onRefresh = async () => {
+    if (!validSeasons.includes(season)) {
+      setIsSeasonValid(false);
+      setRefreshing(false);
+      return;
+    }
+
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
@@ -114,12 +140,12 @@ function Home({ navigation }) {
   const handleScroll = useCallback(
     ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-      const paddingToBottom = 20;
+      const paddingToBottom = normalize(20);
       if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
         loadMoreDishes();
       }
     },
-    [hasMore, loading.more, page]
+    [hasMore, loading.more, page, isSeasonValid]
   );
 
   return (
@@ -141,24 +167,16 @@ function Home({ navigation }) {
 
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Browse by category</Text>
-          <ScrollView
-            style={styles.categoriesGrid}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingRight: WIDTH * ((Object.values(DishType).length - 1) * 0.22),
-            }}
-          >
+          <View style={styles.categoriesGrid}>
             {Object.values(DishType).map((category, key) => (
               <CategoryCard
                 key={key}
                 category={{ id: key, ...category }}
                 onPress={() => navigation.navigate(ScreensName.search, { category })}
-                cardWidth={"20%"}
-                style={{ marginRight: "4%" }}
+                style={styles.categoryCard}
               />
             ))}
-          </ScrollView>
+          </View>
         </View>
 
         <View style={styles.seasonalSection}>
@@ -171,16 +189,18 @@ function Home({ navigation }) {
 
           {loading.initial ? (
             <SpinnerLoading />
+          ) : !isSeasonValid ? (
+            <Text style={styles.noResultsText}>
+              Invalid season. Please select a valid season (Spring, Summer, Fall, Winter).
+            </Text>
           ) : seasonalDishes.length > 0 ? (
-            seasonalDishes
-              .filter((item) => item?.season?.toLowerCase()?.includes(season?.toLowerCase()))
-              .map((dish) => (
-                <DishedV1
-                  dish={dish}
-                  key={dish._id}
-                  onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })}
-                />
-              ))
+            seasonalDishes.map((dish) => (
+              <DishedV1
+                dish={dish}
+                key={dish._id}
+                onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })}
+              />
+            ))
           ) : (
             <Text style={styles.noResultsText}>No seasonal dishes found</Text>
           )}
@@ -197,40 +217,45 @@ function Home({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: normalize(16),
   },
   categoriesSection: {
-    marginTop: 16,
+    marginTop: normalize(16),
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: normalize(16),
     color: "#38B2AC",
     fontWeight: "500",
-    marginBottom: 16,
+    marginBottom: normalize(16),
   },
   categoriesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: normalize(40), // Add space for category images that are positioned absolute
+  },
+  categoryCard: {
+    marginBottom: normalize(24),
   },
   seasonalSection: {
-    marginVertical: 16,
+    marginVertical: normalize(16),
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    marginBottom: normalize(16),
   },
   viewAllText: {
     color: "#38B2AC",
-    fontSize: 14,
+    fontSize: normalize(14),
   },
   noResultsText: {
-    fontSize: 16,
+    fontSize: normalize(16),
     textAlign: "center",
+    padding: normalize(20),
   },
   loadingMore: {
-    marginVertical: 20,
+    marginVertical: normalize(20),
   },
 });
 

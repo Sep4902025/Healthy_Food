@@ -1,25 +1,25 @@
 import io from "socket.io-client";
 import api from "./api";
 
-// Lấy URL từ env
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
 
-// Khởi tạo socket với autoConnect = false
 let socket = null;
 
 const RemindService = {
-  // Kết nối socket với userId
   connectSocket: (userId) => {
     if (!userId) {
       console.error("❌ Không có userId để kết nối socket!");
       return;
     }
 
-    // Lấy token mới nhất từ localStorage
     const token = localStorage.getItem("token");
     console.log("🔍 Token trước khi gửi:", token);
 
-    // Khởi tạo socket nếu chưa có hoặc token thay đổi
+    if (socket && socket.userId && socket.userId !== userId) {
+      socket.disconnect();
+      socket = null;
+    }
+
     if (!socket) {
       socket = io(SOCKET_URL, {
         path: "/socket.io",
@@ -32,20 +32,18 @@ const RemindService = {
           token: token,
         },
       });
+      socket.userId = userId;
     }
 
-    // Đảm bảo token đang sử dụng là token mới nhất
     socket.auth = { token };
 
-    // Kết nối nếu chưa kết nối
     if (!socket.connected) {
       socket.connect();
     }
 
     socket.on("connect", () => {
       console.log("✅ Reminder socket connected for user:", userId);
-
-      // Tự động join vào room của user
+      // Thêm lại logic để tham gia phòng
       socket.emit("join", userId);
     });
 
@@ -54,32 +52,20 @@ const RemindService = {
     });
   },
 
-  // Lắng nghe thông báo nhắc nhở từ server
   listenReminder: (callback) => {
     if (!socket) return;
 
-    socket.off("receive_reminder"); // Đảm bảo không đăng ký nhiều lần
-    socket.on("receive_reminder", (data) => {
+    socket.off("mealReminder");
+    socket.on("mealReminder", (data) => {
       console.log("🔔 Nhắc nhở nhận được:", data);
       callback(data);
     });
   },
 
-  // Lấy danh sách nhắc nhở từ API
-  getReminders: async (userId) => {
-    try {
-      const response = await api.get(`/reminders/${userId}`);
-      return response.data;
-    } catch (error) {
-      console.error("❌ Lỗi khi lấy danh sách nhắc nhở:", error);
-      throw error;
-    }
-  },
-
-  // Ngắt kết nối socket
   disconnect: () => {
     if (socket && socket.connected) {
       socket.disconnect();
+      socket = null;
       console.log("🔌 Reminder socket disconnected manually");
     }
   },

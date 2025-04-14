@@ -2,7 +2,10 @@ import axiosInstance from "./axiosInstance";
 
 export const getFavoriteList = async (userId) => {
   try {
+    console.log(userId);
     const response = await axiosInstance.get(`/favoriteDishes/${userId}`);
+    console.log(response?.data);
+    
     return response;
   } catch (error) {
     console.log("getFavoriteList in service/dishes error : ", error);

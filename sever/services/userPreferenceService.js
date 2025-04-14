@@ -344,6 +344,7 @@ exports.filterUserPreferencesByDiet = async (query) => {
 };
 
 // Reset User Preference
+// Reset User Preference
 exports.resetUserPreference = async (userPreferenceId) => {
   const defaultValues = {
     age: "",
@@ -366,36 +367,56 @@ exports.resetUserPreference = async (userPreferenceId) => {
     isDelete: false,
   };
 
-  // Kiểm tra xem userPreference có tồn tại không
-  const existingPreference = await UserPreferenceModel.findOne({
-    _id: userPreferenceId,
-    isDelete: false,
-  });
+  try {
+    // Kiểm tra xem userPreference có tồn tại không
+    const existingPreference = await UserPreferenceModel.findOne({
+      _id: userPreferenceId,
+      isDelete: false,
+    });
 
-  if (!existingPreference) {
+    if (!existingPreference) {
+      return {
+        status: "fail",
+        message: "User Preference not found",
+      };
+    }
+
+    // Cập nhật UserPreference
+    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(
+      userPreferenceId,
+      { $set: defaultValues },
+      { new: true }
+    );
+
+    if (!updatedPreference) {
+      return {
+        status: "fail",
+        message: "User Preference could not be updated",
+      };
+    }
+
+    // Tìm và cập nhật UserModel để xóa userPreferenceId
+    const user = await UserModel.findOneAndUpdate(
+      { userPreferenceId: userPreferenceId },
+      { $unset: { userPreferenceId: "" } }, // Xóa trường userPreferenceId
+      { new: true }
+    );
+
+    if (!user) {
+      console.warn(`No user found with userPreferenceId: ${userPreferenceId}`);
+      // Không trả về lỗi vì reset preference vẫn thành công
+    }
+
     return {
-      status: "fail",
-      message: "User Preference not found",
+      status: "success",
+      message: "User Preference reset successfully",
+      data: updatedPreference,
+    };
+  } catch (error) {
+    console.error("Error resetting user preference:", error);
+    return {
+      status: "error",
+      message: "An error occurred while resetting user preference",
     };
   }
-
-  // Cập nhật dữ liệu
-  const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(
-    userPreferenceId,
-    { $set: defaultValues },
-    { new: true }
-  );
-
-  if (!updatedPreference) {
-    return {
-      status: "fail",
-      message: "User Preference not found or could not be updated",
-    };
-  }
-
-  return {
-    status: "success",
-    message: "User Preference reset successfully",
-    data: updatedPreference,
-  };
 };
