@@ -201,7 +201,7 @@ const NutritionChat = () => {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col bg-white h-[calc(100vh-60px)]">
+        <div className="flex-1 flex flex-col bg-white h-[calc(100vh-105px)]">
           {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
           <div className="flex-1 overflow-hidden">
             {selectedConversation ? (

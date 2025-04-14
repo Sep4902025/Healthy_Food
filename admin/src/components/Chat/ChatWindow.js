@@ -222,7 +222,7 @@ const ChatWindow = ({ conversation, setCurrentConversation }) => {
   }
 
   return (
-    <div className="flex flex-col h-[490px] w-full">
+    <div className="flex flex-col h-full w-full">
       {renderHeader()}
       {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
       <div
@@ -231,7 +231,7 @@ const ChatWindow = ({ conversation, setCurrentConversation }) => {
       >
         <MessageList messages={messages} currentUserId={user._id} />
       </div>
-      <div className="border-t border-gray-200 mt-1">
+      <div className="border-t border-gray-200">
         <ChatInput
           onSendMessage={handleSendMessage}
           conversation={conversation}
