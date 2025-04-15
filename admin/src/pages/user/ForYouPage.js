@@ -9,7 +9,8 @@ import { useSelector } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
 import { toast } from "react-toastify";
 import HomeService from "../../services/home.service";
-
+import SearchResult from "./HomeSection/SearchResult";
+import { useSearch } from "../context/SearchContext";
 // Hàm debounce để giới hạn tần suất gọi handleScroll
 const debounce = (func, wait) => {
   let timeout;
@@ -22,22 +23,31 @@ const debounce = (func, wait) => {
 // Define fallback images based on type
 const FALLBACK_IMAGES = {
   ALL: "https://i.pinimg.com/736x/93/00/a4/9300a4f74d823f7bb93be955493a0155.jpg",
-  "HEAVY MEALS": "https://i.pinimg.com/736x/e8/8b/12/e88b123fd4a3f0555d7e70045ac14f9c.jpg",
-  "LIGHT MEALS": "https://i.pinimg.com/474x/db/c5/36/dbc53635aad70a15ce04489d02467605.jpg",
-  DESSERT: "https://i.pinimg.com/474x/e0/7c/de/e07cde796c00d499dc5d93d517082c00.jpg",
-  BEVERAGES: "https://i.pinimg.com/474x/08/76/98/0876982d7a1c29ca365fc84c0731ee78.jpg",
-  SNACKS: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
-  BREAKFAST: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
-  VEGAN: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
-  "VIETNAMESE BEEF": "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
-  "VIETNAMESE BEVERAGE": "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  "HEAVY MEALS":
+    "https://i.pinimg.com/736x/e8/8b/12/e88b123fd4a3f0555d7e70045ac14f9c.jpg",
+  "LIGHT MEALS":
+    "https://i.pinimg.com/474x/db/c5/36/dbc53635aad70a15ce04489d02467605.jpg",
+  DESSERT:
+    "https://i.pinimg.com/474x/e0/7c/de/e07cde796c00d499dc5d93d517082c00.jpg",
+  BEVERAGES:
+    "https://i.pinimg.com/474x/08/76/98/0876982d7a1c29ca365fc84c0731ee78.jpg",
+  SNACKS:
+    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  BREAKFAST:
+    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  VEGAN:
+    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  "VIETNAMESE BEEF":
+    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  "VIETNAMESE BEVERAGE":
+    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
   DEFAULT:
     "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=200&auto=format&fit=crop",
 };
 
 const ForYouPage = () => {
   const sliderRef = useRef(null);
-  
+
   const user = useSelector(selectUser);
   const userId = user?._id;
   const navigate = useNavigate();
@@ -50,28 +60,43 @@ const ForYouPage = () => {
   const [selectedType, setSelectedType] = useState("");
   const [categories, setCategories] = useState([]);
   const [alertMessage] = useState(null);
-  const [likedFoods, setLikedFoods] = useState([]); // Thêm state để quản lý danh sách món ăn yêu thích
+  const [likedFoods, setLikedFoods ] = useState([]); // Thêm state để quản lý danh sách món ăn yêu thích
+  const { searchTerm } = useSearch();
+  const [filteredDishes, setFilteredDishes] = useState([]);
 
   const limit = 8;
-
 
   // Hàm lấy danh sách món ăn yêu thích từ API
   const fetchLikedFoods = useCallback(async () => {
     try {
-      const response = await UserService.getFavoriteDishes(userId);
-      if (response.success) {
-        const likedDishes = response.data.map((dish) => ({
-          dishId: dish._id,
+      const response = await HomeService.getFavoriteDishes(userId);
+      if (Array.isArray(response)) {
+        const likedDishes = response.map((dish) => ({
+          dishId: dish.dishId,
           isLike: true,
         }));
         setLikedFoods(likedDishes);
+
       } else {
-        console.error("Failed to fetch liked foods:", response.message);
+        console.error("Unexpected response format:", response);
       }
     } catch (err) {
       console.error("Error fetching liked foods:", err);
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (!searchTerm || searchTerm.trim() === "") {
+      setFilteredDishes(recommendedRecipes);
+    } else {
+      const filtered = recommendedRecipes.filter((dish) =>
+        dish.name && typeof dish.name === "string"
+          ? dish.name.toLowerCase().includes(searchTerm.toLowerCase())
+          : false
+      );
+      setFilteredDishes(filtered);
+    }
+  }, [searchTerm, recommendedRecipes]);
 
   // Gọi API để lấy danh sách món ăn yêu thích khi component mount
   useEffect(() => {
@@ -100,7 +125,9 @@ const ForYouPage = () => {
       if (response.success) {
         const formattedCategories = response.data.map((category) => {
           const formattedName = formatCategoryName(category.name);
-          const isPlaceholderImage = category.image?.includes("via.placeholder.com");
+          const isPlaceholderImage = category.image?.includes(
+            "via.placeholder.com"
+          );
           const image =
             !category.image || isPlaceholderImage
               ? FALLBACK_IMAGES[formattedName] || FALLBACK_IMAGES["DEFAULT"]
@@ -148,7 +175,11 @@ const ForYouPage = () => {
 
       try {
         const normalizedType = normalizeTypeForApi(type);
-        const result = await UserService.getForyou(userId, { page, limit, type: normalizedType });
+        const result = await UserService.getForyou(userId, {
+          page,
+          limit,
+          type: normalizedType,
+        });
 
         if (result.success) {
           setRecommendedRecipes((prevRecipes) =>
@@ -241,13 +272,21 @@ const ForYouPage = () => {
   // Hàm xử lý thả tim yêu thích món ăn
   const handleLike = async (dishId) => {
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
-    const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
+    const isCurrentlyLiked =
+      foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
 
     try {
-      const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId, isCurrentlyLiked);
+      const newLikeState = await HomeService.toggleFavoriteDish(
+        userId,
+        dishId,
+        isCurrentlyLiked
+      );
       setLikedFoods((prev) =>
         newLikeState
-          ? [...prev.filter((item) => item.dishId !== dishId), { dishId, isLike: true }]
+          ? [
+              ...prev.filter((item) => item.dishId !== dishId),
+              { dishId, isLike: true },
+            ]
           : prev.filter((item) => item.dishId !== dishId)
       );
       const food = recommendedRecipes.find((item) => item._id === dishId);
@@ -270,6 +309,13 @@ const ForYouPage = () => {
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
           {alertMessage}
         </div>
+      )}
+
+      {searchTerm?.trim() && (
+        <>
+          <SearchResult userId={userId} dishes={filteredDishes} />
+          <hr className="w-full border-t border-gray-300 my-6" />
+        </>
       )}
 
       <div className="p-6 flex items-center justify-between mb-8">
@@ -298,7 +344,9 @@ const ForYouPage = () => {
             <div
               onClick={() => handleSelectType(category.name)}
               className={`cursor-pointer group transition-all duration-300 ${
-                selectedType === category.name ? "opacity-100 scale-105" : "opacity-80"
+                selectedType === category.name
+                  ? "opacity-100 scale-105"
+                  : "opacity-80"
               } hover:opacity-100 hover:scale-105`}
             >
               <div className="relative">
@@ -307,7 +355,9 @@ const ForYouPage = () => {
                   alt={category.name}
                   className="rounded-xl shadow-lg w-48 h-36 object-cover border-2 border-gray-200 dark:border-gray-500 mx-auto transition-all duration-300 group-hover:shadow-xl"
                   onError={(e) =>
-                    (e.target.src = FALLBACK_IMAGES[category.name] || FALLBACK_IMAGES["DEFAULT"])
+                    (e.target.src =
+                      FALLBACK_IMAGES[category.name] ||
+                      FALLBACK_IMAGES["DEFAULT"])
                   }
                 />
               </div>
@@ -344,7 +394,8 @@ const ForYouPage = () => {
               </span>
               <img
                 src={
-                  recipe.imageUrl && recipe.imageUrl !== "ERR_WRONG_CONNECTION_TIME"
+                  recipe.imageUrl &&
+                  recipe.imageUrl !== "ERR_WRONG_CONNECTION_TIME"
                     ? recipe.imageUrl
                     : "https://via.placeholder.com/200"
                 }
@@ -369,7 +420,9 @@ const ForYouPage = () => {
                   {recipe.calories || "N/A"} kcal
                 </p>
               </div>
-              {!recipe.recipeId && <p className="mt-2 text-sm text-red-500">No recipe available</p>}
+              {!recipe.recipeId && (
+                <p className="mt-2 text-sm text-red-500">No recipe available</p>
+              )}
               <div
                 className="absolute right-[-10px] bottom-[-5px] w-[55px] h-[35px] bg-[#40b491] rounded-tr-[37.50px] rounded-bl-[42.50px] flex items-center justify-center"
                 onClick={(e) => {
@@ -380,11 +433,11 @@ const ForYouPage = () => {
                 <Heart
                   size={25}
                   className={`text-white ${
-                    likedFoods.find((item) => item.dishId === recipe._id)?.isLike
+                    likedFoods.find((item) => item.dishId === recipe._id)
+                      ?.isLike
                       ? "fill-white"
                       : "stroke-white"
                   }`}
-                  
                 />
               </div>
             </div>
@@ -397,9 +450,13 @@ const ForYouPage = () => {
           Loading more dishes...
         </div>
       )}
-      {currentPage >= totalPages && recommendedRecipes.length > 0 && !loading && (
-        <div className="text-center p-6 text-gray-600 dark:text-gray-400">All dishes loaded!</div>
-      )}
+      {currentPage >= totalPages &&
+        recommendedRecipes.length > 0 &&
+        !loading && (
+          <div className="text-center p-6 text-gray-600 dark:text-gray-400">
+            All dishes loaded!
+          </div>
+        )}
       {error && recommendedRecipes.length > 0 && (
         <div className="text-center p-6 text-red-500">{error}</div>
       )}
