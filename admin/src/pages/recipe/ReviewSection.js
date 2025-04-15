@@ -16,74 +16,87 @@ const ReviewSection = ({ recipeId, dishId }) => {
   const user = useSelector(selectAuth)?.user;
   const userId = user?._id;
   const isAdmin = user?.role === "admin";
-  const navigate = useNavigate();
+  const [averageRate, setAverage] = useState(0);
   const { checkLogin } = useAuthCheck(userId);
 
   const fetchReviews = async () => {
     try {
-      const [ratingsResponse, commentsResponse] = await Promise.all([
+      // 1. Gọi song song 2 API: lấy rating & comment
+      const [ratingsRes, commentsRes] = await Promise.all([
         commentService.getRatingsByRecipe(recipeId),
         commentService.getCommentsByDishId(dishId),
       ]);
-
-      const ratings = ratingsResponse.data;
-      const comments = commentsResponse.data.map((comment) => ({
+  
+      const ratings = ratingsRes.data;
+      const rawComments = commentsRes.data;
+  
+      // 2. Gắn isLiked vào mỗi comment
+      const comments = rawComments.map((comment) => ({
         ...comment,
         isLiked: comment.likedBy.includes(userId),
       }));
-
+  
+      // 3. Tạo Map lưu review theo userId
       const reviewMap = new Map();
-
-      ratings.forEach((rating) => {
-        if (rating.userId && rating.userId._id) {
-          reviewMap.set(rating.userId._id, {
-            userId: rating.userId._id,
-            email: rating.userId.email,
-            star: rating.star,
-            comments: [],
-          });
-
-          // 👇 Nếu là user hiện tại thì set selectedRating
-          if (rating.userId._id === userId) {
-            setSelectedRating(rating.star);
-          }
+      let totalStars = 0;
+  
+      ratings.forEach(({ userId: user, star }) => {
+        if (!user || !user._id) return;
+  
+        reviewMap.set(user._id, {
+          userId: user._id,
+          email: user.email,
+          star,
+          comments: [],
+        });
+  
+        if (user._id === userId) {
+          setSelectedRating(star); // đánh dấu rating của chính mình
         }
+  
+        totalStars += star;
       });
-
+  
+      // 4. Gộp comment vào reviewMap
       comments.forEach((comment) => {
-        if (reviewMap.has(comment.userId)) {
-          reviewMap.get(comment.userId).comments.push(comment);
+        const uid = comment.userId;
+        if (reviewMap.has(uid)) {
+          reviewMap.get(uid).comments.push(comment);
         } else {
-          reviewMap.set(comment.userId, {
-            userId: comment.userId,
-            email: comment.userId.email || "Anonymous",
+          reviewMap.set(uid, {
+            userId: uid,
+            email: comment.userId?.email || "Anonymous",
             star: null,
             comments: [comment],
           });
         }
       });
-
+  
+      // 5. Sắp xếp comment theo lượt like và thời gian
       const sortedReviews = Array.from(reviewMap.values()).map((review) => {
         const sortedComments = [...review.comments].sort((a, b) => {
-          if (b.likeCount !== a.likeCount) {
-            return b.likeCount - a.likeCount;
-          }
-          const updatedA = a.updatedAt || a.createdAt;
-          const updatedB = b.updatedAt || b.createdAt;
-          return new Date(updatedB) - new Date(updatedA);
+          if (b.likeCount !== a.likeCount) return b.likeCount - a.likeCount;
+  
+          const timeA = new Date(a.updatedAt || a.createdAt);
+          const timeB = new Date(b.updatedAt || b.createdAt);
+          return timeB - timeA;
         });
-
+  
         return {
           ...review,
           comments: sortedComments,
         };
       });
-
+  
+      // 6. Tính điểm trung bình và cập nhật UI
+      const average = ratings.length ? (totalStars / ratings.length).toFixed(1) : 0;
+      setAverage(average);
       setReviews(sortedReviews);
     } catch (error) {
       console.error("Error fetching reviews:", error);
     }
   };
+  
 
   useEffect(() => {
     fetchReviews();
@@ -217,8 +230,12 @@ const ReviewSection = ({ recipeId, dishId }) => {
           ))}
         </div>
       </div>
-  
+
       <div className="mt-6 p-4 rounded-xl">
+        <p className="text-md text-gray-600 mb-2">
+          Average Rating:{" "}
+          <span className="text-yellow-500 font-semibold">{averageRate} ★</span>
+        </p>
         <h2 className="text-2xl font-semibold mb-4">Comments</h2>
         <textarea
           className="w-full p-3 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400"
@@ -233,7 +250,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
         >
           Submit Comment
         </Button>
-  
+
         {reviews.length === 0 ? (
           <p className="text-gray-500 text-center mt-4">
             No ratings or comments yet.
@@ -260,12 +277,18 @@ const ReviewSection = ({ recipeId, dishId }) => {
                       <p className="font-semibold text-md text-gray-800">
                         {review.email}
                       </p>
+                      {review.star && (
+                        <span className="text-yellow-500 text-sm font-medium">
+                          {review.star} ★
+                        </span>
+                      )}
+
                       <p className="text-xs text-gray-500">
                         {new Date(comment.createdAt).toLocaleString()}
                       </p>
                     </div>
                   </div>
-  
+
                   <div className="flex justify-between items-start">
                     <p className="text-base text-gray-800 leading-relaxed pr-4 flex-1 break-words">
                       {comment.text}
@@ -282,7 +305,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
                       <span>{comment.likeCount}</span>
                     </div>
                   </div>
-  
+
                   {isAdmin && (
                     <div className="mt-3 flex justify-end">
                       <Button
@@ -303,7 +326,6 @@ const ReviewSection = ({ recipeId, dishId }) => {
       </div>
     </div>
   );
-  
 };
 
 export default ReviewSection;

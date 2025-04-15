@@ -56,8 +56,6 @@ const FoodSlider = ({ userId, dishes = []}) => {
     }
   };
   
-  
-
   // Ensure dishes is an array before mapping, memoize the result
   const sortedDishes = useMemo(() => {
     const validDishes = Array.isArray(dishes) ? dishes : [];
@@ -158,9 +156,9 @@ const FoodSlider = ({ userId, dishes = []}) => {
                       ? food.rating.toFixed(1) + "⭐"
                       : "No ratings yet"}
                   </p>
-
-                  {/* Thông báo nếu không có công thức */}
                 </div>
+
+                {/* Thông báo nếu không có công thức */}
                 {!food.recipeId && (
                   <p className="mt-2 text-sm text-red-500">
                     No recipe available

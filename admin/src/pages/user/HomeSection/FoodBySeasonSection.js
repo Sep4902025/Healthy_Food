@@ -5,10 +5,11 @@ import { useNavigate } from "react-router-dom";
 import useFoodData from "../../../helpers/useFoodData";
 import HomeService from "../../../services/home.service";
 import useAuthCheck from "../../../helpers/useAuthCheck";
+import DefaultImg from "../../../assets/images/default.jpg";
 
 const FoodBySeasonSection = ({ userId, selectedSeason }) => {
-  const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, []);
   const [displayedDishes, setDisplayedDishes] = useState([]);
+  const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, displayedDishes);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -156,6 +157,10 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
                     }
                     alt={dish.name}
                     className="w-48 h-48 rounded-full object-cover"
+                    onError={(e) =>{
+                      e.target.onerror = null;
+                      e.target.src = DefaultImg;
+                    }}
                   />
                 </div>
 
@@ -166,6 +171,8 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
                   <p className="text-sm text-gray-500 font-['Inter'] mt-1 line-clamp-2">
                     {dish.description}
                   </p>
+
+                  
 
                   {/* Add "No recipe available" message if no recipeId */}
                   {!hasRecipe && (

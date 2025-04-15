@@ -30,7 +30,7 @@ const Home = () => {
     const fetchDishes = async () => {
       setLoading(true);
       try {
-        const data = await HomeService.getAllDishes();
+        const data = await HomeService.getAllDishes(1,1000);
         console.log("API Response:", data);
         const dishesArray = data.data.items || data.data || [];
         setDishes(dishesArray);
@@ -69,8 +69,10 @@ const Home = () => {
 
   return (
     <div className="home">
+      {/* Intro Section */}
       <IntroSection />
 
+      {/* Search Section */}
       {searchTerm?.trim() && (
         <>
           <SearchResult userId={userId} dishes={filteredDishes} />
@@ -78,9 +80,11 @@ const Home = () => {
         </>
       )}
 
+      {/* FoodMainSection */}
       <FoodSlider userId={userId} dishes={dishes} />
       <hr className="w-full border-t border-gray-300 my-6" />
 
+      {/* SeasonSection */}
       <SeasonSection
         onSelectSeason={setSelectedSeason}
         selectedSeason={selectedSeason}
