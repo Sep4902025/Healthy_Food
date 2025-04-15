@@ -1,6 +1,91 @@
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
 
+let io;
+exports.initialize = (socketIoInstance) => {
+  if (!socketIoInstance) {
+    console.error("socketIoInstance is undefined or null");
+    return;
+  }
+  io = socketIoInstance;
+  console.log("conversationService initialized with io");
+};
+
+exports.createMessage = async (conversationId, senderId, text, imageUrl, videoUrl, type) => {
+  if (!conversationId || !senderId) {
+    throw Object.assign(new Error("Missing conversationId or senderId"), { status: 400 });
+  }
+
+  try {
+    const message = await Message.create({
+      conversationId,
+      senderId,
+      text,
+      imageUrl,
+      videoUrl,
+      type: type || "text",
+    });
+
+    const existingConversation = await Conversation.findById(conversationId);
+    if (!existingConversation) {
+      throw Object.assign(new Error("Conversation not found"), { status: 404 });
+    }
+
+    const isUser =
+      senderId === (existingConversation.userId ? existingConversation.userId.toString() : null);
+    const isNutritionist = existingConversation.nutritionistId
+      ? senderId === existingConversation.nutritionistId.toString()
+      : false;
+
+    if (!isUser && !isNutritionist) {
+      throw Object.assign(new Error("Not authorized to send message in this conversation"), {
+        status: 403,
+      });
+    }
+
+    const updateFields = {
+      lastMessage: text || imageUrl || videoUrl || "New message",
+      updatedAt: Date.now(),
+    };
+
+    if (
+      existingConversation.status === "pending" &&
+      !existingConversation.nutritionistId &&
+      senderId !== existingConversation.userId?.toString()
+    ) {
+      updateFields.nutritionistId = senderId;
+      updateFields.status = "active";
+    }
+
+    const conversation = await Conversation.findByIdAndUpdate(
+      conversationId,
+      {
+        $push: { messages: message._id },
+        $set: updateFields,
+      },
+      { new: true }
+    );
+
+    if (!conversation) {
+      throw Object.assign(new Error("Conversation not found"), { status: 404 });
+    }
+
+    if (io) {
+      console.log(`Emitting message to room ${conversationId}:`, message);
+      io.to(conversationId).emit("receive_message", message);
+    } else {
+      console.warn("WebSocket io instance not initialized");
+    }
+
+    return message;
+  } catch (error) {
+    console.error("Error in createMessage:", error);
+    throw Object.assign(new Error("Internal server error"), {
+      status: 500,
+      details: error.message,
+    });
+  }
+};
 exports.createConversation = async (userId, topic) => {
   if (!userId || !topic) {
     throw Object.assign(new Error("Missing userId or topic"), { status: 400 });
@@ -54,53 +139,6 @@ exports.updateStatusConversation = async (conversationId, nutritionistId, status
   }
 
   return await conversation.save();
-};
-
-exports.createMessage = async (conversationId, senderId, text, imageUrl, videoUrl, type) => {
-  if (!conversationId || !senderId) {
-    throw Object.assign(new Error("Missing conversationId or senderId"), { status: 400 });
-  }
-
-  const conversation = await Conversation.findById(conversationId);
-  if (!conversation) {
-    throw Object.assign(new Error("Conversation not found"), { status: 404 });
-  }
-
-  if (
-    conversation.status === "pending" &&
-    !conversation.nutritionistId &&
-    senderId !== conversation.userId.toString()
-  ) {
-    conversation.nutritionistId = senderId;
-    conversation.status = "active";
-    await conversation.save();
-  }
-
-  const isUser = senderId === conversation.userId.toString();
-  const isNutritionist =
-    conversation.nutritionistId && senderId === conversation.nutritionistId.toString();
-
-  if (!isUser && !isNutritionist) {
-    throw Object.assign(new Error("Not authorized to send message in this conversation"), {
-      status: 403,
-    });
-  }
-
-  const message = await Message.create({
-    conversationId,
-    senderId,
-    text,
-    imageUrl,
-    videoUrl,
-    type: type || "text",
-  });
-
-  conversation.messages.push(message._id);
-  conversation.lastMessage = text || imageUrl || videoUrl || "New message";
-  conversation.updatedAt = Date.now();
-  await conversation.save();
-
-  return message;
 };
 
 exports.getMessages = async (conversationId) => {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, memo } from "react";
 import {
   View,
   Text,
@@ -21,21 +21,58 @@ import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import messageSocket from "../services/messageSocket";
 import { userSelector } from "../redux/selectors/selector";
 import { useSelector } from "react-redux";
-import {
-  createConversation,
-  getConversationMessage,
-  getUserConversations,
-} from "../services/conversationService";
 import InputModal from "../components/modal/InputModal";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
 import { useTheme } from "../contexts/ThemeContext";
 import ShowToast from "../components/common/CustomToast";
-import { arrayToString, stringToArray } from "../utils/common";
 import { uploadImages } from "../services/cloundaryService";
-import MessageService from "../services/messageService";
+import { arrayToString, stringToArray } from "../utils/common";
+import "react-native-get-random-values";
+import { v4 as uuidv4 } from "uuid";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
+
+// Component MessageItem tách riêng và bọc bằng memo
+const MessageItem = memo(({ item, index, theme, handleImagePress }) => {
+  const isMyMessage = item.sender === "me";
+
+  return (
+    <View
+      style={[styles.messageBubble, isMyMessage ? styles.myMessage : styles.otherMessage]}
+      key={index}
+    >
+      {item.type === "text" && item.text && (
+        <Text style={[styles.messageSender, isMyMessage && styles.mySender]}>{item.text}</Text>
+      )}
+
+      {item.type === "image" && item.imageUrl && (
+        <View style={styles.messageImageContainer}>
+          {stringToArray(item.imageUrl).map((image, imgIndex) => (
+            <TouchableOpacity
+              key={`${item._id}-image-${imgIndex}`}
+              onPress={() => handleImagePress(image.url || image)}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: image.url || image }}
+                style={styles.messageImage}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <Text style={[styles.timestamp, isMyMessage && styles.mySender]}>
+        {new Date(item.updatedAt || item.timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </Text>
+    </View>
+  );
+});
 
 function Message({ navigation }) {
   const user = useSelector(userSelector);
@@ -46,9 +83,10 @@ function Message({ navigation }) {
   const [visible, setVisible] = useState({ inputTopic: false });
   const [selectedImages, setSelectedImages] = useState([]);
   const [isSending, setIsSending] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { theme, themeMode } = useTheme();
   const flatListRef = useRef(null);
-
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedViewImage, setSelectedViewImage] = useState(null);
 
@@ -63,10 +101,23 @@ function Message({ navigation }) {
 
     loadConversation();
 
+    return () => {
+      messageSocket.disconnect();
+    };
+  }, [user?._id, user?.accessToken]);
+
+  useEffect(() => {
+    if (!conversation?._id) return;
+
+    messageSocket.init({
+      userId: user._id,
+      token: user.accessToken,
+      conversationId: conversation._id,
+    });
+
     const handleReceiveMessage = (message) => {
-      console.log("Receive Message:", message);
-      // Chỉ xử lý tin nhắn từ người khác
-      if (message.conversationId === conversation._id && message.senderId !== user._id) {
+      console.log("New message received on app:", message);
+      if (message.conversationId === conversation._id) {
         let adjustedType = message.type || "text";
         if (message.imageUrl && !message.videoUrl && adjustedType === "text") {
           adjustedType = "image";
@@ -75,51 +126,85 @@ function Message({ navigation }) {
         }
 
         const messageToReceived = {
-          id: message._id,
+          _id: message._id,
           text: message.text,
-          sender: "other",
+          sender: message.senderId === user._id ? "me" : "other",
           timestamp: message.updatedAt,
           imageUrl: message.imageUrl || null,
           type: adjustedType,
         };
 
         setMessages((previousMessages) => {
-          // Kiểm tra trùng lặp dựa trên id
-          if (previousMessages.some((msg) => msg.id === messageToReceived.id)) {
-            console.log("Duplicate message detected:", messageToReceived);
-            return previousMessages;
+          // Kiểm tra xem tin nhắn đã tồn tại chưa dựa trên _id
+          const exists = previousMessages.some((msg) => msg._id === message._id);
+          if (exists) {
+            console.log("Duplicate message detected in handleReceiveMessage:", messageToReceived);
+            return previousMessages; // Không thêm nếu đã tồn tại
           }
-          return [...previousMessages, messageToReceived];
+
+          const updatedMessages = [...previousMessages, messageToReceived];
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+          return updatedMessages;
+        });
+      } else {
+        console.warn("Message ignored due to conversation ID mismatch:", {
+          received: message.conversationId,
+          expected: conversation._id,
         });
       }
     };
 
+    const handleConversationUpdated = (updatedConversation) => {
+      console.log("Conversation updated on app:", updatedConversation);
+      if (updatedConversation._id === conversation._id) {
+        setConversation(updatedConversation);
+      }
+    };
+
+    const handleUserStatus = (status) => {
+      console.log("User status updated on app:", status);
+    };
+
+    const handleTypingStatus = (typingData) => {
+      console.log("Typing status on app:", typingData);
+    };
+
     messageSocket.on("receive_message", handleReceiveMessage);
+    messageSocket.on("conversationUpdated", handleConversationUpdated);
+    messageSocket.on("user_status", handleUserStatus);
+    messageSocket.on("typing_status", handleTypingStatus);
 
     return () => {
-      messageSocket.disconnect();
       messageSocket.off("receive_message", handleReceiveMessage);
+      messageSocket.off("conversationUpdated", handleConversationUpdated);
+      messageSocket.off("user_status", handleUserStatus);
+      messageSocket.off("typing_status", handleTypingStatus);
     };
-  }, [user?._id, user?.accessToken, conversation?._id]);
+  }, [conversation?._id, user?._id]);
 
   const loadConversation = async () => {
     try {
-      const response = await getUserConversations(user?._id);
+      setInitialLoading(true);
+      const response = await messageSocket.getUserConversations(user?._id);
       if (response.status === 200 && response.data?.data[0]) {
         setConversation(response.data.data[0]);
-        loadMessgageHistory(response.data.data[0]._id);
+        loadMessageHistory(response.data.data[0]._id);
       } else {
         handleCreateConversation("defaultTopic");
       }
     } catch (error) {
       console.error("Load conversation error:", error);
       ShowToast("error", "Không thể tải cuộc trò chuyện");
+    } finally {
+      setInitialLoading(false);
     }
   };
 
-  const loadMessgageHistory = async (conversationId) => {
+  const loadMessageHistory = async (conversationId) => {
     try {
-      const response = await getConversationMessage(conversationId);
+      const response = await messageSocket.getMessages(conversationId);
       if (response.status === 200) {
         const newMessages = response.data?.data?.map((item) => {
           let adjustedType = item.type || "text";
@@ -130,16 +215,15 @@ function Message({ navigation }) {
           }
           return {
             ...item,
-            id: item._id,
+            _id: item._id,
             sender: item.senderId === user?._id ? "me" : "other",
             type: adjustedType,
           };
         });
 
         setMessages((prevMessages) => {
-          // Chỉ thêm tin nhắn mới, tránh trùng lặp
-          const existingIds = new Set(prevMessages.map((msg) => msg.id));
-          const filteredMessages = newMessages.filter((msg) => !existingIds.has(msg.id));
+          const existingIds = new Set(prevMessages.map((msg) => msg._id));
+          const filteredMessages = newMessages.filter((msg) => !existingIds.has(msg._id));
           return [...prevMessages, ...filteredMessages];
         });
       }
@@ -160,7 +244,7 @@ function Message({ navigation }) {
 
   const handleCreateConversation = async (topic) => {
     try {
-      const response = await MessageService.createConversation(user?._id, topic);
+      const response = await messageSocket.createConversation(user?._id, topic);
       if (response.status === 200) {
         setScreenState("chat");
         setConversation(response.data?.data);
@@ -225,10 +309,13 @@ function Message({ navigation }) {
     }));
 
     try {
-      const uploadedImages = await uploadImages(imageFiles);
+      const uploadedImages = await uploadImages(imageFiles, (progress) => {
+        setUploadProgress(progress);
+      });
       return uploadedImages;
     } catch (error) {
       console.error("Upload images error:", error);
+      ShowToast("error", "Không thể tải ảnh lên. Vui lòng thử lại.");
       throw error;
     }
   };
@@ -242,19 +329,7 @@ function Message({ navigation }) {
     try {
       let messageData;
 
-      if (selectedImages.length > 0) {
-        const uploadedImages = await handleUploadImages();
-        const imageUrl = arrayToString(uploadedImages.map((item) => item.url));
-
-        messageData = {
-          conversationId: conversation._id,
-          senderId: user._id,
-          text: "",
-          imageUrl: imageUrl || null,
-          videoUrl: null,
-          type: "image",
-        };
-      } else {
+      if (inputText.trim()) {
         messageData = {
           conversationId: conversation._id,
           senderId: user._id,
@@ -263,34 +338,36 @@ function Message({ navigation }) {
           videoUrl: null,
           type: "text",
         };
-      }
-      //#####GỬI TIN NHẮN MỚI#####
-      const response = await MessageService.sendMessage(conversation._id, messageData);
-      if (response.status === 201 && response.data?.data) {
-        const newMessage = response.data.data;
 
-        setMessages((previousMessages) => {
-          // Kiểm tra trùng lặp trước khi thêm
-          if (previousMessages.some((msg) => msg.id === newMessage._id)) {
-            return previousMessages;
+        // Gửi tin nhắn qua socket mà không thêm vào messages ngay
+        await messageSocket.sendMessage(conversation._id, messageData);
+      }
+
+      if (selectedImages.length > 0) {
+        const uploadedImages = await handleUploadImages();
+        for (const image of uploadedImages) {
+          const imageUrl = image?.url;
+          if (!imageUrl) {
+            throw new Error("Failed to upload image: No URL returned");
           }
 
-          return [
-            ...previousMessages,
-            {
-              id: newMessage._id,
-              text: newMessage.text,
-              sender: "me",
-              timestamp: newMessage.updatedAt,
-              imageUrl: newMessage.imageUrl || null,
-              type: newMessage.type,
-            },
-          ];
-        });
+          messageData = {
+            conversationId: conversation._id,
+            senderId: user._id,
+            text: "",
+            imageUrl: imageUrl,
+            videoUrl: null,
+            type: "image",
+          };
+
+          // Gửi tin nhắn qua socket mà không thêm vào messages ngay
+          await messageSocket.sendMessage(conversation._id, messageData);
+        }
       }
 
       setInputText("");
       setSelectedImages([]);
+      setUploadProgress(0);
     } catch (error) {
       console.error("Send message error:", error);
       ShowToast("error", "Có lỗi xảy ra khi gửi tin nhắn");
@@ -300,42 +377,8 @@ function Message({ navigation }) {
   };
 
   const renderMessage = ({ item, index }) => {
-    const isMyMessage = item.sender === "me";
-
     return (
-      <View
-        style={[styles.messageBubble, isMyMessage ? styles.myMessage : styles.otherMessage]}
-        key={index}
-      >
-        {item.type === "text" && item.text && (
-          <Text style={[styles.messageSender, isMyMessage && styles.mySender]}>{item.text}</Text>
-        )}
-
-        {item.type === "image" && item.imageUrl && (
-          <View style={styles.messageImageContainer}>
-            {stringToArray(item.imageUrl).map((image, imgIndex) => (
-              <TouchableOpacity
-                key={`${item.id}-image-${imgIndex}`}
-                onPress={() => handleImagePress(image.url || image)}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={{ uri: image.url || image }}
-                  style={styles.messageImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        <Text style={[styles.timestamp, isMyMessage && styles.mySender]}>
-          {new Date(item.updatedAt || item.timestamp).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </Text>
-      </View>
+      <MessageItem item={item} index={index} theme={theme} handleImagePress={handleImagePress} />
     );
   };
 
@@ -367,6 +410,26 @@ function Message({ navigation }) {
     );
   };
 
+  if (initialLoading) {
+    return (
+      <MainLayoutWrapper headerHidden={true}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading messages...</Text>
+        </View>
+      </MainLayoutWrapper>
+    );
+  }
+
+  if (!conversation) {
+    return (
+      <MainLayoutWrapper headerHidden={true}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Select a conversation to start</Text>
+        </View>
+      </MainLayoutWrapper>
+    );
+  }
+
   return (
     <MainLayoutWrapper headerHidden={true}>
       {screenState === "onboarding" ? (
@@ -394,7 +457,7 @@ function Message({ navigation }) {
             ref={flatListRef}
             data={messages}
             renderItem={renderMessage}
-            keyExtractor={(item) => item.id || `temp-${Date.now()}-${Math.random()}`}
+            keyExtractor={(item, index) => item._id || item.tempId || `temp-${uuidv4()}-${index}`}
             style={{
               ...styles.messagesList,
               backgroundColor: theme.editModalbackgroundColor,
@@ -402,6 +465,10 @@ function Message({ navigation }) {
             contentContainerStyle={styles.messagesListContent}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            initialNumToRender={20}
+            maxToRenderPerBatch={10}
+            windowSize={21}
+            removeClippedSubviews={true}
           />
 
           {selectedImages.length > 0 && (
@@ -415,6 +482,11 @@ function Message({ navigation }) {
                 {selectedImages.map((image, index) => (
                   <View key={index} style={styles.selectedImageWrapper}>
                     <Image source={{ uri: image.uri }} style={styles.selectedImage} />
+                    {uploadProgress > 0 && uploadProgress < 100 && (
+                      <View style={styles.progressOverlay}>
+                        <Text style={styles.progressText}>{uploadProgress}%</Text>
+                      </View>
+                    )}
                     <TouchableOpacity
                       style={styles.removeImageButton}
                       onPress={() => removeImage(index)}
@@ -730,6 +802,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f8f8",
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.2)",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#999",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#999",
   },
 });
 

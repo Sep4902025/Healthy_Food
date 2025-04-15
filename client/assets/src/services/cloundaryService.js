@@ -3,11 +3,16 @@ import axios from "axios";
 const cloudinaryUrl = process.env.EXPO_PUBLIC_CLOUDINARY_URL;
 const cloudinaryPreset = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
-export const uploadImages = async (imageFiles) => {
+export const uploadImages = async (imageFiles, onProgress) => {
   try {
-    // Tạo mảng các promise cho việc upload nhiều ảnh
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    for (const file of imageFiles) {
+      // Kiểm tra kích thước file (giả định file.uri có thể truy cập kích thước qua API khác nếu cần)
+      // Note: Expo không cung cấp cách trực tiếp để lấy kích thước file từ URI, cần thêm logic nếu muốn kiểm tra
+      console.log(`Uploading file: ${file.name || file.uri}`);
+    }
+
     const uploadPromises = imageFiles.map(async (file) => {
-      // Tạo form data cho từng ảnh
       const formData = new FormData();
       formData.append("file", {
         uri: file.uri,
@@ -15,16 +20,17 @@ export const uploadImages = async (imageFiles) => {
         name: file.name || "upload.jpg",
       });
       formData.append("upload_preset", cloudinaryPreset);
-      console.log(cloudinaryPreset);
 
-      // Upload ảnh lên Cloudinary
       const response = await axios.post(cloudinaryUrl, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+          if (onProgress) onProgress(progress);
+        },
       });
 
-      // Trả về thông tin ảnh đã upload
       return {
         url: response?.data?.secure_url,
         public_id: response?.data?.public_id,
@@ -33,31 +39,30 @@ export const uploadImages = async (imageFiles) => {
       };
     });
 
-    // Chờ tất cả các ảnh được upload xong
     const uploadedImages = await Promise.all(uploadPromises);
-
-    // Trả về mảng các thông tin ảnh đã upload
     return uploadedImages;
   } catch (error) {
-    console.error("Upload images error:", error?.response);
-    throw error; // Ném lỗi để xử lý ở hàm gọi
+    console.error("Upload images error:", error?.response || error.message);
+    throw error;
   }
 };
 
-// Hàm hỗ trợ upload một ảnh duy nhất (giữ lại phiên bản cũ để tương thích)
-export const uploadToCloudinary = async (uri) => {
+export const uploadToCloudinary = async (uri, onProgress) => {
   try {
-    const images = await uploadImages([
-      {
-        uri: uri,
-        type: "image/jpeg",
-        name: "upload.jpg",
-      },
-    ]);
+    const images = await uploadImages(
+      [
+        {
+          uri: uri,
+          type: "image/jpeg",
+          name: "upload.jpg",
+        },
+      ],
+      onProgress
+    );
 
     return images[0]?.url;
   } catch (error) {
     console.error("Upload error:", error);
-    return error;
+    throw error;
   }
 };
