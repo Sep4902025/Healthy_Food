@@ -89,16 +89,14 @@ function Signup({ navigation }) {
 
     const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-    const isValidPassword = (password) =>
-      /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/.test(password);
+    const isValidPassword = (password) => /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/.test(password);
     // Ít nhất 6 ký tự, gồm chữ và số
 
     // Check các trường bắt buộc
     if (!email.trim()) return ShowToast("error", "Email is required.");
     if (!fullName.trim()) return ShowToast("error", "Full name is required.");
     if (!password.trim()) return ShowToast("error", "Password is required.");
-    if (!phoneNumber.trim())
-      return ShowToast("error", "Phone number is required.");
+    if (!phoneNumber.trim()) return ShowToast("error", "Phone number is required.");
 
     // Validate email format
     if (!isValidEmail(email.trim())) {
@@ -137,10 +135,7 @@ function Signup({ navigation }) {
           ShowToast("error", "Login failed after registration.");
         }
       } else {
-        ShowToast(
-          "error",
-          response?.response?.data?.error?.message || "Registration failed."
-        );
+        ShowToast("error", response?.response?.data?.error?.message || "Registration failed.");
       }
     } catch (error) {
       ShowToast("error", "An error occurred during registration.");
@@ -158,9 +153,7 @@ function Signup({ navigation }) {
   const calculateMaxButtonWidth = () => {
     const buttonTexts = ["Register", "Continue with Google"];
 
-    const textWidths = buttonTexts.map((text) =>
-      getTextWidth(text, 18, "Aleo_700Bold")
-    );
+    const textWidths = buttonTexts.map((text) => getTextWidth(text, 18, "Aleo_700Bold"));
 
     const maxWidth = Math.min(Math.max(...textWidths), WIDTH * 0.8);
 
@@ -186,9 +179,7 @@ function Signup({ navigation }) {
   };
 
   return (
-    <SafeAreaWrapper
-      headerStyle={{ theme: "light", backgroundColor: "transparent" }}
-    >
+    <SafeAreaWrapper headerStyle={{ theme: "light", backgroundColor: "transparent" }}>
       <Image source={backgroundImage} style={styles.backgroundImage} />
 
       <LinearGradient
@@ -231,7 +222,7 @@ function Signup({ navigation }) {
               alignItems: "center",
             }}
           >
-            <Text style={styles.title}>REGISTER</Text>
+            <Text style={styles.title}>Sign Up</Text>
 
             <View style={styles.formContainer}>
               <TextInput
@@ -290,9 +281,7 @@ function Signup({ navigation }) {
                   style={{
                     ...styles.checkboxText,
                     textDecorationLine:
-                      formData.loginError === "termAgreeError"
-                        ? "underline"
-                        : "none",
+                      formData.loginError === "termAgreeError" ? "underline" : "none",
                   }}
                 >
                   Agree to terms
@@ -305,7 +294,7 @@ function Signup({ navigation }) {
                   backgroundColor: "#191C32",
                   justifyContent: "center",
                 }}
-                buttonText="Register"
+                buttonText="Sign Up"
                 textStyle={{ ...styles.textStyle, color: "#ffffff" }}
                 onPress={async () => await onPressRegisterButton()}
               />
@@ -344,7 +333,7 @@ function Signup({ navigation }) {
                   }}
                   onPress={() => navigation.navigate(ScreensName.signin)}
                 >
-                  Log In
+                  Sign In
                 </Text>
               </Text>
             </View>

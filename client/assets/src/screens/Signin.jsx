@@ -60,10 +60,7 @@ function Signin({ navigation }) {
 
     try {
       const responseLogin = await dispatch(loginThunk(credentials));
-      if (
-        responseLogin.type.endsWith("fulfilled") &&
-        responseLogin?.payload?.data?.status
-      ) {
+      if (responseLogin.type.endsWith("fulfilled") && responseLogin?.payload?.data?.status) {
         const username = responseLogin?.payload?.data?.data?.user?.username;
         ShowToast("success", "Welcome back " + username);
         navigation.navigate(ScreensName.home);
@@ -117,9 +114,7 @@ function Signin({ navigation }) {
               <SigninInputField
                 state={email}
                 setState={setEmail}
-                icon={
-                  <Ionicons name="mail-outline" size={20} color="#5FC88F" />
-                }
+                icon={<Ionicons name="mail-outline" size={20} color="#5FC88F" />}
                 iconBackgroundcolor="#DEF5E9"
                 placeholder="Email"
                 inputType="email-address"
@@ -129,9 +124,7 @@ function Signin({ navigation }) {
               <SigninInputField
                 state={password}
                 setState={setPassword}
-                icon={
-                  <MaterialIcons name="lock-open" size={20} color="#9F9DF3" />
-                }
+                icon={<MaterialIcons name="lock-open" size={20} color="#9F9DF3" />}
                 iconBackgroundcolor="#EBECFF"
                 placeholder="Password"
                 secureTextEntry
@@ -151,16 +144,14 @@ function Signin({ navigation }) {
 
               <RippleButton
                 onPress={handlePress}
-                buttonText="Sign in"
+                buttonText="Sign In"
                 buttonStyle={styles.signinButton}
                 textStyle={styles.signinButtonText}
                 loading={loading}
               />
             </View>
 
-            <View style={styles.loginMethodContainer}>
-              {renderLoginMethod()}
-            </View>
+            <View style={styles.loginMethodContainer}>{renderLoginMethod()}</View>
 
             <View style={styles.registerContainer}>
               <Text style={styles.alreadyText}>
@@ -169,7 +160,7 @@ function Signin({ navigation }) {
                   style={styles.registerText}
                   onPress={() => navigation.navigate(ScreensName.signup)}
                 >
-                  Register
+                  Sign Up
                 </Text>
               </Text>
             </View>
