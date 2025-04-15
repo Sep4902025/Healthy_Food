@@ -91,7 +91,7 @@ const UserManagement = () => {
     const updatedUser = { role: formData.role, isBan: formData.isBan };
     const result = await UserService.updateUser(editData._id, updatedUser);
     if (result.success) {
-      toast.success("Cập nhật user thành công!");
+      toast.success("Update User successfully!");
       setUsers((prev) => prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u)));
       setFilteredUsers((prev) =>
         prev.map((u) => (u._id === editData._id ? { ...u, ...updatedUser } : u))
@@ -119,7 +119,7 @@ const UserManagement = () => {
     console.log("Deleting user with ID:", userToDelete._id);
     const result = await UserService.deleteUser(userToDelete._id);
     if (result.success) {
-      toast.success("Xóa người dùng thành công!");
+      toast.success("Delete User successfully!");
       const userResponse = await UserService.getAllUsers(currentPage, usersPerPage);
       if (userResponse.success) {
         setUsers(userResponse.users || []);
@@ -333,7 +333,10 @@ const UserManagement = () => {
     <div className="container mx-auto px-6 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-extrabold text-[#40B491] tracking-tight">User Management</h1>
-        <button onClick={exportToExcel} className="bg-custom-green text-white px-4 py-2 rounded">
+        <button
+          onClick={exportToExcel}
+          className="bg-custom-green text-white px-4 py-2 rounded hover:bg-[#359c7a]"
+        >
           Export to Excel
         </button>
       </div>
@@ -404,7 +407,7 @@ const UserManagement = () => {
                 filteredUsers.map((user, index) => (
                   <div
                     key={user._id}
-                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300"
+                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300 items-center"
                   >
                     <div className="col-span-1 text-gray-600 font-medium">
                       {(currentPage - 1) * usersPerPage + index + 1}
@@ -426,14 +429,14 @@ const UserManagement = () => {
                     </div>
                     <div className="col-span-2 flex justify-center space-x-3">
                       <button
-                        className="p-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                        className="p-1 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
                         onClick={() => handleOpenEditModal(user)}
                         title="Edit"
                       >
                         <EditIcon size={16} />
                       </button>
                       <button
-                        className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                        className="p-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
                         onClick={() => handleDeleteUser(user._id)}
                         title="Delete"
                       >
@@ -468,14 +471,43 @@ const UserManagement = () => {
             <h2 className="text-xl font-semibold mb-4 text-[#40B491]">
               Pending Nutritionist Applications
             </h2>
+            {/* Table Header */}
             <div className="grid grid-cols-12 gap-4 bg-[#40B491] text-white p-4 font-semibold text-sm uppercase tracking-wider">
               <div className="col-span-1">No.</div>
               <div className="col-span-3">Username</div>
               <div className="col-span-3">Email</div>
-              <div className="col-span-3">Submitted At</div> {/* Line 514 */}
+              <div className="col-span-3">Submitted At</div>
               <div className="col-span-2 text-center">Actions</div>
             </div>
-            {/* Rest of the table body */}
+
+            {/* Table Body */}
+            <div className="divide-y divide-gray-200">
+              {pendingNutritionists.length > 0 ? (
+                pendingNutritionists.map((user, index) => (
+                  <div
+                    key={user._id}
+                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 transition-opacity duration-300"
+                  >
+                    <div className="col-span-1 text-gray-600 font-medium">{index + 1}</div>
+                    <div className="col-span-3 text-gray-700 text-sm">{user.username}</div>
+                    <div className="col-span-3 text-gray-700 text-sm">{user.email}</div>
+                    <div className="col-span-3 text-gray-700 text-sm">
+                      {new Date(user.nutritionistApplication.submittedAt).toLocaleDateString()}
+                    </div>
+                    <div className="col-span-2 flex justify-center">
+                      <button
+                        className="px-4 py-1 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition"
+                        onClick={() => setSelectedApplication(user)}
+                      >
+                        View CV
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-6 text-center text-gray-500">No pending applications.</div>
+              )}
+            </div>
           </div>
         )}
       </div>

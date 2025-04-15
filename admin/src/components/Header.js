@@ -284,8 +284,8 @@ const Header = () => {
             href="/"
             className={`font-medium transition-colors ${
               isActive("/") && location.pathname === "/"
-                ? "text-green-600"
-                : "text-gray-700 hover:text-green-600"
+                ? "text-custom-green"
+                : "text-gray-700 hover:text-[#359c7a]"
             }`}
           >
             Home
@@ -295,8 +295,8 @@ const Header = () => {
               href={user?.role === "admin" ? "/admin" : "/nutritionist"}
               className={`font-medium transition-colors ${
                 isActive(user?.role === "admin" ? "/admin" : "/nutritionist")
-                  ? "text-green-600"
-                  : "text-gray-700 hover:text-green-600"
+                  ? "text-custom-green"
+                  : "text-gray-700 hover:text-[#359c7a]"
               }`}
             >
               Management
@@ -308,7 +308,7 @@ const Header = () => {
                 <a
                   href="/foryou"
                   className={`font-medium transition-colors ${
-                    isActive("/foryou") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                    isActive("/foryou") ? "text-custom-green" : "text-gray-700 hover:text-[#359c7a]"
                   }`}
                 >
                   For You
@@ -318,8 +318,8 @@ const Header = () => {
                   href="/survey/name"
                   className={`font-medium transition-colors ${
                     isActive("/survey/name")
-                      ? "text-green-600"
-                      : "text-gray-700 hover:text-green-600"
+                      ? "text-custom-green"
+                      : "text-gray-700 hover:text-[#359c7a]"
                   }`}
                 >
                   Survey
@@ -329,7 +329,7 @@ const Header = () => {
               <a
                 href="/mealplan"
                 className={`font-medium transition-colors ${
-                  isActive("/mealplan") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                  isActive("/mealplan") ? "text-custom-green" : "text-gray-700 hover:text-[#359c7a]"
                 }`}
               >
                 Meal Plan
@@ -411,7 +411,7 @@ const Header = () => {
           ) : (
             <button
               onClick={() => navigate("/signin")}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-md text-sm font-medium"
+              className="bg-custom-green hover:text-[#359c7a] text-white px-4 py-1 rounded-md text-sm font-medium"
             >
               Sign In
             </button>
@@ -433,7 +433,7 @@ const Header = () => {
             <button
               onClick={() => toggleDropdown("dishes")}
               className={`font-medium transition-colors ${
-                isActive("/dishes") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                isActive("/dishes") ? "text-custom-green" : "text-gray-700 hover:text-[#359c7a]"
               }`}
             >
               Dishes {activeDropdown === "dishes" ? "▲" : "▼"}
@@ -464,7 +464,9 @@ const Header = () => {
             <button
               onClick={() => toggleDropdown("ingredients")}
               className={`font-medium transition-colors ${
-                isActive("/ingredients") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+                isActive("/ingredients")
+                  ? "text-custom-green"
+                  : "text-gray-700 hover:text-[#359c7a]"
               }`}
             >
               Ingredients {activeDropdown === "ingredients" ? "▲" : "▼"}
@@ -494,7 +496,7 @@ const Header = () => {
           <a
             href="/medical"
             className={`font-medium transition-colors ${
-              isActive("/medical") ? "text-green-600" : "text-gray-700 hover:text-green-600"
+              isActive("/medical") ? "text-custom-green" : "text-gray-700 hover:text-[#359c7a]"
             }`}
           >
             Medical

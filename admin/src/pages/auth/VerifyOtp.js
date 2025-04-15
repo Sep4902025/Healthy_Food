@@ -109,7 +109,7 @@ const VerifyOtp = () => {
         <div className="flex justify-center mb-4">
           <img src={VerifyLogo} alt="Success" className="w-[60%] h-[60%]" />
         </div>
-        <h1 className="text-2xl font-semibold text-gray-800">Verify OTP</h1>
+        <h1 className="text-2xl text-custom-green font-semibold">Verify OTP</h1>
         <p className="text-gray-600 mb-6">Please enter the OTP sent to your email</p>
 
         <div className="flex justify-center space-x-2 mb-4">
@@ -132,15 +132,15 @@ const VerifyOtp = () => {
 
         <button
           onClick={handleVerify}
-          className="bg-green-500 text-white px-4 py-2 rounded mb-4 w-full"
+          className="bg-custom-green text-white px-4 py-2 rounded mb-4 w-full"
         >
           Verify Code
         </button>
 
         <p className="text-gray-600">
           Can’t get OTP?{" "}
-          <span className="text-green-500 cursor-pointer">
-            <span onClick={handleResendOTP} className="text-green-500 cursor-pointer">
+          <span className="text-custom-green cursor-pointer">
+            <span onClick={handleResendOTP} className="text-custom-green cursor-pointer">
               Resend
             </span>
           </span>

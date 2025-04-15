@@ -357,10 +357,13 @@ const HealthyDashboard = () => {
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-full">
       <div className="flex-grow flex flex-col">
         <div className="flex justify-end mr-6 mt-6">
-          <button onClick={exportToExcel} className="bg-custom-green text-white px-4 py-2 rounded">
+          <button
+            onClick={exportToExcel}
+            className="bg-custom-green text-white px-4 py-2 rounded hover:bg-[#359c7a]"
+          >
             Export to Excel
           </button>
         </div>
@@ -417,7 +420,9 @@ const HealthyDashboard = () => {
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500">Total Revenue</h3>
-            <p className="text-xl font-bold text-green-500">{totalRevenue.toLocaleString()} VND</p>
+            <p className="text-xl font-bold text-custom-green">
+              {totalRevenue.toLocaleString()} VND
+            </p>
           </div>
         </div>
 

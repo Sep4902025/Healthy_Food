@@ -37,9 +37,7 @@ const NutritionistApplicationForm = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">
-        Apply to Become a Nutritionist
-      </h1>
+      <h1 className="text-2xl text-custom-green font-bold mb-6">Apply to Become a Nutritionist</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block mb-1">Full Name</label>
@@ -85,9 +83,7 @@ const NutritionistApplicationForm = () => {
           />
         </div>
         <div>
-          <label className="block mb-1">
-            Certificate Link (e.g., Google Drive URL)
-          </label>
+          <label className="block mb-1">Certificate Link (e.g., Google Drive URL)</label>
           <input
             type="url"
             name="certificateLink"
@@ -110,7 +106,7 @@ const NutritionistApplicationForm = () => {
         </div>
         <button
           type="submit"
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          className="px-4 py-2 bg-custom-green text-white rounded hover:bg-green-500"
         >
           Submit Application
         </button>
@@ -118,7 +114,7 @@ const NutritionistApplicationForm = () => {
 
       {/* Updated Preview Section */}
       <div className="mt-6 p-6 border rounded bg-gray-50">
-        <h2 className="text-xl font-semibold mb-4">Preview Application</h2>
+        <h2 className="text-xl text-custom-green font-semibold mb-4">Preview Application</h2>
         <div className="flex flex-col md:flex-row gap-6">
           {/* Left Column: Image and Personal Info */}
           <div className="w-full md:w-1/3 flex flex-col">
@@ -128,9 +124,7 @@ const NutritionistApplicationForm = () => {
                   src={formData.profileImage}
                   alt="Profile"
                   className="w-full h-64 object-cover rounded-lg shadow-md"
-                  onError={(e) =>
-                    (e.target.src = "https://via.placeholder.com/150")
-                  }
+                  onError={(e) => (e.target.src = "https://via.placeholder.com/150")}
                 />
               ) : (
                 <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -140,16 +134,13 @@ const NutritionistApplicationForm = () => {
             </div>
             <div className="space-y-2">
               <p>
-                <strong>Full Name:</strong>{" "}
-                {formData.personalInfo.fullName || "N/A"}
+                <strong>Full Name:</strong> {formData.personalInfo.fullName || "N/A"}
               </p>
               <p>
-                <strong>Phone:</strong>{" "}
-                {formData.personalInfo.phoneNumber || "N/A"}
+                <strong>Phone:</strong> {formData.personalInfo.phoneNumber || "N/A"}
               </p>
               <p>
-                <strong>Address:</strong>{" "}
-                {formData.personalInfo.address || "N/A"}
+                <strong>Address:</strong> {formData.personalInfo.address || "N/A"}
               </p>
               <p>
                 <strong>Certificate Link:</strong>{" "}

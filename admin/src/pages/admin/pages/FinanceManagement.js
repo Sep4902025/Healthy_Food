@@ -6,7 +6,7 @@ import { EyeIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
-import { Document, HeadingLevel, Packer, Paragraph, TextRun, AlignmentType } from "docx";
+import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import paymentService from "../../../services/payment.service";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -221,41 +221,48 @@ const FinanceManagement = () => {
     return payment ? payment.status : "Not Paid";
   };
 
-  const exportToWord = () => {
-    // Giữ nguyên logic exportToWord của bạn
-    // Ví dụ:
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: [
-            new Paragraph({
-              text: `Finance Management Report - Month ${selectedMonth}/${selectedYear}`,
-              heading: HeadingLevel.HEADING_1,
-              alignment: AlignmentType.CENTER,
-            }),
-            ...nutritionists.map(
-              (nutri, index) =>
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: `${index + 1}. ${nutri.name} - Meal Plans: ${
-                        nutri.mealPlanCount
-                      }, Success: ${nutri.successCount}, Pending: ${
-                        nutri.pendingCount
-                      }, Status: ${getPaymentStatus(nutri.id)}`,
-                    }),
-                  ],
-                })
-            ),
-          ],
-        },
-      ],
-    });
+  const exportToExcel = () => {
+    const data = nutritionists.map((nutri, index) => ({
+      "No.": currentPage * limit + index + 1,
+      Nutritionist: nutri.name,
+      "Meal Plans": nutri.mealPlanCount,
+      Success: nutri.successCount,
+      Pending: nutri.pendingCount,
+      "Base Salary (VND)": 5000000,
+      "Commission (VND)": nutri.mealPlans
+        .filter((mp) => !mp.isBlock)
+        .reduce((sum, mp) => sum + (mp.price || 0) * 0.1, 0),
+      "Total Salary (VND)": calculateSalary(nutri),
+      Status: getPaymentStatus(nutri.id),
+    }));
 
-    Packer.toBlob(doc).then((blob) => {
-      saveAs(blob, `Finance_Report_${selectedMonth}_${selectedYear}.docx`);
-    });
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Finance Report");
+
+    // Điều chỉnh độ rộng cột
+    worksheet["!cols"] = [
+      { wch: 5 },
+      { wch: 20 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+    ];
+
+    // Thêm tiêu đề
+    XLSX.utils.sheet_add_aoa(
+      worksheet,
+      [[`Finance Management Report - Month ${selectedMonth}/${selectedYear}`]],
+      { origin: "A1" }
+    );
+
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, `Finance_Report_${selectedMonth}_${selectedYear}.xlsx`);
   };
 
   if (user?.role !== "admin") {
@@ -328,10 +335,10 @@ const FinanceManagement = () => {
             View Salary History
           </button>
           <button
-            onClick={exportToWord}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            onClick={exportToExcel}
+            className="bg-custom-green text-white px-4 py-2 rounded hover:bg-[#359c7a]"
           >
-            Export to Word
+            Export to Excel
           </button>
         </div>
       </div>
@@ -387,9 +394,9 @@ const FinanceManagement = () => {
                     ) : (
                       <button
                         onClick={() => handleCalculateSalary(nutri)}
-                        className="bg-[#40B491] text-white px-3 py-1 rounded hover:bg-green-600"
+                        className="bg-[#40B491] text-white px-4 w-20 py-1 rounded hover:bg-[#359c7a]"
                       >
-                        Pay Salary
+                        Pay
                       </button>
                     )}
                   </div>

@@ -13,7 +13,7 @@ const useCurrentSeason = () => {
   const month = new Date().getMonth() + 1; // getMonth() returns 0-11, so add 1
   if (month >= 1 && month <= 3) return "Spring";
   if (month >= 4 && month <= 6) return "Summer";
-  if (month >= 7 && month <= 9) return "Autumn";
+  if (month >= 7 && month <= 9) return "Fall";
   return "Winter";
 };
 
@@ -30,7 +30,7 @@ const Home = () => {
     const fetchDishes = async () => {
       setLoading(true);
       try {
-        const data = await HomeService.getAllDishes(1,1000);
+        const data = await HomeService.getAllDishes(1, 1000);
         console.log("API Response:", data);
         const dishesArray = data.data.items || data.data || [];
         setDishes(dishesArray);
@@ -62,9 +62,7 @@ const Home = () => {
   }
 
   if (!dishes.length) {
-    return (
-      <div className="text-center p-10">No dishes available at the moment.</div>
-    );
+    return <div className="text-center p-10">No dishes available at the moment.</div>;
   }
 
   return (
@@ -85,10 +83,7 @@ const Home = () => {
       <hr className="w-full border-t border-gray-300 my-6" />
 
       {/* SeasonSection */}
-      <SeasonSection
-        onSelectSeason={setSelectedSeason}
-        selectedSeason={selectedSeason}
-      />
+      <SeasonSection onSelectSeason={setSelectedSeason} selectedSeason={selectedSeason} />
       <hr className="w-full border-t border-gray-300 my-6" />
 
       <FoodBySeasonSection userId={userId} selectedSeason={selectedSeason} />

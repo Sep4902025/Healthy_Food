@@ -34,8 +34,16 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
     setLoading(true);
 
     try {
-      // Fetch dishes from the backend with pagination
-      const response = await HomeService.getAllDishes(pageNum, limit);
+      let response;
+      const isAllSeasons = selectedSeason.toLowerCase() === "all seasons";
+
+      // Call appropriate API based on selected season
+      if (isAllSeasons) {
+        response = await HomeService.getAllDishes(pageNum, limit);
+      } else {
+        response = await HomeService.getDishBySeason(selectedSeason, pageNum, limit);
+      }
+
       console.log("API Response:", response);
 
       if (response.success === true) {
@@ -43,14 +51,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
           throw new Error("Invalid response format: data.items is not an array");
         }
 
-        // Filter dishes based on the selected season
-        const newDishes = response.data.items.filter((dish) => {
-          const dishSeason = dish.season?.toLowerCase();
-          const selected = selectedSeason.toLowerCase();
-          return (
-            dishSeason === selected || dishSeason === "all seasons" || dishSeason === "all season"
-          );
-        });
+        const newDishes = response.data.items;
 
         setDisplayedDishes((prev) => {
           const updatedDishes = reset ? newDishes : [...prev, ...newDishes];
@@ -92,10 +93,10 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
   );
 
   const handleLike = async (dishId) => {
-    if (!checkLogin()) return; 
+    if (!checkLogin()) return;
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
     const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
-    
+
     const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId, isCurrentlyLiked);
 
     setLikedFoods((prev) => {
@@ -157,7 +158,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
                     }
                     alt={dish.name}
                     className="w-48 h-48 rounded-full object-cover"
-                    onError={(e) =>{
+                    onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = DefaultImg;
                     }}
@@ -172,9 +173,6 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
                     {dish.description}
                   </p>
 
-                  
-
-                  {/* Add "No recipe available" message if no recipeId */}
                   {!hasRecipe && (
                     <p className="text-red-500 text-sm italic mt-2">No recipe available</p>
                   )}
