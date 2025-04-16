@@ -138,21 +138,21 @@ function Signup({ navigation }) {
       });
 
       if (response.status === 200) {
-        navigation.navigate(ScreensName.signin);
-        // const credentials = {
-        //   email,
-        //   password,
-        // };
-        // const responseLogin = await dispatch(loginThunk(credentials));
-        // if (responseLogin.type.endsWith("fulfilled")) {
-        //   setIsOpen({ ...isOpen, otpModal: true });
-        //   ShowToast(
-        //     "success",
-        //     "Register successfully! Please check your email to verify your account."
-        //   );
-        // } else {
-        //   ShowToast("error", "Login failed after registration.");
-        // }
+        // navigation.navigate(ScreensName.signin);
+        const credentials = {
+          email,
+          password,
+        };
+        const responseLogin = await dispatch(loginThunk(credentials));
+        if (responseLogin.type.endsWith("fulfilled")) {
+          setIsOpen({ ...isOpen, otpModal: true });
+          ShowToast(
+            "success",
+            "Register successfully! Please check your email to verify your account."
+          );
+        } else {
+          ShowToast("error", "Login failed after registration.");
+        }
       } else {
         ShowToast(
           "error",
