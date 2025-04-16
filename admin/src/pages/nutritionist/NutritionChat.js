@@ -152,7 +152,7 @@ const NutritionChat = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-60px)]">
+    <div className="flex h-[calc(100vh-100px)] w-full">
       <div className="flex flex-1">
         <div className="w-64 border-r flex flex-col h-[calc(100vh-60px)]">
           <div className="flex border-b">
@@ -205,7 +205,7 @@ const NutritionChat = () => {
             )}
           </div>
         </div>
-        <div className="flex-1 flex flex-col bg-white h-[550px]">
+        <div className="flex-1 flex flex-col bg-white h-full">
           {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
           <div className="flex-1 overflow-hidden">
             {selectedConversation ? (

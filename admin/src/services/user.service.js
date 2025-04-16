@@ -490,6 +490,8 @@ const UserService = {
   getPendingNutritionists: async () => {
     try {
       const response = await axiosInstance.get("/users/pending-nutritionists");
+      console.log("PDN", response);
+
       return {
         success: true,
         users: response.data.data.users,

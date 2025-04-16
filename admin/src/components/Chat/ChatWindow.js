@@ -196,11 +196,11 @@ const ChatWindow = ({ conversation, setCurrentConversation }) => {
       {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
       <div
         ref={chatContainerRef}
-        className="flex-1 min-h-[200px] overflow-y-auto overflow-x-hidden p-3"
+        className="flex-1 min-h-[200px] overflow-y-auto overflow-x-hidden px-3"
       >
         <MessageList messages={messages} currentUserId={user._id} />
       </div>
-      <div className="border-t border-gray-200">
+      <div className="border-t border-gray-200 mt-1">
         <ChatInput
           onSendMessage={handleSendMessage}
           conversation={conversation}

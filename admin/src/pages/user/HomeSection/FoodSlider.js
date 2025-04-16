@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import useFoodData from "../../../helpers/useFoodData";
 import DefaultImg from "../../../assets/images/default.jpg";
 import useAuthCheck from "../../../helpers/useAuthCheck";
-const FoodSlider = ({ userId, dishes = []}) => {
+const FoodSlider = ({ userId, dishes = [] }) => {
   const swiperRef = useRef(null);
   const navigate = useNavigate();
   const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, dishes);
@@ -23,23 +23,15 @@ const FoodSlider = ({ userId, dishes = []}) => {
 
   const handleLike = async (dishId) => {
     if (!checkLogin()) return;
-  
+
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
-    const isCurrentlyLiked =
-      foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
-  
+    const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
+
     try {
-      const newLikeState = await HomeService.toggleFavoriteDish(
-        userId,
-        dishId,
-        isCurrentlyLiked
-      );
+      const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId, isCurrentlyLiked);
       setLikedFoods((prev) =>
         newLikeState
-          ? [
-              ...prev.filter((item) => item.dishId !== dishId),
-              { dishId, isLike: true },
-            ]
+          ? [...prev.filter((item) => item.dishId !== dishId), { dishId, isLike: true }]
           : prev.filter((item) => item.dishId !== dishId)
       );
       const food = dishes.find((item) => item._id === dishId);
@@ -55,8 +47,6 @@ const FoodSlider = ({ userId, dishes = []}) => {
       toast.error("An error occurred while updating favorites!");
     }
   };
-  
-  
 
   // Ensure dishes is an array before mapping, memoize the result
   const sortedDishes = useMemo(() => {
@@ -72,12 +62,8 @@ const FoodSlider = ({ userId, dishes = []}) => {
 
   return (
     <div className="relative w-full">
-      <h3 className="p-10 text-2xl md:text-2xl lg:text-[50px] font-extrabold leading-normal text-[#ff6868]">
-        Recommended Dishes
-      </h3>
-
       <div className="text-center px-4">
-        <h1 className="p-10 text-[60px] md:text-4xl lg:text-5xl font-extrabold text-black leading-tight max-w-[90%] md:max-w-[80%] lg:max-w-[60%] mx-auto ">
+        <h1 className="p-10 text-[60px] md:text-4xl lg:text-5xl font-extrabold text-yellow-500 leading-tight max-w-[90%] md:max-w-[80%] lg:max-w-[60%] mx-auto ">
           Standout Foods From Our Menu
         </h1>
       </div>
@@ -104,7 +90,6 @@ const FoodSlider = ({ userId, dishes = []}) => {
           {sortedDishes.map((food) => (
             <SwiperSlide key={food._id} className="flex items-stretch">
               <div
-                
                 className={`food-item w-full max-w-[500px] min-w-[250px] min-h-[550px] aspect-auto h-auto flex flex-col bg-[#c1f1c6] rounded-[35px] shadow-lg transition-transform duration-300 ease-in-out transform hover:scale-105 ${
                   food.recipeId ? "cursor-pointer hover:shadow-lg" : "cursor-not-allowed"
                 } transition`}
@@ -121,8 +106,7 @@ const FoodSlider = ({ userId, dishes = []}) => {
                     <Heart
                       size={32}
                       className={`text-white ${
-                        likedFoods.find((item) => item.dishId === food._id)
-                          ?.isLike
+                        likedFoods.find((item) => item.dishId === food._id)?.isLike
                           ? "fill-white"
                           : "stroke-white"
                       }`}
@@ -144,28 +128,18 @@ const FoodSlider = ({ userId, dishes = []}) => {
                   </div>
                 </div>
 
-                <div className="food-item-title ">
-                  {food.name}
-                </div>
+                <div className="food-item-title ">{food.name}</div>
                 <div className="food-item-des">{food.description}</div>
 
                 <div className="food-item-rating">
-                  <p className="food-item-rating-title ">
-                    Rating
-                  </p>
+                  <p className="food-item-rating-title ">Rating</p>
                   <p className="food-item-rating-average block mb-2 text-lg font-semibold text-gray-700">
-                    {food.rating > 0
-                      ? food.rating.toFixed(1) + "⭐"
-                      : "No ratings yet"}
+                    {food.rating > 0 ? food.rating.toFixed(1) + "⭐" : "No ratings yet"}
                   </p>
-
-                  {/* Thông báo nếu không có công thức */}
                 </div>
-                {!food.recipeId && (
-                  <p className="mt-2 text-sm text-red-500">
-                    No recipe available
-                  </p>
-                )}
+
+                {/* Thông báo nếu không có công thức */}
+                {!food.recipeId && <p className="mt-2 text-sm text-red-500">No recipe available</p>}
               </div>
             </SwiperSlide>
           ))}

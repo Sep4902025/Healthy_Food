@@ -34,7 +34,7 @@ const Cart = ({
             <button
               className={`flex-1 py-2 text-center ${
                 activeTab === "mealPlan"
-                  ? "border-b-2 border-green-500 text-green-600"
+                  ? "border-b-2 border-green-400 text-custom-green"
                   : "text-gray-600"
               }`}
               onClick={() => setActiveTab("mealPlan")}
@@ -44,7 +44,7 @@ const Cart = ({
             <button
               className={`flex py-2 text-center ${
                 activeTab === "history"
-                  ? "border-b-2 border-green-500 text-green-600"
+                  ? "border-b-2 border-green-400 text-custom-green"
                   : "text-gray-600"
               }`}
               onClick={() => setActiveTab("history")}
@@ -90,7 +90,7 @@ const Cart = ({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No meal plans to pay.</p>
+                <p className="text-sm text-gray-500 p-2">No meal plans to pay.</p>
               )
             ) : (
               <div className="w-full">

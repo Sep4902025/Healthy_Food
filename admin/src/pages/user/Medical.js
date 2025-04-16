@@ -75,8 +75,6 @@ const MedicalConditionList = memo(
 
 const Medical = () => {
   const navigate = useNavigate();
-  const auth = useSelector(selectAuth);
-  const user = auth?.user;
   const [medicalConditions, setMedicalConditions] = useState([]);
   const [dishes, setDishes] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -91,7 +89,11 @@ const Medical = () => {
   const fetchMedicalConditions = async (page) => {
     setSearchLoading(true);
     try {
-      const response = await medicalConditionService.getAllMedicalConditions(page, limit, searchTerm);
+      const response = await medicalConditionService.getAllMedicalConditions(
+        page,
+        limit,
+        searchTerm
+      );
       if (response.success) {
         setMedicalConditions(response.data.items || []);
         setTotalPages(response.data.totalPages || 1);
@@ -191,27 +193,27 @@ const Medical = () => {
   );
 
   // Stable onChange handler for SearchInput
-  const handleInputChange = useCallback((e) => {
-    const value = e.target.value;
-    setInputValue(value);
-    debouncedSearch(value);
-  }, [debouncedSearch]);
+  const handleInputChange = useCallback(
+    (e) => {
+      const value = e.target.value;
+      setInputValue(value);
+      debouncedSearch(value);
+    },
+    [debouncedSearch]
+  );
 
   // Stable onConditionClick handler
-  const handleConditionClick = useCallback((conditionId) => {
-    navigate(`/medical/${conditionId}`);
-  }, [navigate]);
+  const handleConditionClick = useCallback(
+    (conditionId) => {
+      navigate(`/medical/${conditionId}`);
+    },
+    [navigate]
+  );
 
   useEffect(() => {
-    if (!user) {
-      toast.error("Please sign in to view medical conditions!");
-      navigate("/signin");
-      return;
-    }
-
     fetchMedicalConditions(currentPage);
     fetchDishes();
-  }, [currentPage, user, navigate, searchTerm]);
+  }, [currentPage, navigate, searchTerm]);
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -232,7 +234,9 @@ const Medical = () => {
       {/* Header Section */}
       <header className="bg-gradient-to-r from-[#40B491] to-[#2e8b6e] text-white py-16 px-6">
         <div className="container mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-extrabold font-['Syne'] mb-4">Health Insights</h1>
+          <h1 className="text-5xl md:text-6xl font-extrabold font-['Syne'] mb-4">
+            Health Insights
+          </h1>
           <p className="text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed">
             Discover expert advice on medical conditions and dietary recommendations.
           </p>

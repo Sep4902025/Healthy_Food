@@ -3,8 +3,8 @@ import mealPlanService from "../../../services/mealPlanServices";
 import UserService from "../../../services/user.service";
 import { convertTo24Hour } from "../../../utils/formatTime";
 import debounce from "lodash/debounce";
-import { toast, ToastContainer } from "react-toastify"; // Thêm react-toastify
-import "react-toastify/dist/ReactToastify.css"; // Nhập CSS cho react-toastify
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
   const [title, setTitle] = useState("");
@@ -19,6 +19,9 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
   const [customDuration, setCustomDuration] = useState(false);
   const [creating, setCreating] = useState(false);
   const [userSuggestions, setUserSuggestions] = useState([]);
+
+  // Lấy ngày hiện tại theo định dạng YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
 
   const searchUsers = debounce(async (email) => {
     if (!email) {
@@ -126,10 +129,9 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-l-4 border-[#40B491]">
-      {/* Thêm ToastContainer để hiển thị toast */}
       <ToastContainer />
 
-      <h2 className="text-xl font-semibold mb-6 text-gray-800">Create New Meal Plan</h2>
+      <h2 className="text-xl text-custom-green font-bold mb-6 ">Create New Meal Plan</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Title */}
@@ -151,6 +153,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            min={today} // Giới hạn ngày tối thiểu là ngày hiện tại
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
           />
         </div>

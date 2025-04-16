@@ -82,8 +82,8 @@ const NutritionistLayout = () => {
     }
   };
 
-  const handleSubmenuClick = (submenu) => {
-    setActiveMenu(submenu.name);
+  const handleSubmenuClick = (submenu, parentMenu) => {
+    setActiveMenu(submenu.name); // Đặt activeMenu là submenu được chọn
     navigate(submenu.path);
     scrollToTop();
   };
@@ -94,39 +94,41 @@ const NutritionistLayout = () => {
     }
   };
 
+  // Hàm kiểm tra xem menu chính có nên active không
+  const isMenuActive = (item) => {
+    if (!item.submenus) {
+      return location.pathname === item.path || activeMenu === item.name;
+    }
+    // Nếu menu có submenu, kiểm tra xem có submenu nào đang active không
+    return item.submenus?.some((submenu) => location.pathname === submenu.path);
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <div className="flex flex-col h-full bg-gray-100">
       <Header />
       <div className="flex flex-1">
-        <aside className="w-64 bg-white border-r p-4 flex flex-col fixed top-[60px] left-0 min-h-[calc(100vh-60px)]">
+        <aside className="w-64 bg-white border-r p-4 flex flex-col left-0 min-h-[calc(100vh-60px)]">
           <div className="flex items-center mb-6 shrink-0">
             <HomeIcon size={24} className="text-[#40B491] mr-2" />
             <span className="text-xl font-bold text-[#40B491]">Nutritionist</span>
           </div>
-          <nav className="flex-1 overflow-y-auto max-h-[calc(100vh-60px-72px)] scrollbar-hidden">
+          <nav className="flex-1 max-h-[calc(100vh-60px-72px)] scrollbar-hidden">
             {menuItems.map((item) => (
               <div key={item.name}>
                 <div
                   className={`flex items-center p-3 cursor-pointer rounded hover:bg-[#40B491]/10 ${
-                    location.pathname === item.path || openSubmenus[item.name]
-                      ? "bg-[#40B491]/20 text-[#40B491]"
-                      : "text-gray-600"
+                    isMenuActive(item) ? "bg-[#40B491]/20 text-[#40B491]" : "text-gray-600"
                   }`}
                   onClick={() => handleMenuClick(item)}
                 >
                   <span className="mr-3">{item.icon}</span>
                   <span className="flex-grow">{item.name}</span>
                   {item.submenus && (
-                    <span className="ml-auto transition-transform duration-300 ease-in-out">
-                      <ChevronDownIcon
-                        size={20}
-                        className={`${openSubmenus[item.name] ? "rotate-180" : "rotate-0"}`}
-                      />
-                    </span>
+                    <span className="ml-auto">{openSubmenus[item.name] ? "▲" : "▼"}</span>
                   )}
                 </div>
                 {item.submenus && openSubmenus[item.name] && (
-                  <div className="ml-6 mt-1 space-y-1">
+                  <div className="ml-8 mt-1 space-y-1">
                     {item.submenus.map((submenu) => (
                       <div
                         key={submenu.name}
@@ -135,7 +137,7 @@ const NutritionistLayout = () => {
                             ? "bg-[#40B491]/20 text-[#40B491]"
                             : "text-gray-600"
                         }`}
-                        onClick={() => handleSubmenuClick(submenu)}
+                        onClick={() => handleSubmenuClick(submenu, item.name)}
                       >
                         {submenu.name}
                       </div>
@@ -146,24 +148,10 @@ const NutritionistLayout = () => {
             ))}
           </nav>
         </aside>
-        <main
-          ref={mainRef}
-          className="flex-1 bg-white shadow overflow-y-auto min-h-[calc(100vh-60px)] ml-64"
-        >
+        <main ref={mainRef} className="bg-white shadow min-h-[calc(100vh-60px)] flex-1">
           <Outlet />
         </main>
       </div>
-
-      {/* Inline CSS to hide scrollbar */}
-      <style jsx>{`
-        .scrollbar-hidden {
-          -ms-overflow-style: none; /* IE and Edge */
-          scrollbar-width: none; /* Firefox */
-        }
-        .scrollbar-hidden::-webkit-scrollbar {
-          display: none; /* Chrome, Safari, and Opera */
-        }
-      `}</style>
     </div>
   );
 };

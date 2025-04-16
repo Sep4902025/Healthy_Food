@@ -6,6 +6,9 @@ import MealDays from "./MealDays";
 import CreateMealPlanForm from "./CreateMealPlanForm";
 import MealPlanAimChart from "./MealPlanAimChart";
 
+import { toast } from "react-toastify";
+import ConfirmationDialog from "../../../components/ui/ConfirmDialog";
+
 const MealPlan = () => {
   const { user } = useSelector(selectAuth);
   console.log("USER redux", user);
@@ -16,6 +19,7 @@ const MealPlan = () => {
   const [processingAction, setProcessingAction] = useState(false);
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [isMealPlanExpired, setIsMealPlanExpired] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false); // Thêm state cho dialog
 
   const fetchUserMealPlan = async () => {
     try {
@@ -64,16 +68,16 @@ const MealPlan = () => {
       const response = await mealPlanService.toggleMealPlanStatus(userMealPlan._id, newIsPause);
 
       if (response.success) {
-        alert(`🔔 MealPlan has been ${newIsPause ? "paused" : "resumed"} successfully!`);
+        toast.success(`🔔 MealPlan has been ${newIsPause ? "Paused" : "Resumed"} successfully!`);
         await fetchUserMealPlan();
       } else {
         setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
-        alert(`❌ Error: ${response.message}`);
+        toast.error(`❌ Error: ${response.message}`);
       }
     } catch (error) {
       setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
       console.error("❌ Unexpected error while toggling MealPlan status:", error);
-      alert("❌ An unexpected error occurred while changing the MealPlan status");
+      toast.error("❌ An unexpected error occurred while changing the MealPlan status");
     } finally {
       setProcessingAction(false);
     }
@@ -82,32 +86,34 @@ const MealPlan = () => {
   const handleDeleteMealPlan = async () => {
     if (!userMealPlan) return;
 
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this MealPlan? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+    // Mở dialog xác nhận
+    setShowConfirmDialog(true);
+  };
 
+  const confirmDelete = async () => {
     try {
       setProcessingAction(true);
       const response = await mealPlanService.deleteMealPlan(userMealPlan._id);
 
       if (response.success) {
-        alert("🗑️ MealPlan has been deleted successfully!");
+        toast.success("🗑️ MealPlan has been deleted successfully!");
         setUserMealPlan(null);
         setIsMealPlanExpired(false);
         setShowCreateForm(true);
       } else {
-        alert(`❌ Error: ${response.message}`);
+        toast.error(`❌ Error: ${response.message}`);
       }
     } catch (error) {
       console.error("❌ Error deleting MealPlan:", error);
-      alert("❌ An error occurred while deleting the MealPlan");
+      toast.error("❌ An error occurred while deleting the MealPlan");
     } finally {
       setProcessingAction(false);
+      setShowConfirmDialog(false); // Đóng dialog
     }
+  };
+
+  const cancelDelete = () => {
+    setShowConfirmDialog(false); // Đóng dialog khi hủy
   };
 
   const handleNutritionTargetsCalculated = (targets) => {
@@ -116,7 +122,7 @@ const MealPlan = () => {
 
   const handleCreateNewPlanClick = () => {
     if (userMealPlan && !isMealPlanExpired) {
-      alert("❌ Please delete the current MealPlan before creating a new one.");
+      toast.error("❌ Please delete the current MealPlan before creating a new one.");
     } else {
       setShowCreateForm(true);
     }
@@ -126,11 +132,6 @@ const MealPlan = () => {
 
   return (
     <div className="w-full mx-auto p-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-semibold" style={{ color: '#40B491' }}>
-          Meal Plan
-        </h1>
-      </div>
       {userMealPlan ? (
         <div className="bg-white p-6 rounded-lg shadow-md mt-6">
           {isMealPlanExpired && (
@@ -170,10 +171,8 @@ const MealPlan = () => {
                 <p className="text-gray-600">
                   Status:
                   <span
-                    className={`font-medium ml-1 ${
-                      userMealPlan.isPause ? "text-yellow-500" : ""
-                    }`}
-                    style={{ color: userMealPlan.isPause ? undefined : '#40B491' }}
+                    className={`font-medium ml-1 ${userMealPlan.isPause ? "text-yellow-500" : ""}`}
+                    style={{ color: userMealPlan.isPause ? undefined : "#40B491" }}
                   >
                     {userMealPlan.isPause ? "Inactive" : "Active"}
                   </span>
@@ -194,12 +193,10 @@ const MealPlan = () => {
                     onClick={handleToggleMealPlanStatus}
                     disabled={processingAction}
                     className={`px-4 py-2 rounded text-white ${
-                      userMealPlan.isPause
-                        ? ""
-                        : "hover:bg-[#35977A]"
+                      userMealPlan.isPause ? "" : "hover:bg-[#35977A]"
                     } ${processingAction ? "opacity-50 cursor-not-allowed" : ""}`}
                     style={{
-                      backgroundColor: userMealPlan.isPause ? '#40B491' : '#40B491',
+                      backgroundColor: userMealPlan.isPause ? "#40B491" : "#Facc15",
                     }}
                   >
                     {userMealPlan.isPause ? "▶️ Continue" : "⏸️ Pause"}
@@ -225,19 +222,18 @@ const MealPlan = () => {
             <button
               onClick={handleCreateNewPlanClick}
               className="text-white px-4 py-2 rounded hover:bg-[#35977A]"
-              style={{ backgroundColor: '#40B491' }}
+              style={{ backgroundColor: "#40B491" }}
             >
               ✏️ Create New Meal Plan
             </button>
           ) : (
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Create New Meal Plan</h3>
+              <div className="flex justify-end items-center mb-4">
                 <button
                   onClick={() => setShowCreateForm(false)}
-                  className="text-gray-600 hover:text-gray-800"
+                  className="text-red-600 hover:text-red-800"
                 >
-                  ❌ Cancel
+                  ❌
                 </button>
               </div>
               <CreateMealPlanForm
@@ -249,6 +245,12 @@ const MealPlan = () => {
           )}
         </div>
       )}
+      <ConfirmationDialog
+        isOpen={showConfirmDialog}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        message="Are you sure you want to delete this MealPlan? This action cannot be undone."
+      />
     </div>
   );
 };

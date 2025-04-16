@@ -99,7 +99,7 @@ const ReminderNotification = ({ userId }) => {
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-50">
           <div className="p-4">
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-lg font-bold">Notifications</h2>
+              <h2 className="text-custom-green font-bold">Notifications</h2>
               {reminders.length > 0 && (
                 <button className="text-red-500 text-sm hover:underline" onClick={clearReminders}>
                   Clear All

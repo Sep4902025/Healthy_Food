@@ -30,7 +30,7 @@ const SearchInput = memo(({ value, onChange }) => {
   );
 });
 
-// ConditionList Component (unchanged for brevity)
+// ConditionList Component (unchanged)
 const ConditionList = memo(
   ({ conditions, onEdit, onView, onDelete }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -378,7 +378,7 @@ const TableMedicalConditions = () => {
     setIsSaving(false);
 
     if (response.success) {
-      toast.success(`Medical condition "${editData.name}" has been updated!`);
+      toast.success(`Medical condition "${editData.name}" has been saved!`);
       setIsEditModalOpen(false);
       fetchConditions();
     } else {
@@ -677,8 +677,15 @@ const TableMedicalConditions = () => {
                         name="calories"
                         value={editData.nutritionalConstraints.calories}
                         onChange={handleChange}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
                         placeholder="Max calories"
-                        className={`w-full border ${errors.calories ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${
+                          errors.calories ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       {errors.calories && (
                         <p className="text-red-500 text-sm mt-1">{errors.calories}</p>
@@ -691,8 +698,15 @@ const TableMedicalConditions = () => {
                         name="protein"
                         value={editData.nutritionalConstraints.protein}
                         onChange={handleChange}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
                         placeholder="Max protein"
-                        className={`w-full border ${errors.protein ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${
+                          errors.protein ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       {errors.protein && (
                         <p className="text-red-500 text-sm mt-1">{errors.protein}</p>
@@ -705,10 +719,19 @@ const TableMedicalConditions = () => {
                         name="carbs"
                         value={editData.nutritionalConstraints.carbs}
                         onChange={handleChange}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
                         placeholder="Max carbs"
-                        className={`w-full border ${errors.carbs ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${
+                          errors.carbs ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
-                      {errors.carbs && <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>}
+                      {errors.carbs && (
+                        <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm text-gray-600">Fat (g)</label>
@@ -717,8 +740,15 @@ const TableMedicalConditions = () => {
                         name="fat"
                         value={editData.nutritionalConstraints.fat}
                         onChange={handleChange}
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
                         placeholder="Max fat"
-                        className={`w-full border ${errors.fat ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${
+                          errors.fat ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       />
                       {errors.fat && <p className="text-red-500 text-sm mt-1">{errors.fat}</p>}
                     </div>

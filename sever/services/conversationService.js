@@ -92,7 +92,7 @@ exports.createConversation = async (userId, topic) => {
   }
 
   const existingConversation = await Conversation.findOne({ userId, topic });
-  if (existingConversation) {
+  if (existingConversation) { 
     throw Object.assign(new Error("User already has a conversation with this topic."), {
       status: 400,
       data: existingConversation,

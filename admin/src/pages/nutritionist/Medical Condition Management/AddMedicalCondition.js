@@ -230,9 +230,8 @@ const AddMedicalCondition = () => {
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Enter condition name"
-                  className={`w-full border ${
-                    errors.name ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isSubmitting}
                 />
                 {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
@@ -247,9 +246,8 @@ const AddMedicalCondition = () => {
                   value={formData.description}
                   onChange={handleChange}
                   placeholder="Enter description"
-                  className={`w-full border ${
-                    errors.description ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isSubmitting}
                 />
                 {errors.description && (
@@ -392,10 +390,14 @@ const AddMedicalCondition = () => {
                       name="calories"
                       value={formData.nutritionalConstraints.calories}
                       onChange={handleChange}
+                      onKeyPress={(e) => {
+                        if (!/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
                       placeholder="Max calories"
-                      className={`w-full border ${
-                        errors.calories ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.calories ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       disabled={isSubmitting}
                     />
                     {errors.calories && (
@@ -409,10 +411,14 @@ const AddMedicalCondition = () => {
                       name="protein"
                       value={formData.nutritionalConstraints.protein}
                       onChange={handleChange}
+                      onKeyPress={(e) => {
+                        if (!/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
                       placeholder="Max protein"
-                      className={`w-full border ${
-                        errors.protein ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.protein ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       disabled={isSubmitting}
                     />
                     {errors.protein && (
@@ -426,10 +432,14 @@ const AddMedicalCondition = () => {
                       name="carbs"
                       value={formData.nutritionalConstraints.carbs}
                       onChange={handleChange}
+                      onKeyPress={(e) => {
+                        if (!/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
                       placeholder="Max carbs"
-                      className={`w-full border ${
-                        errors.carbs ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.carbs ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       disabled={isSubmitting}
                     />
                     {errors.carbs && <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>}
@@ -441,10 +451,14 @@ const AddMedicalCondition = () => {
                       name="fat"
                       value={formData.nutritionalConstraints.fat}
                       onChange={handleChange}
+                      onKeyPress={(e) => {
+                        if (!/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
                       placeholder="Max fat"
-                      className={`w-full border ${
-                        errors.fat ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.fat ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       disabled={isSubmitting}
                     />
                     {errors.fat && <p className="text-red-500 text-sm mt-1">{errors.fat}</p>}
@@ -457,9 +471,8 @@ const AddMedicalCondition = () => {
           <div className="flex justify-end mt-6">
             <button
               type="submit"
-              className={`bg-[#40B491] text-white px-4 py-2 rounded-md hover:bg-[#359c7a] ${
-                isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`bg-[#40B491] text-white px-4 py-2 rounded-md hover:bg-[#359c7a] ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Creating..." : "Create Medical Condition"}
@@ -602,9 +615,8 @@ const FoodSelectionModal = ({
           <div className="ml-auto flex space-x-3">
             <button
               onClick={handleConfirm}
-              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
-                tempSelectedDishes.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${tempSelectedDishes.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               disabled={tempSelectedDishes.length === 0}
             >
               Confirm
@@ -651,9 +663,8 @@ const FoodSelectionModal = ({
                 return (
                   <div
                     key={dish._id}
-                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${
-                      isSelected ? "border-[#40B491] border-2" : "border-gray-200"
-                    } ${isConflicting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                      } ${isConflicting ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => !isConflicting && handleDishClick(dish._id)}
                   >
                     <div className="relative h-40 bg-gray-200">

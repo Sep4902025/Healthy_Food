@@ -12,6 +12,7 @@ const SignUp = () => {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const [isLoading, setIsLoading] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(true);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -33,32 +34,52 @@ const SignUp = () => {
     }));
   };
 
+  const validateUsername = (username) => {
+    const usernameRegex = /^[A-Za-z\s]+$/;
+    return usernameRegex.test(username);
+  };
+
+  const validatePassword = (password) => {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return passwordRegex.test(password);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form data being submitted:", formData);
+
+    // Validate username
+    if (!validateUsername(formData.username)) {
+      toast.error("Full Name must contain only letters and spaces!");
+      return;
+    }
+
+    // Validate password
+    if (!validatePassword(formData.password)) {
+      toast.error(
+        "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character!"
+      );
+      return;
+    }
 
     if (formData.password !== formData.passwordConfirm) {
-      toast.error("Mật khẩu không khớp!");
+      toast.error("Passwords do not match!");
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log("Calling API with data:", formData);
       const response = await AuthService.signup(formData);
-      console.log("API Response:", response);
 
       if (response.success === true) {
-        toast.success(response.message || "Đăng ký thành công!");
+        toast.success(response.message || "Sign up successful!");
         setTimeout(() => {
           navigate("/signin");
         }, 1000);
       } else {
-        toast.error(response.message || "Đăng ký thất bại!");
+        toast.error(response.message || "Sign up failed!");
       }
     } catch (error) {
-      console.error("API Error:", error);
-      const errorMessage = error.message || "Đăng ký thất bại. Vui lòng thử lại!";
+      const errorMessage = error.message || "Sign up failed. Please try again!";
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -72,10 +93,39 @@ const SignUp = () => {
     }
   };
 
+  const handleTermsAccept = () => {
+    setShowTermsModal(false);
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
+      {/* Terms Modal */}
+      {showTermsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Terms and Conditions</h2>
+            <p className="text-gray-600">
+              Your email address is essential. It will be used for account recovery, such as
+              resetting or changing your password. If you choose to sign up quickly without entering
+              a valid email, you may face difficulties related to account recovery or security.
+            </p>
+            <p className="text-gray-600">
+              By proceeding, you agree to our terms of service and privacy policy.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={handleTermsAccept}
+                className="py-2 px-4 bg-[#1C1B1F] text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                I Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md space-y-8">
-        {/* Logo và Icon */}
+        {/* Logo and Icon */}
         <div className="flex justify-center">
           <div className="w-24 h-24 bg-pink-100 rounded-full flex items-center justify-center">
             <svg
@@ -103,12 +153,12 @@ const SignUp = () => {
           </div>
         </div>
 
-        {/* Tiêu đề */}
+        {/* Title */}
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">Create an account</h2>
         </div>
 
-        {/* Form đăng ký */}
+        {/* Sign Up Form */}
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
             <div>
@@ -195,7 +245,7 @@ const SignUp = () => {
           <div className="flex justify-center">
             <GoogleLogin
               onSuccess={handleGoogleLogin}
-              onError={() => toast.error("Đăng nhập thất bại")}
+              onError={() => toast.error("Sign in failed")}
               type="icon"
               shape="circle"
               theme="outline"
@@ -215,7 +265,7 @@ const SignUp = () => {
           </div>
         </form>
 
-        {/* Trang trí */}
+        {/* Decorative Elements */}
         <div className="absolute top-0 left-0 w-24 h-24 bg-green-100 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-50"></div>
         <div className="absolute bottom-0 right-0 w-32 h-32 bg-green-100 rounded-full translate-x-1/2 translate-y-1/2 opacity-50"></div>
       </div>
