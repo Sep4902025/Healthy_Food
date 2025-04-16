@@ -13,7 +13,7 @@ import { ScreensMap } from "./ScreensMap";
 import CustomTabBar from "../components/common/CustomTabBar";
 import { useTheme } from "../contexts/ThemeContext";
 import CustomDrawerLayout from "../components/layout/CustomDrawerLayout";
-import { navigationRef } from "../utils/NavigationService";
+import { navigationRef } from "../utils/NavigationService"; 
 
 
 const Stack = createStackNavigator();

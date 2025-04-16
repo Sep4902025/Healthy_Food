@@ -23,7 +23,7 @@ const OTPInput = ({ length = 6, value = "", onChange }) => {
         onChange(newOtp.join(""));
 
         
-        const nextIndex = Math.min(index + pasteArray.length, length - 1);
+        const nextIndex = Math.min(index + pasteArray.length, length - 1); 
         inputRefs.current[nextIndex]?.focus();
       }
     } catch (error) {

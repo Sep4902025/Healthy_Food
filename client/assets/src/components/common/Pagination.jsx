@@ -14,7 +14,7 @@ const Pagination = ({ totalItems, handlePageClick, currentPage, text }) => {
 
   const handleNext = () => {
     if (currentPage < pageCount - 1) {
-      handlePageClick({ selected: currentPage + 1 });
+      handlePageClick({ selected: currentPage + 1 }); 
     }
   };
 

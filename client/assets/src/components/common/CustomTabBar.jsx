@@ -11,7 +11,7 @@ import { useSelector } from "react-redux";
 // Get screen dimensions
 const HEIGHT = Dimensions.get("window").height;
 
-const CustomTabBar = ({ state, descriptors, navigation }) => {
+const CustomTabBar = ({ state, descriptors, navigation }) => { 
   // Get theme context
   const { theme } = useTheme();
   const user = useSelector(userSelector);

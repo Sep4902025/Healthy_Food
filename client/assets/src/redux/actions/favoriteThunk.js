@@ -53,7 +53,7 @@ export const toggleFavorite = createAsyncThunk(
        
         if (response?.status === 201) {
           ShowToast("success", "Add to favorite successfull");
-          return [...favoriteList, id];
+          return [...favoriteList, id]; 
         }
       }
     } catch (error) {

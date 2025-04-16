@@ -14,7 +14,7 @@ const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
 
 const RippleButton = ({
-  onPress,
+  onPress, 
   children,
   buttonStyle,
   textStyle,

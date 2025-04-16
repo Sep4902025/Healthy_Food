@@ -15,7 +15,7 @@ const WIDTH = Dimensions.get("window").width;
 
 const CustomDrawerLayout = forwardRef(({ children, drawerWidth = WIDTH * 0.7, theme }, ref) => {
   const navigation = useNavigation();
-  const drawerVisible = useSelector(drawerSelector);
+  const drawerVisible = useSelector(drawerSelector); 
   const drawerRef = useRef(null);
   const user = useSelector(userSelector);
   const dispatch = useDispatch();

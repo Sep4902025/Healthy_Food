@@ -10,7 +10,7 @@ const CategoryTag = ({ name = "", color = "#FF6B00" }) => {
       style={{
         ...styles.categoryTag,
         borderColor: color,
-        backgroundColor: theme.categoryTagBackgroundColor,
+        backgroundColor: theme.categoryTagBackgroundColor, 
       }}
     >
       <Text style={{ ...styles.categoryTagText, color: color }}>{name}</Text>

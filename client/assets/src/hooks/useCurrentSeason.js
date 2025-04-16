@@ -12,5 +12,5 @@ function useCurrentSeason() {
 
   return season;
 }
-
+ 
 export default useCurrentSeason;

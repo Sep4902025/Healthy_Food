@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { favorSelector } from "../../redux/selectors/selector";
 import { toggleFavorite } from "../../redux/actions/favoriteThunk";
 import MaterialCommunityIcons from "./VectorIcons/MaterialCommunityIcons";
-import { useTheme } from "../../contexts/ThemeContext";
+import { useTheme } from "../../contexts/ThemeContext"; 
 import { ScreensName } from "../../constants/ScreensName";
 const HEIGHT = Dimensions.get("window").height;
 

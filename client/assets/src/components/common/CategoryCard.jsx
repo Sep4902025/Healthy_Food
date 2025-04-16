@@ -8,7 +8,7 @@ import {
   Dimensions,
   PixelRatio,
 } from "react-native";
-import { useTheme } from "../../contexts/ThemeContext";
+import { useTheme } from "../../contexts/ThemeContext"; 
 
 const window = Dimensions.get("window");
 const scale = window.width / 375; // Using 375 as base width for scaling

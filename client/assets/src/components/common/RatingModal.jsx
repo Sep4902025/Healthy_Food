@@ -15,7 +15,7 @@ const RatingModal = ({
   setRating,
   comment,
   setComment,
-  handleRate,
+  handleRate, 
   submitComment,
 }) => {
   return (

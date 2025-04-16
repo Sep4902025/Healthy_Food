@@ -7,7 +7,7 @@ const ThemeContext = createContext();
 export const ThemeProvider = ({ children }) => {
   const [themeMode, setThemeMode] = useState(Appearance.getColorScheme() || "light");
 
-  const theme = LightContants[themeMode];
+  const theme = LightContants[themeMode]; 
 
   const toggleTheme = () => {
     setThemeMode((prevMode) => {

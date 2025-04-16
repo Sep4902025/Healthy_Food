@@ -16,7 +16,7 @@ const scale = window.width / 375;
 // Function to normalize sizes for different screen dimensions
 const normalize = (size) => {
   const newSize = size * scale;
-  return Math.round(PixelRatio.roundToNearestPixel(newSize));
+  return Math.round(PixelRatio.roundToNearestPixel(newSize)); 
 };
 
 const SearchBar = ({

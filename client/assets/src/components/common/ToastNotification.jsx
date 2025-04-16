@@ -18,7 +18,7 @@ const CustomToast = ({ title, message, type }) => {
     <View style={styles.container}>
       <View style={[styles.Line, { backgroundColor }]}></View>
       <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+      <Text style={styles.message}>{message}</Text> 
     </View>
   );
 };

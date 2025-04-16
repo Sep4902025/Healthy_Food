@@ -15,7 +15,7 @@ export const EditModalHeader = ({ onCancel }) => {
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      <Image
+      <Image 
         source={
           themeMode === "light"
             ? require("../../../assets/image/EditModalHeaderDecor.png")

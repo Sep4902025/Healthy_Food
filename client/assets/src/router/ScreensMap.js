@@ -70,7 +70,7 @@ export const ScreensMap = [
     name: ScreensName.signin,
     component: Signin,
     options: {
-      tabBarButton: () => null,
+      tabBarButton: () => null, 
     },
     hiddenBottomTab: true,
   },

@@ -39,7 +39,7 @@ const Rating = ({
           <Ionicons
             name={active ? "star" : "star-outline"}
             size={size}
-            color={active ? activeColor : inactiveColor}
+            color={active ? activeColor : inactiveColor} 
           />
         </TouchableOpacity>
       );

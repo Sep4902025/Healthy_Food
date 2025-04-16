@@ -33,7 +33,7 @@ function SigninInputField({
       toValue: WIDTH * 0.88, 
       duration: 200, 
       useNativeDriver: false, 
-    }).start();
+    }).start(); 
   };
 
   

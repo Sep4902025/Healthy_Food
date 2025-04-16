@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: normalize(24),
     paddingVertical: normalize(20),
-  },
+  }, 
   card: {
     width: "100%",
     alignItems: "center",

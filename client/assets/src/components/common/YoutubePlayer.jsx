@@ -17,7 +17,7 @@ const YouTubePlayer = ({ videoId }) => {
 
   
   const getVideoId = (idOrUrl) => {
-    if (idOrUrl.includes("youtube.com") || idOrUrl.includes("youtu.be")) {
+    if (idOrUrl.includes("youtube.com") || idOrUrl.includes("youtu.be")) { 
       if (idOrUrl.includes("youtube.com/embed/")) {
         return idOrUrl.split("/embed/")[1].split("?")[0];
       } else if (idOrUrl.includes("youtube.com/watch")) {

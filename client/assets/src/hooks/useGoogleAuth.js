@@ -13,7 +13,7 @@ export const useGoogleAuth = () => {
   const [userInfo, setUserInfo] = useState(null);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null); 
   const dispatch = useDispatch()
 
   const [request, response, promptAsync] = Google.useAuthRequest({

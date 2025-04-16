@@ -20,7 +20,7 @@ const SplitLine = ({ text, textStyle, lineStyle }) => {
 };
 
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create({ 
   container: {
     flexDirection: "row", 
     alignItems: "center", 

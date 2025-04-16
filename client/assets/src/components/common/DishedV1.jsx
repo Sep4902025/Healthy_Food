@@ -16,7 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { favorSelector } from "../../redux/selectors/selector";
 import { toggleFavorite } from "../../redux/actions/favoriteThunk";
-import { getSeasonColor } from "../../utils/common";
+import { getSeasonColor } from "../../utils/common"; 
 import { useTheme } from "../../contexts/ThemeContext";
 
 const window = Dimensions.get("window");

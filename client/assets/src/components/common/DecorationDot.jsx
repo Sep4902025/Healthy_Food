@@ -15,7 +15,7 @@ function DecorationDot({
   transform, 
 }) {
   return (
-    
+     
     <View
       style={{
         width: size, 
