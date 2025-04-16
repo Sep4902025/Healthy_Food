@@ -15,19 +15,18 @@ const InputOtpModal = ({
   onClose,
   onVerify,
   otpAmount = 6,
+  isCancleRefreshCode = false,
 }) => {
   const [verificationCode, setVerificationCode] = useState("");
 
- 
   const handleCodeChange = (code) => {
     setVerificationCode(code);
   };
 
-  
   const handleVerify = () => {
     onVerify(verificationCode);
-    setVerificationCode("");
-    onClose();
+
+    !isCancleRefreshCode && setVerificationCode("");
   };
 
   return (
@@ -48,12 +47,9 @@ const InputOtpModal = ({
             />
           </View>
 
-          
           <TouchableOpacity style={styles.verifyButton} onPress={handleVerify}>
             <Text style={styles.buttonText}>Confirm</Text>
           </TouchableOpacity>
-
-         
         </View>
       </TouchableOpacity>
     </Modal>

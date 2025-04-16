@@ -30,7 +30,7 @@ import { ScreensName } from "../constants/ScreensName";
 
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 
-import { signup, verifyAccount } from "../services/authService";
+import { signup, verifyOtp } from "../services/authService";
 
 import InputOtpModal from "../components/modal/InputOtpModal";
 
@@ -189,11 +189,11 @@ function Signup({ navigation }) {
   }, []);
 
   const handleVerifyAccount = async (code) => {
-    const response = await verifyAccount({ otp: code });
+    const response = await verifyOtp({ email: formData?.email, otp: code });
 
     if (response.status === 200) {
       ShowToast("success", "Verify account successfully.");
-
+      setIsOpen({ ...isOpen, otpModal: false });
       navigation.navigate(ScreensName.home);
     } else {
       ShowToast("error", "Verify account fail. Please try again.");
@@ -375,6 +375,7 @@ function Signup({ navigation }) {
           onVerify={(code) => {
             handleVerifyAccount(code);
           }}
+          isCancleRefreshCode={true}
         />
       </LinearGradient>
 
