@@ -29,8 +29,8 @@ const ForgetPassword = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="bg-white rounded-lg shadow-md p-8 w-96">
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className=" rounded-lg p-8 w-96">
         <div className="flex justify-center mb-4">
           <img src={ForgetPasswordLogo} alt="Forget Password" className="w-[60%] h-[60%]" />
         </div>

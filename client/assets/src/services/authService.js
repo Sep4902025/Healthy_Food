@@ -37,16 +37,38 @@ export const signup = async ({ email, password, passwordConfirm, username }) => 
   }
 };
 
-export const resendOTP = async () => {
+// Request OTP (replaces requestEmailVerification)
+export const resendOTP = async ({ email }) => {
   try {
-    const response = await axiosInstance.post("/users/resend-otp");
+    const response = await axiosInstance.post("/users/resend-otp", { email });
+    console.log("RSO", response);
+
+    return response.data; // Backend returns { success, status, message } or { success, error }
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+export const verifyOtp = async ({ email, otp }) => {
+  try {
+    const data = { email, otp };
+    const response = await axiosInstance.post("/users/verify-otp", data);
     return response;
   } catch (error) {
-    console.log("resendOTP error: ", error);
+    console.log("verifyOtp error: ", error);
     return error;
   }
 };
 
+export const requestOtp = async ({ email }) => {
+  try {
+    const data = { email };
+    const response = await axiosInstance.post("/users/request-otp", data);
+    return response;
+  } catch (error) {
+    console.log("requestOtp error: ", error);
+    return error;
+  }
+};
 export const logout = async () => {
   try {
     const response = await axiosInstance.post("/users/logout");
@@ -68,7 +90,7 @@ export const forgetPassword = async ({ email }) => {
   }
 };
 
-export const verifyOtp = async ({ email, otp }) => {
+export const verifyAccount = async ({ email, otp }) => {
   try {
     const data = { email, otp };
     const response = await axiosInstance.post("/users/verify", data);

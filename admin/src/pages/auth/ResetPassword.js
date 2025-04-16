@@ -40,8 +40,8 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto">
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className=" rounded-lg p-8 max-w-md mx-auto">
         <div className="flex justify-center mb-6">
           <img src={VerifyLogo} alt="Verify Logo" className="w-[60%] h-[60%]" />
         </div>

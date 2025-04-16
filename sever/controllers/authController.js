@@ -54,6 +54,22 @@ exports.resendOTP = catchAsync(async (req, res, next) => {
   }
   res.status(200).json(result);
 });
+// Xác minh OTP (cho TempOTP)
+exports.verifyOtp = catchAsync(async (req, res, next) => {
+  const result = await authService.verifyOtp(req.body);
+  if (!result.success) {
+    return next(result.error);
+  }
+  res.status(200).json(result);
+});
+// Gửi OTP ban đầu
+exports.requestOTP = catchAsync(async (req, res, next) => {
+  const result = await authService.requestOTP(req.body);
+  if (!result.success) {
+    return next(result.error);
+  }
+  res.status(200).json(result);
+});
 
 // Đăng nhập
 exports.login = catchAsync(async (req, res, next) => {

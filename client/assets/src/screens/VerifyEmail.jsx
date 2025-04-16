@@ -18,7 +18,7 @@ import { ScreensName } from "../constants/ScreensName";
 
 import sadCactusIcon from "../../assets/image/sad_cactus.png";
 import happyCactusIcon from "../../assets/image/happy_cactus.png";
-import { forgetPassword, verifyOtp } from "../services/authService";
+import { forgetPassword, verifyAccount } from "../services/authService";
 import OTPInput from "../components/common/OtpInput";
 import { useTheme } from "../contexts/ThemeContext";
 import { secondsToMinutes } from "../utils/common";
@@ -95,9 +95,7 @@ function VerifyEmail({ navigation, route }) {
     } catch (error) {
       console.error("Network error:", error);
       setIsNetworkError(true);
-      setErrorMessage(
-        "Không thể gửi mã OTP. Kiểm tra kết nối mạng và thử lại."
-      );
+      setErrorMessage("Không thể gửi mã OTP. Kiểm tra kết nối mạng và thử lại.");
     }
   };
 
@@ -109,9 +107,7 @@ function VerifyEmail({ navigation, route }) {
 
       // Check if user is blocked due to too many attempts
       if (isBlocked) {
-        setErrorMessage(
-          "Bạn đã nhập sai quá số lần cho phép. Vui lòng thử lại sau."
-        );
+        setErrorMessage("Bạn đã nhập sai quá số lần cho phép. Vui lòng thử lại sau.");
         return;
       }
 
@@ -121,7 +117,7 @@ function VerifyEmail({ navigation, route }) {
         return;
       }
 
-      const response = await verifyOtp({
+      const response = await verifyAccount({
         email: email.trim(),
         otp: value ?? verificationCode,
       });
@@ -136,9 +132,7 @@ function VerifyEmail({ navigation, route }) {
 
         if (newAttemptCount >= 3) {
           setIsBlocked(true);
-          setErrorMessage(
-            "Bạn đã nhập sai quá số lần cho phép. Vui lòng thử lại sau."
-          );
+          setErrorMessage("Bạn đã nhập sai quá số lần cho phép. Vui lòng thử lại sau.");
         } else {
           setErrorMessage("Invalid Otp. Please retype code.");
         }
@@ -146,9 +140,7 @@ function VerifyEmail({ navigation, route }) {
     } catch (error) {
       console.error("Network error:", error);
       setIsNetworkError(true);
-      setErrorMessage(
-        "Không thể xác thực mã OTP. Kiểm tra kết nối mạng và thử lại."
-      );
+      setErrorMessage("Không thể xác thực mã OTP. Kiểm tra kết nối mạng và thử lại.");
     }
   };
 
@@ -197,10 +189,7 @@ function VerifyEmail({ navigation, route }) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.card}>
-          <Image
-            source={isCodeSent ? happyCactusIcon : sadCactusIcon}
-            style={styles.cactusIcon}
-          />
+          <Image source={isCodeSent ? happyCactusIcon : sadCactusIcon} style={styles.cactusIcon} />
 
           <Text style={{ ...styles.title, color: theme.textColor }}>
             {isCodeSent ? "Verify OTP" : "Forgot password"}
@@ -213,15 +202,11 @@ function VerifyEmail({ navigation, route }) {
           </Text>
 
           {/* Error message display */}
-          {errorMessage ? (
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          ) : null}
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
           {!isCodeSent ? (
             <>
-              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                Email address
-              </Text>
+              <Text style={{ ...styles.label, color: theme.greyTextColor }}>Email address</Text>
               <TextInput
                 style={styles.emailInput}
                 placeholder="example@gmail.com"
@@ -239,9 +224,7 @@ function VerifyEmail({ navigation, route }) {
                 onPress={handleSubmitEmail}
               />
 
-              <Text
-                style={{ ...styles.bottomText, color: theme.greyTextColor }}
-              >
+              <Text style={{ ...styles.bottomText, color: theme.greyTextColor }}>
                 Remember password?{" "}
                 <Text
                   style={styles.linkText}
@@ -264,9 +247,7 @@ function VerifyEmail({ navigation, route }) {
 
               {/* Timer display */}
               <Text style={{ ...styles.timerText, color: theme.textColor }}>
-                {countTime > 0
-                  ? `Time left: ${secondsToMinutes(countTime)}`
-                  : "OTP code exprided"}
+                {countTime > 0 ? `Time left: ${secondsToMinutes(countTime)}` : "OTP code exprided"}
               </Text>
 
               <Text style={{ ...styles.bottomText, color: theme.textColor }}>

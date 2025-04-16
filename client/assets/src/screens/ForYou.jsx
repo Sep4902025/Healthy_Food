@@ -45,7 +45,6 @@ const ForYou = ({ navigation }) => {
           setPage(pageNum);
           setHasMore(pageNum < response.pagination.totalPages);
         } else {
-          console.error("Failed to load for you dishes:", response?.message);
           setHasMore(false);
         }
       } catch (error) {

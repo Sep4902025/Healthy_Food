@@ -71,7 +71,6 @@ const quizService = {
         };
       }
     } catch (error) {
-      console.error("Lỗi lấy danh sách món ăn đề xuất:", error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || "Lỗi khi lấy danh sách món ăn",

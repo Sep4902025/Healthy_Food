@@ -104,8 +104,8 @@ const VerifyOtp = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white shadow-md rounded-lg p-8 w-96 text-center">
+    <div className="flex items-center justify-center min-h-screen bg-white  ">
+      <div className=" rounded-lg p-8 w-96 text-center">
         <div className="flex justify-center mb-4">
           <img src={VerifyLogo} alt="Success" className="w-[60%] h-[60%]" />
         </div>

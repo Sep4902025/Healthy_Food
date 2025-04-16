@@ -4,6 +4,7 @@ const AppError = require("../utils/appError");
 const UserModel = require("../models/UserModel");
 const sendEmail = require("../utils/email");
 const jwt = require("jsonwebtoken");
+const TempOTP = require("../models/TempOTP");
 
 const client = new OAuth2Client(process.env.GG_CLIENT_ID);
 
@@ -18,7 +19,7 @@ exports.signToken = (id) => {
 exports.signup = async (body) => {
   const { email, password, passwordConfirm, username } = body;
 
-  // Kiểm tra xem email đã được đăng ký chưa
+  // Check if email is already registered
   const existingUser = await UserModel.findOne({ email });
   if (existingUser) {
     return {
@@ -27,26 +28,13 @@ exports.signup = async (body) => {
     };
   }
 
-  // Tạo OTP và thời gian hết hạn
-  const otp = generateOtp();
-  const otpExpires = Date.now() + 24 * 60 * 60 * 1000; // Thời gian hết hạn là 24 giờ
-
-  // Tạo người dùng mới
-  const newUser = await UserModel.create({
-    email,
-    password,
-    passwordConfirm,
-    username,
-    otp,
-    otpExpires,
-  });
-
-  // Gửi OTP qua email
+  // Create new user
   try {
-    await sendEmail({
-      email: newUser.email,
-      subject: "OTP for email verification",
-      html: `<h1>Your OTP is ${otp}</h1>`,
+    const newUser = await UserModel.create({
+      email,
+      password,
+      passwordConfirm,
+      username,
     });
 
     return {
@@ -54,14 +42,9 @@ exports.signup = async (body) => {
       data: { user: newUser },
     };
   } catch (error) {
-    console.error("Error sending email:", error);
-
-    // Xóa user nếu có lỗi gửi email
-    await UserModel.findByIdAndDelete(newUser._id);
-
     return {
       success: false,
-      error: new AppError("There is an error sending the email. Try again", 500),
+      error: new AppError("Error creating user. Please try again.", 500),
     };
   }
 };
@@ -167,7 +150,108 @@ exports.resendOTP = async (body) => {
     };
   }
 };
+exports.verifyOtp = async (body) => {
+  const { email, otp } = body;
 
+  if (!email || !otp) {
+    return {
+      success: false,
+      error: new AppError("Email and OTP are required", 400),
+    };
+  }
+
+  // Check OTP in TempOTP
+  const tempOtp = await TempOTP.findOne({ email, otp });
+
+  if (!tempOtp) {
+    return {
+      success: false,
+      error: new AppError("Invalid OTP", 400),
+    };
+  }
+
+  // Check expiration
+  if (tempOtp.otpExpires < Date.now()) {
+    await TempOTP.deleteOne({ email });
+    return {
+      success: false,
+      error: new AppError("OTP has expired. Please request a new one.", 400),
+    };
+  }
+
+  // OTP valid, delete from TempOTP
+  await TempOTP.deleteOne({ email });
+  return {
+    success: true,
+    status: "success",
+    message: "OTP verified successfully.",
+  };
+};
+exports.requestOTP = async (body) => {
+  const { email } = body;
+
+  if (!email) {
+    return {
+      success: false,
+      error: new AppError("Email is required to send OTP", 400),
+    };
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return {
+      success: false,
+      error: new AppError("Invalid email format", 400),
+    };
+  }
+
+  // Check if email is already registered
+  const existingUser = await UserModel.findOne({ email });
+  if (existingUser) {
+    return {
+      success: false,
+      error: new AppError("Email is already registered. Please use a different email.", 400),
+    };
+  }
+
+  // Generate OTP and set expiration (shortened to 10 minutes)
+  const newOtp = generateOtp();
+  const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  // Delete any existing OTP for this email
+  await TempOTP.deleteOne({ email });
+
+  // Store OTP in TempOTP collection
+  await TempOTP.create({
+    email,
+    otp: newOtp,
+    otpExpires,
+  });
+
+  // Send OTP via email
+  try {
+    await sendEmail({
+      email,
+      subject: "OTP for Email Verification",
+      html: `<h1>Your OTP is ${newOtp}</h1><p>This OTP is valid for 10 minutes.</p>`,
+    });
+
+    return {
+      success: true,
+      status: "success",
+      message:
+        "An OTP has been sent to your email. Please check your inbox (and spam/junk folder).",
+    };
+  } catch (error) {
+    // Delete OTP if email sending fails
+    await TempOTP.deleteOne({ email });
+    return {
+      success: false,
+      error: new AppError("There was an error sending the email. Please try again.", 500),
+    };
+  }
+};
 // Đăng nhập
 exports.login = async (body) => {
   const { email, password } = body;

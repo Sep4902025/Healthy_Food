@@ -9,6 +9,8 @@ const {
   resetPassword,
   googleLogin,
   changePassword,
+  requestOTP,
+  verifyOtp,
 } = require("../controllers/authController");
 const {
   updateUserById,
@@ -30,6 +32,8 @@ const userRouter = express.Router();
 userRouter.post("/signup", signup);
 userRouter.post("/verify", verifyAccount);
 userRouter.post("/resend-otp", resendOTP);
+userRouter.post("/request-otp", requestOTP);
+userRouter.post("/verify-otp", verifyOtp);
 userRouter.post("/login", login);
 userRouter.post("/login-google", googleLogin);
 userRouter.post("/logout", logout);
