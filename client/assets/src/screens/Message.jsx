@@ -1,140 +1,140 @@
-import React, { useState, useRef, useEffect } from "react"; // Import các hook cơ bản từ React
+import React, { useState, useRef, useEffect } from "react";
 import {
-  View, // Component để tạo khung bố cục
-  Text, // Component để hiển thị văn bản
-  TextInput, // Component để nhập liệu
-  TouchableOpacity, // Component tạo vùng có thể nhấn
-  FlatList, // Component hiển thị danh sách có thể cuộn với hiệu suất cao
-  KeyboardAvoidingView, // Component giúp nội dung không bị che khi bàn phím mở
-  Platform, // API để xác định nền tảng đang chạy
-  StyleSheet, // API để tạo và quản lý style
-  Image, // Component hiển thị hình ảnh
-  Dimensions, // API lấy kích thước màn hình
-  ScrollView, // Component tạo vùng có thể cuộn
-  Modal, // Component hiển thị cửa sổ pop-up
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Image,
+  Dimensions,
+  ScrollView,
+  Modal,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker"; // Import thư viện chọn ảnh từ Expo
-import MainLayoutWrapper from "../components/layout/MainLayoutWrapper"; // Import component layout chính
-import messageSocket from "../services/messageSocket"; // Import service xử lý socket tin nhắn
-import { userSelector } from "../redux/selectors/selector"; // Import selector để lấy thông tin user từ Redux
-import { useSelector } from "react-redux"; // Hook để truy cập dữ liệu từ Redux store
+import * as ImagePicker from "expo-image-picker";
+import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
+import messageSocket from "../services/messageSocket";
+import { userSelector } from "../redux/selectors/selector";
+import { useSelector } from "react-redux";
 import {
-  createConversation, // Hàm tạo cuộc trò chuyện mới
-  getConversationMessage, // Hàm lấy tin nhắn của cuộc trò chuyện
-  getUserConversations, // Hàm lấy danh sách cuộc trò chuyện của người dùng
+  createConversation,
+  getConversationMessage,
+  getUserConversations,
 } from "../services/conversationService";
-import InputModal from "../components/modal/InputModal"; // Import modal nhập liệu
-import Ionicons from "../components/common/VectorIcons/Ionicons"; // Import icon từ Ionicons
-import { useTheme } from "../contexts/ThemeContext"; // Import hook để sử dụng theme
-import ShowToast from "../components/common/CustomToast"; // Import component hiển thị thông báo
-import { arrayToString, stringToArray } from "../utils/common"; // Import các hàm tiện ích xử lý dữ liệu
-import { uploadImages } from "../services/cloundaryService"; // Import service để tải lên hình ảnh
+import InputModal from "../components/modal/InputModal";
+import Ionicons from "../components/common/VectorIcons/Ionicons";
+import { useTheme } from "../contexts/ThemeContext";
+import ShowToast from "../components/common/CustomToast";
+import { arrayToString, stringToArray } from "../utils/common";
+import { uploadImages } from "../services/cloundaryService";
 
-const WIDTH = Dimensions.get("window").width; // Lấy chiều rộng màn hình
-const HEIGHT = Dimensions.get("window").height; // Lấy chiều cao màn hình
+const WIDTH = Dimensions.get("window").width;
+const HEIGHT = Dimensions.get("window").height;
 
-function Message({ navigation }) { // Component chính của màn hình tin nhắn
-  const user = useSelector(userSelector); // Lấy thông tin người dùng từ Redux
+function Message({ navigation }) {
+  const user = useSelector(userSelector);
 
-  const [messages, setMessages] = useState([]); // State lưu danh sách tin nhắn
-  const [conversation, setConversation] = useState({}); // State lưu thông tin cuộc trò chuyện
-  const [screenState, setScreenState] = useState("chat"); // State để quản lý trạng thái màn hình
-  const [inputText, setInputText] = useState(""); // State lưu nội dung đang nhập
-  const [visible, setVisible] = useState({ inputTopic: false }); // State quản lý hiển thị modal
-  const [selectedImages, setSelectedImages] = useState([]); // State lưu danh sách ảnh đã chọn
-  const { theme, themeMode } = useTheme(); // Lấy theme hiện tại
-  const flatListRef = useRef(null); // Tham chiếu đến FlatList để điều khiển cuộn
+  const [messages, setMessages] = useState([]);
+  const [conversation, setConversation] = useState({});
+  const [screenState, setScreenState] = useState("chat");
+  const [inputText, setInputText] = useState("");
+  const [visible, setVisible] = useState({ inputTopic: false });
+  const [selectedImages, setSelectedImages] = useState([]);
+  const { theme, themeMode } = useTheme();
+  const flatListRef = useRef(null);
 
-  const [imageViewerVisible, setImageViewerVisible] = useState(false); // State quản lý hiển thị modal xem ảnh
-  const [selectedViewImage, setSelectedViewImage] = useState(null); // State lưu ảnh đang xem
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [selectedViewImage, setSelectedViewImage] = useState(null);
 
-  useEffect(() => { // Hook chạy khi component được mount
-    messageSocket.init({ userId: user?._id, token: user?.accessToken }); // Khởi tạo kết nối socket
-    loadConversation(); // Tải dữ liệu cuộc trò chuyện
+  useEffect(() => {
+    messageSocket.init({ userId: user?._id, token: user?.accessToken });
+    loadConversation();
 
-    const handleReceiveMessage = (message) => { // Hàm xử lý khi nhận tin nhắn mới
+    const handleReceiveMessage = (message) => {
       console.log("Receive Message : ", message);
 
-      const messageToReceived = { // Định dạng lại tin nhắn nhận được
+      const messageToReceived = {
         id: message._id,
         text: message.text,
-        sender: message.senderId === user?._id ? "me" : "other", // Xác định người gửi là ai
+        sender: message.senderId === user?._id ? "me" : "other",
         timestamp: message.updatedAt,
         imageUrl: message.imageUrl || [],
       };
 
-      setMessages((previousMessages) => { // Cập nhật danh sách tin nhắn
-        if (previousMessages.some((msg) => msg.id === messageToReceived.id)) { // Kiểm tra tin nhắn đã tồn tại chưa
+      setMessages((previousMessages) => {
+        if (previousMessages.some((msg) => msg.id === messageToReceived.id)) {
           return previousMessages;
         }
-        return [...previousMessages, messageToReceived]; // Thêm tin nhắn mới vào danh sách
+        return [...previousMessages, messageToReceived];
       });
     };
 
-    messageSocket.on("receive_message", handleReceiveMessage); // Đăng ký lắng nghe sự kiện nhận tin nhắn
+    messageSocket.on("receive_message", handleReceiveMessage);
 
-    return () => { // Hàm dọn dẹp khi component unmount
-      messageSocket.disconnect(); // Ngắt kết nối socket
-      messageSocket.off("receive_message", handleReceiveMessage); // Hủy đăng ký lắng nghe
+    return () => {
+      messageSocket.disconnect();
+      messageSocket.off("receive_message", handleReceiveMessage);
     };
   }, [user?._id, user?.accessToken]);
 
-  const loadConversation = async () => { // Hàm tải dữ liệu cuộc trò chuyện
-    const response = await getUserConversations(user?._id); // Gọi API lấy danh sách cuộc trò chuyện
-    if (response.status === 200) { // Nếu thành công
-      if (response.data?.data[0]) { // Nếu có cuộc trò chuyện
-        setConversation(response.data?.data[0]); // Lưu thông tin cuộc trò chuyện đầu tiên
-        if (response.data?.data[0]?._id) { // Nếu có ID cuộc trò chuyện
-          loadMessgageHistory(response.data?.data[0]._id); // Tải lịch sử tin nhắn
+  const loadConversation = async () => {
+    const response = await getUserConversations(user?._id);
+    if (response.status === 200) {
+      if (response.data?.data[0]) {
+        setConversation(response.data?.data[0]);
+        if (response.data?.data[0]?._id) {
+          loadMessgageHistory(response.data?.data[0]._id);
         }
-      } else { // Nếu không có cuộc trò chuyện nào
-        handleCreateConversation("defaultTopic"); // Tạo cuộc trò chuyện mới với chủ đề mặc định
+      } else {
+        handleCreateConversation("defaultTopic");
       }
-    } else { // Nếu có lỗi
-      handleCreateConversation("defaultTopic"); // Tạo cuộc trò chuyện mới với chủ đề mặc định
+    } else {
+      handleCreateConversation("defaultTopic");
     }
   };
 
-  const loadMessgageHistory = async (conversationId) => { // Hàm tải lịch sử tin nhắn
-    const response = await getConversationMessage(conversationId); // Gọi API lấy tin nhắn
-    if (response.status === 200) { // Nếu thành công
-      setMessages( // Định dạng lại và lưu danh sách tin nhắn
+  const loadMessgageHistory = async (conversationId) => {
+    const response = await getConversationMessage(conversationId);
+    if (response.status === 200) {
+      setMessages(
         response.data?.data?.map((item) => ({
           ...item,
           id: item._id,
-          sender: item.senderId === user?._id ? "me" : "other", // Xác định người gửi là ai
+          sender: item.senderId === user?._id ? "me" : "other",
         }))
       );
     }
   };
 
-  const getStarted = () => { // Hàm xử lý khi bắt đầu trò chuyện
-    if (conversation) { // Nếu đã có cuộc trò chuyện
-      setScreenState("chat"); // Chuyển sang trạng thái chat
-      ShowToast("success", "Topic : " + conversation.topic); // Hiển thị thông báo chủ đề
-    } else { // Nếu chưa có cuộc trò chuyện
-      setVisible({ ...visible, inputTopic: true }); // Hiển thị modal nhập chủ đề
+  const getStarted = () => {
+    if (conversation) {
+      setScreenState("chat");
+      ShowToast("success", "Topic : " + conversation.topic);
+    } else {
+      setVisible({ ...visible, inputTopic: true });
     }
   };
 
-  const handleCreateConversation = async (topic) => { // Hàm tạo cuộc trò chuyện mới
-    const response = await createConversation(user?._id, topic); // Gọi API tạo cuộc trò chuyện
-    if (response.status === 200) { // Nếu thành công
-      setScreenState("chat"); // Chuyển sang trạng thái chat
-      setConversation(response.data?.data); // Lưu thông tin cuộc trò chuyện mới
-      setVisible({ ...visible, inputTopic: false }); // Ẩn modal nhập chủ đề
+  const handleCreateConversation = async (topic) => {
+    const response = await createConversation(user?._id, topic);
+    if (response.status === 200) {
+      setScreenState("chat");
+      setConversation(response.data?.data);
+      setVisible({ ...visible, inputTopic: false });
     }
   };
 
-  const handleImagePress = (imageUrl) => { // Hàm xử lý khi nhấn vào ảnh
-    setSelectedViewImage(imageUrl); // Lưu URL ảnh được chọn
-    setImageViewerVisible(true); // Hiển thị modal xem ảnh
+  const handleImagePress = (imageUrl) => {
+    setSelectedViewImage(imageUrl);
+    setImageViewerVisible(true);
   };
 
-  const pickImages = async () => { // Hàm chọn ảnh từ thư viện
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync(); // Yêu cầu quyền truy cập thư viện ảnh
+  const pickImages = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (status !== "granted") { // Nếu không được cấp quyền
+    if (status !== "granted") {
       ShowToast(
         "error",
         "Cần quyền truy cập vào thư viện ảnh để sử dụng tính năng này"
@@ -142,44 +142,44 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
       return;
     }
 
-    let result = await ImagePicker.launchImageLibraryAsync({ // Mở thư viện ảnh
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Chỉ chọn ảnh
-      allowsMultipleSelection: true, // Cho phép chọn nhiều ảnh
-      aspect: [4, 3], // Tỷ lệ khung hình
-      quality: 1, // Chất lượng ảnh
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      aspect: [4, 3],
+      quality: 1,
     });
 
-    if (!result.canceled) { // Nếu người dùng đã chọn ảnh
-      setSelectedImages(result.assets); // Lưu danh sách ảnh đã chọn
+    if (!result.canceled) {
+      setSelectedImages(result.assets);
     }
   };
 
-  const removeImage = (index) => { // Hàm xóa ảnh đã chọn
-    const newImages = [...selectedImages]; // Tạo bản sao của danh sách ảnh
-    newImages.splice(index, 1); // Xóa ảnh tại vị trí index
-    setSelectedImages(newImages); // Cập nhật danh sách ảnh
+  const removeImage = (index) => {
+    const newImages = [...selectedImages];
+    newImages.splice(index, 1);
+    setSelectedImages(newImages);
   };
 
-  const handleUploadImages = async () => { // Hàm tải lên ảnh đã chọn
-    if (selectedImages.length > 0) { // Nếu có ảnh đã chọn
-      const imageFiles = selectedImages.map((img) => ({ // Định dạng lại dữ liệu ảnh
+  const handleUploadImages = async () => {
+    if (selectedImages.length > 0) {
+      const imageFiles = selectedImages.map((img) => ({
         uri: img.uri,
         type: "image/jpeg",
         name: `image_${Date.now()}.jpg`,
       }));
 
-      const uploadedImages = await uploadImages(imageFiles); // Gọi API tải lên ảnh
-      return uploadedImages; // Trả về kết quả
+      const uploadedImages = await uploadImages(imageFiles);
+      return uploadedImages;
     }
-    return []; // Trả về mảng rỗng nếu không có ảnh
+    return [];
   };
 
-  const onSend = async () => { // Hàm gửi tin nhắn
-    if (inputText.trim() === "" && selectedImages.length === 0) return; // Không làm gì nếu không có nội dung
+  const onSend = async () => {
+    if (inputText.trim() === "" && selectedImages.length === 0) return;
 
     try {
-      const uploadedImages = await handleUploadImages(); // Tải lên ảnh đã chọn
-      console.log("Receive Message : ", { // In ra thông tin tin nhắn
+      const uploadedImages = await handleUploadImages();
+      console.log("Receive Message : ", {
         conversationId: conversation._id,
         senderId: user?._id,
         receiverId: conversation?.nutritionistId ?? "",
@@ -188,7 +188,7 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
         createdAt: new Date(),
       });
 
-      messageSocket.emit("send_message", { // Gửi tin nhắn qua socket
+      messageSocket.emit("send_message", {
         conversationId: conversation._id,
         senderId: user?._id,
         receiverId: conversation?.nutritionistId ?? "",
@@ -197,22 +197,22 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
         createdAt: new Date(),
       });
 
-      setInputText(""); // Xóa nội dung đã nhập
-      setSelectedImages([]); // Xóa danh sách ảnh đã chọn
-    } catch (error) { // Xử lý lỗi
+      setInputText("");
+      setSelectedImages([]);
+    } catch (error) {
       console.error("Send message error:", error);
       ShowToast("error", "Có lỗi xảy ra khi gửi tin nhắn");
     }
   };
 
-  const renderMessage = ({ item, index }) => { // Hàm render mỗi tin nhắn
-    const isMyMessage = item.sender === "me"; // Kiểm tra tin nhắn của mình hay người khác
+  const renderMessage = ({ item, index }) => {
+    const isMyMessage = item.sender === "me";
 
     return (
       <View
         style={[
           styles.messageBubble,
-          isMyMessage ? styles.myMessage : styles.otherMessage, // Áp dụng style khác nhau cho tin nhắn của mình và người khác
+          isMyMessage ? styles.myMessage : styles.otherMessage,
         ]}
         key={index}
       >
@@ -249,8 +249,8 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
     );
   };
 
-  const renderIntroduce = () => { // Hàm render phần giới thiệu
-    const introduceText = [ // Danh sách các gợi ý tin nhắn
+  const renderIntroduce = () => {
+    const introduceText = [
       "Hello",
       "I need some help",
       "Healthy food",
@@ -261,18 +261,18 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
       <ScrollView
         style={{
           ...styles.introduceTextContainer,
-          backgroundColor: theme.editModalbackgroundColor, // Áp dụng màu nền từ theme
+          backgroundColor: theme.editModalbackgroundColor,
         }}
         horizontal
         nestedScrollEnabled={true}
         showsHorizontalScrollIndicator={false}
       >
-        {introduceText.map((item, key) => { // Render từng mục gợi ý
+        {introduceText.map((item, key) => {
           return (
             <TouchableOpacity
               style={{ margin: 6 }}
               onPress={() => {
-                setInputText(item); // Khi nhấn vào gợi ý, đặt nội dung vào ô nhập liệu
+                setInputText(item);
               }}
               key={key}
             >
@@ -291,11 +291,11 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
   };
 
   return (
-    <MainLayoutWrapper headerHidden={true}> {/* Sử dụng layout chính không hiển thị header */}
-      {screenState === "onboarding" ? ( // Nếu đang ở trạng thái onboarding
+    <MainLayoutWrapper headerHidden={true}>
+      {screenState === "onboarding" ? (
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"} // Xử lý khác nhau cho iOS và Android
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0} // Offset cho iOS
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
           style={{
             ...styles.messagesList,
 
@@ -317,29 +317,29 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
             <Text style={styles.getStartedButtonText}>Get Started</Text>
           </TouchableOpacity>
         </KeyboardAvoidingView>
-      ) : ( // Nếu đang ở trạng thái chat
+      ) : (
         <>
           <FlatList
-            ref={flatListRef} // Gán tham chiếu để điều khiển cuộn
-            data={messages} // Dữ liệu danh sách tin nhắn
-            renderItem={renderMessage} // Hàm render từng tin nhắn
-            keyExtractor={(item) => { // Hàm tạo key cho mỗi mục
-              if (!item.id) { // Xử lý trường hợp không có id
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => {
+              if (!item.id) {
                 console.warn("Message missing id:", item);
-                return `temp-${Date.now()}-${Math.random()}`; // Tạo id tạm thời
+                return `temp-${Date.now()}-${Math.random()}`;
               }
               return item.id;
             }}
             style={{
               ...styles.messagesList,
-              backgroundColor: theme.editModalbackgroundColor, // Áp dụng màu nền từ theme
+              backgroundColor: theme.editModalbackgroundColor,
             }}
             contentContainerStyle={styles.messagesListContent}
             onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true }) // Cuộn xuống cuối khi nội dung thay đổi
+              flatListRef.current?.scrollToEnd({ animated: true })
             }
             onLayout={() =>
-              flatListRef.current?.scrollToEnd({ animated: true }) // Cuộn xuống cuối khi layout hoàn thành
+              flatListRef.current?.scrollToEnd({ animated: true })
             }
           />
 
@@ -348,7 +348,7 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
             <View
               style={{
                 ...styles.selectedImagesContainer,
-                backgroundColor: theme.editModalbackgroundColor, // Áp dụng màu nền từ theme
+                backgroundColor: theme.editModalbackgroundColor,
               }}
             >
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -360,7 +360,7 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
                     />
                     <TouchableOpacity
                       style={styles.removeImageButton}
-                      onPress={() => removeImage(index)} // Xóa ảnh khi nhấn nút
+                      onPress={() => removeImage(index)}
                     >
                       <Ionicons name="close-circle" size={20} color="#fff" />
                     </TouchableOpacity>
@@ -371,20 +371,20 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
           )}
 
           <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"} // Xử lý khác nhau cho iOS và Android
-            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0} // Offset cho iOS
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
           >
-            {!messages[0] && renderIntroduce()} {/* Hiển thị phần giới thiệu nếu không có tin nhắn */}
+            {!messages[0] && renderIntroduce()}
             <View
               style={{
                 ...styles.inputContainer,
-                backgroundColor: theme.editModalbackgroundColor, // Áp dụng màu nền từ theme
-                borderTopWidth: themeMode === "light" ? 1 : 0, // Hiển thị viền nếu đang ở chế độ sáng
+                backgroundColor: theme.editModalbackgroundColor,
+                borderTopWidth: themeMode === "light" ? 1 : 0,
               }}
             >
               <TouchableOpacity
                 style={styles.attachButton}
-                onPress={pickImages} // Chọn ảnh khi nhấn nút
+                onPress={pickImages}
               >
                 <Ionicons name="image-outline" size={24} color="#999" />
               </TouchableOpacity>
@@ -392,7 +392,7 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
               <TextInput
                 style={styles.input}
                 value={inputText}
-                onChangeText={setInputText} // Cập nhật nội dung khi nhập liệu
+                onChangeText={setInputText}
                 placeholder="Type a message..."
                 multiline
               />
@@ -402,11 +402,11 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
                   styles.sendButton,
                   inputText.trim() === "" &&
                     selectedImages.length === 0 &&
-                    styles.sendButtonDisabled, // Áp dụng style khác nếu không có nội dung
+                    styles.sendButtonDisabled,
                 ]}
-                onPress={onSend} // Gửi tin nhắn khi nhấn nút
+                onPress={onSend}
                 disabled={
-                  inputText.trim() === "" && selectedImages.length === 0 // Vô hiệu hóa nút nếu không có nội dung
+                  inputText.trim() === "" && selectedImages.length === 0
                 }
               >
                 <Text style={styles.sendButtonText}>Send</Text>
@@ -418,15 +418,15 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
 
       {/* Image Viewer Modal */}
       <Modal
-        visible={imageViewerVisible} // Hiển thị modal nếu imageViewerVisible là true
-        transparent={true} // Modal trong suốt
-        animationType="fade" // Hiệu ứng fade khi hiển thị
-        onRequestClose={() => setImageViewerVisible(false)} // Đóng modal khi nhấn nút back
+        visible={imageViewerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setImageViewerVisible(false)}
       >
         <View style={styles.imageViewerContainer}>
           <TouchableOpacity
             style={styles.closeButton}
-            onPress={() => setImageViewerVisible(false)} // Đóng modal khi nhấn nút đóng
+            onPress={() => setImageViewerVisible(false)}
           >
             <Ionicons name="close" size={30} color="#fff" />
           </TouchableOpacity>
@@ -442,11 +442,11 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
       </Modal>
 
       <InputModal
-        visible={visible.inputTopic} // Hiển thị modal nếu visible.inputTopic là true
+        visible={visible.inputTopic}
         onClose={() => {
-          setVisible({ ...visible, inputTopic: false }); // Đóng modal khi nhấn nút đóng
+          setVisible({ ...visible, inputTopic: false });
         }}
-        onSubmit={handleCreateConversation} // Tạo cuộc trò chuyện mới khi xác nhận
+        onSubmit={handleCreateConversation}
         title={"Enter Topic Name"}
         placeholder={"Type here..."}
       />
@@ -454,7 +454,7 @@ function Message({ navigation }) { // Component chính của màn hình tin nh�
   );
 }
 
-const styles = StyleSheet.create({ // Định nghĩa các style
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
@@ -675,4 +675,4 @@ const styles = StyleSheet.create({ // Định nghĩa các style
   },
 });
 
-export default Message; // Export component Message để sử dụng ở nơi khác
+export default Message;

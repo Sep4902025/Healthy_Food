@@ -1,4 +1,3 @@
-// Import các thư viện và components từ React và React Native
 import React, { useState, useEffect } from "react";
 import {
   Text,
@@ -14,61 +13,55 @@ import {
   ScrollView,
 } from "react-native";
 
-// Import các components tùy chỉnh từ ứng dụng
-import SafeAreaWrapper from "../components/layout/SafeAreaWrapper"; // Component bọc ngoài để đảm bảo nội dung nằm trong vùng an toàn
-import RippleButton from "../components/common/RippleButton"; // Nút có hiệu ứng gợn sóng khi nhấn
-import proundCactusIcon from "../../assets/image/pround_cactus.png"; // Hình ảnh xương rồng cho minh họa
-import ShowToast from "../components/common/CustomToast"; // Component hiển thị thông báo toast
-import { changePassword } from "../services/authService"; // Service xử lý thay đổi mật khẩu
-import { ScreensName } from "../constants/ScreensName"; // Các hằng số tên màn hình
-import { useTheme } from "../contexts/ThemeContext"; // Hook sử dụng theme
-import { Feather } from "@expo/vector-icons"; // Thư viện icon
-import { normalize } from "../utils/common"; // Hàm chuẩn hóa kích thước theo màn hình
+import SafeAreaWrapper from "../components/layout/SafeAreaWrapper";
+import RippleButton from "../components/common/RippleButton";
+import proundCactusIcon from "../../assets/image/pround_cactus.png";
+import ShowToast from "../components/common/CustomToast";
+import { changePassword } from "../services/authService";
+import { ScreensName } from "../constants/ScreensName";
+import { useTheme } from "../contexts/ThemeContext";
+import { Feather } from "@expo/vector-icons";
+import { normalize } from "../utils/common";
 
-// Component màn hình thay đổi mật khẩu
 function ChangePassword({ navigation, route }) {
-  const email = route.params?.email; // Lấy email từ params nếu có
-  const { theme } = useTheme(); // Lấy theme hiện tại
+  const email = route.params?.email;
+  const { theme } = useTheme();
 
-  // Các state để lưu trữ thông tin mật khẩu
-  const [presentPassword, setPresentPassword] = useState(""); // Mật khẩu hiện tại
-  const [newPassword, setNewPassword] = useState(""); // Mật khẩu mới
-  const [confirmPassword, setConfirmPassword] = useState(""); // Xác nhận mật khẩu mới
-  const [showPresentPassword, setShowPresentPassword] = useState(false); // Trạng thái hiển thị mật khẩu hiện tại
-  const [showNewPassword, setShowNewPassword] = useState(false); // Trạng thái hiển thị mật khẩu mới
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Trạng thái hiển thị xác nhận mật khẩu
+  const [presentPassword, setPresentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPresentPassword, setShowPresentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Theo dõi trạng thái các trường đã được tương tác hay chưa
+  // Track whether fields have been touched/modified
   const [touched, setTouched] = useState({
     presentPassword: false,
     newPassword: false,
     confirmPassword: false,
   });
 
-  // State lưu các lỗi cho từng trường
   const [errors, setErrors] = useState({
     presentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const [isFormValid, setIsFormValid] = useState(false); // Trạng thái form hợp lệ
+  const [isFormValid, setIsFormValid] = useState(false);
 
-  // Hàm kiểm tra độ mạnh của mật khẩu
+  // Password strength checker
   const checkPasswordStrength = (password) => {
     let strength = 0;
-    const hasLowerCase = /[a-z]/.test(password); // Kiểm tra có chữ thường
-    const hasUpperCase = /[A-Z]/.test(password); // Kiểm tra có chữ hoa
-    const hasNumbers = /\d/.test(password); // Kiểm tra có số
-    const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(password); // Kiểm tra có ký tự đặc biệt
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
-    // Tính điểm độ mạnh của mật khẩu
     if (password.length >= 8) strength++;
     if (hasLowerCase) strength++;
     if (hasUpperCase) strength++;
     if (hasNumbers) strength++;
     if (hasSpecialChars) strength++;
 
-    // Nếu mật khẩu và độ mạnh < 3, trả về không đủ mạnh
     if (password && strength < 3) {
       return {
         isStrong: false,
@@ -77,15 +70,14 @@ function ChangePassword({ navigation, route }) {
       };
     }
 
-    return { isStrong: true, message: "" }; // Mật khẩu đủ mạnh
+    return { isStrong: true, message: "" };
   };
 
-  // Chạy kiểm tra form mỗi khi có thay đổi ở các trường mật khẩu
+  // Validate form on input change
   useEffect(() => {
     validateForm();
   }, [presentPassword, newPassword, confirmPassword]);
 
-  // Hàm kiểm tra tính hợp lệ của form
   const validateForm = () => {
     const newErrors = {
       presentPassword: "",
@@ -95,13 +87,13 @@ function ChangePassword({ navigation, route }) {
 
     let isValid = true;
 
-    // Kiểm tra mật khẩu hiện tại
+    // Validate present password
     if (!presentPassword.trim()) {
       newErrors.presentPassword = "Current password is required";
       isValid = false;
     }
 
-    // Kiểm tra mật khẩu mới
+    // Validate new password
     if (!newPassword.trim()) {
       newErrors.newPassword = "New password is required";
       isValid = false;
@@ -113,7 +105,7 @@ function ChangePassword({ navigation, route }) {
       }
     }
 
-    // Kiểm tra xác nhận mật khẩu
+    // Validate confirm password
     if (!confirmPassword.trim()) {
       newErrors.confirmPassword = "Confirm password is required";
       isValid = false;
@@ -122,12 +114,12 @@ function ChangePassword({ navigation, route }) {
       isValid = false;
     }
 
-    setErrors(newErrors); // Cập nhật state lỗi
-    setIsFormValid(isValid); // Cập nhật trạng thái form
+    setErrors(newErrors);
+    setIsFormValid(isValid);
     return isValid;
   };
 
-  // Xử lý khi trường được tương tác
+  // Handle field touch state
   const handleFieldTouch = (field) => {
     setTouched((prev) => ({
       ...prev,
@@ -135,35 +127,31 @@ function ChangePassword({ navigation, route }) {
     }));
   };
 
-  // Xử lý khi nhấn nút đổi mật khẩu
   const handleResetPassword = async () => {
-    // Đánh dấu tất cả các trường đã được chạm vào khi cố gắng gửi
+    // Mark all fields as touched when attempting to submit
     setTouched({
       presentPassword: true,
       newPassword: true,
       confirmPassword: true,
     });
 
-    // Kiểm tra lại form trước khi gửi
     if (!validateForm()) {
       ShowToast("error", "Complete form to change password");
       return;
     }
 
-    // Gọi API đổi mật khẩu
     const response = await changePassword({
       currentPassword: presentPassword,
       newPassword: newPassword,
       newPasswordConfirm: confirmPassword,
     });
 
-    // Xử lý phản hồi từ API
     if (response.status === 200) {
       ShowToast("success", "Password changed successfully");
       console.log("Password reset:", newPassword);
-      navigation.navigate(ScreensName.signin); // Chuyển đến màn hình đăng nhập
+      navigation.navigate(ScreensName.signin);
     } else {
-      // Hiển thị thông báo lỗi
+
       ShowToast(
         "error",
         response?.response?.data?.message || "Failed to change password"
@@ -173,7 +161,6 @@ function ChangePassword({ navigation, route }) {
 
   return (
     <SafeAreaWrapper>
-      {/* KeyboardAvoidingView giúp form không bị che khuất bởi bàn phím */}
       <KeyboardAvoidingView
         style={{
           ...styles.container,
@@ -182,13 +169,11 @@ function ChangePassword({ navigation, route }) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? normalize(64) : 0}
       >
-        {/* ScrollView cho phép cuộn nội dung khi không đủ không gian */}
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.card}>
-            {/* Tiêu đề và phụ đề */}
             <Text style={[styles.title, { color: theme.textColor }]}>
               Change Password
             </Text>
@@ -197,7 +182,6 @@ function ChangePassword({ navigation, route }) {
             </Text>
 
             <View style={styles.inputContainer}>
-              {/* Trường mật khẩu hiện tại */}
               <Text style={[styles.label, { color: theme.greyTextColor }]}>
                 Current Password
               </Text>
@@ -223,7 +207,6 @@ function ChangePassword({ navigation, route }) {
                   secureTextEntry={!showPresentPassword}
                   onBlur={() => handleFieldTouch("presentPassword")}
                 />
-                {/* Nút hiển thị/ẩn mật khẩu */}
                 <TouchableOpacity
                   style={styles.eyeIcon}
                   onPress={() => setShowPresentPassword(!showPresentPassword)}
@@ -235,12 +218,10 @@ function ChangePassword({ navigation, route }) {
                   />
                 </TouchableOpacity>
               </View>
-              {/* Hiển thị thông báo lỗi nếu có */}
               {touched.presentPassword && errors.presentPassword ? (
                 <Text style={styles.errorText}>{errors.presentPassword}</Text>
               ) : null}
 
-              {/* Trường mật khẩu mới */}
               <Text style={[styles.label, { color: theme.greyTextColor }]}>
                 New Password
               </Text>
@@ -266,7 +247,6 @@ function ChangePassword({ navigation, route }) {
                   secureTextEntry={!showNewPassword}
                   onBlur={() => handleFieldTouch("newPassword")}
                 />
-                {/* Nút hiển thị/ẩn mật khẩu mới */}
                 <TouchableOpacity
                   style={styles.eyeIcon}
                   onPress={() => setShowNewPassword(!showNewPassword)}
@@ -278,12 +258,10 @@ function ChangePassword({ navigation, route }) {
                   />
                 </TouchableOpacity>
               </View>
-              {/* Hiển thị thông báo lỗi nếu có */}
               {touched.newPassword && errors.newPassword ? (
                 <Text style={styles.errorText}>{errors.newPassword}</Text>
               ) : null}
 
-              {/* Trường xác nhận mật khẩu */}
               <Text style={[styles.label, { color: theme.greyTextColor }]}>
                 Confirm Password
               </Text>
@@ -309,7 +287,6 @@ function ChangePassword({ navigation, route }) {
                   secureTextEntry={!showConfirmPassword}
                   onBlur={() => handleFieldTouch("confirmPassword")}
                 />
-                {/* Nút hiển thị/ẩn xác nhận mật khẩu */}
                 <TouchableOpacity
                   style={styles.eyeIcon}
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -321,13 +298,11 @@ function ChangePassword({ navigation, route }) {
                   />
                 </TouchableOpacity>
               </View>
-              {/* Hiển thị thông báo lỗi nếu có */}
               {touched.confirmPassword && errors.confirmPassword ? (
                 <Text style={styles.errorText}>{errors.confirmPassword}</Text>
               ) : null}
             </View>
 
-            {/* Phần minh họa với hình xương rồng và các trang trí */}
             <View style={styles.illustrationContainer}>
               <Image source={proundCactusIcon} style={styles.cactusIcon} />
               <View style={styles.decorations}>
@@ -337,7 +312,6 @@ function ChangePassword({ navigation, route }) {
               </View>
             </View>
 
-            {/* Nút thay đổi mật khẩu */}
             <RippleButton
               // buttonStyle={[
               //   styles.submitButton,
@@ -347,7 +321,7 @@ function ChangePassword({ navigation, route }) {
               buttonText="Change Password"
               textStyle={styles.buttonText}
               onPress={handleResetPassword}
-              disabled={!isFormValid} // Vô hiệu hóa nút nếu form không hợp lệ
+              disabled={!isFormValid}
             />
           </View>
         </ScrollView>
@@ -356,139 +330,138 @@ function ChangePassword({ navigation, route }) {
   );
 }
 
-// Định nghĩa các styles cho component
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Chiếm toàn bộ không gian có sẵn
-    backgroundColor: "#FFFFFF", // Màu nền trắng
+    flex: 1,
+    backgroundColor: "#FFFFFF",
   },
   scrollContainer: {
-    flexGrow: 1, // Cho phép nội dung mở rộng
-    paddingHorizontal: normalize(24), // Đệm ngang
-    paddingVertical: normalize(20), // Đệm dọc
+    flexGrow: 1,
+    paddingHorizontal: normalize(24),
+    paddingVertical: normalize(20),
   },
   card: {
-    width: "100%", // Chiếm toàn bộ chiều rộng
-    alignItems: "center", // Căn giữa các phần tử con theo chiều ngang
+    width: "100%",
+    alignItems: "center",
   },
   title: {
-    fontSize: normalize(24), // Kích thước font chữ tiêu đề
-    fontFamily: "Aleo_700Bold", // Font chữ đậm
-    color: "#191C32", // Màu chữ
-    marginBottom: normalize(10), // Khoảng cách dưới
-    alignSelf: "flex-start", // Căn trái
+    fontSize: normalize(24),
+    fontFamily: "Aleo_700Bold",
+    color: "#191C32",
+    marginBottom: normalize(10),
+    alignSelf: "flex-start",
   },
   subtitle: {
-    fontSize: normalize(16), // Kích thước font chữ phụ đề
-    fontFamily: "Aleo_400Regular", // Font chữ thường
-    color: "#666", // Màu chữ xám
-    marginBottom: normalize(24), // Khoảng cách dưới
-    lineHeight: normalize(22), // Khoảng cách giữa các dòng
-    alignSelf: "flex-start", // Căn trái
+    fontSize: normalize(16),
+    fontFamily: "Aleo_400Regular",
+    color: "#666",
+    marginBottom: normalize(24),
+    lineHeight: normalize(22),
+    alignSelf: "flex-start",
   },
   inputContainer: {
-    width: "100%", // Chiếm toàn bộ chiều rộng
-    marginBottom: normalize(16), // Khoảng cách dưới
+    width: "100%",
+    marginBottom: normalize(16),
   },
   label: {
-    fontSize: normalize(16), // Kích thước font chữ nhãn
-    fontFamily: "Aleo_400Regular", // Font chữ thường
-    color: "#666", // Màu chữ xám
-    marginBottom: normalize(8), // Khoảng cách dưới
+    fontSize: normalize(16),
+    fontFamily: "Aleo_400Regular",
+    color: "#666",
+    marginBottom: normalize(8),
   },
   inputWrapper: {
-    width: "100%", // Chiếm toàn bộ chiều rộng
-    height: normalize(50), // Chiều cao trường nhập liệu
-    backgroundColor: "#F5F5F5", // Màu nền xám nhạt
-    borderRadius: normalize(12), // Bo góc
-    flexDirection: "row", // Sắp xếp các phần tử con theo hàng ngang
-    alignItems: "center", // Căn giữa theo chiều dọc
-    borderWidth: 1, // Độ dày viền
-    borderColor: "transparent", // Màu viền trong suốt (mặc định)
-    marginBottom: normalize(5), // Khoảng cách dưới
+    width: "100%",
+    height: normalize(50),
+    backgroundColor: "#F5F5F5",
+    borderRadius: normalize(12),
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
+    marginBottom: normalize(5),
   },
   inputError: {
-    borderColor: "#FF6B6B", // Màu viền đỏ khi có lỗi
+    borderColor: "#FF6B6B",
   },
   input: {
-    flex: 1, // Mở rộng để chiếm hết không gian còn lại
-    height: "100%", // Chiếm toàn bộ chiều cao
-    paddingHorizontal: normalize(15), // Đệm ngang
-    fontSize: normalize(16), // Kích thước font chữ
-    fontFamily: "Aleo_400Regular", // Font chữ thường
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: normalize(15),
+    fontSize: normalize(16),
+    fontFamily: "Aleo_400Regular",
   },
   eyeIcon: {
-    paddingHorizontal: normalize(15), // Đệm ngang
-    height: "100%", // Chiếm toàn bộ chiều cao
-    justifyContent: "center", // Căn giữa theo chiều dọc
+    paddingHorizontal: normalize(15),
+    height: "100%",
+    justifyContent: "center",
   },
   errorText: {
-    color: "#FF6B6B", // Màu chữ đỏ cho thông báo lỗi
-    fontSize: normalize(12), // Kích thước font chữ nhỏ
-    fontFamily: "Aleo_400Regular", // Font chữ thường
-    marginBottom: normalize(15), // Khoảng cách dưới
+    color: "#FF6B6B",
+    fontSize: normalize(12),
+    fontFamily: "Aleo_400Regular",
+    marginBottom: normalize(15),
   },
   illustrationContainer: {
-    position: "relative", // Vị trí tương đối
-    width: "100%", // Chiếm toàn bộ chiều rộng
-    aspectRatio: 2, // Tỷ lệ khung hình 2:1
-    marginVertical: normalize(16), // Khoảng cách trên dưới
-    alignItems: "center", // Căn giữa theo chiều ngang
-    justifyContent: "center", // Căn giữa theo chiều dọc
+    position: "relative",
+    width: "100%",
+    aspectRatio: 2, // Maintain a consistent aspect ratio
+    marginVertical: normalize(16),
+    alignItems: "center",
+    justifyContent: "center",
   },
   cactusIcon: {
-    width: "80%", // Chiều rộng 80% của container
-    height: "80%", // Chiều cao 80% của container
-    resizeMode: "contain", // Chế độ hiển thị hình ảnh
+    width: "80%", // Adjust based on screen size
+    height: "80%",
+    resizeMode: "contain",
   },
   decorations: {
-    position: "absolute", // Vị trí tuyệt đối
-    width: "100%", // Chiếm toàn bộ chiều rộng
-    height: "100%", // Chiếm toàn bộ chiều cao
+    position: "absolute",
+    width: "100%",
+    height: "100%",
   },
   star: {
-    position: "absolute", // Vị trí tuyệt đối
-    width: normalize(20), // Chiều rộng ngôi sao
-    height: normalize(20), // Chiều cao ngôi sao
-    borderRadius: normalize(4), // Bo góc
-    transform: [{ rotate: "45deg" }], // Xoay 45 độ để tạo hình ngôi sao
+    position: "absolute",
+    width: normalize(20),
+    height: normalize(20),
+    borderRadius: normalize(4),
+    transform: [{ rotate: "45deg" }],
   },
   starOrange: {
-    backgroundColor: "#FF8A65", // Màu cam
-    right: "20%", // Vị trí bên phải
-    top: "10%", // Vị trí từ trên xuống
+    backgroundColor: "#FF8A65",
+    right: "20%",
+    top: "10%",
   },
   starYellow: {
-    backgroundColor: "#FFD54F", // Màu vàng
-    right: "35%", // Vị trí bên phải
-    top: "15%", // Vị trí từ trên xuống
+    backgroundColor: "#FFD54F",
+    right: "35%",
+    top: "15%",
   },
   dot: {
-    position: "absolute", // Vị trí tuyệt đối
-    width: normalize(10), // Chiều rộng chấm
-    height: normalize(10), // Chiều cao chấm
-    borderRadius: normalize(5), // Bo tròn hoàn toàn
-    backgroundColor: "#4CAF50", // Màu xanh lá
-    right: "25%", // Vị trí bên phải
-    top: "25%", // Vị trí từ trên xuống
+    position: "absolute",
+    width: normalize(10),
+    height: normalize(10),
+    borderRadius: normalize(5),
+    backgroundColor: "#4CAF50",
+    right: "25%",
+    top: "25%",
   },
   submitButton: {
-    width: "100%", // Chiếm toàn bộ chiều rộng
-    backgroundColor: "#32B768", // Màu nền xanh lá
-    padding: normalize(15), // Đệm
-    borderRadius: normalize(12), // Bo góc
-    marginTop: normalize(16), // Khoảng cách trên
+    width: "100%",
+    backgroundColor: "#32B768",
+    padding: normalize(15),
+    borderRadius: normalize(12),
+    marginTop: normalize(16),
   },
   disabledButton: {
-    backgroundColor: "#A5D6A7", // Màu nền xanh lá nhạt khi nút bị vô hiệu hóa
-    opacity: 0.7, // Độ mờ
+    backgroundColor: "#A5D6A7",
+    opacity: 0.7,
   },
   buttonText: {
-    color: "#FFFFFF", // Màu chữ trắng
-    fontSize: normalize(18), // Kích thước font chữ
-    fontFamily: "Aleo_700Bold", // Font chữ đậm
-    textAlign: "center", // Căn giữa văn bản
+    color: "#FFFFFF",
+    fontSize: normalize(18),
+    fontFamily: "Aleo_700Bold",
+    textAlign: "center",
   },
 });
 
-export default ChangePassword; // Xuất component để sử dụng trong ứng dụng
+export default ChangePassword;

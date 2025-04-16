@@ -1,223 +1,136 @@
-// Import các thư viện và components cần thiết
-import React, {
-  useRef,
-  forwardRef,
-  useImperativeHandle,
-  useEffect,
-} from "react"; // Import React và các hooks cần thiết
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Image,
-} from "react-native"; // Import các components cơ bản từ React Native
-import {
-  GestureHandlerRootView,
-  DrawerLayout,
-} from "react-native-gesture-handler"; // Import components để xử lý drawer và gesture
-import FontistoIcon from "../common/VectorIcons/FontistoIcon"; // Import icon tùy chỉnh từ bộ Fontisto
-import Ionicons from "../common/VectorIcons/Ionicons"; // Import icon tùy chỉnh từ bộ Ionicons
-import MaterialIcons from "../common/VectorIcons/MaterialIcons"; // Import icon tùy chỉnh từ bộ MaterialIcons
-import { useDispatch, useSelector } from "react-redux"; // Import hooks để tương tác với Redux store
-import { drawerSelector, userSelector } from "../../redux/selectors/selector"; // Import selectors để lấy dữ liệu từ Redux store
-import { ScreensName } from "../../constants/ScreensName"; // Import các tên màn hình để điều hướng
-import { useNavigation } from "@react-navigation/native"; // Import hook để điều hướng giữa các màn hình
-import {
-  toggleVisible,
-  updateVisible,
-} from "../../redux/reducers/drawerReducer"; // Import các actions để thay đổi trạng thái drawer
+import React, { useRef, forwardRef, useImperativeHandle, useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Image } from "react-native";
+import { GestureHandlerRootView, DrawerLayout } from "react-native-gesture-handler";
+import FontistoIcon from "../common/VectorIcons/FontistoIcon";
+import Ionicons from "../common/VectorIcons/Ionicons";
+import MaterialIcons from "../common/VectorIcons/MaterialIcons";
+import { useDispatch, useSelector } from "react-redux";
+import { drawerSelector, userSelector } from "../../redux/selectors/selector";
+import { ScreensName } from "../../constants/ScreensName";
+import { useNavigation } from "@react-navigation/native";
+import { toggleVisible, updateVisible } from "../../redux/reducers/drawerReducer";
 
-// Lấy kích thước màn hình thiết bị
-const HEIGHT = Dimensions.get("window").height; // Chiều cao màn hình
-const WIDTH = Dimensions.get("window").width; // Chiều rộng màn hình
+const HEIGHT = Dimensions.get("window").height;
+const WIDTH = Dimensions.get("window").width;
 
-// Định nghĩa component CustomDrawerLayout sử dụng forwardRef để có thể truyền ref từ component cha
-const CustomDrawerLayout = forwardRef(
-  ({ children, drawerWidth = WIDTH * 0.7, theme }, ref) => {
-    // Lấy đối tượng navigation để điều hướng
-    const navigation = useNavigation();
-    // Lấy trạng thái drawer từ Redux store
-    const drawerVisible = useSelector(drawerSelector);
-    // Tạo ref để tham chiếu đến component DrawerLayout
-    const drawerRef = useRef(null);
-    // Lấy thông tin user từ Redux store
-    const user = useSelector(userSelector);
-    // Lấy dispatch để gửi actions đến Redux store
-    const dispatch = useDispatch();
+const CustomDrawerLayout = forwardRef(({ children, drawerWidth = WIDTH * 0.7, theme }, ref) => {
+  const navigation = useNavigation();
+  const drawerVisible = useSelector(drawerSelector);
+  const drawerRef = useRef(null);
+  const user = useSelector(userSelector);
+  const dispatch = useDispatch();
 
-    // Effect để đồng bộ trạng thái drawer với Redux store
-    useEffect(() => {
-      // Nếu drawer nên hiển thị theo Redux store
-      if (drawerVisible.visible) {
-        // Mở drawer thông qua ref
-        drawerRef.current.openDrawer();
+  useEffect(() => {
+    if (drawerVisible.visible) {
+      drawerRef.current.openDrawer();
+    } else {
+      drawerRef.current.closeDrawer();
+    }
+  }, [drawerVisible]);
+
+  const closeDrawer = () => {
+    dispatch(toggleVisible());
+  };
+
+  const checkAuth = () => {
+    if (user) {
+      navigation.navigate(ScreensName.profile);
+    } else {
+      navigation.navigate(ScreensName.signin);
+    }
+  };
+
+  const notificationNav = () => {
+    if (user) {
+      if (user.userPreferenceId === null) {
+        navigation.navigate(ScreensName.survey);
       } else {
-        // Đóng drawer thông qua ref
-        drawerRef.current.closeDrawer();
+        navigation.navigate(ScreensName.forYou);
       }
-    }, [drawerVisible]); // Chạy lại khi drawerVisible thay đổi
+    } else {
+      navigation.navigate(ScreensName.signin);
+    }
+  };
 
-    // Hàm đóng drawer bằng cách gửi action toggleVisible đến Redux store
-    const closeDrawer = () => {
-      dispatch(toggleVisible());
-    };
-
-    // Hàm kiểm tra xác thực và điều hướng đến màn hình tương ứng
-    const checkAuth = () => {
-      if (user) {
-        // Nếu đã đăng nhập, chuyển đến màn hình profile
-        navigation.navigate(ScreensName.profile);
-      } else {
-        // Nếu chưa đăng nhập, chuyển đến màn hình signin
-        navigation.navigate(ScreensName.signin);
-      }
-    };
-
-    // Hàm điều hướng đến màn hình thông báo dựa trên trạng thái user
-    const notificationNav = () => {
-      if (user) {
-        // Nếu đã đăng nhập
-        if (user.userPreferenceId === null) {
-          // Nếu chưa có preference, chuyển đến màn hình survey
-          navigation.navigate(ScreensName.survey);
-        } else {
-          // Nếu đã có preference, chuyển đến màn hình for you
-          navigation.navigate(ScreensName.forYou);
-        }
-      } else {
-        // Nếu chưa đăng nhập, chuyển đến màn hình signin
-        navigation.navigate(ScreensName.signin);
-      }
-    };
-
-    // Hàm render nội dung của drawer
-    const renderDrawerContent = () => {
-      // Danh sách các mục trong drawer
-      const drawerItems = [
-        {
-          title: "Home", // Tiêu đề mục
-          icon: (
-            <Ionicons name="home" size={24} color={theme.backButtonColor} />
-          ), // Icon hiển thị
-          onPress: () => {
-            // Hành động khi nhấn vào mục
-            navigation.navigate(ScreensName.home); // Điều hướng đến màn hình home
-            closeDrawer(); // Đóng drawer
-          },
+  const renderDrawerContent = () => {
+    const drawerItems = [
+      {
+        title: "Home",
+        icon: <Ionicons name="home" size={24} color={theme.backButtonColor} />,
+        onPress: () => {
+          navigation.navigate(ScreensName.home);
+          closeDrawer();
         },
-        {
-          title: "Profile",
-          icon: (
-            <MaterialIcons
-              name="account-circle"
-              size={24}
-              color={theme.backButtonColor}
-            />
-          ),
-          onPress: () => {
-            checkAuth(); // Kiểm tra xác thực trước khi điều hướng
-            closeDrawer();
-          },
+      },
+      {
+        title: "Profile",
+        icon: <MaterialIcons name="account-circle" size={24} color={theme.backButtonColor} />,
+        onPress: () => {
+          checkAuth();
+          closeDrawer();
         },
-        {
-          title: "Notifications",
-          icon: (
-            <FontistoIcon name="bell" size={24} color={theme.backButtonColor} />
-          ),
-          onPress: () => {
-            notificationNav(); // Điều hướng đến màn hình thông báo tương ứng
-            closeDrawer();
-          },
+      },
+      {
+        title: "Notifications",
+        icon: <FontistoIcon name="bell" size={24} color={theme.backButtonColor} />,
+        onPress: () => {
+          notificationNav();
+          closeDrawer();
         },
-      ];
-
-      return (
-        // Container chính của drawer content
-        <View
-          style={[
-            styles.drawerContent,
-            { backgroundColor: theme.headerBackgroundColor },
-          ]}
-        >
-          {/* Header của drawer hiển thị thông tin user */}
-          <View style={styles.drawerHeader}>
-            {/* Kiểm tra và hiển thị avatar user nếu có */}
-            {user?.avatarUrl ? (
-              <Image
-                source={{ uri: user.avatarUrl }} // URL của avatar
-                resizeMode="cover" // Mode hiển thị ảnh
-                style={[styles.profileImage, styles.avtImage]} // Style cho ảnh
-              />
-            ) : (
-              // Nếu không có avatar, hiển thị icon mặc định
-              <MaterialIcons
-                name="account-circle"
-                size={60}
-                color={theme.backButtonColor}
-              />
-            )}
-            {/* Hiển thị tên user hoặc "Guest" nếu không có user */}
-            <Text
-              style={[
-                styles.drawerHeaderText,
-                { color: theme.backButtonColor },
-              ]}
-            >
-              {user?.username || "Guest"}
-            </Text>
-          </View>
-
-          {/* Render các mục trong drawer bằng phương thức map */}
-          {drawerItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.drawerItem}
-              onPress={item.onPress}
-            >
-              {item.icon} {/* Hiển thị icon của mục */}
-              <Text
-                style={[
-                  styles.drawerItemText,
-                  { color: theme.backButtonColor },
-                ]}
-              >
-                {item.title} {/* Hiển thị tiêu đề của mục */}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      );
-    };
-
-    // Sử dụng useImperativeHandle để hiển thị các phương thức cho component cha thông qua ref
-    useImperativeHandle(ref, () => ({
-      openDrawer: () => drawerRef.current?.openDrawer(), // Phương thức mở drawer
-      closeDrawer: () => drawerRef.current?.closeDrawer(), // Phương thức đóng drawer
-    }));
+      },
+    ];
 
     return (
-      // Root view cho gesture handler
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        {/* Component DrawerLayout chính */}
-        <DrawerLayout
-          ref={drawerRef} // Gán ref để có thể điều khiển drawer từ code
-          drawerWidth={drawerWidth} // Chiều rộng của drawer
-          drawerPosition={DrawerLayout.positions.Left} // Vị trí của drawer (từ bên trái)
-          drawerType="front" // Kiểu drawer (hiển thị phía trước nội dung)
-          renderNavigationView={renderDrawerContent} // Hàm render nội dung của drawer
-          onDrawerClose={() => {
-            // Xử lý khi drawer đóng
-            dispatch(updateVisible({ visible: false })); // Cập nhật trạng thái trong Redux store
-          }}
-        >
-          {children} {/* Hiển thị nội dung con */}
-        </DrawerLayout>
-      </GestureHandlerRootView>
+      <View style={[styles.drawerContent, { backgroundColor: theme.headerBackgroundColor }]}>
+        <View style={styles.drawerHeader}>
+          {user?.avatarUrl ? (
+            <Image
+              source={{ uri: user.avatarUrl }}
+              resizeMode="cover"
+              style={[styles.profileImage, styles.avtImage]}
+            />
+          ) : (
+            <MaterialIcons name="account-circle" size={60} color={theme.backButtonColor} />
+          )}
+          <Text style={[styles.drawerHeaderText, { color: theme.backButtonColor }]}>
+            {user?.username || "Guest"}
+          </Text>
+        </View>
+
+        {drawerItems.map((item, index) => (
+          <TouchableOpacity key={index} style={styles.drawerItem} onPress={item.onPress}>
+            {item.icon}
+            <Text style={[styles.drawerItemText, { color: theme.backButtonColor }]}>
+              {item.title}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     );
-  }
-);
+  };
+
+  useImperativeHandle(ref, () => ({
+    openDrawer: () => drawerRef.current?.openDrawer(),
+    closeDrawer: () => drawerRef.current?.closeDrawer(),
+  }));
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <DrawerLayout
+        ref={drawerRef}
+        drawerWidth={drawerWidth}
+        drawerPosition={DrawerLayout.positions.Left}
+        drawerType="front"
+        renderNavigationView={renderDrawerContent}
+        onDrawerClose={() => {
+          dispatch(updateVisible({ visible: false }));
+        }}
+      >
+        {children}
+      </DrawerLayout>
+    </GestureHandlerRootView>
+  );
+});
 
 const styles = StyleSheet.create({
   drawerContent: {

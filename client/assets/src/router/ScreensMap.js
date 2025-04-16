@@ -1,44 +1,26 @@
-// Import các màn hình đăng nhập và đăng ký
 import Signin from "../screens/Signin";
 import Signup from "../screens/Signup";
 
-// Import hằng số tên các màn hình từ constants
 import { ScreensName } from "../constants/ScreensName";
-// Import màn hình đổi mật khẩu
 import ChangePassword from "../screens/ChangePassword";
-// Import màn hình xác minh email
 import VerifyEmail from "../screens/VerifyEmail";
-// Import component icon từ Ionicons
 import Ionicons from "../components/common/VectorIcons/Ionicons";
-// Import màn hình chính
 import Home from "../screens/Home";
-// Import màn hình danh sách yêu thích
 import FavorList from "../screens/FavorList";
-// Import màn hình tìm kiếm
 import Search from "../screens/Search";
-// Import màn hình yêu thích và gợi ý
 import FavorAndSuggest from "../screens/FavorAndSuggest";
-// Import màn hình thông báo
+import Setting from "../screens/Setting";
 import Notification from "../screens/Notification";
-// Import icon từ AntDesign
+import FontistoIcon from "../components/common/VectorIcons/FontistoIcon";
 import AntDesignIcon from "../components/common/VectorIcons/AntDesignIcon";
-// Import màn hình danh sách
 import List from "../screens/List";
-// Import màn hình tin nhắn
 import Message from "../screens/Message";
-// Import icon từ FontAwesome
 import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon";
-// Import components Image và View từ React Native
-import { View } from "react-native";
-// Import icon từ Octicons
+import { Image, View } from "react-native";
 import OcticonsIcon from "../components/common/VectorIcons/OcticonsIcon";
-// Import màn hình hồ sơ người dùng
 import Profile from "../screens/Profile";
-// Import màn hình kế hoạch ăn uống
 import MealPlan from "../screens/MealPlan/MealPlan";
-// Import màn hình đề xuất cho bạn
 import ForYou from "../screens/ForYou";
-// Import các màn hình khảo sát
 import UnderDisease from "../screens/Survey/UnderDisease";
 import EatHabit from "../screens/Survey/EatHabit";
 import Favorite from "../screens/Survey/Favorite";
@@ -58,118 +40,119 @@ import Weight from "../screens/Survey/Weight";
 import Email from "../screens/Survey/Email";
 import PhoneNumber from "../screens/Survey/PhoneNumber";
 import Name from "../screens/Survey/Name";
-// Import màn hình chính cho khảo sát
 import SurveyScreen from "../screens/SurveyScreen";
-// Import màn hình đặt lại mật khẩu
+import { resetPassword } from "../services/authService";
 import ResetPassword from "../screens/ResetPassword";
-// Import màn hình thanh toán cho kế hoạch ăn uống
 import PaymentScreen from "../screens/MealPlan/PaymentScreen";
-// Import màn hình trạng thái thanh toán
 import PaymentStatusScreen from "../screens/MealPlan/PaymentStatusScreen";
 
-// Xuất mảng chứa cấu hình của tất cả các màn hình trong ứng dụng
 export const ScreensMap = [
   {
-    name: ScreensName.home, // Tên màn hình chính
-    component: Home, // Component tương ứng
+    name: ScreensName.home,
+    component: Home,
     options: {
-      tabBarButton: () => null, // Ẩn nút tab cho màn hình này
+      tabBarButton: () => null,
     },
   },
   {
-    name: ScreensName.signup, // Tên màn hình đăng ký
-    component: Signup, // Component tương ứng
+    name: ScreensName.signup,
+
+    component: Signup,
+
     options: {
-      tabBarButton: () => null, // Ẩn nút tab cho màn hình này
+      tabBarButton: () => null,
     },
-    hiddenBottomTab: true, // Ẩn thanh tab dưới cùng khi hiển thị màn hình này
+
+    hiddenBottomTab: true,
+  },
+
+  {
+    name: ScreensName.signin,
+    component: Signin,
+    options: {
+      tabBarButton: () => null,
+    },
+    hiddenBottomTab: true,
   },
   {
-    name: ScreensName.signin, // Tên màn hình đăng nhập
-    component: Signin, // Component tương ứng
+    name: ScreensName.verifyEmail,
+    component: VerifyEmail,
     options: {
-      tabBarButton: () => null, // Ẩn nút tab cho màn hình này
+      tabBarButton: () => null,
     },
-    hiddenBottomTab: true, // Ẩn thanh tab dưới cùng khi hiển thị màn hình này
+    hiddenBottomTab: true,
   },
   {
-    name: ScreensName.verifyEmail, // Tên màn hình xác minh email
-    component: VerifyEmail, // Component tương ứng
+    name: ScreensName.changePassword,
+    component: ChangePassword,
     options: {
-      tabBarButton: () => null, // Ẩn nút tab cho màn hình này
+      tabBarButton: () => null,
     },
-    hiddenBottomTab: true, // Ẩn thanh tab dưới cùng khi hiển thị màn hình này
+    hiddenBottomTab: true,
   },
   {
-    name: ScreensName.changePassword, // Tên màn hình đổi mật khẩu
-    component: ChangePassword, // Component tương ứng
+    name: ScreensName.resetPassword,
+    component: ResetPassword,
     options: {
-      tabBarButton: () => null, // Ẩn nút tab cho màn hình này
+      tabBarButton: () => null,
     },
-    hiddenBottomTab: true, // Ẩn thanh tab dưới cùng khi hiển thị màn hình này
+    hiddenBottomTab: true,
   },
+
   {
-    name: ScreensName.resetPassword, // Tên màn hình đặt lại mật khẩu
-    component: ResetPassword, // Component tương ứng
+    name: ScreensName.favorList,
+    component: FavorList,
     options: {
-      tabBarButton: () => null, // Ẩn nút tab cho màn hình này
-    },
-    hiddenBottomTab: true, // Ẩn thanh tab dưới cùng khi hiển thị màn hình này
-  },
-  {
-    name: ScreensName.favorList, // Tên màn hình danh sách yêu thích
-    component: FavorList, // Component tương ứng
-    options: {
-      tabBarIcon: ({ color, focused }) => <Ionicons name="heart-outline" size={28} color={color} />, // Icon hiển thị trên tab
-      requireAuthen: true, // Yêu cầu xác thực để truy cập
+      tabBarIcon: ({ color, focused }) => <Ionicons name="heart-outline" size={28} color={color} />,
+      requireAuthen: true,
     },
   },
   {
-    name: ScreensName.message, // Tên màn hình tin nhắn
-    component: Message, // Component tương ứng
+    name: ScreensName.message,
+    component: Message,
     options: {
       tabBarIcon: ({ color, focused }) => (
         <Ionicons name="chatbubble-ellipses-outline" size={28} color={color} />
-      ), // Icon hiển thị trên tab
-      iconStyles: { transform: [{ translateX: -25 }] }, // Điều chỉnh vị trí icon
-      requireAuthen: true, // Yêu cầu xác thực để truy cập
+      ),
+      iconStyles: { transform: [{ translateX: -25 }] },
+      requireAuthen: true,
     },
-    hiddenBottomTab: true, // Ẩn thanh tab dưới cùng khi hiển thị màn hình này
+    hiddenBottomTab: true,
   },
   {
-    name: ScreensName.survey, // Tên màn hình khảo sát
-    component: SurveyScreen, // Component tương ứng (màn hình đầu tiên của khảo sát)
+    name: ScreensName.survey,
+    component: SurveyScreen, // Màn hình đầu tiên của khảo sát
     options: {
-      tabBarIcon: ({ color, focused }) => <AntDesignIcon name="calendar" size={28} color={color} />, // Icon hiển thị trên tab
-      iconStyles: { transform: [{ translateX: 25 }] }, // Điều chỉnh vị trí icon
-      requireAuthen: true, // Yêu cầu xác thực để truy cập
+      tabBarIcon: ({ color, focused }) => <AntDesignIcon name="calendar" size={28} color={color} />,
+      iconStyles: { transform: [{ translateX: 25 }] },
+      requireAuthen: true,
     },
-    hiddenBottomTab: true, // Ẩn thanh tab dưới cùng khi hiển thị màn hình này
+    hiddenBottomTab: true,
   },
   {
-    name: ScreensName.mealPlan, // Tên màn hình kế hoạch ăn uống
-    component: MealPlan, // Component tương ứng
+    name: ScreensName.mealPlan,
+    component: MealPlan,
     options: {
       tabBarIcon: ({ color, focused }) => {
         return (
           <View>
-            <FontAwesomeIcon name="heart-o" size={24} color={color} /> {/* Icon trái tim */}
+            <FontAwesomeIcon name="heart-o" size={24} color={color} />
             <OcticonsIcon
               name="pulse"
               size={16}
               color={color}
               style={{
-                position: "absolute", // Định vị tuyệt đối
-                height: 16, // Chiều cao
-                width: 32, // Chiều rộng
-                top: 4, // Vị trí từ trên xuống
-                left: 4, // Vị trí từ trái sang
+                position: "absolute",
+                height: 16,
+                width: 32,
+                top: 4,
+                left: 4,
               }}
-            /> {/* Icon nhịp đập được chồng lên icon trái tim */}
+            />
           </View>
         );
       },
-      requireAuthen: true, // Yêu cầu xác thực để truy cập
+      requireAuthen: true,
     },
   },
 
@@ -179,6 +162,13 @@ export const ScreensMap = [
     options: {
       tabBarButton: () => null,
       requireAuthen: true,
+    },
+  },
+  {
+    name: ScreensName.setting,
+    component: Setting,
+    options: {
+      tabBarButton: () => null,
     },
   },
   {

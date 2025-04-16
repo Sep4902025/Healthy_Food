@@ -1,188 +1,188 @@
-import React, { useEffect, useState } from "react"; // Import các hook cơ bản của React
+import React, { useEffect, useState } from "react";
 import {
-  View, // Component để tạo container
-  Text, // Component để hiển thị text
-  Image, // Component để hiển thị hình ảnh
-  TouchableOpacity, // Component để tạo button có thể nhấn
-  StyleSheet, // API để định nghĩa styles
-  Switch, // Component công tắc
-  Dimensions, // API để lấy kích thước màn hình
-  ActivityIndicator, // Component hiển thị loading
-  ScrollView, // Component cho phép cuộn
-} from "react-native"; // Framework để phát triển ứng dụng di động
-import { useDispatch, useSelector } from "react-redux"; // Hook để tương tác với Redux store
-import { userSelector } from "../redux/selectors/selector"; // Selector để lấy thông tin user từ Redux
-import NonBottomTabWrapper from "../components/layout/NonBottomTabWrapper"; // Component wrapper cho màn hình không có bottom tab
-import { EditHealthModal } from "../components/modal/EditHealthModal"; // Modal chỉnh sửa thông tin sức khỏe
-import { useTheme } from "../contexts/ThemeContext"; // Hook để sử dụng theme
-import { EditProfileModal } from "../components/modal/EditProfileModal"; // Modal chỉnh sửa profile
-import { EditMealPlanModal } from "../components/modal/EditMealPlanModal"; // Modal chỉnh sửa kế hoạch ăn uống
-import { ScreensName } from "../constants/ScreensName"; // Constant chứa tên các màn hình
-import ShowToast from "../components/common/CustomToast"; // Component để hiển thị thông báo
-import { deleteUser, updateUser } from "../services/authService"; // Service để xóa và cập nhật thông tin user
-import { removeUser, updateUserAct } from "../redux/reducers/userReducer"; // Action để xóa và cập nhật user trong Redux
-import { createUserPreference, resetUserPreference } from "../services/userPreference"; // Service để tạo và reset preference
-import { useFocusEffect } from "@react-navigation/native"; // Hook để thực hiện hành động khi màn hình được focus
-import ConfirmDeleteAccountModal from "../components/modal/ConfirmDeleteAccountModal"; // Modal xác nhận xóa tài khoản
-import { toggleVisible } from "../redux/reducers/drawerReducer"; // Action để toggle drawer
-import Ionicons from "../components/common/VectorIcons/Ionicons"; // Component icon từ Ionicons
-import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon"; // Component icon từ FontAwesome
-import quizService from "../services/quizService"; // Service để lấy thông tin từ quiz
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Switch,
+  Dimensions,
+  ActivityIndicator,
+  ScrollView,
+} from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import { userSelector } from "../redux/selectors/selector";
+import NonBottomTabWrapper from "../components/layout/NonBottomTabWrapper";
+import { EditHealthModal } from "../components/modal/EditHealthModal";
+import { useTheme } from "../contexts/ThemeContext";
+import { EditProfileModal } from "../components/modal/EditProfileModal";
+import { EditMealPlanModal } from "../components/modal/EditMealPlanModal";
+import { ScreensName } from "../constants/ScreensName";
+import ShowToast from "../components/common/CustomToast";
+import { deleteUser, updateUser } from "../services/authService";
+import { removeUser, updateUserAct } from "../redux/reducers/userReducer";
+import { createUserPreference, resetUserPreference } from "../services/userPreference";
+import { useFocusEffect } from "@react-navigation/native";
+import ConfirmDeleteAccountModal from "../components/modal/ConfirmDeleteAccountModal";
+import { toggleVisible } from "../redux/reducers/drawerReducer";
+import Ionicons from "../components/common/VectorIcons/Ionicons";
+import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon";
+import quizService from "../services/quizService";
 
-const WIDTH = Dimensions.get("window").width; // Lấy chiều rộng màn hình
-const HEIGHT = Dimensions.get("window").height; // Lấy chiều cao màn hình
+const WIDTH = Dimensions.get("window").width;
+const HEIGHT = Dimensions.get("window").height;
 
 function Profile({ navigation }) {
-  const dispatch = useDispatch(); // Hook để dispatch action đến Redux
-  const { themeMode, toggleTheme, theme } = useTheme(); // Lấy thông tin và functions từ theme context
-  const [isFetchingPreferences, setIsFetchingPreferences] = useState(false); // State kiểm tra đang fetching preferences
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false); // State kiểm tra đang cập nhật profile
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false); // State kiểm tra đang xóa tài khoản
-  const [error, setError] = useState(null); // State lưu trữ thông báo lỗi
+  const dispatch = useDispatch();
+  const { themeMode, toggleTheme, theme } = useTheme();
+  const [isFetchingPreferences, setIsFetchingPreferences] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [error, setError] = useState(null);
   const [modalVisible, setModalVisible] = useState({
-    EditHealthModal: false, // State hiển thị modal sức khỏe
-    EditProfileModal: false, // State hiển thị modal profile
-    EditMealPlanModal: false, // State hiển thị modal kế hoạch ăn uống
-    ConfirmDeleteModal: false, // State hiển thị modal xác nhận xóa
+    EditHealthModal: false,
+    EditProfileModal: false,
+    EditMealPlanModal: false,
+    ConfirmDeleteModal: false,
   });
-  const [userPreference, setUserPreference] = useState({}); // State lưu trữ thông tin preference của user
-  const user = useSelector(userSelector); // Lấy thông tin user từ Redux store
+  const [userPreference, setUserPreference] = useState({});
+  const user = useSelector(userSelector);
 
   useFocusEffect(
     React.useCallback(() => {
       if (!user) {
-        ShowToast("error", "Please login first"); // Hiển thị thông báo lỗi nếu không có user
-        navigation.navigate(ScreensName.signin); // Chuyển đến màn hình đăng nhập
+        ShowToast("error", "Please login first");
+        navigation.navigate(ScreensName.signin);
       }
     }, [user])
   );
 
   useEffect(() => {
     if (user?.userPreferenceId) {
-      loadUserPreference(); // Gọi hàm load preference khi có userPreferenceId
+      loadUserPreference();
     }
   }, [user?.userPreferenceId]);
 
   const loadUserPreference = async () => {
-    if (!user) return; // Nếu không có user thì return
-    setIsFetchingPreferences(true); // Đánh dấu đang fetching
-    setError(null); // Reset lỗi
+    if (!user) return;
+    setIsFetchingPreferences(true);
+    setError(null);
 
     try {
       if (!user?.userPreferenceId) {
-        await handleCreateUserPreference(); // Nếu không có userPreferenceId thì tạo mới
+        await handleCreateUserPreference();
         return;
       }
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timeout")), 30000) // Tạo promise timeout sau 30s
+        setTimeout(() => reject(new Error("Request timeout")), 30000)
       );
       const responsePromise = quizService.getUserPreferenceByUserPreferenceId(
-        user?.userPreferenceId // Gọi API lấy preference theo ID
+        user?.userPreferenceId
       );
-      const response = await Promise.race([responsePromise, timeoutPromise]); // Race promise để xử lý timeout
+      const response = await Promise.race([responsePromise, timeoutPromise]);
 
       if (response?.data) {
-        setUserPreference(response.data || {}); // Set preference nếu có data
+        setUserPreference(response.data || {});
       } else {
-        throw new Error("Failed to load user preferences"); // Throw error nếu không có data
+        throw new Error("Failed to load user preferences");
       }
     } catch (err) {
-      setError(err.message || "Unable to load profile information. Please try again later."); // Set thông báo lỗi
+      setError(err.message || "Unable to load profile information. Please try again later.");
       ShowToast(
         "error",
-        err.message || "Unable to load profile information. Please try again later." // Hiển thị thông báo lỗi
+        err.message || "Unable to load profile information. Please try again later."
       );
-      setUserPreference({}); // Reset preference
+      setUserPreference({});
     } finally {
-      setIsFetchingPreferences(false); // Đánh dấu đã fetch xong
+      setIsFetchingPreferences(false);
     }
   };
 
   const handleCreateUserPreference = async () => {
     const emptyUserPreferenceData = {
-      userId: user._id, // ID của user
-      age: "", // Tuổi (trống)
-      diet: "", // Chế độ ăn (trống)
-      eatHabit: [], // Thói quen ăn (mảng rỗng)
-      email: user?.email, // Email từ thông tin user
-      favorite: [], // Món ăn yêu thích (mảng rỗng)
-      longOfPlan: "", // Độ dài kế hoạch (trống)
-      mealNumber: "", // Số bữa ăn (trống)
-      name: user.username, // Tên từ thông tin user
-      goal: "", // Mục tiêu (trống)
-      sleepTime: "", // Thời gian ngủ (trống)
-      waterDrink: "", // Lượng nước uống (trống)
-      currentMealplanId: "", // ID kế hoạch hiện tại (trống)
-      previousMealplanId: "", // ID kế hoạch trước đó (trống)
-      hate: [], // Món ăn ghét (mảng rỗng)
-      recommendedFoods: [], // Món ăn được đề xuất (mảng rỗng)
-      weight: 0, // Cân nặng (0)
-      weightGoal: 0, // Mục tiêu cân nặng (0)
-      height: 0, // Chiều cao (0)
-      activityLevel: 0, // Mức độ hoạt động (0)
-      gender: "", // Giới tính (trống)
-      phoneNumber: "", // Số điện thoại (trống)
-      underDisease: [], // Bệnh (mảng rỗng)
-      theme: false, // Theme (false)
-      isDelete: false, // Trạng thái xóa (false)
+      userId: user._id,
+      age: "",
+      diet: "",
+      eatHabit: [],
+      email: user?.email,
+      favorite: [],
+      longOfPlan: "",
+      mealNumber: "",
+      name: user.username,
+      goal: "",
+      sleepTime: "",
+      waterDrink: "",
+      currentMealplanId: "",
+      previousMealplanId: "",
+      hate: [],
+      recommendedFoods: [],
+      weight: 0,
+      weightGoal: 0,
+      height: 0,
+      activityLevel: 0,
+      gender: "",
+      phoneNumber: "",
+      underDisease: [],
+      theme: false,
+      isDelete: false,
     };
     try {
-      const response = await createUserPreference(emptyUserPreferenceData); // Gọi API tạo preference
+      const response = await createUserPreference(emptyUserPreferenceData);
       if (response.status === 201) {
-        dispatch(updateUserAct({ ...user, userPreferenceId: response.data._id })); // Cập nhật user với preference ID mới
-        await loadUserPreference(); // Load lại preference
+        dispatch(updateUserAct({ ...user, userPreferenceId: response.data._id }));
+        await loadUserPreference();
       } else {
-        ShowToast("error", "Failed to create user preferences"); // Hiển thị thông báo lỗi
+        ShowToast("error", "Failed to create user preferences");
       }
     } catch (err) {
-      ShowToast("error", "Unable to create user preferences. Please try again."); // Hiển thị thông báo lỗi
+      ShowToast("error", "Unable to create user preferences. Please try again.");
     }
   };
 
   const changeLightMode = () => {
-    toggleTheme(); // Gọi hàm toggle theme từ context
+    toggleTheme();
   };
 
   const handleEditHealth = async (data) => {
     try {
-      const response = await resetUserPreference(user?.userPreferenceId); // Gọi API reset preference
+      const response = await resetUserPreference(user?.userPreferenceId);
 
       if (response.status === 200) {
-        ShowToast("success", "Health information reset successfully"); // Hiển thị thông báo thành công
-        await loadUserPreference(); // Load lại preference
-        navigation.navigate(ScreensName.survey); // Chuyển đến màn hình khảo sát
+        ShowToast("success", "Health information reset successfully");
+        await loadUserPreference();
+        navigation.navigate(ScreensName.survey);
       } else {
-        ShowToast("error", "Failed to reset health information"); // Hiển thị thông báo lỗi
+        ShowToast("error", "Failed to reset health information");
       }
     } catch (err) {
-      ShowToast("error", "Unable to reset health information. Please try again later."); // Hiển thị thông báo lỗi
+      ShowToast("error", "Unable to reset health information. Please try again later.");
     } finally {
       setModalVisible({
         ...modalVisible,
-        EditHealthModal: false, // Đóng modal
+        EditHealthModal: false,
       });
     }
   };
 
   const handleEditProfile = async (data) => {
-    setIsUpdatingProfile(true); // Đánh dấu đang cập nhật profile
+    setIsUpdatingProfile(true);
     try {
-      const response = await updateUser(data); // Gọi API cập nhật user
+      const response = await updateUser(data);
 
       if (response.status === 200) {
-        ShowToast("success", "Profile updated successfully"); // Hiển thị thông báo thành công
-        dispatch(updateUserAct(response.data?.data?.user || {})); // Cập nhật user trong Redux
+        ShowToast("success", "Profile updated successfully");
+        dispatch(updateUserAct(response.data?.data?.user || {}));
       } else {
-        ShowToast("error", "Failed to update profile"); // Hiển thị thông báo lỗi
+        ShowToast("error", "Failed to update profile");
       }
     } catch (err) {
-      ShowToast("error", "Unable to update profile. Please try again later."); // Hiển thị thông báo lỗi
+      ShowToast("error", "Unable to update profile. Please try again later.");
     } finally {
-      setIsUpdatingProfile(false); // Đánh dấu đã cập nhật xong
+      setIsUpdatingProfile(false);
       setModalVisible({
         ...modalVisible,
-        EditProfileModal: false, // Đóng modal
+        EditProfileModal: false,
       });
     }
   };
@@ -190,36 +190,36 @@ function Profile({ navigation }) {
   const handleEditMealPlan = (data) => {
     setModalVisible({
       ...modalVisible,
-      EditMealPlanModal: false, // Đóng modal
+      EditMealPlanModal: false,
     });
   };
 
   const handleDeleteAccount = async () => {
-    setIsDeletingAccount(true); // Đánh dấu đang xóa tài khoản
+    setIsDeletingAccount(true);
     try {
-      const response = await deleteUser(user?._id); // Gọi API xóa user
+      const response = await deleteUser(user?._id);
 
       if (response.status === 200) {
-        ShowToast("success", "Account deleted successfully"); // Hiển thị thông báo thành công
-        handleLogout(); // Đăng xuất
+        ShowToast("success", "Account deleted successfully");
+        handleLogout();
       } else {
-        const message = response?.response?.data?.message || "Something went wrong"; // Lấy thông báo lỗi
-        ShowToast("error", message); // Hiển thị thông báo lỗi
+        const message = response?.response?.data?.message || "Something went wrong";
+        ShowToast("error", message);
       }
     } catch (err) {
-      ShowToast("error", "Unable to delete account. Please try again later."); // Hiển thị thông báo lỗi
+      ShowToast("error", "Unable to delete account. Please try again later.");
     } finally {
-      setIsDeletingAccount(false); // Đánh dấu đã xóa xong
+      setIsDeletingAccount(false);
       setModalVisible({
         ...modalVisible,
-        ConfirmDeleteModal: false, // Đóng modal
+        ConfirmDeleteModal: false,
       });
     }
   };
 
   const handleLogout = async () => {
-    dispatch(removeUser()); // Xóa user khỏi Redux
-    navigation.navigate(ScreensName.signin); // Chuyển đến màn hình đăng nhập
+    dispatch(removeUser());
+    navigation.navigate(ScreensName.signin);
   };
 
   if (
@@ -227,7 +227,6 @@ function Profile({ navigation }) {
     Object.keys(userPreference).length === 0 &&
     !user?.userPreferenceId
   ) {
-    // Hiển thị loading nếu đang fetch và chưa có dữ liệu
     return (
       <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#3592E7" />
@@ -237,7 +236,6 @@ function Profile({ navigation }) {
   }
 
   if (error && Object.keys(userPreference).length === 0 && !user?.userPreferenceId) {
-    // Hiển thị lỗi và nút thử lại nếu có lỗi
     return (
       <View style={[styles.container, styles.centerContent]}>
         <Text style={{ color: "red", textAlign: "center", marginBottom: 20 }}>{error}</Text>
@@ -254,7 +252,7 @@ function Profile({ navigation }) {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => {
-              dispatch(toggleVisible()); // Toggle drawer
+              dispatch(toggleVisible());
             }}
             style={styles.backButton}
           >
@@ -266,7 +264,7 @@ function Profile({ navigation }) {
         <View style={styles.profileSection}>
           <Image
             source={
-              user?.avatarUrl ? { uri: user.avatarUrl } : require("../../assets/image/Profile.png") // Hiển thị avatar hoặc ảnh mặc định
+              user?.avatarUrl ? { uri: user.avatarUrl } : require("../../assets/image/Profile.png")
             }
             style={styles.profileImage}
           />
@@ -279,7 +277,7 @@ function Profile({ navigation }) {
                 onPress={() => {
                   setModalVisible({
                     ...modalVisible,
-                    EditProfileModal: true, // Mở modal chỉnh sửa profile
+                    EditProfileModal: true,
                   });
                 }}
               >
@@ -293,7 +291,7 @@ function Profile({ navigation }) {
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => {
-              navigation.navigate(ScreensName.favorList); // Chuyển đến màn hình danh sách yêu thích
+              navigation.navigate(ScreensName.favorList);
             }}
           >
             <Ionicons name="heart-outline" size={24} color={theme.textColor} />
@@ -306,7 +304,7 @@ function Profile({ navigation }) {
             onPress={() => {
               setModalVisible({
                 ...modalVisible,
-                EditHealthModal: true, // Mở modal chỉnh sửa thông tin sức khỏe
+                EditHealthModal: true,
               });
             }}
           >
@@ -321,7 +319,7 @@ function Profile({ navigation }) {
             style={styles.menuItem}
             onPress={() => {
               navigation.navigate(ScreensName.changePassword, {
-                type: "changePassword", // Chuyển đến màn hình đổi mật khẩu
+                type: "changePassword",
               });
             }}
           >
@@ -334,8 +332,8 @@ function Profile({ navigation }) {
             <Ionicons name="contrast-outline" size={24} color={theme.textColor} />
             <Text style={{ ...styles.menuText, color: theme.textColor }}>Dark/Light</Text>
             <Switch
-              value={themeMode === "dark"} // Kiểm tra nếu theme là dark
-              onValueChange={changeLightMode} // Gọi hàm thay đổi theme
+              value={themeMode === "dark"}
+              onValueChange={changeLightMode}
               trackColor={{ false: "#ccc", true: "#75a57f" }}
             />
           </View>
@@ -345,7 +343,7 @@ function Profile({ navigation }) {
             onPress={() => {
               setModalVisible({
                 ...modalVisible,
-                ConfirmDeleteModal: true, // Mở modal xác nhận xóa tài khoản
+                ConfirmDeleteModal: true,
               });
             }}
           >
@@ -371,40 +369,40 @@ function Profile({ navigation }) {
       )}
 
       <EditHealthModal
-        visible={modalVisible.EditHealthModal} // Hiển thị modal sức khỏe nếu state là true
+        visible={modalVisible.EditHealthModal}
         onClose={() => {
-          setModalVisible({ ...modalVisible, EditHealthModal: false }); // Đóng modal
+          setModalVisible({ ...modalVisible, EditHealthModal: false });
         }}
         onSave={(data) => {
-          handleEditHealth(data); // Gọi hàm xử lý khi lưu
+          handleEditHealth(data);
         }}
-        userPreference={userPreference} // Truyền dữ liệu preference
+        userPreference={userPreference}
       />
       <EditMealPlanModal
-        visible={modalVisible.EditMealPlanModal} // Hiển thị modal kế hoạch ăn uống nếu state là true
+        visible={modalVisible.EditMealPlanModal}
         onClose={() => {
-          setModalVisible({ ...modalVisible, EditMealPlanModal: false }); // Đóng modal
+          setModalVisible({ ...modalVisible, EditMealPlanModal: false });
         }}
         onSave={(data) => {
-          handleEditMealPlan(data); // Gọi hàm xử lý khi lưu
+          handleEditMealPlan(data);
         }}
       />
       <EditProfileModal
-        visible={modalVisible.EditProfileModal} // Hiển thị modal profile nếu state là true
+        visible={modalVisible.EditProfileModal}
         onClose={() => {
-          setModalVisible({ ...modalVisible, EditProfileModal: false }); // Đóng modal
+          setModalVisible({ ...modalVisible, EditProfileModal: false });
         }}
         onSave={(data) => {
-          handleEditProfile(data); // Gọi hàm xử lý khi lưu
+          handleEditProfile(data);
         }}
-        readOnly={false} // Cho phép chỉnh sửa
+        readOnly={false} // Allow editing unless specified otherwise
       />
       <ConfirmDeleteAccountModal
-        visible={modalVisible.ConfirmDeleteModal} // Hiển thị modal xác nhận xóa nếu state là true
+        visible={modalVisible.ConfirmDeleteModal}
         onClose={() => {
-          setModalVisible({ ...modalVisible, ConfirmDeleteModal: false }); // Đóng modal
+          setModalVisible({ ...modalVisible, ConfirmDeleteModal: false });
         }}
-        onSubmit={handleDeleteAccount} // Gọi hàm xử lý khi xác nhận
+        onSubmit={handleDeleteAccount}
       />
     </NonBottomTabWrapper>
   );
@@ -412,120 +410,120 @@ function Profile({ navigation }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Chiếm toàn bộ không gian có sẵn
-    minHeight: HEIGHT, // Chiều cao tối thiểu bằng chiều cao màn hình
-    backgroundColor: "#FFFFFF", // Màu nền trắng
+    flex: 1,
+    minHeight: HEIGHT,
+    backgroundColor: "#FFFFFF",
   },
   centerContent: {
-    justifyContent: "center", // Canh giữa theo chiều dọc
-    alignItems: "center", // Canh giữa theo chiều ngang
-    padding: 20, // Padding 20px
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
   scrollView: {
-    marginBottom: 48, // Margin dưới 48px
+    marginBottom: 48,
   },
   header: {
-    position: "relative", // Vị trí tương đối
-    flexDirection: "row", // Sắp xếp theo hàng ngang
-    alignItems: "center", // Canh giữa theo chiều ngang
-    justifyContent: "center", // Canh giữa theo chiều dọc
-    paddingHorizontal: 16, // Padding ngang 16px
-    paddingTop: "10%", // Padding trên 10%
-    paddingBottom: 8, // Padding dưới 8px
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingTop: "10%",
+    paddingBottom: 8,
   },
   backButton: {
-    position: "absolute", // Vị trí tuyệt đối
-    left: "5%", // Cách trái 5%
-    bottom: "10%", // Cách dưới 10%
-    padding: 8, // Padding 8px
-    zIndex: 999, // Z-index cao để hiển thị trên cùng
+    position: "absolute",
+    left: "5%",
+    bottom: "10%",
+    padding: 8,
+    zIndex: 999,
   },
   headerTitle: {
-    fontSize: 18, // Kích thước font 18px
-    fontWeight: "600", // Độ đậm font 600
+    fontSize: 18,
+    fontWeight: "600",
   },
   profileSection: {
-    flexDirection: "row", // Sắp xếp theo hàng ngang
-    alignItems: "center", // Canh giữa theo chiều ngang
-    justifyContent: "center", // Canh giữa theo chiều dọc
-    paddingVertical: 20, // Padding dọc 20px
-    gap: 12, // Khoảng cách giữa các phần tử 12px
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+    gap: 12,
   },
   profileImage: {
-    width: WIDTH * 0.25, // Chiều rộng bằng 25% chiều rộng màn hình
-    height: WIDTH * 0.25, // Chiều cao bằng 25% chiều rộng màn hình
-    borderRadius: WIDTH, // Bo tròn
-    backgroundColor: "#ddd", // Màu nền xám
+    width: WIDTH * 0.25,
+    height: WIDTH * 0.25,
+    borderRadius: WIDTH,
+    backgroundColor: "#ddd",
   },
   profileInfoContainer: {
-    maxWidth: "85%", // Chiều rộng tối đa 85%
-    alignItems: "flex-start", // Canh trái
+    maxWidth: "85%",
+    alignItems: "flex-start",
   },
   profileName: {
-    fontWeight: "600", // Độ đậm font 600
-    fontSize: 18, // Kích thước font 18px
+    fontWeight: "600",
+    fontSize: 18,
   },
   profileEmail: {
-    fontSize: 14, // Kích thước font 14px
-    color: "#666", // Màu chữ xám
-    marginTop: 4, // Margin trên 4px
+    fontSize: 14,
+    color: "#666",
+    marginTop: 4,
   },
   editButtonContainer: {
-    marginTop: 12, // Margin trên 12px
+    marginTop: 12,
   },
   editButton: {
-    paddingHorizontal: 12, // Padding ngang 12px
-    paddingVertical: 6, // Padding dọc 6px
-    borderRadius: 4, // Bo tròn 4px
-    backgroundColor: "#3592E7", // Màu nền xanh
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: "#3592E7",
   },
   editButtonText: {
-    fontSize: 14, // Kích thước font 14px
-    color: "white", // Màu chữ trắng
+    fontSize: 14,
+    color: "white",
   },
   menuContainer: {
-    borderRadius: 12, // Bo tròn 12px
-    marginHorizontal: 16, // Margin ngang 16px
-    marginTop: 16, // Margin trên 16px
-    paddingVertical: 8, // Padding dọc 8px
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 8,
   },
   menuItem: {
-    flexDirection: "row", // Sắp xếp theo hàng ngang
-    alignItems: "center", // Canh giữa theo chiều ngang
-    paddingVertical: 12, // Padding dọc 12px
-    paddingHorizontal: 20, // Padding ngang 20px
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
   menuText: {
-    flex: 1, // Chiếm toàn bộ không gian còn lại
-    marginLeft: 16, // Margin trái 16px
-    fontSize: 16, // Kích thước font 16px
+    flex: 1,
+    marginLeft: 16,
+    fontSize: 16,
   },
   separator: {
-    height: 1, // Chiều cao 1px
-    backgroundColor: "#000000", // Màu nền đen
-    marginVertical: 12, // Margin dọc 12px
-    marginHorizontal: 20, // Margin ngang 20px
+    height: 1,
+    backgroundColor: "#000000",
+    marginVertical: 12,
+    marginHorizontal: 20,
   },
   loadingOverlay: {
-    position: "absolute", // Vị trí tuyệt đối
-    left: 0, // Cách trái 0px
-    right: 0, // Cách phải 0px
-    top: 0, // Cách trên 0px
-    bottom: 0, // Cách dưới 0px
-    alignItems: "center", // Canh giữa theo chiều ngang
-    justifyContent: "center", // Canh giữa theo chiều dọc
-    backgroundColor: "rgba(0, 0, 0, 0.3)", // Màu nền đen với độ trong suốt
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   retryButton: {
-    backgroundColor: "#3592E7", // Màu nền xanh
-    paddingHorizontal: 20, // Padding ngang 20px
-    paddingVertical: 10, // Padding dọc 10px
-    borderRadius: 5, // Bo tròn 5px
+    backgroundColor: "#3592E7",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
   },
   retryButtonText: {
-    color: "white", // Màu chữ trắng
-    fontWeight: "600", // Độ đậm font 600
+    color: "white",
+    fontWeight: "600",
   },
 });
 
-export default Profile; // Export component Profile
+export default Profile;
