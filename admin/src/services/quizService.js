@@ -6,24 +6,23 @@ const quizService = {
   submitQuizData: async () => {
     const finalData = JSON.parse(sessionStorage.getItem("finalData"));
     if (!finalData) {
-      console.error("🚨 Không tìm thấy finalData trong sessionStorage");
+      console.error("🚨 finalData not found in sessionStorage");
       return {
         success: false,
-        message: "Không tìm thấy dữ liệu bài kiểm tra trong sessionStorage",
+        message: "Quiz data not found in sessionStorage",
       };
     }
 
     if (!finalData.userId || !finalData.email || !finalData.name) {
-      console.error("🚨 finalData thiếu các trường bắt buộc:", finalData);
+      console.error("🚨 finalData missing required fields:", finalData);
       return {
         success: false,
-        message:
-          "Dữ liệu gửi lên thiếu các trường bắt buộc: userId, email, name",
+        message: "Submitted data missing required fields: userId, email, name",
       };
     }
 
     try {
-      console.log("🚀 Đang gửi dữ liệu bài kiểm tra:", finalData);
+      console.log("🚀 Submitting quiz data:", finalData);
       const response = await axios.post(
         `${API_URL}/userpreference`,
         finalData,
@@ -33,25 +32,21 @@ const quizService = {
           },
         }
       );
-      console.log("🚀 Phản hồi từ /userpreference:", response.data);
+      console.log("🚀 Response from /userpreference:", response.data);
 
       if (!response.data.success) {
-        console.error("🚨 API trả về success: false:", response.data);
+        console.error("🚨 API returned success: false:", response.data);
         return {
           success: false,
-          message:
-            response.data.message || "Không thể gửi dữ liệu bài kiểm tra",
+          message: response.data.message || "Unable to submit quiz data",
         };
       }
 
       if (!response.data.data || !response.data.data.user) {
-        console.error(
-          "🚨 Không có dữ liệu user trong phản hồi:",
-          response.data
-        );
+        console.error("🚨 No user data in response:", response.data);
         return {
           success: false,
-          message: "Không có dữ liệu người dùng trả về từ API",
+          message: "No user data returned from API",
         };
       }
 
@@ -60,17 +55,16 @@ const quizService = {
 
       return {
         success: true,
-        message: response.data.message || "Gửi bài kiểm tra thành công",
+        message: response.data.message || "Quiz submitted successfully",
         user: response.data.data.user,
-        userPreference: response.data.data.userPreference, // Thêm userPreference để sử dụng nếu cần
+        userPreference: response.data.data.userPreference, // Added userPreference for potential use
       };
     } catch (error) {
-      console.error("🚨 Lỗi trong submitQuizData:", error.message);
-      console.error("🚨 Chi tiết lỗi:", error.response?.data || error);
+      console.error("🚨 Error in submitQuizData:", error.message);
+      console.error("🚨 Error details:", error.response?.data || error);
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Không thể gửi dữ liệu bài kiểm tra",
+        message: error.response?.data?.message || "Unable to submit quiz data",
       };
     }
   },
@@ -79,13 +73,13 @@ const quizService = {
     if (!userPreferenceId) {
       return {
         success: false,
-        message: "userPreferenceId là bắt buộc để lấy sở thích người dùng",
+        message: "userPreferenceId is required to fetch user preferences",
       };
     }
 
     try {
       console.log(
-        "🚀 Đang lấy sở thích người dùng với userPreferenceId:",
+        "🚀 Fetching user preferences with userPreferenceId:",
         userPreferenceId
       );
       const response = await axios.get(
@@ -96,7 +90,7 @@ const quizService = {
           },
         }
       );
-      console.log("🚀 Phản hồi từ /userPreference:", response.data);
+      console.log("🚀 Response from /userPreference:", response.data);
 
       if (response.data.success) {
         return {
@@ -106,18 +100,18 @@ const quizService = {
       } else {
         return {
           success: false,
-          message: response.data.message || "Không thể lấy sở thích người dùng",
+          message: response.data.message || "Unable to fetch user preferences",
         };
       }
     } catch (error) {
       console.error(
-        "🚨 Lỗi trong getUserPreferenceByUserPreferenceId:",
+        "🚨 Error in getUserPreferenceByUserPreferenceId:",
         error.response?.data || error.message
       );
       return {
         success: false,
         message:
-          error.response?.data?.message || "Không thể lấy sở thích người dùng",
+          error.response?.data?.message || "Unable to fetch user preferences",
       };
     }
   },
@@ -126,13 +120,13 @@ const quizService = {
     if (!userPreferenceId) {
       return {
         success: false,
-        message: "userPreferenceId là bắt buộc để xóa sở thích người dùng",
+        message: "userPreferenceId is required to delete user preferences",
       };
     }
 
     try {
       console.log(
-        "🚀 Đang xóa sở thích người dùng với userPreferenceId:",
+        "🚀 Deleting user preferences with userPreferenceId:",
         userPreferenceId
       );
       const response = await axios.delete(
@@ -143,49 +137,50 @@ const quizService = {
           },
         }
       );
-      console.log("🚀 Phản hồi từ /userPreference delete:", response.data);
+      console.log("🚀 Response from /userPreference delete:", response.data);
 
       if (response.data.success) {
         return {
           success: true,
           message:
-            response.data.message || "Xóa sở thích người dùng thành công",
+            response.data.message || "User preferences deleted successfully",
         };
       } else {
         return {
           success: false,
-          message: response.data.message || "Không thể xóa sở thích người dùng",
+          message: response.data.message || "Unable to delete user preferences",
         };
       }
     } catch (error) {
       console.error(
-        "🚨 Lỗi trong deleteUserPreference:",
+        "🚨 Error in deleteUserPreference:",
         error.response?.data || error.message
       );
       return {
         success: false,
         message:
-          error.response?.data?.message || "Không thể xóa sở thích người dùng",
+          error.response?.data?.message || "Unable to delete user preferences",
       };
     }
   },
+
   updateUserPreference: async (userPreferenceId, updatedData) => {
     console.log("UPI", userPreferenceId);
     if (!userPreferenceId) {
       return {
         success: false,
-        message: "userPreferenceId là bắt buộc để cập nhật sở thích người dùng",
+        message: "userPreferenceId is required to update user preferences",
       };
     }
 
     if (!updatedData || Object.keys(updatedData).length === 0) {
       return {
         success: false,
-        message: "Dữ liệu cập nhật không được để trống",
+        message: "Update data cannot be empty",
       };
     }
 
-    // Lọc bỏ các trường undefined để tránh gửi dữ liệu không hợp lệ
+    // Filter out undefined fields to avoid sending invalid data
     const filteredData = Object.fromEntries(
       Object.entries(updatedData).filter(([_, value]) => value !== undefined)
     );
@@ -193,16 +188,16 @@ const quizService = {
     if (Object.keys(filteredData).length === 0) {
       return {
         success: false,
-        message: "Không có dữ liệu hợp lệ để cập nhật",
+        message: "No valid data to update",
       };
     }
 
     try {
       console.log(
-        "🚀 Đang cập nhật sở thích người dùng với userPreferenceId:",
+        "🚀 Updating user preferences with userPreferenceId:",
         userPreferenceId
       );
-      console.log("🚀 Dữ liệu cập nhật (sau khi lọc):", filteredData);
+      console.log("🚀 Update data (after filtering):", filteredData);
 
       const response = await axios.put(
         `${API_URL}/userpreference/${userPreferenceId}`,
@@ -214,85 +209,86 @@ const quizService = {
         }
       );
 
-      console.log("🚀 Phản hồi từ /userpreference update:", response.data);
+      console.log("🚀 Response from /userpreference update:", response.data);
 
-      // Đồng bộ định dạng phản hồi với cách UserProfileUpdate xử lý
+      // Synchronize response format with how UserProfileUpdate handles it
       return {
-        success: response.data.success || true, // Nếu API trả về success, dùng nó; nếu không, mặc định true
+        success: response.data.success || true, // Use API success if available; otherwise, default to true
         message:
-          response.data.message || "Cập nhật sở thích người dùng thành công",
+          response.data.message || "User preferences updated successfully",
       };
     } catch (error) {
       console.error(
-        "🚨 Lỗi trong updateUserPreference:",
+        "🚨 Error in updateUserPreference:",
         error.response?.data || error.message
       );
       return {
         success: false,
         message:
-          error.response?.data?.message ||
-          "Không thể cập nhật sở thích người dùng",
+          error.response?.data?.message || "Unable to update user preferences",
       };
     }
   },
 
-  deleteUserByUserId: async (userId) => {
+  deleteUserByUserId: async (userId, password) => {
     if (!userId) {
       return {
         success: false,
-        message: "userId là bắt buộc để xóa người dùng",
+        message: "userId is required to delete user",
       };
     }
 
     try {
-      console.log("🚀 Đang xóa người dùng với userId:", userId);
+      console.log("🚀 Deleting user with userId:", userId);
       const response = await axios.delete(`${API_URL}/users/${userId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
+        data: { password }, // Gửi mật khẩu trong body
       });
-      console.log("🚀 Phản hồi từ /user delete:", response.data);
+      console.log("🚀 Response from /user delete:", response.data);
 
       if (response.data.success) {
         return {
           success: true,
-          message: response.data.message || "Xóa người dùng thành công",
+          message: response.data.message || "User deleted successfully",
         };
       } else {
         return {
           success: false,
-          message: response.data.message || "Không thể xóa người dùng",
+          message: response.data.message || "Unable to delete user",
         };
       }
     } catch (error) {
       console.error(
-        "🚨 Lỗi trong deleteUserByUserId:",
+        "🚨 Error in deleteUserByUserId:",
         error.response?.data || error.message
       );
       return {
         success: false,
-        message: error.response?.data?.message || "Không thể xóa người dùng",
+        message: error.response?.data?.message || "Unable to delete user",
       };
     }
   },
+
   updateUserById: async (userId, updatedData) => {
     if (!userId) {
       return {
         success: false,
-        message: "userId là bắt buộc để cập nhật thông tin người dùng",
+        message: "userId is required to update user information",
       };
     }
 
     if (!updatedData || Object.keys(updatedData).length === 0) {
       return {
         success: false,
-        message: "Dữ liệu cập nhật không được để trống",
+        message: "Update data cannot be empty",
       };
     }
 
     try {
-      console.log("🚀 Đang cập nhật thông tin người dùng với userId:", userId);
-      console.log("🚀 Dữ liệu cập nhật:", updatedData);
+      console.log("🚀 Updating user information with userId:", userId);
+      console.log("🚀 Update data:", updatedData);
 
       const response = await axios.put(
         `${API_URL}/users/${userId}`,
@@ -303,32 +299,30 @@ const quizService = {
           },
         }
       );
-      console.log("🚀 Phản hồi từ /users update:", response.data);
+      console.log("🚀 Response from /users update:", response.data);
 
       if (response.data.success) {
         return {
           success: true,
           message:
-            response.data.message || "Cập nhật thông tin người dùng thành công",
-          data: response.data.data, // Trả về dữ liệu người dùng đã cập nhật nếu có
+            response.data.message || "User information updated successfully",
+          data: response.data.data, // Return updated user data if available
         };
       } else {
         return {
           success: false,
-          message:
-            response.data.message || "Không thể cập nhật thông tin người dùng",
+          message: response.data.message || "Unable to update user information",
         };
       }
     } catch (error) {
       console.error(
-        "🚨 Lỗi trong updateUserById:",
+        "🚨 Error in updateUserById:",
         error.response?.data || error.message
       );
       return {
         success: false,
         message:
-          error.response?.data?.message ||
-          "Không thể cập nhật thông tin người dùng",
+          error.response?.data?.message || "Unable to update user information",
       };
     }
   },

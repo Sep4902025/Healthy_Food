@@ -19,6 +19,7 @@ const {
   submitNutritionistApplication,
   getPendingNutritionists,
   reviewNutritionistApplication,
+  deleteUser,
 } = require("../controllers/userController");
 const { isAuthenticated, isAdmin } = require("../middlewares/isAuthenticated");
 
@@ -36,9 +37,23 @@ userRouter.post("/reset-password", resetPassword);
 userRouter.post("/change-password", isAuthenticated, changePassword);
 
 // Nutritionist application routes (tĩnh, cụ thể)
-userRouter.post("/submit-nutritionist", isAuthenticated, submitNutritionistApplication);
-userRouter.post("/review-nutritionist", isAuthenticated, isAdmin, reviewNutritionistApplication);
-userRouter.get("/pending-nutritionists", isAuthenticated, isAdmin, getPendingNutritionists);
+userRouter.post(
+  "/submit-nutritionist",
+  isAuthenticated,
+  submitNutritionistApplication
+);
+userRouter.post(
+  "/review-nutritionist",
+  isAuthenticated,
+  isAdmin,
+  reviewNutritionistApplication
+);
+userRouter.get(
+  "/pending-nutritionists",
+  isAuthenticated,
+  isAdmin,
+  getPendingNutritionists
+);
 
 // User management routes (tĩnh, cụ thể)
 userRouter.post("/", createUser);
@@ -47,6 +62,7 @@ userRouter.get("/search", searchUserByEmail);
 // User management routes (có tham số động)
 userRouter.get("/:id", getUserById);
 userRouter.put("/:id", updateUserById);
+userRouter.delete("/:id", deleteUser);
 
 // Route chung (generic, đặt cuối cùng)
 userRouter.get("/", getAllUsers);

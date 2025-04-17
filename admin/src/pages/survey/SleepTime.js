@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const sleeptimeGroups = [
   { sleeptime: "Less than 5 hours" },
   { sleeptime: "5-6 hours" },
@@ -13,7 +13,7 @@ const SleepTime = () => {
   const navigate = useNavigate();
   const [selectedSleepTime, setSelectedSleepTime] = useState(null);
 
-  // Load dữ liệu từ sessionStorage khi mở trang
+  // Load data from sessionStorage when the page opens
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.sleepTime) {
@@ -27,23 +27,23 @@ const SleepTime = () => {
       return;
     }
 
-    // Lấy dữ liệu hiện tại từ sessionStorage
+    // Get current data from sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật dữ liệu mới
+    // Update data
     const updatedData = {
       ...currentData,
       sleepTime: selectedSleepTime,
     };
 
-    // Lưu vào sessionStorage
+    // Save to sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
-    // Điều hướng trang tiếp theo
+    // Navigate to the next page
     navigate("/survey/activitylevel");
   };
 
-  // Hàm xử lý khi nhấn phím
+  // Handle key press
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.keyCode === 13) {
       handleNext();
@@ -52,28 +52,28 @@ const SleepTime = () => {
 
   return (
     <div
-      className="max-w-md mx-auto p-4"
+      className="w-[400px] mx-auto p-4"
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      {/* Header với back button và progress bar */}
+      {/* Header with back button and progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/goal")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={52.5} />
       </div>
 
-      {/* Tiêu đề và mô tả */}
+      {/* Title and description */}
       <h2 className="text-2xl font-bold text-center">Sleep Time</h2>
       <p className="text-center text-gray-600">
         How long do you sleep per day?
       </p>
 
-      {/* Danh sách lựa chọn */}
+      {/* Selection list */}
       <div className="space-y-4 mt-4">
         {sleeptimeGroups.map((item, index) => (
           <div
@@ -92,7 +92,7 @@ const SleepTime = () => {
         ))}
       </div>
 
-      {/* Nút Next */}
+      {/* Next button */}
       <button
         onClick={handleNext}
         className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"

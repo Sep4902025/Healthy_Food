@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const mealnumberGroups = [
   { mealnumber: "1 meal" },
   { mealnumber: "2 meals" },
@@ -13,7 +13,7 @@ const MealNumber = () => {
   const navigate = useNavigate();
   const [selectedMealNumber, setSelectedMealNumber] = useState(null);
 
-  // Load dữ liệu từ sessionStorage khi mở trang
+  // Load data from sessionStorage when the page opens
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.mealNumber) {
@@ -27,23 +27,23 @@ const MealNumber = () => {
       return;
     }
 
-    // Lấy dữ liệu hiện tại từ sessionStorage
+    // Get current data from sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật dữ liệu mới
+    // Update data
     const updatedData = {
       ...currentData,
       mealNumber: selectedMealNumber,
     };
 
-    // Lưu vào sessionStorage
+    // Save to sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
-    // Điều hướng sang trang tiếp theo
+    // Navigate to the next page
     navigate("/survey/longofplan");
   };
 
-  // Hàm xử lý khi nhấn phím
+  // Handle key press
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.keyCode === 13) {
       handleNext();
@@ -52,7 +52,7 @@ const MealNumber = () => {
 
   return (
     <div
-      className="max-w-md mx-auto p-4"
+      className="w-[400px] mx-auto p-4"
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
@@ -60,9 +60,9 @@ const MealNumber = () => {
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/diet")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={68.25} />
       </div>

@@ -20,7 +20,7 @@ const medicalConditionService = {
           limit,
           search, // Thêm tìm kiếm
           sort: "createdAt", // Sắp xếp theo ngày tạo
-          order: "desc",     // Giảm dần (mới nhất lên trước)
+          order: "desc", // Giảm dần (mới nhất lên trước)
         },
       });
       console.log("📌 List of medical conditions:", response.data);
@@ -45,7 +45,6 @@ const medicalConditionService = {
       };
     }
   },
-  
 
   // 🔹 Lấy điều kiện y tế theo ID
   getMedicalConditionById: async (id) => {

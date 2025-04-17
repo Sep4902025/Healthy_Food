@@ -10,6 +10,8 @@ import {
   FaRuler,
   FaCalculator,
   FaKey,
+  FaEye,
+  FaEyeSlash,
 } from "react-icons/fa";
 import quizService from "../../../../services/quizService";
 import { selectUser } from "../../../../store/selectors/authSelectors";
@@ -21,6 +23,10 @@ import { updateUser } from "../../../../store/actions/authActions";
 import { toast } from "react-toastify";
 import { getFavoriteNamesByIds } from "../../../survey/Favorite";
 import { getHateNamesByIds } from "../../../survey/Hate";
+import medicalConditionService from "../../../../services/nutritionist/medicalConditionServices";
+import { loginSuccess } from "../../../../store/slices/authSlice";
+
+// Assuming getMedicalConditionById is exported from quizService
 
 const UserProfile = () => {
   const user = useSelector(selectUser);
@@ -31,18 +37,24 @@ const UserProfile = () => {
   const [resetInProgress, setResetInProgress] = useState(false);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const [passwordChangeInProgress, setPasswordChangeInProgress] =
-    useState(false); // Đổi tên biến
-  const [showChangePassword, setShowChangePassword] = useState(false); // Đổi tên state
+    useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [passwordData, setPasswordData] = useState({
-    currentPassword: "", // Đổi từ email thành currentPassword
-    newPassword: "", // Đổi từ password thành newPassword
-    newPasswordConfirm: "", // Đổi từ passwordConfirm thành newPasswordConfirm
+    currentPassword: "",
+    newPassword: "",
+    newPasswordConfirm: "",
   });
+  const [deletePassword, setDeletePassword] = useState("");
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null); // For image preview
+  const [previewImage, setPreviewImage] = useState(null);
   const fileInputRef = useRef(null);
+  // State for medical condition names
+  const [medicalConditionNames, setMedicalConditionNames] = useState([]);
+
   const fetchUserData = async () => {
     if (!user || !user._id) {
       console.error("🚨 User or user._id does not exist:", user);
@@ -62,13 +74,28 @@ const UserProfile = () => {
         );
       if (success) {
         setUserData(data);
+        // Fetch medical condition names if underDisease exists
+        if (data.underDisease && Array.isArray(data.underDisease)) {
+          const names = await Promise.all(
+            data.underDisease.map(async (id) => {
+              const result =
+                await medicalConditionService.getMedicalConditionById(id);
+              return result.success ? result.data.name : "Unknown";
+            })
+          );
+          setMedicalConditionNames(names);
+        } else {
+          setMedicalConditionNames(["None"]);
+        }
       } else {
         console.error("🚨 Error fetching userPreference data:", message);
         setUserData(null);
+        setMedicalConditionNames(["None"]);
       }
     } catch (error) {
       console.error("🚨 Error in fetchUserData:", error);
       setUserData(null);
+      setMedicalConditionNames(["None"]);
     } finally {
       setLoading(false);
     }
@@ -86,6 +113,10 @@ const UserProfile = () => {
 
   const handleEditClick = () => {
     setShowEditModal(true);
+  };
+
+  const handleReSurvey = () => {
+    setShowEditModal(true);
     navigate("/survey/name");
   };
 
@@ -94,10 +125,6 @@ const UserProfile = () => {
       toast.error("No userPreferenceId found to delete!");
       return;
     }
-    const confirmReset = window.confirm(
-      "Are you sure you want to delete all personal information? This action cannot be undone."
-    );
-    if (!confirmReset) return;
     try {
       setResetInProgress(true);
       const { success, message } = await quizService.deleteUserPreference(
@@ -106,6 +133,18 @@ const UserProfile = () => {
       if (success) {
         toast.success("Information deleted successfully");
         setUserData(null);
+        setMedicalConditionNames(["None"]);
+
+        // Update Redux store with the updated user data
+        const updatedUser = { ...user, userPreferenceId: null };
+        dispatch(
+          loginSuccess({
+            user: updatedUser,
+            token: localStorage.getItem("token"),
+          })
+        );
+        console.log("✅ Updated user in Redux after reset:", updatedUser);
+
         fetchUserData();
       } else {
         toast.error(`Error deleting: ${message}`);
@@ -150,9 +189,9 @@ const UserProfile = () => {
           newPassword: "",
           newPasswordConfirm: "",
         });
-        localStorage.removeItem("token"); // Xóa token
-        localStorage.removeItem("username"); // Xóa username nếu có
-        navigate("/signin"); // Chuyển về trang đăng nhập
+        localStorage.removeItem("token");
+        localStorage.removeItem("username");
+        navigate("/signin");
       } else {
         toast.error(`Error: ${result.message || "Unable to change password"}`);
       }
@@ -168,13 +207,16 @@ const UserProfile = () => {
       toast.error("No user information found to delete!");
       return;
     }
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this account? This action cannot be undone, and you will be logged out!"
-    );
-    if (!confirmDelete) return;
+    if (!deletePassword) {
+      toast.error("Password is required!");
+      return;
+    }
     try {
       setDeleteInProgress(true);
-      const { success, message } = await quizService.deleteUserById(user._id);
+      const { success, message } = await quizService.deleteUserByUserId(
+        user._id,
+        deletePassword
+      );
       if (success) {
         toast.success("Account deleted successfully!");
         localStorage.removeItem("token");
@@ -187,11 +229,27 @@ const UserProfile = () => {
       console.error("🚨 Delete user error:", error);
     } finally {
       setDeleteInProgress(false);
+      setShowDeleteAccount(false);
+      setDeletePassword("");
     }
   };
 
   const handleUpdateProfile = (updatedData) => {
     setUserData((prev) => ({ ...prev, ...updatedData }));
+    // Refetch medical condition names if underDisease is updated
+    if (updatedData.underDisease) {
+      if (updatedData.underDisease && Array.isArray(updatedData.underDisease)) {
+        Promise.all(
+          updatedData.underDisease.map(async (id) => {
+            const result =
+              await medicalConditionService.getMedicalConditionById(id);
+            return result.success ? result.data.name : "Unknown";
+          })
+        ).then((names) => setMedicalConditionNames(names));
+      } else {
+        setMedicalConditionNames(["None"]);
+      }
+    }
   };
 
   const handleFileChange = (e) => {
@@ -207,7 +265,6 @@ const UserProfile = () => {
       toast.error("No image selected to upload!");
       return;
     }
-
     setUploading(true);
     try {
       const result = await uploadFile(
@@ -216,20 +273,15 @@ const UserProfile = () => {
         (cancel) => console.log("Upload canceled")
       );
       const avatarUrl = result.secure_url;
-
-      // Đảm bảo _id là string
       const userId =
         typeof user._id === "object" && user._id.$oid
           ? user._id.$oid
           : user._id;
-      const userData = { _id: userId, avatarUrl }; // Only send necessary fields
-
+      const userData = { _id: userId, avatarUrl };
       const updatedUser = await dispatch(updateUser(userData));
       if (!updatedUser) {
         throw new Error("Failed to update user");
       }
-
-      // Update local state with the full updated user
       setUserData((prev) => ({ ...prev, ...updatedUser }));
     } catch (error) {
       console.error("🚨 Error uploading avatar:", error);
@@ -245,10 +297,12 @@ const UserProfile = () => {
       }
     }
   };
+
   const handleCancelPreview = () => {
     setPreviewImage(null);
-    fileInputRef.current.value = null; // Reset input file
+    fileInputRef.current.value = null;
   };
+
   const triggerFileInput = () => {
     fileInputRef.current.click();
   };
@@ -338,7 +392,7 @@ const UserProfile = () => {
                 <FaEdit /> Edit Profile
               </button>
               <button
-                onClick={() => setShowChangePassword(!showChangePassword)} // Đổi tên
+                onClick={() => setShowChangePassword(!showChangePassword)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-300 shadow-md"
               >
                 <FaKey /> Change Password
@@ -351,7 +405,7 @@ const UserProfile = () => {
                 {resetInProgress ? "Deleting..." : "Delete Personal Data"}
               </button>
               <button
-                onClick={handleDeleteUser}
+                onClick={() => setShowDeleteAccount(true)}
                 disabled={deleteInProgress}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-all duration-300 shadow-md disabled:bg-red-400"
               >
@@ -368,7 +422,6 @@ const UserProfile = () => {
             <div className="bg-gradient-to-r from-indigo-600 to-blue-500 p-6 text-white">
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative">
-                  {/* Progress bar khi đang upload */}
                   {uploading && (
                     <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
                       <div
@@ -377,7 +430,6 @@ const UserProfile = () => {
                       ></div>
                     </div>
                   )}
-                  {/* Hiển thị hình ảnh: preview nếu có, nếu không thì avatar hoặc placeholder */}
                   {previewImage ? (
                     <img
                       src={previewImage.url}
@@ -395,7 +447,6 @@ const UserProfile = () => {
                       {user.username ? user.username[0].toUpperCase() : "?"}
                     </div>
                   )}
-                  {/* Nút "X" ở góc trên bên phải, không có background */}
                   {previewImage && (
                     <button
                       onClick={handleCancelPreview}
@@ -405,7 +456,6 @@ const UserProfile = () => {
                       <span className="text-lg font-bold">X</span>
                     </button>
                   )}
-                  {/* Nút Upload hoặc Save */}
                   <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2">
                     {previewImage ? (
                       <button
@@ -450,7 +500,6 @@ const UserProfile = () => {
 
             {/* Body */}
             <div className="p-6">
-              {/* Body Measurements */}
               <SectionTitle
                 title="Body Measurements"
                 icon={<FaCalculator className="text-indigo-600" />}
@@ -495,7 +544,6 @@ const UserProfile = () => {
                 </div>
               </div>
 
-              {/* Personal Info */}
               {userData ? (
                 <>
                   <SectionTitle
@@ -617,7 +665,7 @@ const UserProfile = () => {
                         />
                         <InfoItem
                           label="Medical Conditions"
-                          value={userData.underDisease || "None"}
+                          value={medicalConditionNames.join(", ") || "None"}
                           colorClass="bg-pink-50"
                           textClass="text-pink-700"
                         />
@@ -632,7 +680,7 @@ const UserProfile = () => {
                     No personal data available
                   </p>
                   <button
-                    onClick={handleEditClick}
+                    onClick={handleReSurvey}
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300"
                   >
                     Enter Information Now
@@ -714,6 +762,52 @@ const UserProfile = () => {
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-indigo-300"
                 >
                   {passwordChangeInProgress ? "Processing..." : "Confirm"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteAccount && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Delete Account
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-1">Password</label>
+                <div className="password-wrapper">
+                  <input
+                    type={showDeletePassword ? "text" : "password"}
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="Enter your password"
+                  />
+                  <span
+                    className="password-toggle"
+                    onClick={() => setShowDeletePassword(!showDeletePassword)}
+                  >
+                    {showDeletePassword ? <FaEyeSlash /> : <FaEye />}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowDeleteAccount(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  disabled={deleteInProgress}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-300 disabled:bg-red-300"
+                >
+                  {deleteInProgress ? "Deleting..." : "Confirm"}
                 </button>
               </div>
             </div>

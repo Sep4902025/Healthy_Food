@@ -5,7 +5,7 @@ import Age1825 from "../../assets/images/age/18-25.png";
 import Age2635 from "../../assets/images/age/26-35.png";
 import Age3645 from "../../assets/images/age/36-45.png";
 import Age46 from "../../assets/images/age/46.png";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const ageGroups = [
   { age: "18-25", img: Age1825 },
   { age: "26-35", img: Age2635 },
@@ -17,7 +17,7 @@ const Age = () => {
   const navigate = useNavigate();
   const [selectedAge, setSelectedAge] = useState(null);
 
-  // Khi component load, kiểm tra xem có age nào đã lưu không
+  // When the component loads, check if any age is already saved
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.age) {
@@ -31,21 +31,21 @@ const Age = () => {
       return;
     }
 
-    // Lấy dữ liệu cũ (nếu có) trong sessionStorage
+    // Get existing data (if any) from sessionStorage
     const existingData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật age vào sessionStorage
+    // Update age in sessionStorage
     const updatedData = {
       ...existingData,
       age: selectedAge,
     };
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
-    // Điều hướng sang trang tiếp theo
+    // Navigate to the next page
     navigate("/survey/goal");
   };
 
-  // Hàm xử lý khi nhấn phím
+  // Handle key press
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.keyCode === 13) {
       handleNext();
@@ -53,13 +53,17 @@ const Age = () => {
   };
 
   return (
-    <div className="w-[1/2] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
+    <div
+      className="w-[400px] mx-auto p-4"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+    >
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/gender")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={42} />
       </div>
@@ -77,8 +81,14 @@ const Age = () => {
             }`}
             onClick={() => setSelectedAge(item.age)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">{item.age}</span>
-            <img src={item.img} alt="" className="w-16 h-16 rounded-full object-cover" />
+            <span className="text-lg font-semibold flex-1 text-left">
+              {item.age}
+            </span>
+            <img
+              src={item.img}
+              alt=""
+              className="w-16 h-16 rounded-full object-cover"
+            />
           </div>
         ))}
       </div>

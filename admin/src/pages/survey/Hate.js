@@ -5,7 +5,7 @@ import quizService from "../../services/quizService";
 import { useSelector, useDispatch } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
 import { loginSuccess } from "../../store/slices/authSlice";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const hateGroups = [
   {
     name: "Vegetables",
@@ -93,16 +93,16 @@ const hateGroups = [
   },
 ];
 
-// Hàm ánh xạ từ id sang name
+// Function to map from id to name
 export const getHateNameById = (id) => {
   for (const group of hateGroups) {
     const item = group.items.find((item) => item.id === id);
     if (item) return item.name;
   }
-  return "Unknown"; // Trả về "Unknown" nếu không tìm thấy id
+  return "Unknown"; // Return "Unknown" if the id is not found
 };
 
-// Hàm ánh xạ danh sách ids sang danh sách names
+// Function to map a list of ids to a list of names
 export const getHateNamesByIds = (ids) => {
   if (!ids || !Array.isArray(ids)) return [];
   return ids.map((id) => getHateNameById(id));
@@ -121,22 +121,23 @@ const Hate = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [selectedItemIds, setSelectedItemIds] = useState([]);
-  const [favoriteItemIds, setFavoriteItemIds] = useState([]); // Lưu danh sách favorite từ sessionStorage
+  const [favoriteItemIds, setFavoriteItemIds] = useState([]); // Store the favorite list from sessionStorage
 
+  // Load data from sessionStorage when the page loads
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.hate) {
       setSelectedItemIds(savedData.hate);
     }
     if (savedData.favorite) {
-      setFavoriteItemIds(savedData.favorite); // Lấy danh sách favorite để kiểm tra
+      setFavoriteItemIds(savedData.favorite); // Get the favorite list for checking
     }
   }, []);
 
   const toggleItemSelection = (id) => {
-    // Không cho chọn nếu id đã có trong favoriteItemIds
+    // Do not allow selection if the id is in favoriteItemIds
     if (favoriteItemIds.includes(id)) {
-      return; // Bỏ qua nếu đã thích
+      return; // Skip if already favorite
     }
     setSelectedItemIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -146,7 +147,7 @@ const Hate = () => {
   const selectAll = () => {
     const allItemIds = hateGroups
       .flatMap((group) => group.items.map((item) => item.id))
-      .filter((id) => !favoriteItemIds.includes(id)); // Loại bỏ các id đã thích
+      .filter((id) => !favoriteItemIds.includes(id)); // Exclude ids that are favorite
     setSelectedItemIds(allItemIds);
   };
 
@@ -171,8 +172,8 @@ const Hate = () => {
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
     if (!user || !user._id || !user.email || !user.username) {
-      alert("Thông tin người dùng không đầy đủ. Vui lòng đăng nhập lại!");
-      console.error("❌ Thiếu thông tin người dùng trong Redux:", user);
+      alert("User information is incomplete. Please log in again!");
+      console.error("❌ Missing user information in Redux:", user);
       return;
     }
 
@@ -199,11 +200,11 @@ const Hate = () => {
 
     if (missingFields.length > 0) {
       alert(
-        `Vui lòng hoàn thành các bước trước đó. Thiếu các trường: ${missingFields.join(
+        `Please complete the previous steps. Missing fields: ${missingFields.join(
           ", "
         )}`
       );
-      console.error("❌ Thiếu các trường trong quizData:", missingFields);
+      console.error("❌ Missing fields in quizData:", missingFields);
       return;
     }
 
@@ -235,26 +236,26 @@ const Hate = () => {
     };
 
     if (!finalData.userId || !finalData.email || !finalData.name) {
-      alert("Dữ liệu không đầy đủ để gửi lên server!");
-      console.error("❌ finalData không đầy đủ:", finalData);
+      alert("Data is incomplete for server submission!");
+      console.error("❌ finalData is incomplete:", finalData);
       return;
     }
 
     sessionStorage.setItem("finalData", JSON.stringify(finalData));
-    console.log("🚀 finalData gửi lên backend:", finalData);
+    console.log("🚀 finalData sent to backend:", finalData);
 
     try {
       const result = await quizService.submitQuizData();
       if (result.success) {
         if (result.user) {
           if (!result.user.userPreferenceId) {
-            console.warn("⚠️ userPreferenceId vẫn là null:", result.user);
+            console.warn("⚠️ userPreferenceId is still null:", result.user);
             alert(
-              "userPreferenceId chưa được cập nhật. Vui lòng kiểm tra logic backend."
+              "userPreferenceId has not been updated. Please check the backend logic."
             );
           } else {
             console.log(
-              "✅ userPreferenceId đã được cập nhật:",
+              "✅ userPreferenceId has been updated:",
               result.user.userPreferenceId
             );
           }
@@ -264,32 +265,29 @@ const Hate = () => {
               token: localStorage.getItem("token"),
             })
           );
-          console.log("✅ Đã cập nhật user trong Redux:", result.user);
+          console.log("✅ Updated user in Redux:", result.user);
           navigate("/");
         } else {
-          console.error(
-            "🚨 Không có dữ liệu user trong phản hồi submitQuizData:",
-            result
-          );
+          console.error("🚨 No user data in submitQuizData response:", result);
           alert(
-            `Không thể lấy dữ liệu user đã cập nhật: ${
-              result.message || "Dữ liệu user bị thiếu trong phản hồi."
+            `Unable to retrieve updated user data: ${
+              result.message || "User data is missing in the response."
             }`
           );
         }
       } else {
-        console.error("🚨 Gửi thất bại:", result.message);
+        console.error("🚨 Submission failed:", result.message);
         alert(
-          `Lỗi khi gửi bài kiểm tra: ${
-            result.message || "Đã xảy ra lỗi không xác định."
+          `Error submitting quiz: ${
+            result.message || "An unknown error occurred."
           }`
         );
       }
     } catch (error) {
-      console.error("🚨 Lỗi trong handleNext:", error);
+      console.error("🚨 Error in handleNext:", error);
       alert(
-        `Đã xảy ra lỗi khi gửi bài kiểm tra: ${
-          error.message || "Lỗi không xác định"
+        `An error occurred while submitting the quiz: ${
+          error.message || "Unknown error"
         }`
       );
     }
@@ -303,16 +301,16 @@ const Hate = () => {
 
   return (
     <div
-      className="max-w-md mx-auto p-4"
+      className="w-[400px] mx-auto p-4"
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/favorite")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={100} />
       </div>
@@ -353,7 +351,7 @@ const Hate = () => {
                     : "bg-gray-100 hover:bg-green-200"
                 } transition`}
                 onClick={() => toggleItemSelection(item.id)}
-                disabled={favoriteItemIds.includes(item.id)} // Vô hiệu hóa nếu đã thích
+                disabled={favoriteItemIds.includes(item.id)} // Disable if already favorite
               >
                 {item.name}
               </button>
