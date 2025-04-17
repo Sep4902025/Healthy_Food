@@ -35,10 +35,10 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
     "Quiz Management": "/admin/quizmanagement",
     "Dish Preferences": "/admin/dishmanagement",
     "Footer Management": "/admin/aboutusmanagement", // Default submenu
-    "About Us Management": "/admin/aboutusmanagement",
-    "Contact Us Management": "/admin/contactusmanagement",
-    "FAQs Management": "/admin/faqsManagement",
-    "Term of Use Management": "/admin/termofusemanagement",
+    "About Us": "/admin/aboutusmanagement",
+    "Contact Us": "/admin/contactusmanagement",
+    FAQs: "/admin/faqsManagement",
+    "Term of Use": "/admin/termofusemanagement",
     "User Interface": "/admin/userinterface",
     "Finance Management": "/admin/financemanagement", // Added route
   };
@@ -59,23 +59,16 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
 
   const menuItems = [
     { icon: <HomeIcon size={20} />, name: "Dashboard" },
-    { icon: <BookOpenIcon size={20} />, name: "Meal Plan" },
     {
       icon: <UserIcon size={20} />,
       name: "User Management",
     },
-    { icon: <DollarSignIcon size={20} />, name: "Finance Management" }, 
+    { icon: <DollarSignIcon size={20} />, name: "Finance Management" },
     {
       icon: <HelpCircleIcon size={20} />,
-      name: "Footer Management",
-      submenus: [
-        "About Us Management",
-        "Contact Us Management",
-        "FAQs Management",
-        "Term of Use Management",
-      ],
+      name: "Content Management",
+      submenus: ["About Us", "Contact Us", "FAQs", "Term of Use"],
     },
-    
   ];
 
   const toggleSubmenu = (menuName) => {
@@ -91,16 +84,12 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
       <div className="flex-grow flex">
         {/* Sidebar */}
         <div className="w-64 bg-white border-r p-4 overflow-y-auto">
-          <div className="flex items-center mb-8">
-            <span className="text-2xl font-bold text-green-600">Healthy</span>
-            <span className="text-sm ml-1 text-gray-500">.Admin</span>
-          </div>
           <nav>
             {menuItems.map((item) => (
               <div key={item.name}>
                 <div
                   className={`flex items-center p-3 cursor-pointer rounded hover:bg-green-50 ${
-                    activeMenu === item.name ? "bg-green-100 text-green-600" : "text-gray-600"
+                    activeMenu === item.name ? "bg-green-100 text-custom-green" : "text-gray-600"
                   }`}
                   onClick={() => handleMenuClick(item)}
                 >

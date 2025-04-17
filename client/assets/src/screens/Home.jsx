@@ -8,6 +8,7 @@ import {
   Dimensions,
   RefreshControl,
   ActivityIndicator,
+  PixelRatio,
 } from "react-native";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import SearchBar from "../components/common/SearchBar";
@@ -21,9 +22,7 @@ import { loadFavorites } from "../redux/actions/favoriteThunk";
 import { favorSelector, userSelector } from "../redux/selectors/selector";
 import SpinnerLoading from "../components/common/SpinnerLoading";
 import HomeService from "../services/HomeService";
-
-const WIDTH = Dimensions.get("window").width;
-const HEIGHT = Dimensions.get("window").height;
+import { normalize } from "../utils/common";
 
 function Home({ navigation }) {
   const [seasonalDishes, setSeasonalDishes] = useState([]);
@@ -36,22 +35,24 @@ function Home({ navigation }) {
 
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
-  console.log("USEREDUC", user);
 
   const dispatch = useDispatch();
-  const season = useCurrentSeason() || "spring";
+  const season = useCurrentSeason();
 
   useEffect(() => {
-    loadInitialDishes();
-  }, []);
+    const validSeasons = ["Spring", "Summer", "Fall", "Winter"];
+    if (validSeasons.includes(season)) {
+      loadInitialDishes();
+    }
+  }, [season]);
 
   useEffect(() => {
     loadFavoritesData();
   }, [dispatch, user]);
 
   const loadFavoritesData = async () => {
-    if (user?.userId) {
-      dispatch(loadFavorites(user.userId));
+    if (user?._id) {
+      dispatch(loadFavorites(user._id));
     }
   };
 
@@ -70,18 +71,26 @@ function Home({ navigation }) {
 
   const loadDishes = async (pageNum, isRefresh = false) => {
     try {
-      const response = await HomeService.getAllDishes(pageNum, limit);
-      if (response?.success) {
-        const newDishes = response.data.items.filter(
-          (dish) => dish.season && typeof dish.season === "string"
-        );
+      if (!season) return;
 
-        setSeasonalDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+      const response = await HomeService.getDishBySeason(
+        season,
+        pageNum,
+        limit
+      );
+      console.log(response);
+
+      if (response?.success) {
+        const newDishes = response.data.items;
+
+        setSeasonalDishes((prev) =>
+          isRefresh ? newDishes : [...prev, ...newDishes]
+        );
 
         setPage(pageNum);
         setHasMore(pageNum < response.data.totalPages);
       } else {
-        console.error("Failed to load dishes:", response?.message);
+        console.error("Failed to load dishes:", response);
         setHasMore(false);
       }
     } catch (error) {
@@ -114,8 +123,11 @@ function Home({ navigation }) {
   const handleScroll = useCallback(
     ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-      const paddingToBottom = 20;
-      if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+      const paddingToBottom = normalize(20);
+      if (
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+      ) {
         loadMoreDishes();
       }
     },
@@ -129,7 +141,9 @@ function Home({ navigation }) {
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <SearchBar
           placeholder="What do you need?"
@@ -141,24 +155,18 @@ function Home({ navigation }) {
 
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Browse by category</Text>
-          <ScrollView
-            style={styles.categoriesGrid}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingRight: WIDTH * ((Object.values(DishType).length - 1) * 0.22),
-            }}
-          >
+          <View style={styles.categoriesGrid}>
             {Object.values(DishType).map((category, key) => (
               <CategoryCard
                 key={key}
                 category={{ id: key, ...category }}
-                onPress={() => navigation.navigate(ScreensName.search, { category })}
-                cardWidth={"20%"}
-                style={{ marginRight: "4%" }}
+                onPress={() =>
+                  navigation.navigate(ScreensName.search, { category })
+                }
+                style={styles.categoryCard}
               />
             ))}
-          </ScrollView>
+          </View>
         </View>
 
         <View style={styles.seasonalSection}>
@@ -171,14 +179,20 @@ function Home({ navigation }) {
 
           {loading.initial ? (
             <SpinnerLoading />
-          ) : seasonalDishes.length > 0 ? (
+          ) : seasonalDishes.filter((item) =>
+              item?.season?.toLowerCase()?.includes(season?.toLowerCase())
+            ).length > 0 ? (
             seasonalDishes
-              .filter((item) => item?.season?.toLowerCase()?.includes(season?.toLowerCase()))
-              .map((dish) => (
+              .filter((item) =>
+                item?.season?.toLowerCase()?.includes(season?.toLowerCase())
+              )
+              .map((dish, index) => (
                 <DishedV1
                   dish={dish}
-                  key={dish._id}
-                  onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })}
+                  key={dish._id + index}
+                  onPress={() =>
+                    navigation.navigate(ScreensName.favorAndSuggest, { dish })
+                  }
                 />
               ))
           ) : (
@@ -186,7 +200,11 @@ function Home({ navigation }) {
           )}
 
           {loading.more && (
-            <ActivityIndicator size="large" color="#38B2AC" style={styles.loadingMore} />
+            <ActivityIndicator
+              size="large"
+              color="#38B2AC"
+              style={styles.loadingMore}
+            />
           )}
         </View>
       </ScrollView>
@@ -197,40 +215,45 @@ function Home({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: normalize(16),
   },
   categoriesSection: {
-    marginTop: 16,
+    marginTop: normalize(16),
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: normalize(16),
     color: "#38B2AC",
     fontWeight: "500",
-    marginBottom: 16,
+    marginBottom: normalize(16),
   },
   categoriesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: normalize(40), // Add space for category images that are positioned absolute
+  },
+  categoryCard: {
+    marginBottom: normalize(24),
   },
   seasonalSection: {
-    marginVertical: 16,
+    marginVertical: normalize(16),
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    marginBottom: normalize(16),
   },
   viewAllText: {
     color: "#38B2AC",
-    fontSize: 14,
+    fontSize: normalize(14),
   },
   noResultsText: {
-    fontSize: 16,
+    fontSize: normalize(16),
     textAlign: "center",
+    padding: normalize(20),
   },
   loadingMore: {
-    marginVertical: 20,
+    marginVertical: normalize(20),
   },
 });
 

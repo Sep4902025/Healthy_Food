@@ -28,7 +28,6 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const [hasMore, setHasMore] = useState(true);
   const limit = 10;
 
-  // Định nghĩa sẵn các tag
   const orderedTags = [
     { label: "ALL", type: "all" },
     { label: "Favorites", type: "favorites" },
@@ -44,6 +43,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
   const loadInitialDishes = async () => {
     setLoading((prev) => ({ ...prev, initial: true }));
     setPage(1);
+    setDishes([]); // Reset dishes to avoid duplicates
     setHasMore(true);
     await loadDishes(1, true);
     setLoading((prev) => ({ ...prev, initial: false }));
@@ -71,7 +71,13 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
 
       if (dishesResponse.success) {
         const newDishes = dishesResponse.data.items || [];
-        setDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
+        // Deduplicate dishes by _id
+        setDishes((prev) => {
+          const existingIds = new Set(isRefresh ? [] : prev.map((dish) => dish._id));
+          const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));
+          filteredNewDishes.forEach((dish) => existingIds.add(dish._id));
+          return isRefresh ? filteredNewDishes : [...prev, ...filteredNewDishes];
+        });
         setPage(pageNum);
         setHasMore(pageNum < dishesResponse.data.totalPages);
       } else {
@@ -342,7 +348,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
           <FlatList
             data={filteredDishes}
             renderItem={renderDishItem}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item._id} // Ensure _id is unique; otherwise, modify this
             numColumns={2}
             columnWrapperStyle={{ justifyContent: "space-between" }}
             onEndReached={handleLoadMore}

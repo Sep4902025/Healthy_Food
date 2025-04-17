@@ -15,7 +15,7 @@ const CreateMealPlanPage = () => {
   return (
     <div className="w-full mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-semibold text-green-600">Create New Meal Plan</h1>
+        <h1 className="text-3xl font-semibold text-[#40B491]">Create New Meal Plan</h1>
         <button
           onClick={() => navigate("/nutritionist/mealplan")}
           className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400"

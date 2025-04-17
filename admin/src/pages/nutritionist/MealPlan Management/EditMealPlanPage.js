@@ -178,7 +178,9 @@ const EditMealPlanPage = () => {
   return (
     <div className="w-full mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-semibold text-green-600">Edit Meal Plan: {mealPlan.title}</h1>
+        <h1 className="text-3xl font-semibold text-[#40B491]">
+          Edit Meal Plan: {mealPlan.title}
+        </h1>
         <button
           onClick={() => navigate("/nutritionist/mealplan")}
           className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400"
@@ -206,7 +208,7 @@ const EditMealPlanPage = () => {
             <span
               className={`${
                 getMealPlanStatus() === "Active"
-                  ? "text-green-600"
+                  ? "text-[#40B491]"
                   : getMealPlanStatus() === "Paused"
                   ? "text-yellow-600"
                   : "text-red-600"
@@ -241,7 +243,7 @@ const EditMealPlanPage = () => {
       {showModal && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <h3 className="text-xl font-semibold text-custom-green mb-4">Healthy Info</h3>
+            <h3 className="text-xl font-semibold text-[#40B491] mb-4">Healthy Info</h3>
             {modalLoading ? (
               <p>Loading healthy info...</p>
             ) : healthyInfo ? (

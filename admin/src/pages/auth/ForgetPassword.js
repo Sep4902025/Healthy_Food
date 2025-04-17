@@ -29,12 +29,12 @@ const ForgetPassword = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="bg-white rounded-lg shadow-md p-8 w-96">
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className=" rounded-lg p-8 w-96">
         <div className="flex justify-center mb-4">
           <img src={ForgetPasswordLogo} alt="Forget Password" className="w-[60%] h-[60%]" />
         </div>
-        <h2 className="text-2xl font-bold text-center mb-2">Forgot password</h2>
+        <h2 className="text-2xl text-custom-green font-bold text-center mb-2">Forgot password</h2>
         <p className="text-gray-600 text-center mb-6">Enter your registered email below</p>
 
         {message && <p className="text-green-500 text-center mb-4">{message}</p>}
@@ -54,7 +54,7 @@ const ForgetPassword = () => {
 
         <button
           onClick={handleForgetPassword}
-          className="w-full bg-green-500 text-white font-bold py-2 rounded-md hover:bg-green-600 transition duration-200"
+          className="w-full bg-custom-green text-white font-bold py-2 rounded-md hover:bg-custom-green-hover transition duration-200"
           disabled={loading}
         >
           {loading ? "Processing..." : "Reset Password"}
@@ -62,7 +62,7 @@ const ForgetPassword = () => {
 
         <p className="text-center text-gray-500 mt-4">
           Remember the password?{" "}
-          <a href="/signin" className="text-green-500 hover:underline">
+          <a href="/signin" className="text-custom-green hover:underline">
             Signin
           </a>
         </p>

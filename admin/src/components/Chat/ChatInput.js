@@ -48,61 +48,63 @@ const ChatInput = ({
   };
 
   return (
-    <div className="h-full w-full p-2">
-      {isUploading && (
-        <div className="mb-2">
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-blue-500 h-2 rounded-full"
-              style={{ width: `${uploadProgress}%` }}
-            ></div>
+    <div className="h-full w-full p-2 relative">
+      <div className="absolute bottom-16 w-full">
+        {isUploading && (
+          <div className="mb-2">
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-blue-500 h-2 rounded-full"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <button onClick={onCancelUpload} className="text-xs text-red-500 hover:underline">
+              Cancel
+            </button>
           </div>
-          <button onClick={onCancelUpload} className="text-xs text-red-500 hover:underline">
-            Cancel
-          </button>
-        </div>
-      )}
-      {selectedFile && !isUploading && (
-        <div className="mb-2">
-          {/* Display preview for image or video */}
-          {previewUrl && (
-            <div className="relative w-32 h-32 mb-2">
-              {selectedFile.type.startsWith("image/") ? (
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              ) : selectedFile.type.startsWith("video/") ? (
-                <video
-                  src={previewUrl}
-                  controls
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              ) : (
-                <p className="text-sm text-gray-500">
-                  File: {selectedFile.name} (Preview not available)
-                </p>
-              )}
-              {/* Remove button overlay */}
-              <button
-                onClick={handleRemoveFile}
-                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600"
-              >
-                ✕
-              </button>
-            </div>
-          )}
-          {!previewUrl && (
-            <div className="text-sm text-gray-500">
-              File: {selectedFile.name}
-              <button onClick={handleRemoveFile} className="ml-2 text-red-500 hover:underline">
-                Remove
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+        )}
+        {selectedFile && !isUploading && (
+          <div className="mb-2">
+            {/* Display preview for image or video */}
+            {previewUrl && (
+              <div className="relative w-28 h-28 mb-2">
+                {selectedFile.type.startsWith("image/") ? (
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                ) : selectedFile.type.startsWith("video/") ? (
+                  <video
+                    src={previewUrl}
+                    controls
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    File: {selectedFile.name} (Preview not available)
+                  </p>
+                )}
+                {/* Remove button overlay */}
+                <button
+                  onClick={handleRemoveFile}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {!previewUrl && (
+              <div className="text-sm text-gray-500">
+                File: {selectedFile.name}
+                <button onClick={handleRemoveFile} className="ml-2 text-red-500 hover:underline">
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <label className="cursor-pointer">
           <FiPaperclip size={20} className="text-gray-500" />

@@ -8,10 +8,11 @@ exports.getAllUsers = async (query, currentAdminId) => {
   const limit = parseInt(query.limit) || 10; // Mặc định 10 users mỗi trang
   const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
 
-  // Điều kiện lọc: không bao gồm người dùng đã xóa và không phải admin đang đăng nhập
+  // Điều kiện lọc: không bao gồm người dùng đã xóa, không phải admin đang đăng nhập, và không có role admin
   const filter = {
     isDelete: false,
     _id: { $ne: currentAdminId }, // Loại trừ admin đang đăng nhập
+    role: { $ne: "admin" }, // Loại trừ người dùng có role admin
   };
 
   // Đếm tổng số người dùng thỏa mãn điều kiện

@@ -4,34 +4,48 @@ import { FaRegBell } from "react-icons/fa";
 
 const ReminderNotification = ({ userId }) => {
   const [reminders, setReminders] = useState([]);
+  console.log("RMD", reminders);
+
   const [hasNewReminders, setHasNewReminders] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
   // Connect to socket and listen for reminder notifications
   useEffect(() => {
+    if (!userId) {
+      console.error("userId is not provided to ReminderNotification");
+      return;
+    }
+
     RemindService.connectSocket(userId);
 
     RemindService.listenReminder((data) => {
-      console.log("Received reminder data:", data); // Keep for debugging
+      console.log("Received reminder data:", data);
+
+      // Filter: Only process reminders intended for the logged-in user
+      if (!data.userId) {
+        console.error("Reminder data is missing userId:", data);
+        return;
+      }
+
+      if (data.userId !== userId) {
+        console.log(`Ignoring reminder for user ${data.userId} (logged-in user: ${userId})`);
+        return;
+      }
 
       setReminders((prevReminders) => {
-        // Check if a reminder with the same id already exists
         const existsIndex = prevReminders.findIndex((r) => r.id === data.id);
         if (existsIndex !== -1) {
-          // If it exists, replace the old reminder with the new one
           const updatedReminders = [...prevReminders];
           updatedReminders[existsIndex] = data;
           return updatedReminders;
         }
-        // If it doesn't exist, add the new reminder to the list
         return [data, ...prevReminders];
       });
 
-      setHasNewReminders(true); // Mark as having new notifications
+      setHasNewReminders(true);
     });
 
-    // Disconnect when the component unmounts
     return () => {
       RemindService.disconnect();
     };
@@ -51,17 +65,14 @@ const ReminderNotification = ({ userId }) => {
     };
   }, []);
 
-  // Function to remove a single reminder
   const removeReminder = (index) => {
     setReminders((prevReminders) => prevReminders.filter((_, i) => i !== index));
   };
 
-  // Function to clear all reminders
   const clearReminders = () => {
     setReminders([]);
   };
 
-  // Toggle the display of notifications
   const toggleNotifications = () => {
     setShowNotifications(!showNotifications);
     setHasNewReminders(false);
@@ -69,17 +80,13 @@ const ReminderNotification = ({ userId }) => {
 
   return (
     <div className="relative" ref={notificationRef}>
-      {/* Notification bell button */}
       <button
         onClick={toggleNotifications}
         className="flex items-center justify-center"
         aria-label="Notifications"
       >
         <div className="relative">
-          {/* Bell icon */}
           <FaRegBell />
-
-          {/* Badge showing the number of notifications */}
           {hasNewReminders && reminders.length > 0 && (
             <span className="absolute -top-1 -right-[10px] bg-red-500 text-white text-xs font-bold rounded-full h-4 w-5 flex items-center justify-center">
               {reminders.length > 9 ? "9+" : reminders.length}
@@ -88,12 +95,11 @@ const ReminderNotification = ({ userId }) => {
         </div>
       </button>
 
-      {/* Dropdown displaying the list of notifications */}
       {showNotifications && (
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-50">
           <div className="p-4">
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-lg font-bold">Notifications</h2>
+              <h2 className="text-custom-green font-bold">Notifications</h2>
               {reminders.length > 0 && (
                 <button className="text-red-500 text-sm hover:underline" onClick={clearReminders}>
                   Clear All

@@ -1,4 +1,4 @@
-import axiosInstance from "./axiosInstance"; // Import axiosInstance
+import axiosInstance from "./axiosInstance";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Hàm lấy token từ AsyncStorage
@@ -38,6 +38,30 @@ const dishesService = {
       return { success: false, message: "Lỗi khi tải danh sách món ăn" };
     }
   },
+  // Search dishes by name
+  searchDishByName: async (params) => {
+    try {
+      const response = await axiosInstance.get("/dishes/search", { params });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || "Failed to search dishes");
+    }
+  },
+
+  // Get dishes by type
+  getDishByType: async (type, params) => {
+    try {
+      // Encode the type parameter to handle spaces
+      const encodedType = encodeURIComponent(type);
+
+      const response = await axiosInstance.get(`/dishes/type/${encodedType}`, { params });
+      console.log("encodedType", response);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || "Failed to fetch dishes by type");
+    }
+  },
+
   // 🔹 Thêm món ăn mới
   createDish: async (data) => {
     try {
@@ -82,7 +106,7 @@ const dishesService = {
   getRecipeByRecipeId: async (dishId, recipeId) => {
     try {
       const headers = await getAuthHeaders();
-      const response = await axiosInstance.get(`/dishes/${dishId}/recipes/${recipeId}`, {
+      const response = await axiosInstance.get(`/recipes/dish/${recipeId}`, {
         headers,
       });
       console.log("Fetched Recipes nè :", response.data.data); // Debug API response

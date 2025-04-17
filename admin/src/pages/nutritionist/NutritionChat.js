@@ -13,7 +13,7 @@ const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
     >
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-medium text-sm">{conversation.userId.email}</h3>
+          <h3 className="font-medium text-sm truncate w-20">{conversation.userId?.email}</h3>
           <p className="text-xs text-gray-500">{conversation.topic}</p>
           <p className="text-xs text-gray-400">
             {new Date(conversation.createdAt).toLocaleString()}
@@ -32,7 +32,7 @@ const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
               )}
               <button
                 onClick={() => onAccept(conversation._id)}
-                className="px-2 py-1 text-xs text-white bg-blue-500 rounded-full hover:bg-blue-600"
+                className="px-2 py-1 text-xs text-white bg-[#40B491] rounded-full hover:bg-[#359c7a]"
               >
                 Consult
               </button>
@@ -42,7 +42,7 @@ const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
             <span className="px-2 py-1 text-xs text-gray-500">Seen</span>
           )}
           {conversation.status === "active" && (
-            <span className="px-2 py-1 text-xs text-green-500">Consulting</span>
+            <span className="px-2 py-1 text-xs text-[#40B491]">Consulting</span>
           )}
         </div>
       </div>
@@ -110,12 +110,17 @@ const NutritionChat = () => {
 
   const handleAcceptChat = async (conversationId) => {
     try {
-      await ChatService.acceptConversation(conversationId, user._id);
+      const response = await ChatService.acceptConversation(conversationId, user._id);
       await loadConversations();
       setActiveTab("active");
       const updatedConversation = conversations.find((conv) => conv._id === conversationId);
       if (updatedConversation) {
         setSelectedConversation({ ...updatedConversation, status: "active" });
+        const socket = ChatService.connectSocket(user._id);
+        socket.emit("conversation_status_changed", {
+          conversationId,
+          status: "active",
+        });
       }
     } catch (error) {
       console.error("Error accepting chat:", error);
@@ -147,14 +152,14 @@ const NutritionChat = () => {
   };
 
   return (
-    <div className="flex h-[450px]">
+    <div className="flex h-[calc(100vh-100px)] w-full">
       <div className="flex flex-1">
-        <div className="w-64 border-r flex flex-col">
+        <div className="w-64 border-r flex flex-col h-[calc(100vh-60px)]">
           <div className="flex border-b">
             <button
               className={`flex-1 p-2 text-sm ${
                 activeTab === "pending"
-                  ? "border-b-2 border-blue-500 text-blue-500"
+                  ? "border-b-2 border-[#40B491] text-[#40B491]"
                   : "text-gray-600"
               }`}
               onClick={() => setActiveTab("pending")}
@@ -164,7 +169,7 @@ const NutritionChat = () => {
             <button
               className={`flex-1 p-2 text-sm ${
                 activeTab === "checked"
-                  ? "border-b-2 border-blue-500 text-blue-500"
+                  ? "border-b-2 border-[#40B491] text-[#40B491]"
                   : "text-gray-600"
               }`}
               onClick={() => setActiveTab("checked")}
@@ -174,7 +179,7 @@ const NutritionChat = () => {
             <button
               className={`flex-1 p-2 text-sm ${
                 activeTab === "active"
-                  ? "border-b-2 border-blue-500 text-blue-500"
+                  ? "border-b-2 border-[#40B491] text-[#40B491]"
                   : "text-gray-600"
               }`}
               onClick={() => setActiveTab("active")}
@@ -182,7 +187,7 @@ const NutritionChat = () => {
               Messages
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-hidden">
             {loading ? (
               <div className="p-3 text-center text-gray-500 text-sm">Loading...</div>
             ) : conversations.length === 0 ? (
@@ -200,14 +205,14 @@ const NutritionChat = () => {
             )}
           </div>
         </div>
-
-        <div className="flex-1 flex flex-col bg-white overflow-x-hidden h-[450px]">
+        <div className="flex-1 flex flex-col bg-white h-full">
           {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="flex-1 overflow-hidden">
             {selectedConversation ? (
               <ChatWindow
                 conversation={selectedConversation}
                 setCurrentConversation={handleUpdateConversation}
+                role="nutritionist"
               />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500 text-sm">

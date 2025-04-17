@@ -23,7 +23,7 @@ const getUserRoleFilter = async (req, defaultFilter) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
       const user = await UserModel.findById(decoded.id);
-      if (user && (user.role === "admin" || user.role === "nutritionist")) {
+      if (user && (user.role === "admin")) {
         filter = {}; // Admin/Nutritionist thấy tất cả
       }
     } catch (error) {

@@ -1,41 +1,14 @@
 import { useState, useEffect } from "react";
 
-/**
- * @param {string} hemisphere 
- * @returns {string} 
- */
-function useCurrentSeason(hemisphere = "northern") {
-  const [season, setSeason] = useState("");
-
-  useEffect(() => {
-    
+function useCurrentSeason() {
+  const [season] = useState(() => {
     const currentMonth = new Date().getMonth() + 1;
+    if (currentMonth >= 1 && currentMonth <= 3) return "Spring";
+    if (currentMonth >= 4 && currentMonth <= 6) return "Summer";
+    if (currentMonth >= 7 && currentMonth <= 9) return "Fall";
+    return "Winter";
+  });
 
-   
-    if (hemisphere === "northern") {
-      
-      if (currentMonth >= 2 && currentMonth <= 4) {
-        setSeason("Spring"); 
-      } else if (currentMonth >= 5 && currentMonth <= 7) {
-        setSeason("Summer"); 
-      } else if (currentMonth >= 8 && currentMonth <= 10) {
-        setSeason("Fall"); 
-      } else {
-        setSeason("Winter"); 
-      }
-    } else {
-      
-      if (currentMonth >= 2 && currentMonth <= 4) {
-        setSeason("Fall"); 
-      } else if (currentMonth >= 5 && currentMonth <= 7) {
-        setSeason("Winter"); 
-      } else if (currentMonth >= 8 && currentMonth <= 10) {
-        setSeason("Spring"); 
-      } else {
-        setSeason("Summer"); 
-      }
-    }
-  }, [hemisphere]);
 
   return season;
 }

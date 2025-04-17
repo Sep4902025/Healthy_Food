@@ -40,9 +40,9 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     ScreensMap[0];
 
   // If current screen should hide tab bar, return null but maintain layout space
-  // if (currentScreen?.hiddenBottomTab) {
-  //   return <View />;
-  // }
+  if (currentScreen?.hiddenBottomTab) {
+    return <View />;
+  }
 
   // Find visible tabs to display in the tab bar
   const visibleTabs = ScreensMap.filter(

@@ -4,10 +4,12 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import useFoodData from "../../../helpers/useFoodData";
 import HomeService from "../../../services/home.service";
+import useAuthCheck from "../../../helpers/useAuthCheck";
+import DefaultImg from "../../../assets/images/default.jpg";
 
 const FoodBySeasonSection = ({ userId, selectedSeason }) => {
-  const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, []);
   const [displayedDishes, setDisplayedDishes] = useState([]);
+  const { likedFoods, setLikedFoods, ratings } = useFoodData(userId, displayedDishes);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -16,6 +18,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
   const navigate = useNavigate();
   const observer = useRef();
   const limit = 6; // Align with initial display limit
+  const { checkLogin } = useAuthCheck(userId);
 
   useEffect(() => {
     setDisplayedDishes([]);
@@ -31,8 +34,16 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
     setLoading(true);
 
     try {
-      // Fetch dishes from the backend with pagination
-      const response = await HomeService.getAllDishes(pageNum, limit);
+      let response;
+      const isAllSeasons = selectedSeason.toLowerCase() === "all seasons";
+
+      // Call appropriate API based on selected season
+      if (isAllSeasons) {
+        response = await HomeService.getAllDishes(pageNum, limit);
+      } else {
+        response = await HomeService.getDishBySeason(selectedSeason, pageNum, limit);
+      }
+
       console.log("API Response:", response);
 
       if (response.success === true) {
@@ -40,14 +51,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
           throw new Error("Invalid response format: data.items is not an array");
         }
 
-        // Filter dishes based on the selected season
-        const newDishes = response.data.items.filter((dish) => {
-          const dishSeason = dish.season?.toLowerCase();
-          const selected = selectedSeason.toLowerCase();
-          return (
-            dishSeason === selected || dishSeason === "all seasons" || dishSeason === "all season"
-          );
-        });
+        const newDishes = response.data.items;
 
         setDisplayedDishes((prev) => {
           const updatedDishes = reset ? newDishes : [...prev, ...newDishes];
@@ -89,6 +93,7 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
   );
 
   const handleLike = async (dishId) => {
+    if (!checkLogin()) return;
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
     const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
 
@@ -153,6 +158,10 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
                     }
                     alt={dish.name}
                     className="w-48 h-48 rounded-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = DefaultImg;
+                    }}
                   />
                 </div>
 
@@ -164,7 +173,6 @@ const FoodBySeasonSection = ({ userId, selectedSeason }) => {
                     {dish.description}
                   </p>
 
-                  {/* Add "No recipe available" message if no recipeId */}
                   {!hasRecipe && (
                     <p className="text-red-500 text-sm italic mt-2">No recipe available</p>
                   )}

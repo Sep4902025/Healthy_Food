@@ -3,6 +3,13 @@ const MedicalCondition = require("../models/MedicalCondition");
 
 // Tạo Medical Condition
 exports.createMedicalCondition = async (data) => {
+  const existingCondition = await MedicalCondition.findOne({ 
+    name: data.name, 
+    isDelete: false 
+  });
+  if (existingCondition) {
+    throw Object.assign(new Error("Medical condition with this name already exists"), { status: 400 });
+  }
   const newCondition = new MedicalCondition(data);
   await newCondition.save();
   return newCondition;

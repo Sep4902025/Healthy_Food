@@ -32,6 +32,7 @@ export const userSlice = createSlice({
       state.avatarUrl = "";
       state.role = "";
       state.token = "";
+      state.userPreferenceId = "";
       state.socketConnection = null;
     },
     setOnlineUser: (state, action) => {

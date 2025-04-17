@@ -68,6 +68,7 @@ import AddMedicalCondition from "../pages/nutritionist/Medical Condition Managem
 import CreateMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/CreateMealPlanPage";
 import EditMealPlanNutritionist from "../pages/nutritionist/MealPlan Management/EditMealPlanPage";
 import Medical from "../pages/user/Medical";
+import MedicalConditionDetail from "../pages/user/MedicalConditionDetail";
 import NutritionistApplicationForm from "../pages/user/NutritionistApplicationForm";
 import MealPlansAnalytics from "../pages/nutritionist/MealPlan Management/MealPlansAnalytics";
 import TableMealPlanAdmin from "../pages/admin/pages/TableMealPlanAdmin";
@@ -157,6 +158,8 @@ const AppRoutes = () => {
 
         {/* Thêm route cho trang Medical */}
         <Route path="medical" element={<Medical />} />
+        <Route path="medical/:conditionId" element={<MedicalConditionDetail />} />
+
 
         {/* Gom các route của khảo sát vào đây */}
         <Route

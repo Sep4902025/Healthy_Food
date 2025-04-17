@@ -79,29 +79,38 @@ const MessageList = ({ messages, currentUserId }) => {
 
       const avatarData = {};
       for (const senderId of uniqueSenderIds) {
-        console.log("Fetching avatar for senderId:", senderId);
-        const response = await UserService.getUserById(senderId);
-        console.log("API response for senderId:", senderId, response);
+        try {
+          console.log("Fetching avatar for senderId:", senderId);
+          const response = await UserService.getUserById(senderId);
+          console.log("API response for senderId:", senderId, response);
 
-        if (response.success && response.data) {
-          const user = response.data;
-          console.log("User data for senderId:", senderId, user);
+          if (response.success && response.user) {
+            const user = response.user;
+            console.log("User data for senderId:", senderId, user);
 
-          avatarData[senderId] = {
-            avatarUrl:
-              user.role === "nutritionist"
-                ? "https://res.cloudinary.com/dds8jiclc/image/upload/v1744009146/uzxsw0ecl0psvmg4jyri.png"
-                : user.avatarUrl || "/default-avatar.png",
-            role: user.role || "user",
-          };
-        } else {
-          console.error(`Failed to fetch user ${senderId}:`, response.message);
+            avatarData[senderId] = {
+              avatarUrl:
+                user.role === "nutritionist"
+                  ? "https://res.cloudinary.com/dds8jiclc/image/upload/v1744009146/uzxsw0ecl0psvmg4jyri.png"
+                  : user.avatarUrl || "/default-avatar.png",
+              role: user.role || "user",
+            };
+          } else {
+            console.error(`Failed to fetch user ${senderId}:`, response.message || "No user data");
+            avatarData[senderId] = {
+              avatarUrl: "/default-avatar.png",
+              role: "user",
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching user ${senderId}:`, error);
           avatarData[senderId] = {
             avatarUrl: "/default-avatar.png",
             role: "user",
           };
         }
       }
+      console.log("Updated userAvatars:", avatarData);
       setUserAvatars(avatarData);
     };
 
@@ -112,7 +121,7 @@ const MessageList = ({ messages, currentUserId }) => {
 
   // Hàm kiểm tra xem tin nhắn có cần hiển thị thời gian phân cách ngày không
   const shouldShowDateSeparator = (currentMessage, prevMessage) => {
-    if (!prevMessage) return true; // Tin nhắn đầu tiên luôn hiển thị ngày
+    if (!prevMessage) return true;
     const currentDate = new Date(currentMessage.createdAt).toDateString();
     const prevDate = new Date(prevMessage.createdAt).toDateString();
     return currentDate !== prevDate;
@@ -120,27 +129,25 @@ const MessageList = ({ messages, currentUserId }) => {
 
   // Hàm kiểm tra xem tin nhắn có nên hiển thị avatar không
   const shouldShowAvatar = (currentMessage, prevMessage) => {
-    if (currentMessage.senderId === currentUserId) return false; // Không hiển thị avatar cho người dùng hiện tại
-    if (!prevMessage) return true; // Tin nhắn đầu tiên luôn hiển thị avatar
+    if (currentMessage.senderId === currentUserId) return false;
+    if (!prevMessage) return true;
 
     const currentTime = new Date(currentMessage.createdAt).getTime();
     const prevTime = new Date(prevMessage.createdAt).getTime();
-    const timeDiff = (currentTime - prevTime) / (1000 * 60); // Chênh lệch thời gian tính bằng phút
+    const timeDiff = (currentTime - prevTime) / (1000 * 60);
 
-    // Hiển thị avatar nếu người gửi thay đổi hoặc thời gian cách nhau quá 1 phút
     return prevMessage.senderId !== currentMessage.senderId || timeDiff > 1;
   };
 
   // Hàm kiểm tra xem tin nhắn có nên hiển thị thời gian không
   const shouldShowTime = (currentMessage, nextMessage) => {
-    if (!nextMessage) return true; // Tin nhắn cuối cùng luôn hiển thị thời gian
-    if (nextMessage.senderId !== currentMessage.senderId) return true; // Hiển thị thời gian nếu người gửi thay đổi
+    if (!nextMessage) return true;
+    if (nextMessage.senderId !== currentMessage.senderId) return true;
 
     const currentTime = new Date(currentMessage.createdAt).getTime();
     const nextTime = new Date(nextMessage.createdAt).getTime();
-    const timeDiff = (nextTime - currentTime) / (1000 * 60); // Chênh lệch thời gian tính bằng phút
+    const timeDiff = (nextTime - currentTime) / (1000 * 60);
 
-    // Hiển thị thời gian nếu tin nhắn tiếp theo cách quá 1 phút
     return timeDiff > 1;
   };
 
@@ -179,7 +186,6 @@ const MessageList = ({ messages, currentUserId }) => {
 
           return (
             <div key={message._id}>
-              {/* Hiển thị thời gian phân cách ngày nếu cần */}
               {showDateSeparator && (
                 <div className="text-center my-4">
                   <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
@@ -192,11 +198,9 @@ const MessageList = ({ messages, currentUserId }) => {
                 </div>
               )}
 
-              {/* Tin nhắn */}
               <div
-                className={`flex items-end ${isCurrentUser ? "justify-end" : "justify-start"} mb-1`} // Sử dụng items-end để căn avatar xuống dưới
+                className={`flex items-end ${isCurrentUser ? "justify-end" : "justify-start"} mb-1`}
               >
-                {/* Avatar (hiển thị bên trái nếu không phải người dùng hiện tại và cần hiển thị) */}
                 {showAvatar && !isCurrentUser && (
                   <img
                     src={userData.avatarUrl}
@@ -213,12 +217,8 @@ const MessageList = ({ messages, currentUserId }) => {
                   />
                 )}
 
-                {/* Nếu không hiển thị avatar, thêm khoảng trống để căn chỉnh */}
-                {!showAvatar && !isCurrentUser && (
-                  <div className="w-8 h-8 mr-2 mb-1" /> // Khoảng trống để căn chỉnh
-                )}
+                {!showAvatar && !isCurrentUser && <div className="w-8 h-8 mr-2 mb-1" />}
 
-                {/* Nội dung tin nhắn */}
                 <div className={`max-w-[80%] ${isCurrentUser ? "text-right" : "text-left"}`}>
                   <div
                     className={`inline-block p-2 rounded-lg break-words ${

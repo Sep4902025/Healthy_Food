@@ -1,5 +1,5 @@
 import React, { useRef, forwardRef, useImperativeHandle, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Image } from "react-native";
 import { GestureHandlerRootView, DrawerLayout } from "react-native-gesture-handler";
 import FontistoIcon from "../common/VectorIcons/FontistoIcon";
 import Ionicons from "../common/VectorIcons/Ionicons";
@@ -10,9 +10,10 @@ import { ScreensName } from "../../constants/ScreensName";
 import { useNavigation } from "@react-navigation/native";
 import { toggleVisible, updateVisible } from "../../redux/reducers/drawerReducer";
 
-const { width } = Dimensions.get("window");
+const HEIGHT = Dimensions.get("window").height;
+const WIDTH = Dimensions.get("window").width;
 
-const CustomDrawerLayout = forwardRef(({ children, drawerWidth = width * 0.7, theme }, ref) => {
+const CustomDrawerLayout = forwardRef(({ children, drawerWidth = WIDTH * 0.7, theme }, ref) => {
   const navigation = useNavigation();
   const drawerVisible = useSelector(drawerSelector);
   const drawerRef = useRef(null);
@@ -77,15 +78,14 @@ const CustomDrawerLayout = forwardRef(({ children, drawerWidth = width * 0.7, th
           closeDrawer();
         },
       },
-      // Add more drawer items as needed
     ];
 
     return (
       <View style={[styles.drawerContent, { backgroundColor: theme.headerBackgroundColor }]}>
         <View style={styles.drawerHeader}>
-          {user?.avatar_url ? (
+          {user?.avatarUrl ? (
             <Image
-              source={{ uri: user.avatar_url }}
+              source={{ uri: user.avatarUrl }}
               resizeMode="cover"
               style={[styles.profileImage, styles.avtImage]}
             />
@@ -93,7 +93,7 @@ const CustomDrawerLayout = forwardRef(({ children, drawerWidth = width * 0.7, th
             <MaterialIcons name="account-circle" size={60} color={theme.backButtonColor} />
           )}
           <Text style={[styles.drawerHeaderText, { color: theme.backButtonColor }]}>
-            {user?.name || "Guest"}
+            {user?.username || "Guest"}
           </Text>
         </View>
 
@@ -109,7 +109,6 @@ const CustomDrawerLayout = forwardRef(({ children, drawerWidth = width * 0.7, th
     );
   };
 
-  // Expose drawer methods to parent component
   useImperativeHandle(ref, () => ({
     openDrawer: () => drawerRef.current?.openDrawer(),
     closeDrawer: () => drawerRef.current?.closeDrawer(),
@@ -160,6 +159,11 @@ const styles = StyleSheet.create({
   drawerItemText: {
     marginLeft: 15,
     fontSize: 16,
+  },
+  avtImage: {
+    width: WIDTH * 0.1,
+    height: WIDTH * 0.1,
+    borderRadius: 50,
   },
 });
 

@@ -24,29 +24,53 @@ const commentRatingRouter = require("./routes/commentRatingRouter");
 const medicalConditionRouter = require("./routes/medicalConditionRouter");
 const userFavoriteDishesRouter = require("./routes/userFavoriteDishesRouter");
 const paymentRouter = require("./routes/paymentRouter");
-const foryouRouter = require("./routes/foryouRouter"); // Thêm router mới
+const foryouRouter = require("./routes/foryouRouter");
 const userPreferenceRouter = require("./routes/userPreferenceRouter");
+const recipeRouter = require("./routes/recipeRouter");
+
+// Import các service và socket
+const conversationService = require("./services/conversationService"); // Thêm import
+const initializeChatSocket = require("./socket/chatSocket");
+const initializeReminderSocket = require("./socket/reminderSocket");
 
 const app = express();
 const server = http.createServer(app);
 
+// Cấu hình Socket.IO với CORS
+const io = socketIo(server, {
+  cors: {
+    origin: [
+      process.env.ADMIN_WEB_URL || "http://localhost:3000",
+      process.env.MOBILE_CLIENT_URL || "http://localhost:3001", // Thêm các origin cần thiết
+    ],
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+    credentials: true,
+  },
+});
+
+// Truyền io vào các service và socket
+console.log("Initializing services and sockets with io...");
+conversationService.initialize(io); // Thêm dòng này để khởi tạo io cho conversationService
+initializeChatSocket(io);
+initializeReminderSocket(io);
+
 // Cấu hình middleware
 app.use(express.json());
-app.use(cookieParser()); // Middleware xử lý cookie
+app.use(cookieParser());
 
 // Danh sách các URL được phép truy cập
 const allowedOrigins = [
-  process.env.ADMIN_WEB_URL, // URL của Admin Web
-  process.env.MOBILE_CLIENT_URL, // URL của Mobile Client
+  process.env.ADMIN_WEB_URL || "http://localhost:3000",
+  process.env.MOBILE_CLIENT_URL || "http://localhost:3001", // Thêm các origin cần thiết
 ];
 
-// Cấu hình CORS
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true); // Cho phép truy cập
+      callback(null, true);
     } else {
-      callback(new Error("Not allowed by CORS")); // Từ chối truy cập
+      callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
@@ -62,28 +86,6 @@ async function graceful() {
 }
 process.on("SIGTERM", graceful);
 process.on("SIGINT", graceful);
-
-// Tạo socket server
-const io = socketIo(server, {
-  cors: {
-    origin: process.env.ADMIN_WEB_URL || "http://localhost:3000",
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
-    credentials: true,
-  },
-});
-
-// Import và khởi tạo các socket (chat, reminder)
-const initializeChatSocket = require("./socket/chatSocket");
-const initializeReminderSocket = require("./socket/reminderSocket");
-const recipeRouter = require("./routes/recipeRouter");
-
-io.on("connection", (socket) => {
-  console.log("A user connected");
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
-  });
-});
 
 // Định nghĩa các route
 app.get("/", (req, res) => {
@@ -102,7 +104,6 @@ app.use("/api/v1/jobs", jobRouter);
 app.use("/api/v1/footer", footerRouter);
 app.use("/api/v1/home", homeRouter);
 app.use("/api/v1/comment", commentRatingRouter);
-//app.use("/api/v1/recipe", commentRatingRouter);
 app.use("/api/v1/medicalConditions", medicalConditionRouter);
 app.use("/api/v1/favoriteDishes", userFavoriteDishesRouter);
 app.use("/api/v1/recipes", recipeRouter);
@@ -126,10 +127,6 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`Server đang chạy tại http://localhost:${PORT}`);
     });
-
-    // Khởi tạo socket sau khi kết nối DB thành công
-    initializeChatSocket(io);
-    initializeReminderSocket(io);
 
     // Bắt đầu Agenda (quản lý jobs)
     agenda.start();

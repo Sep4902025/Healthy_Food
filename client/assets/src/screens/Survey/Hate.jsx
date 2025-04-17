@@ -95,8 +95,15 @@ const Hate = ({ navigation }) => {
     const loadData = async () => {
       try {
         const savedData = JSON.parse(await AsyncStorage.getItem("quizData")) || {};
-        if (savedData.hate) setSelectedItemIds(savedData.hate);
-        if (savedData.favorite) setFavoriteItemIds(savedData.favorite);
+        // Ensure hate and favorite are arrays of strings
+        const hateData = Array.isArray(savedData.hate) ? savedData.hate.map(String) : [];
+        const favoriteData = Array.isArray(savedData.favorite)
+          ? savedData.favorite.map(String)
+          : [];
+        setSelectedItemIds(hateData);
+        setFavoriteItemIds(favoriteData);
+        console.log("Loaded hate:", hateData);
+        console.log("Loaded favorite:", favoriteData);
       } catch (error) {
         console.error("Error loading data:", error);
       }
@@ -105,21 +112,30 @@ const Hate = ({ navigation }) => {
   }, []);
 
   const toggleItemSelection = (id) => {
-    if (favoriteItemIds.includes(id)) return;
-    setSelectedItemIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+    const idAsString = String(id); // Ensure the ID is a string
+    console.log("Toggling ID:", idAsString);
+    console.log("Is in favoriteItemIds?", favoriteItemIds.includes(idAsString));
+    if (favoriteItemIds.includes(idAsString)) return;
+    setSelectedItemIds((prev) => {
+      const newSelected = prev.includes(idAsString)
+        ? prev.filter((i) => i !== idAsString)
+        : [...prev, idAsString];
+      console.log("Updated selectedItemIds:", newSelected);
+      return newSelected;
+    });
   };
 
   const selectAll = () => {
     const allItemIds = hateGroups
-      .flatMap((group) => group.items.map((item) => item.id))
+      .flatMap((group) => group.items.map((item) => String(item.id)))
       .filter((id) => !favoriteItemIds.includes(id));
     setSelectedItemIds(allItemIds);
+    console.log("Select All - selectedItemIds:", allItemIds);
   };
 
   const deselectAll = () => {
     setSelectedItemIds([]);
+    console.log("Deselect All - selectedItemIds:", []);
   };
 
   const handleNext = async () => {
@@ -195,23 +211,22 @@ const Hate = ({ navigation }) => {
       console.log("Final data to submit:", finalData);
 
       const result = await quizService.submitQuizData(finalData);
-      console.log("API result:", result); // Log để kiểm tra result
+      console.log("API result:", result);
 
       if (result.success) {
-        // Truy cập dữ liệu từ result.data.data thay vì result.data
-        const responseData = result.data.data || result.data; // Nếu không có result.data.data, dùng result.data
+        const responseData = result.data.data || result.data;
         if (responseData) {
           const updatedUser = responseData.user
             ? {
-                ...responseData.user, // Dùng user từ API nếu có
-                userPreference: responseData.userPreference, // Thêm userPreference
+                ...responseData.user,
+                userPreference: responseData.userPreference,
               }
             : {
-                ...user, // Dùng user từ Redux nếu không có user trong API
-                userPreferenceId: responseData.userPreference?._id, // Kiểm tra userPreference tồn tại
+                ...user,
+                userPreferenceId: responseData.userPreference?._id,
                 userPreference: responseData.userPreference,
               };
-          console.log("Updated user to dispatch:", updatedUser); // Log để kiểm tra
+          console.log("Updated user to dispatch:", updatedUser);
           dispatch(updateUserAct(updatedUser));
           navigation.navigate("forYou");
         } else {
@@ -259,7 +274,7 @@ const Hate = ({ navigation }) => {
               selectedItemIds.length ===
               hateGroups
                 .flatMap((c) => c.items)
-                .filter((item) => !favoriteItemIds.includes(item.id)).length
+                .filter((item) => !favoriteItemIds.includes(String(item.id))).length
             }
             onValueChange={(value) => (value ? selectAll() : deselectAll())}
           />
@@ -282,20 +297,20 @@ const Hate = ({ navigation }) => {
                   <TouchableOpacity
                     key={item.id}
                     className={`p-2 rounded-lg ${
-                      selectedItemIds.includes(item.id)
+                      selectedItemIds.includes(String(item.id))
                         ? "bg-custom-green"
-                        : favoriteItemIds.includes(item.id)
+                        : favoriteItemIds.includes(String(item.id))
                         ? "bg-blue-200"
                         : "bg-gray-100 border border-gray-300"
                     }`}
                     onPress={() => toggleItemSelection(item.id)}
-                    disabled={favoriteItemIds.includes(item.id)}
+                    disabled={favoriteItemIds.includes(String(item.id))}
                   >
                     <Text
                       className={`${
-                        selectedItemIds.includes(item.id)
+                        selectedItemIds.includes(String(item.id))
                           ? "text-white"
-                          : favoriteItemIds.includes(item.id)
+                          : favoriteItemIds.includes(String(item.id))
                           ? "text-gray-600"
                           : "text-gray-700"
                       }`}

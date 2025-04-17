@@ -11,6 +11,7 @@ const Reminder = require("../models/Reminder");
 const { agenda } = require("../config/agenda");
 const AppError = require("../utils/appError");
 const moment = require("moment-timezone");
+const { scheduleReminderJob } = require("../jobs/reminderJobs");
 
 class MealPlanService {
   static async applyPaginationAndSort(query, page, limit, sort, order) {
@@ -228,24 +229,39 @@ class MealPlanService {
   }
 
   static async getUnpaidMealPlanForUser(userId) {
-    const mealPlans = await MealPlan.find({
-      userId,
-      isBlock: true,
-      isDelete: false,
-    });
+    try {
+      const mealPlans = await MealPlan.find({
+        userId,
+        isBlock: true,
+        isDelete: false,
+      });
 
-    if (!mealPlans || mealPlans.length === 0) {
-      throw new AppError("No unpaid meal plans found for this user", 404);
+      // Trả về mảng rỗng nếu không tìm thấy
+      if (mealPlans.length === 0) {
+        return {
+          status: "success",
+          data: [],
+        };
+      }
+
+      // Map dữ liệu trả về
+      const result = mealPlans.map((mealPlan) => ({
+        _id: mealPlan._id,
+        title: mealPlan.title,
+        price: mealPlan.price,
+        duration: mealPlan.duration,
+        startDate: mealPlan.startDate,
+        isBlock: mealPlan.isBlock,
+      }));
+
+      return {
+        status: "success",
+        data: result,
+      };
+    } catch (error) {
+      // Xử lý lỗi bất ngờ
+      throw new AppError(error.message || "Failed to fetch unpaid meal plans", error.status || 500);
     }
-
-    return mealPlans.map((mealPlan) => ({
-      _id: mealPlan._id,
-      title: mealPlan.title,
-      price: mealPlan.price,
-      duration: mealPlan.duration,
-      startDate: mealPlan.startDate,
-      isBlock: mealPlan.isBlock,
-    }));
   }
 
   static async getMealPlanDetails(mealPlanId) {
@@ -409,9 +425,9 @@ class MealPlanService {
     if (mealPlan.endDate < currentDate) {
       throw new AppError("MealPlan has expired", 403);
     }
-    if (mealPlan.isBlock) {
-      throw new AppError("MealPlan is locked", 403);
-    }
+    // if (mealPlan.isBlock) {
+    //   throw new AppError("MealPlan is locked", 403);
+    // }
     if (mealPlan.isPause) {
       throw new AppError("MealPlan is paused", 403);
     }
@@ -794,7 +810,10 @@ class MealPlanService {
   }
 
   static async handleReminderAndJob(userId, mealPlanId, mealDayId, mealId, meal, mealDay) {
+    console.log(`📌 Bắt đầu handleReminderAndJob cho User ${userId}, Meal ${mealId}`);
+
     if (!meal || !meal.dishes || meal.dishes.length === 0) {
+      console.log(`⚠️ Meal ${mealId} không có món ăn, xóa reminder hiện tại`);
       const existingReminders = await Reminder.find({ userId, mealPlanId, mealDayId, mealId });
       for (const reminder of existingReminders) {
         if (reminder.jobId) await agenda.cancel({ _id: reminder.jobId });
@@ -806,15 +825,23 @@ class MealPlanService {
     const remindTime = moment
       .tz(`${mealDay.date} ${meal.mealTime}`, "YYYY-MM-DD HH:mm", "Asia/Ho_Chi_Minh")
       .toDate();
-    const dishNames = meal.dishes.map((dish) => dish.name).join(", ");
-    const message = `📢 It's mealtime! 🍽️ Time for ${meal.mealName}. You have: ${dishNames}!`;
+    const dishNames =
+      meal.dishes
+        .map((dish) => dish.name)
+        .filter((name) => name)
+        .join(", ") || "your meal";
+    const message = `📢 It's mealtime! 🍽️ Time for ${
+      meal.mealName || "your meal"
+    }. You have: ${dishNames}!`;
 
     let reminder = await Reminder.findOne({ userId, mealPlanId, mealDayId, mealId });
     if (reminder) {
+      console.log(`🔄 Cập nhật reminder ${reminder._id} với remindTime: ${remindTime}`);
       reminder.remindTime = remindTime;
       reminder.message = message;
       reminder.status = "scheduled";
     } else {
+      console.log(`🆕 Tạo mới reminder cho User ${userId}, Meal ${mealId}`);
       reminder = new Reminder({
         userId,
         mealPlanId,
@@ -834,14 +861,12 @@ class MealPlanService {
       nextRunAt: { $ne: null },
     });
     for (const job of existingJobs) {
+      console.log(`🗑️ Hủy job cũ: ${job.attrs._id}`);
       await agenda.cancel({ _id: job.attrs._id });
     }
 
-    const job = await agenda.schedule(remindTime, "sendReminder", {
-      reminderId: reminder._id,
-      userId,
-      message,
-    });
+    const job = await scheduleReminderJob(agenda, remindTime, reminder._id, userId, message);
+    console.log(`✅ Job được lên lịch với ID: ${job.attrs._id}`);
     reminder.jobId = job.attrs._id;
     await reminder.save();
 

@@ -18,7 +18,7 @@ const quizService = {
       }
 
       const response = await axiosInstance.post(`/userpreference`, finalData);
-      console.log("REU", response);
+      console.log("REU", response.data);
 
       // await AsyncStorage.removeItem("quizData"); // Thay sessionStorage bằng AsyncStorage nếu dùng React Native
 
@@ -71,7 +71,6 @@ const quizService = {
         };
       }
     } catch (error) {
-      console.error("Lỗi lấy danh sách món ăn đề xuất:", error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || "Lỗi khi lấy danh sách món ăn",
@@ -87,9 +86,7 @@ const quizService = {
     }
 
     try {
-      console.log("🚀 Đang lấy sở thích người dùng với userPreferenceId:", userPreferenceId);
       const response = await axiosInstance.get(`${API_URL}/userpreference/${userPreferenceId}`);
-      console.log("🚀 Phản hồi từ /userPreference:", response.data);
 
       if (response.data.success) {
         return {
@@ -116,7 +113,7 @@ const quizService = {
 
   updateUserPreference: async (userId, updatedData) => {
     try {
-      const response = await axios.put(`${API_URL}/userPreference/${userId}`, updatedData);
+      const response = await axios.put(`${API_URL}/userpreference/${userId}`, updatedData);
       return { success: true, data: response.data };
     } catch (error) {
       return {

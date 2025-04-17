@@ -16,7 +16,7 @@ export const createConversation = async (userId, topic) => {
       userId: userId,
       topic: topic,
     };
-    const response = await axiosInstance.get(`/conversations`, data);
+    const response = await axiosInstance.post(`/conversations`, data);
     return response;
   } catch (error) {
     console.log("createConversation in service/conversations error : ", error);
