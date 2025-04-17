@@ -10,13 +10,15 @@ export const getUserPreference = async (userId) => {
   }
 };
 
-export const resetUserPreference = async (userId) => {
+export const resetUserPreference = async (userPreferenceId) => {
   try {
-    const response = await axiosInstance.put(`/userPreference/reset/${userId}`);
-    return response;
+    const response = await axiosInstance.put(`/userPreference/reset/${userPreferenceId}`);
+    console.log("LOIXO", response);
+
+    return { success: true, data: response.data };
   } catch (error) {
     console.log("resetUserPreference error: ", error);
-    return error;
+    return { success: false, error };
   }
 };
 
@@ -32,7 +34,7 @@ export const createUserPreference = async (data) => {
 
 export const updateUserPreference = async (data) => {
   try {
-    const response = await axiosInstance.put(`/userPreference/${data?._id}`, data);
+    const response = await axiosInstance.put(`/userpreference/${data?._id}`, data);
     return response;
   } catch (error) {
     console.log("updateUserPreference error: ", error);

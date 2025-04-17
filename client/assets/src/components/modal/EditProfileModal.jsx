@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   StatusBar,
+  ActivityIndicator, // Import ActivityIndicator for loading
 } from "react-native";
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
@@ -20,16 +21,19 @@ import { userSelector } from "../../redux/selectors/selector";
 import { useTheme } from "../../contexts/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary } from "../../services/cloundaryService";
+import { updateUserPreference } from "../../services/userPreference";
 import { normalize } from "../../utils/common";
 
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
-export const EditProfileModal = ({ visible, onClose, onSave }) => {
+
+export const EditProfileModal = ({ visible, onClose, onSave, userPreference }) => {
   const user = useSelector(userSelector);
   const { theme } = useTheme();
   const [profile, setProfile] = useState({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
+    username: user?.username || "",
     email: user?.email || "",
     phoneNumber: user?.phoneNumber || "",
     gender: user?.gender || "",
@@ -37,8 +41,8 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
     weight: user?.weight || "",
     height: user?.height || "",
     weightGoal: user?.weightGoal || "",
+    avatarUrl: user?.avatarUrl || "",
     avtChange: false,
-    ...user,
   });
 
   // State to track which fields are currently editable
@@ -61,6 +65,24 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
     weightGoal: "",
   });
 
+  // State to track loading during update
+  const [loading, setLoading] = useState(false);
+
+  // Update profile state when user or userPreference changes
+  useEffect(() => {
+    setProfile((prev) => ({
+      ...prev,
+      username: user?.username || "",
+      email: user?.email || "",
+      phoneNumber: user?.phoneNumber || userPreference?.phoneNumber || "",
+      gender: user?.gender || userPreference?.gender || "",
+      weight: userPreference?.weight || user?.weight || "",
+      height: userPreference?.height || user?.height || "",
+      weightGoal: userPreference?.weightGoal || user?.weightGoal || "",
+      avatarUrl: user?.avatarUrl || "",
+    }));
+  }, [user, userPreference]);
+
   // Toggle edit mode for a specific field
   const toggleEditMode = (fieldName) => {
     setEditableFields((prev) => ({
@@ -77,7 +99,6 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
 
   // Validate Vietnamese phone number
   const validateVietnamesePhone = (phone) => {
-    // Vietnam phone number format: 10 digits, starting with 0
     const phoneRegex = /^0\d{9}$/;
     return phoneRegex.test(phone);
   };
@@ -85,7 +106,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
   // Validate numeric fields
   const validateNumericField = (value, fieldName) => {
     if (isNaN(value) || value <= 0) {
-      return `${fieldName} phải là số dương`;
+      return `${fieldName} must be a positive number`;
     }
     return "";
   };
@@ -94,46 +115,42 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
   const handleFieldChange = (fieldName, value) => {
     let error = "";
 
-    // Validate based on field type
     switch (fieldName) {
       case "username":
         if (!value.trim()) {
-          error = "Tên không được để trống";
+          error = "Name cannot be empty";
         }
         break;
       case "email":
         if (!value.trim()) {
-          error = "Email không được để trống";
+          error = "Email cannot be empty";
         } else if (!validateEmail(value)) {
-          error = "Định dạng email không hợp lệ";
+          error = "Invalid email format";
         }
         break;
-      // case "phoneNumber":
-      //   if (!validateVietnamesePhone(value)) {
-      //     error =
-      //       "Số điện thoại không hợp lệ (Việt Nam: 10 số, bắt đầu bằng số 0)";
-      //   }
-      //   break;
+      case "phoneNumber":
+        if (!validateVietnamesePhone(value)) {
+          error = "Invalid phone number (Vietnam: 10 digits, starting with 0)";
+        }
+        break;
       case "weight":
-        error = validateNumericField(value, "Cân nặng");
+        error = validateNumericField(value, "Weight");
         break;
       case "height":
-        error = validateNumericField(value, "Chiều cao");
+        error = validateNumericField(value, "Height");
         break;
       case "weightGoal":
-        error = validateNumericField(value, "Mục tiêu cân nặng");
+        error = validateNumericField(value, "Weight Goal");
         break;
       default:
         break;
     }
 
-    // Update validation errors
     setValidationErrors((prev) => ({
       ...prev,
       [fieldName]: error,
     }));
 
-    // Update profile state
     setProfile((prev) => ({
       ...prev,
       [fieldName]: value,
@@ -141,37 +158,67 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
   };
 
   const handleSave = async () => {
-    // Check for validation errors before saving
-    const hasErrors = Object.values(validationErrors).some(
-      (error) => error !== ""
-    );
+    const hasErrors = Object.values(validationErrors).some((error) => error !== "");
     const hasEmptyRequiredFields = !profile.username || !profile.email;
 
     if (hasErrors || hasEmptyRequiredFields) {
-      Alert.alert(
-        "Lỗi",
-        "Vui lòng điền đầy đủ thông tin và sửa các lỗi trước khi lưu",
-        [{ text: "OK" }]
-      );
+      Alert.alert("Error", "Please fill in all required fields and fix errors before saving", [
+        { text: "OK" },
+      ]);
       return;
     }
 
-    const response = profile?.avtChange
-      ? await uploadToCloudinary(profile?.avatarUrl)
-      : profile.avatarUrl;
-    onSave({ ...profile, avatarUrl: response });
+    setLoading(true); // Set loading to true when starting the update
+
+    try {
+      // Upload avatar to Cloudinary if changed
+      const avatarUrl = profile?.avtChange
+        ? await uploadToCloudinary(profile?.avatarUrl)
+        : profile.avatarUrl;
+
+      // Prepare updated user data for onSave
+      const updatedUserData = {
+        ...user,
+        username: profile.username,
+        email: profile.email,
+        avatarUrl: avatarUrl,
+      };
+
+      // Prepare updated userPreference data
+      const updatedPreferenceData = {
+        ...userPreference,
+        _id: userPreference?._id,
+        phoneNumber: profile.phoneNumber,
+        gender: profile.gender,
+        weight: parseFloat(profile.weight) || 0,
+        height: parseFloat(profile.height) || 0,
+        weightGoal: parseFloat(profile.weightGoal) || 0,
+      };
+
+      // Call API to update userPreference
+      const preferenceResponse = await updateUserPreference(updatedPreferenceData);
+
+      if (preferenceResponse.status === 200) {
+        // If userPreference update is successful, proceed with onSave for user data
+        onSave(updatedUserData);
+      } else {
+        throw new Error("Failed to update user preferences");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Unable to save profile. Please try again later.", [{ text: "OK" }]);
+      console.log("Save profile error:", error);
+    } finally {
+      setLoading(false); // Reset loading state after the operation completes
+    }
   };
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Xin lỗi, chúng tôi cần quyền truy cập thư viện ảnh để thực hiện tính năng này!"
-      );
+      Alert.alert("Sorry, we need permission to access your photo library to use this feature!");
       return;
     }
 
-    // Launch image picker
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -180,44 +227,38 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
     });
 
     if (!result.canceled) {
-      setProfile((pre) => ({
-        ...pre,
+      setProfile((prev) => ({
+        ...prev,
         avatarUrl: result.assets[0].uri,
         avtChange: true,
       }));
     }
   };
 
-  // Renders input field with edit button
   const renderEditableField = (
     label,
     fieldName,
     placeholder,
     keyboardType = "default",
-    edittable = true
+    editable = true
   ) => {
     return (
       <>
-        <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-          {label}
-        </Text>
+        <Text style={{ ...styles.label, color: theme.greyTextColor }}>{label}</Text>
         <View style={styles.editableFieldContainer}>
           <TextInput
-            style={[
-              styles.editableInput,
-              !editableFields[fieldName] && styles.disabledInput,
-            ]}
-            value={profile[fieldName]}
+            style={[styles.editableInput, !editableFields[fieldName] && styles.disabledInput]}
+            value={String(profile[fieldName])}
             onChangeText={(text) => handleFieldChange(fieldName, text)}
             placeholder={placeholder}
             keyboardType={keyboardType}
             editable={editableFields[fieldName]}
           />
-          {edittable && (
+          {editable && (
             <TouchableOpacity
               style={styles.editFieldButton}
               onPress={() => {
-                edittable && toggleEditMode(fieldName);
+                editable && toggleEditMode(fieldName);
               }}
             >
               <Ionicons
@@ -237,12 +278,7 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
 
   return (
     <>
-      <Modal
-        visible={visible}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={onClose}
-      >
+      <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
         <EditModalHeader onCancel={onClose} />
         <View
           style={{
@@ -250,27 +286,16 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
             backgroundColor: theme.editModalbackgroundColor,
           }}
         >
-          <Text style={{ ...styles.headerTitle, color: theme.textColor }}>
-            Edit Profile
-          </Text>
+          <Text style={{ ...styles.headerTitle, color: theme.textColor }}>Edit Profile</Text>
 
-          {/* Profile Image */}
           <View style={styles.profileImageContainer}>
             <View style={styles.profileImageWrapper}>
               {profile?.avatarUrl ? (
-                <Image
-                  source={{ uri: profile.avatarUrl }}
-                  style={styles.profileImage}
-                />
+                <Image source={{ uri: profile.avatarUrl }} style={styles.profileImage} />
               ) : (
-                <View
-                  style={[styles.profileImage, styles.profileImagePlaceholder]}
-                />
+                <View style={[styles.profileImage, styles.profileImagePlaceholder]} />
               )}
-              <TouchableOpacity
-                style={styles.editProfileImageButton}
-                onPress={pickImage}
-              >
+              <TouchableOpacity style={styles.editProfileImageButton} onPress={pickImage}>
                 <Ionicons name="pencil" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -278,33 +303,20 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
 
           <ScrollView style={styles.scrollContent}>
             <View style={styles.formContainer}>
-              {renderEditableField("Họ và tên", "username", "Nhập họ và tên")}
+              {renderEditableField("Full Name", "username", "Enter your full name")}
 
-              {renderEditableField(
-                "Email",
-                "email",
-                "Nhập địa chỉ email",
-                "email-address",
-                false
-              )}
+              {renderEditableField("Email", "email", "Enter your email", "email-address", false)}
 
-              <Text style={{ ...styles.label, color: theme.greyTextColor }}>
-                Số điện thoại
-              </Text>
+              <Text style={{ ...styles.label, color: theme.greyTextColor }}>Phone Number</Text>
               <View style={styles.phoneInputContainer}>
                 <View style={styles.countryCodeContainer}>
                   <Text style={styles.countryCode}>{profile.countryCode}</Text>
                 </View>
                 <TextInput
-                  style={[
-                    styles.phoneInput,
-                    !editableFields.phoneNumber && styles.disabledInput,
-                  ]}
-                  value={profile.phoneNumber}
-                  onChangeText={(text) =>
-                    handleFieldChange("phoneNumber", text)
-                  }
-                  placeholder="Nhập số điện thoại"
+                  style={[styles.phoneInput, !editableFields.phoneNumber && styles.disabledInput]}
+                  value={String(profile.phoneNumber)}
+                  onChangeText={(text) => handleFieldChange("phoneNumber", text)}
+                  placeholder="Enter your phone number"
                   keyboardType="phone-pad"
                   editable={editableFields.phoneNumber}
                 />
@@ -320,35 +332,31 @@ export const EditProfileModal = ({ visible, onClose, onSave }) => {
                 </TouchableOpacity>
               </View>
               {validationErrors.phoneNumber ? (
-                <Text style={styles.errorText}>
-                  {validationErrors.phoneNumber}
-                </Text>
+                <Text style={styles.errorText}>{validationErrors.phoneNumber}</Text>
               ) : null}
 
-              {renderEditableField(
-                "Cân nặng (kg)",
-                "weight",
-                "Nhập cân nặng (kg)",
-                "numeric"
-              )}
+              {renderEditableField("Weight (kg)", "weight", "Enter your weight (kg)", "numeric")}
+
+              {renderEditableField("Height (cm)", "height", "Enter your height (cm)", "numeric")}
 
               {renderEditableField(
-                "Chiều cao (cm)",
-                "height",
-                "Nhập chiều cao (cm)",
-                "numeric"
-              )}
-
-              {renderEditableField(
-                "Mục tiêu cân nặng (kg)",
+                "Weight Goal (kg)",
                 "weightGoal",
-                "Nhập mục tiêu cân nặng (kg)",
+                "Enter your weight goal (kg)",
                 "numeric"
               )}
             </View>
           </ScrollView>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Lưu</Text>
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={loading} // Disable the button while loading
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save</Text>
+            )}
           </TouchableOpacity>
         </View>
       </Modal>
@@ -409,6 +417,10 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     marginBottom: HEIGHT * 0.05,
   },
+  saveButtonDisabled: {
+    backgroundColor: "#A0D9C5", // Lighter shade when disabled
+    opacity: 0.7,
+  },
   saveButtonText: {
     color: "#fff",
     fontSize: normalize(16),
@@ -419,7 +431,7 @@ const styles = StyleSheet.create({
   },
   phoneInputContainer: {
     flexDirection: "row",
-    marginBottom: 8, // Reduced to account for possible error text
+    marginBottom: 8,
     alignItems: "center",
   },
   countryCodeContainer: {

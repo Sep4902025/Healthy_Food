@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-
 import {
   View,
   Text,
@@ -10,6 +9,7 @@ import {
   Dimensions,
   Modal,
   Platform,
+  ActivityIndicator, // Import ActivityIndicator for loading
 } from "react-native";
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
@@ -19,17 +19,19 @@ import { normalize } from "../../utils/common";
 const HEIGHT = Dimensions.get("window").height;
 
 export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) => {
+  console.log("User Preference:", userPreference);
+
   const { theme } = useTheme();
   const [healthData, setHealthData] = useState({
     ...userPreference,
   });
   const [bmi, setBmi] = useState(null);
+  const [loading, setLoading] = useState(false); // Add loading state
 
   // Update healthData when userPreference changes
   useEffect(() => {
-    setHealthData(userPreference);
-    calculateBMI(userPreference.weight, userPreference.height);
-    calculateBMI(userPreference.weight, userPreference.height);
+    setHealthData(userPreference || {});
+    calculateBMI(userPreference?.weight, userPreference?.height);
   }, [userPreference]);
 
   // Calculate BMI
@@ -46,7 +48,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     }
   };
 
-  // Handle input changes
+  // Handle input changes (not used since fields are not editable)
   const handleInputChange = (field, value) => {
     setHealthData((prev) => {
       const updatedData = { ...prev, [field]: value };
@@ -60,8 +62,17 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     });
   };
 
-  const handleSave = () => {
-    onSave(healthData);
+  const handleSave = async () => {
+    setLoading(true); // Start loading
+
+    try {
+      // Call onSave to trigger the reset in Profile.jsx
+      onSave(healthData);
+    } catch (error) {
+      console.error("handleSave error:", error);
+    } finally {
+      setLoading(false); // Stop loading
+    }
   };
 
   const formData = [
@@ -74,9 +85,9 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
         editable: false,
       },
       {
-        label: "WaterDrink",
+        label: "Water Drink",
         field: "waterDrink",
-        value: healthData.waterDrink ?? "",
+        value: healthData?.waterDrink ?? "",
         keyboardType: "default",
         editable: false,
       },
@@ -85,14 +96,14 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
       {
         label: "Age",
         field: "age",
-        value: healthData.age ?? "",
+        value: healthData?.age ?? "",
         keyboardType: "default",
         editable: false,
       },
       {
-        label: "SleepTime",
+        label: "Sleep Time",
         field: "sleepTime",
-        value: healthData.sleepTime ?? "",
+        value: healthData?.sleepTime ?? "",
         keyboardType: "default",
         editable: false,
       },
@@ -100,15 +111,15 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     [
       {
         label: "Goal",
-        field: "goal", // Keep field as is, but label is Goal
-        value: healthData.goal ?? "",
+        field: "goal",
+        value: healthData?.goal ?? "",
         keyboardType: "default",
         editable: false,
       },
       {
-        label: "LongOfPlan",
-        field: "longOfPlan", // Keep field as is, but label is LongOfPlan
-        value: healthData.longOfPlan ?? "",
+        label: "Plan Duration",
+        field: "longOfPlan",
+        value: healthData?.longOfPlan ?? "",
         keyboardType: "default",
         editable: false,
       },
@@ -116,24 +127,24 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     [
       {
         label: "Diet",
-        field: "diet", // Keep field as is, but label is Diet
-        value: healthData.diet ?? "",
-        keyboardType: "default", // Changed to default for age ranges
+        field: "diet",
+        value: healthData?.diet ?? "",
+        keyboardType: "default",
         editable: false,
       },
       {
-        label: "MealNumber",
-        field: "mealNumber", // Keep field as is, but label is MealNumber
-        value: healthData.mealNumber ?? "",
+        label: "Meal Number",
+        field: "mealNumber",
+        value: healthData?.mealNumber ?? "",
         keyboardType: "default",
         editable: false,
       },
     ],
     [
       {
-        label: "UnderDisease",
-        field: "underDisease", // Keep field as is, but label is UnderDisease
-        value: "",
+        label: "Underlying Diseases",
+        field: "underDisease",
+        value: healthData?.underDisease?.join(", ") ?? "",
         keyboardType: "default",
         editable: false,
       },
@@ -142,23 +153,23 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
 
   const viewForm = [
     {
-      label: "EatHabit",
+      label: "Eating Habits",
       field: "eatHabit",
-      value: healthData.eatHabit || [], // Make sure this is an array
+      value: healthData?.eatHabit || [],
       keyboardType: "default",
       editable: false,
     },
     {
-      label: "RecommendedFoods",
+      label: "Recommended Foods",
       field: "recommendedFoods",
-      value: healthData.recommendedFoods || [], // Make sure this is an array
+      value: healthData?.recommendedFoods || [],
       keyboardType: "default",
       editable: false,
     },
     {
-      label: "Hate",
+      label: "Disliked Foods",
       field: "hate",
-      value: healthData.hate || [], // Make sure this is an array
+      value: healthData?.hate || [],
       keyboardType: "default",
       editable: false,
     },
@@ -176,7 +187,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
           <TextInput
             style={styles.input}
             value={String(value)}
-            onChangeText={(text) => handleInputChange(field, String(value))}
+            onChangeText={(text) => handleInputChange(field, text)}
             keyboardType={keyboardType}
             editable={editable}
           />
@@ -190,18 +201,22 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
 
     const { label, field, value, keyboardType, editable } = fieldConfig;
 
-    // Assuming value is an array of strings
+    // Ensure value is an array
     const items = Array.isArray(value) ? value : [];
 
     return (
       <View style={styles.formItemFull}>
         <Text style={{ ...styles.label, color: theme.greyTextColor }}>{label}</Text>
         <View style={styles.tagsContainer}>
-          {items.map((item, index) => (
-            <View key={`${field}-${index}`} style={styles.tagItem}>
-              <Text style={styles.tagText}>{item}</Text>
-            </View>
-          ))}
+          {items.length > 0 ? (
+            items.map((item, index) => (
+              <View key={`${field}-${index}`} style={styles.tagItem}>
+                <Text style={styles.tagText}>{item}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.tagText}>None</Text>
+          )}
         </View>
       </View>
     );
@@ -210,7 +225,6 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <EditModalHeader onCancel={onClose} />
-
       <View
         style={{
           ...styles.container,
@@ -234,8 +248,16 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
           </View>
         </ScrollView>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Reset</Text>
+        <TouchableOpacity
+          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.saveButtonText}>Reset</Text>
+          )}
         </TouchableOpacity>
       </View>
     </Modal>
@@ -343,6 +365,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 16,
     marginBottom: HEIGHT * 0.05,
+  },
+  saveButtonDisabled: {
+    backgroundColor: "#A0D9C5",
+    opacity: 0.7,
   },
   saveButtonText: {
     color: "#fff",

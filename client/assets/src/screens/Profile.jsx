@@ -28,6 +28,7 @@ import { toggleVisible } from "../redux/reducers/drawerReducer";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
 import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon";
 import quizService from "../services/quizService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -148,15 +149,34 @@ function Profile({ navigation }) {
     try {
       const response = await resetUserPreference(user?.userPreferenceId);
 
-      if (response.status === 200) {
-        ShowToast("success", "Health information reset successfully");
-        await loadUserPreference();
+      if (response.success) {
+        // Clear userPreference state
+        setUserPreference({});
+
+        // Update Redux state to remove userPreferenceId and userPreference
+        const updatedUser = {
+          ...user,
+          userPreferenceId: null,
+          userPreference: null,
+        };
+        dispatch(updateUserAct(updatedUser));
+
+        // Remove quizData from AsyncStorage
+        await AsyncStorage.removeItem("quizData");
+
+        ShowToast(
+          "success",
+          "You have reset the survey. Please complete it to provide more information."
+        );
+
+        // Navigate to the survey screen
         navigation.navigate(ScreensName.survey);
       } else {
-        ShowToast("error", "Failed to reset health information");
+        throw new Error("Failed to reset health information");
       }
     } catch (err) {
-      ShowToast("error", "Unable to reset health information. Please try again later.");
+      ShowToast("error", "Failed to reset health information. Please try again later.");
+      console.error("handleEditHealth error:", err);
     } finally {
       setModalVisible({
         ...modalVisible,
@@ -173,6 +193,7 @@ function Profile({ navigation }) {
       if (response.status === 200) {
         ShowToast("success", "Profile updated successfully");
         dispatch(updateUserAct(response.data?.data?.user || {}));
+        await loadUserPreference(); // Reload user preferences after updating profile
       } else {
         ShowToast("error", "Failed to update profile");
       }
@@ -395,7 +416,8 @@ function Profile({ navigation }) {
         onSave={(data) => {
           handleEditProfile(data);
         }}
-        readOnly={false} // Allow editing unless specified otherwise
+        userPreference={userPreference} // Pass userPreference as a prop
+        readOnly={false}
       />
       <ConfirmDeleteAccountModal
         visible={modalVisible.ConfirmDeleteModal}
