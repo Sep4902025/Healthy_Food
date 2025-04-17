@@ -13,7 +13,7 @@ const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
     >
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-medium text-sm truncate w-20">{conversation.userId.email}</h3>
+          <h3 className="font-medium text-sm truncate w-20">{conversation.userId?.email}</h3>
           <p className="text-xs text-gray-500">{conversation.topic}</p>
           <p className="text-xs text-gray-400">
             {new Date(conversation.createdAt).toLocaleString()}

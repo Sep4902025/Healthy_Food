@@ -18,6 +18,7 @@ import {
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
 import { toast } from "react-toastify";
+import HomeService from "../../../services/home.service";
 
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
 
@@ -67,6 +68,8 @@ const TableRecipes = () => {
     cookingTime: "",
     totalServing: "",
   });
+  console.log("NRRRR", newRecipeData);
+
   const [nutritionData, setNutritionData] = useState({
     calories: 0,
     protein: 0,
@@ -83,7 +86,7 @@ const TableRecipes = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingInstruction, setIsEditingInstruction] = useState(null);
-  const [newInstructionStep, setNewInstructionStep] = useState({ step: "", direction: "" });
+  const [newInstructionStep, setNewInstructionStep] = useState({ step: "", description: "" });
 
   // Debounced search
   const debouncedSearch = useCallback(
@@ -114,17 +117,16 @@ const TableRecipes = () => {
 
       if (dishesResponse?.success) {
         let dishesData = dishesResponse.data.items || [];
-        // Fetch full recipe data but keep recipeId as string
         for (let dish of dishesData) {
           if (dish.recipeId && typeof dish.recipeId === "string") {
             const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
             if (recipeResponse.success) {
-              dish.recipe = recipeResponse.data; // Store full recipe data in a new property
+              dish.recipe = recipeResponse.data;
             } else {
               dish.recipe = null;
             }
           } else {
-            dish.recipe = null; // Ensure recipe is null if no recipeId
+            dish.recipe = null;
           }
         }
         setDishes(dishesData);
@@ -199,17 +201,15 @@ const TableRecipes = () => {
   const handleAddRecipeClick = async (dish) => {
     setSelectedDish(dish);
     setErrors({});
-    setNewInstructionStep({ step: "", direction: "" });
+    setNewInstructionStep({ step: "", description: "" });
     setIsEditingInstruction(null);
 
     try {
       let recipeData = null;
 
       if (dish.recipe) {
-        // Use the full recipe data if available
         recipeData = dish.recipe;
       } else if (dish.recipeId && typeof dish.recipeId === "string") {
-        // Fetch recipe data if only ID is available
         const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
         if (recipeResponse.success) {
           recipeData = recipeResponse.data;
@@ -219,12 +219,13 @@ const TableRecipes = () => {
       }
 
       if (recipeData) {
-        const existingIngredients = recipeData.ingredients?.map((ing) => ({
-          _id: ing.ingredientId._id || ing.ingredientId,
-          name: ing.ingredientId.name || "Unknown",
-          quantity: ing.quantity || "",
-          unit: ing.unit || "",
-        })) || [];
+        const existingIngredients =
+          recipeData.ingredients?.map((ing) => ({
+            _id: ing.ingredientId._id || ing.ingredientId,
+            name: ing.ingredientId.name || "Unknown",
+            quantity: ing.quantity || "",
+            unit: ing.unit || "",
+          })) || [];
 
         setNewRecipeData({
           ingredients: existingIngredients,
@@ -253,30 +254,37 @@ const TableRecipes = () => {
   };
 
   const handleAddInstruction = () => {
-    const step = newInstructionStep.step;
-    const direction = newInstructionStep.direction.trim();
+    if (
+      !newInstructionStep ||
+      typeof newInstructionStep.step === "undefined" ||
+      typeof newInstructionStep.description === "undefined"
+    ) {
+      setErrors({ ...errors, instruction: "Invalid instruction data!" });
+      return;
+    }
 
-    if (!step && !direction) {
-      setErrors({ ...errors, instruction: "Please enter both step number and direction!" });
+    const step = newInstructionStep.step;
+    const description = newInstructionStep.description.trim();
+
+    if (!step && !description) {
+      setErrors({ ...errors, instruction: "Please enter both step number and description!" });
       return;
     }
     if (!step) {
       setErrors({ ...errors, instruction: "Please enter a step number!" });
       return;
     }
-    if (!direction) {
-      setErrors({ ...errors, instruction: "Please enter a direction!" });
+    if (!description) {
+      setErrors({ ...errors, instruction: "Please enter a description!" });
       return;
     }
 
-    if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(direction)) {
+    if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(description)) {
       setErrors({ ...errors, instruction: "Direction contains invalid characters!" });
       return;
     }
 
-    const stepExists = newRecipeData.instruction.some(
-      (inst) => inst.step === parseInt(step)
-    );
+    const stepExists = newRecipeData.instruction.some((inst) => inst.step === parseInt(step));
     if (stepExists) {
       setErrors({ ...errors, instruction: "Step number already exists!" });
       return;
@@ -284,33 +292,41 @@ const TableRecipes = () => {
 
     setNewRecipeData({
       ...newRecipeData,
-      instruction: [
-        ...newRecipeData.instruction,
-        { step: parseInt(step), direction },
-      ].sort((a, b) => a.step - b.step),
+      instruction: [...newRecipeData.instruction, { step: parseInt(step), description }].sort(
+        (a, b) => a.step - b.step
+      ),
     });
-    setNewInstructionStep({ step: "", direction: "" });
+    setNewInstructionStep({ step: "", description: "" });
     setErrors({ ...errors, instruction: "" });
   };
 
   const handleSaveInstruction = (index) => {
-    const step = newInstructionStep.step;
-    const direction = newInstructionStep.direction.trim();
+    if (
+      !newInstructionStep ||
+      typeof newInstructionStep.step === "undefined" ||
+      typeof newInstructionStep.description === "undefined"
+    ) {
+      setErrors({ ...errors, instruction: "Invalid instruction data!" });
+      return;
+    }
 
-    if (!step && !direction) {
-      setErrors({ ...errors, instruction: "Please enter both step number and direction!" });
+    const step = newInstructionStep.step;
+    const description = newInstructionStep.description.trim();
+
+    if (!step && !description) {
+      setErrors({ ...errors, instruction: "Please enter both step number and description!" });
       return;
     }
     if (!step) {
       setErrors({ ...errors, instruction: "Please enter a step number!" });
       return;
     }
-    if (!direction) {
-      setErrors({ ...errors, instruction: "Please enter a direction!" });
+    if (!description) {
+      setErrors({ ...errors, instruction: "Please enter a description!" });
       return;
     }
 
-    if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(direction)) {
+    if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(description)) {
       setErrors({ ...errors, instruction: "Direction contains invalid characters!" });
       return;
     }
@@ -324,13 +340,13 @@ const TableRecipes = () => {
     }
 
     const updatedInstructions = [...newRecipeData.instruction];
-    updatedInstructions[index] = { step: parseInt(step), direction };
+    updatedInstructions[index] = { step: parseInt(step), description };
     setNewRecipeData({
       ...newRecipeData,
       instruction: updatedInstructions.sort((a, b) => a.step - b.step),
     });
     setIsEditingInstruction(null);
-    setNewInstructionStep({ step: "", direction: "" });
+    setNewInstructionStep({ step: "", description: "" });
     setErrors({ ...errors, instruction: "" });
   };
 
@@ -342,7 +358,8 @@ const TableRecipes = () => {
     });
     setErrors({
       ...errors,
-      instruction: updatedInstructions.length === 0 ? "Please add at least one Instruction step!" : "",
+      instruction:
+        updatedInstructions.length === 0 ? "Please add at least one Instruction step!" : "",
     });
   };
 
@@ -450,7 +467,9 @@ const TableRecipes = () => {
 
     if (duplicates.length > 0) {
       toast.error(
-        `The following ingredients are already in the recipe: ${duplicates.join(", ")}. Please edit the existing entries instead.`
+        `The following ingredients are already in the recipe: ${duplicates.join(
+          ", "
+        )}. Please edit the existing entries instead.`
       );
     } else {
       setErrors({ ...errors, ingredients: "" });
@@ -471,10 +490,10 @@ const TableRecipes = () => {
     if (!confirmDelete) return;
 
     try {
-      const response = await recipesService.deleteRecipe(dish._id, dish.recipeId); // Use dish.recipeId (string)
+      const response = await recipesService.deleteRecipe(dish._id, dish.recipeId);
       if (response.success) {
         toast.success(`The recipe for "${dish.name}" has been deleted!`);
-        fetchData(); // Refresh data after deletion
+        fetchData();
         if (dishes.length === 1 && currentPage > 1) {
           setCurrentPage(currentPage - 1);
         }
@@ -502,7 +521,7 @@ const TableRecipes = () => {
         totalServing: "",
       });
       setSelectedDish(null);
-      setNewInstructionStep({ step: "", direction: "" });
+      setNewInstructionStep({ step: "", description: "" });
       setIsEditingInstruction(null);
       setErrors({});
     }
@@ -521,10 +540,11 @@ const TableRecipes = () => {
               setFilterType("all");
               setCurrentPage(1);
             }}
-            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
-              ? "bg-[#40B491] text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+            className={`px-4 py-2 rounded-md font-semibold ${
+              filterType === "all"
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            } transition duration-200`}
           >
             All
           </button>
@@ -535,10 +555,11 @@ const TableRecipes = () => {
                 setFilterType(type);
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
+                filterType === type
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
             >
               {type}
             </button>
@@ -556,7 +577,7 @@ const TableRecipes = () => {
               filteredDishes.map((dish) => (
                 <div
                   key={dish._id}
-                  className="bg-white rounded-2xl shadow-md overflow-hidden.relative transition duration-200 hover:shadow-lg"
+                  className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
                 >
                   <img
                     src={dish.imageUrl || "https://via.placeholder.com/300"}
@@ -579,7 +600,8 @@ const TableRecipes = () => {
                           <div className="flex items-center">
                             <Dumbbell className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs">
-                              Protein: {dish.totalServing && dish.protein
+                              Protein:{" "}
+                              {dish.totalServing && dish.protein
                                 ? (dish.protein / dish.totalServing).toFixed(2)
                                 : "N/A"}
                               g
@@ -588,7 +610,8 @@ const TableRecipes = () => {
                           <div className="flex items-center">
                             <Droplet className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs">
-                              Fat: {dish.totalServing && dish.fat
+                              Fat:{" "}
+                              {dish.totalServing && dish.fat
                                 ? (dish.fat / dish.totalServing).toFixed(2)
                                 : "N/A"}
                               g
@@ -605,7 +628,8 @@ const TableRecipes = () => {
                           <div className="flex items-center">
                             <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs">
-                              Calories: {dish.totalServing && dish.calories
+                              Calories:{" "}
+                              {dish.totalServing && dish.calories
                                 ? (dish.calories / dish.totalServing).toFixed(2)
                                 : "N/A"}
                               kcal
@@ -614,7 +638,8 @@ const TableRecipes = () => {
                           <div className="flex items-center">
                             <Wheat className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs">
-                              Carbs: {dish.totalServing && dish.carbs
+                              Carbs:{" "}
+                              {dish.totalServing && dish.carbs
                                 ? (dish.carbs / dish.totalServing).toFixed(2)
                                 : "N/A"}
                               g
@@ -699,7 +724,9 @@ const TableRecipes = () => {
                 <button
                   onClick={handleSaveRecipe}
                   disabled={isSaving}
-                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                    isSaving ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </button>
@@ -712,7 +739,7 @@ const TableRecipes = () => {
                       totalServing: "",
                     });
                     setSelectedDish(null);
-                    setNewInstructionStep({ step: "", direction: "" });
+                    setNewInstructionStep({ step: "", description: "" });
                     setIsEditingInstruction(null);
                     setErrors({});
                     setIsAddRecipeModalOpen(false);
@@ -744,7 +771,9 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${errors.cookingTime ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${
+                        errors.cookingTime ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.cookingTime}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -775,7 +804,9 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${errors.totalServing ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${
+                        errors.totalServing ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.totalServing}
                       onInput={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -807,8 +838,8 @@ const TableRecipes = () => {
                   </div>
                   {newRecipeData.instruction.length > 0 ? (
                     <ul className="space-y-2">
-                      {newRecipeData.instruction.map((step, index) => (
-                        <li key={index} className="flex justify-between items-start">
+                      {newRecipeData.instruction.map((inst, index) => (
+                        <li key={inst._id || index} className="flex justify-between items-center">
                           {isEditingInstruction === index ? (
                             <div className="flex items-start w-full space-x-2">
                               <input
@@ -827,15 +858,15 @@ const TableRecipes = () => {
                               />
                               <textarea
                                 className="flex-1 min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
-                                value={newInstructionStep.direction}
+                                value={newInstructionStep.description}
                                 onChange={(e) => {
                                   setNewInstructionStep({
                                     ...newInstructionStep,
-                                    direction: e.target.value,
+                                    description: e.target.value,
                                   });
                                   setErrors({ ...errors, instruction: "" });
                                 }}
-                                placeholder="Enter direction"
+                                placeholder="Enter description"
                               />
                               <div className="flex space-x-2">
                                 <button
@@ -848,7 +879,7 @@ const TableRecipes = () => {
                                   className="text-gray-500 hover:text-gray-700"
                                   onClick={() => {
                                     setIsEditingInstruction(null);
-                                    setNewInstructionStep({ step: "", direction: "" });
+                                    setNewInstructionStep({ step: "", description: "" });
                                     setErrors({ ...errors, instruction: "" });
                                   }}
                                 >
@@ -859,15 +890,15 @@ const TableRecipes = () => {
                           ) : (
                             <>
                               <span className="flex-1">
-                                Step {step.step}: {step.direction}
+                                Step {inst.step}: {inst.description}
                               </span>
-                              <div className="space-x-2">
+                              <div className="flex items-center space-x-2">
                                 <button
                                   className="text-blue-500 hover:text-blue-700"
                                   onClick={() => {
                                     setNewInstructionStep({
-                                      step: step.step,
-                                      direction: step.direction,
+                                      step: inst.step,
+                                      description: inst.description,
                                     });
                                     setIsEditingInstruction(index);
                                   }}
@@ -901,8 +932,8 @@ const TableRecipes = () => {
                           d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                         />
                       </svg>
-                      <p>No directions</p>
-                      <p>Looks like you haven't added any directions yet.</p>
+                      <p>No descriptions</p>
+                      <p>Looks like you haven't added any descriptions yet.</p>
                     </div>
                   )}
                   {isEditingInstruction === null && (
@@ -923,12 +954,15 @@ const TableRecipes = () => {
                       />
                       <textarea
                         className="flex-1 min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
-                        value={newInstructionStep.direction}
+                        value={newInstructionStep.description}
                         onChange={(e) => {
-                          setNewInstructionStep({ ...newInstructionStep, direction: e.target.value });
+                          setNewInstructionStep({
+                            ...newInstructionStep,
+                            description: e.target.value,
+                          });
                           setErrors({ ...errors, instruction: "" });
                         }}
-                        placeholder="Enter direction"
+                        placeholder="Enter description"
                       />
                       <button
                         className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
@@ -1068,7 +1102,7 @@ const TableRecipes = () => {
                     Nutrition (Total for {newRecipeData.totalServing || 1} Servings)
                   </h3>
                   {newRecipeData.ingredients.length > 0 &&
-                    newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
+                  newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
@@ -1092,7 +1126,8 @@ const TableRecipes = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
                         <span className="font-medium">
-                          {(nutritionData.calories / (newRecipeData.totalServing || 1)).toFixed(2)} kcal
+                          {(nutritionData.calories / (newRecipeData.totalServing || 1)).toFixed(2)}{" "}
+                          kcal
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1220,7 +1255,9 @@ const IngredientSelectionModal = ({
           <div className="ml-auto flex space-x-3">
             <button
               onClick={handleConfirm}
-              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${tempSelectedIngredients.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                tempSelectedIngredients.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               disabled={tempSelectedIngredients.length === 0}
             >
               Confirm
@@ -1241,7 +1278,11 @@ const IngredientSelectionModal = ({
                 setFilterType("all");
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold ${filterType === "all" ? "bg-[#40B491] text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"} transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                filterType === "all"
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
             >
               All
             </button>
@@ -1252,7 +1293,11 @@ const IngredientSelectionModal = ({
                   setFilterType(type);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type ? "bg-[#40B491] text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"} transition duration-200`}
+                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
+                  filterType === type
+                    ? "bg-[#40B491] text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
               >
                 {type}
               </button>
@@ -1276,14 +1321,14 @@ const IngredientSelectionModal = ({
                 const isAlreadyAdded = selectedIngredients.some(
                   (selected) => selected._id === ing._id
                 );
-                const isSelected = tempSelectedIngredients.some(
-                  (item) => item._id === ing._id
-                );
+                const isSelected = tempSelectedIngredients.some((item) => item._id === ing._id);
 
                 return (
                   <div
                     key={ing._id}
-                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"} ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${
+                      isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                    } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => !isAlreadyAdded && handleIngredientClick(ing)}
                   >
                     <div className="relative h-40 bg-gray-200">
@@ -1319,30 +1364,26 @@ const IngredientSelectionModal = ({
                       <div className="flex justify-between items-start">
                         <h3 className="font-medium text-gray-800">{ing.name}</h3>
                         <span className="text-sm font-bold text-blue-600">
-                          {ing.calories || "N/A"}{" "}
-                          {ing.calories !== "N/A" ? "kcal" : ""}
+                          {ing.calories || "N/A"} {ing.calories !== "N/A" ? "kcal" : ""}
                         </span>
                       </div>
                       <div className="mt-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-700">Protein:</span>
                           <span className="font-medium">
-                            {ing.protein || "N/A"}{" "}
-                            {ing.protein !== "N/A" ? "g" : ""}
+                            {ing.protein || "N/A"} {ing.protein !== "N/A" ? "g" : ""}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-700">Fat:</span>
                           <span className="font-medium">
-                            {ing.fat || "N/A"}{" "}
-                            {ing.fat !== "N/A" ? "g" : ""}
+                            {ing.fat || "N/A"} {ing.fat !== "N/A" ? "g" : ""}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-700">Carbs:</span>
                           <span className="font-medium">
-                            {ing.carbs || "N/A"}{" "}
-                            {ing.carbs !== "N/A" ? "g" : ""}
+                            {ing.carbs || "N/A"} {ing.carbs !== "N/A" ? "g" : ""}
                           </span>
                         </div>
                       </div>

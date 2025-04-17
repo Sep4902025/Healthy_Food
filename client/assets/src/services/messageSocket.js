@@ -213,13 +213,13 @@ class MessageSocket {
 
   createConversation = async (userId, topic) => {
     try {
-      return await axiosInstance.post(`/conversations`, { userId, topic });
+      const response = await axiosInstance.post(`/conversations`, { userId, topic });
+      return response.data; // Return { status, data } as is
     } catch (error) {
       console.error("Create conversation error:", error);
-      throw error;
+      throw error.response?.data || { message: error.message, status: 500 }; // Standardize error format
     }
   };
-
   acceptConversation = async (conversationId, nutritionistId) => {
     try {
       const response = await axiosInstance.put(`/conversations/status/${conversationId}`, {

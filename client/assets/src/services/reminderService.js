@@ -8,7 +8,6 @@ const RemindService = {
   // Kết nối socket với userId
   connectSocket: async (userId) => {
     if (!userId) {
-      console.error("❌ Không có userId để kết nối socket!");
       return;
     }
 

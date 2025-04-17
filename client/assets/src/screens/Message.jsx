@@ -21,7 +21,6 @@ import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import messageSocket from "../services/messageSocket";
 import { userSelector } from "../redux/selectors/selector";
 import { useSelector } from "react-redux";
-import InputModal from "../components/modal/InputModal";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
 import { useTheme } from "../contexts/ThemeContext";
 import ShowToast from "../components/common/CustomToast";
@@ -29,11 +28,11 @@ import { uploadImages } from "../services/cloundaryService";
 import { arrayToString, stringToArray } from "../utils/common";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
+import ConversationStarter from "../components/modal/ConversationStarter";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
 
-// Component MessageItem tách riêng và bọc bằng memo
 const MessageItem = memo(({ item, index, theme, handleImagePress }) => {
   const isMyMessage = item.sender === "me";
 
@@ -77,13 +76,13 @@ const MessageItem = memo(({ item, index, theme, handleImagePress }) => {
 function Message({ navigation }) {
   const user = useSelector(userSelector);
   const [messages, setMessages] = useState([]);
-  const [conversation, setConversation] = useState({});
-  const [screenState, setScreenState] = useState("chat");
+  const [conversation, setConversation] = useState(null);
   const [inputText, setInputText] = useState("");
-  const [visible, setVisible] = useState({ inputTopic: false });
+  const [visible, setVisible] = useState({ inputTopic: false }); // Initialize to false
   const [selectedImages, setSelectedImages] = useState([]);
   const [isSending, setIsSending] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { theme, themeMode } = useTheme();
   const flatListRef = useRef(null);
@@ -91,7 +90,11 @@ function Message({ navigation }) {
   const [selectedViewImage, setSelectedViewImage] = useState(null);
 
   useEffect(() => {
-    if (!user?._id || !user?.accessToken) return;
+    if (!user?._id || !user?.accessToken) {
+      setInitialLoading(false);
+      setVisible({ ...visible, inputTopic: true }); // Show modal if no user
+      return;
+    }
 
     messageSocket.init({
       userId: user._id,
@@ -116,7 +119,6 @@ function Message({ navigation }) {
     });
 
     const handleReceiveMessage = (message) => {
-      console.log("New message received on app:", message);
       if (message.conversationId === conversation._id) {
         let adjustedType = message.type || "text";
         if (message.imageUrl && !message.videoUrl && adjustedType === "text") {
@@ -129,18 +131,14 @@ function Message({ navigation }) {
           _id: message._id,
           text: message.text,
           sender: message.senderId === user._id ? "me" : "other",
-          timestamp: message.updatedAt,
+          timestamp: message.updatedAt || new Date().toISOString(),
           imageUrl: message.imageUrl || null,
           type: adjustedType,
         };
 
         setMessages((previousMessages) => {
-          // Kiểm tra xem tin nhắn đã tồn tại chưa dựa trên _id
           const exists = previousMessages.some((msg) => msg._id === message._id);
-          if (exists) {
-            console.log("Duplicate message detected in handleReceiveMessage:", messageToReceived);
-            return previousMessages; // Không thêm nếu đã tồn tại
-          }
+          if (exists) return previousMessages;
 
           const updatedMessages = [...previousMessages, messageToReceived];
           setTimeout(() => {
@@ -148,39 +146,21 @@ function Message({ navigation }) {
           }, 100);
           return updatedMessages;
         });
-      } else {
-        console.warn("Message ignored due to conversation ID mismatch:", {
-          received: message.conversationId,
-          expected: conversation._id,
-        });
       }
     };
 
     const handleConversationUpdated = (updatedConversation) => {
-      console.log("Conversation updated on app:", updatedConversation);
       if (updatedConversation._id === conversation._id) {
         setConversation(updatedConversation);
       }
     };
 
-    const handleUserStatus = (status) => {
-      console.log("User status updated on app:", status);
-    };
-
-    const handleTypingStatus = (typingData) => {
-      console.log("Typing status on app:", typingData);
-    };
-
     messageSocket.on("receive_message", handleReceiveMessage);
     messageSocket.on("conversationUpdated", handleConversationUpdated);
-    messageSocket.on("user_status", handleUserStatus);
-    messageSocket.on("typing_status", handleTypingStatus);
 
     return () => {
       messageSocket.off("receive_message", handleReceiveMessage);
       messageSocket.off("conversationUpdated", handleConversationUpdated);
-      messageSocket.off("user_status", handleUserStatus);
-      messageSocket.off("typing_status", handleTypingStatus);
     };
   }, [conversation?._id, user?._id]);
 
@@ -188,15 +168,23 @@ function Message({ navigation }) {
     try {
       setInitialLoading(true);
       const response = await messageSocket.getUserConversations(user?._id);
-      if (response.status === 200 && response.data?.data[0]) {
-        setConversation(response.data.data[0]);
-        loadMessageHistory(response.data.data[0]._id);
+      console.log("Load conversation response:", response);
+
+      if (response.data?.data?.length > 0) {
+        // Check if data array has items
+        const latestConversation = response.data.data[0];
+        setConversation(latestConversation);
+        setVisible({ ...visible, inputTopic: false }); // Hide modal
+        await loadMessageHistory(latestConversation._id);
       } else {
-        handleCreateConversation("defaultTopic");
+        setConversation(null); // Clear conversation if none exists
+        setMessages([]); // Clear messages
+        setVisible({ ...visible, inputTopic: true }); // Show modal only if no conversation
       }
     } catch (error) {
       console.error("Load conversation error:", error);
-      ShowToast("error", "Không thể tải cuộc trò chuyện");
+      ShowToast("error", "Failed to load conversations");
+      setVisible({ ...visible, inputTopic: true });
     } finally {
       setInitialLoading(false);
     }
@@ -205,6 +193,7 @@ function Message({ navigation }) {
   const loadMessageHistory = async (conversationId) => {
     try {
       const response = await messageSocket.getMessages(conversationId);
+      console.log("Load message history response:", response); // Debug log
       if (response.status === 200) {
         const newMessages = response.data?.data?.map((item) => {
           let adjustedType = item.type || "text";
@@ -229,32 +218,71 @@ function Message({ navigation }) {
       }
     } catch (error) {
       console.error("Load message history error:", error);
-      ShowToast("error", "Không thể tải lịch sử tin nhắn");
-    }
-  };
-
-  const getStarted = () => {
-    if (conversation) {
-      setScreenState("chat");
-      ShowToast("success", "Topic: " + conversation.topic);
-    } else {
-      setVisible({ ...visible, inputTopic: true });
+      ShowToast("error", "Failed to load message history");
     }
   };
 
   const handleCreateConversation = async (topic) => {
+    if (isCreating) return;
+    setIsCreating(true);
+
     try {
       const response = await messageSocket.createConversation(user?._id, topic);
-      if (response.status === 200) {
-        setScreenState("chat");
-        setConversation(response.data?.data);
-        setVisible({ ...visible, inputTopic: false });
-        ShowToast("success", "Cuộc trò chuyện đã được tạo");
+      console.log("Create conversation response:", response);
+
+      if (response.data?.status === 200 && response.data?.data) {
+        const newConversation = response.data.data;
+        setConversation(newConversation);
+        setVisible({ ...visible, inputTopic: false }); // Hide modal permanently
+        ShowToast("success", "Conversation started");
+
+        // Send initial message
+        const initialMessage = {
+          conversationId: newConversation._id,
+          senderId: user._id,
+          text: `${topic}`,
+          imageUrl: null,
+          videoUrl: null,
+          type: "text",
+        };
+        await messageSocket.sendMessage(newConversation._id, initialMessage);
+
+        // Load message history to include initial message
+        await loadMessageHistory(newConversation._id);
+
+        // Reinitialize socket
+        messageSocket.init({
+          userId: user._id,
+          token: user.accessToken,
+          conversationId: newConversation._id,
+        });
+      } else if (response.data?.status === 400 && response.data?.data) {
+        // Handle existing conversation
+        const existingConversation = response.data.data;
+        setConversation(existingConversation);
+        setVisible({ ...visible, inputTopic: false }); // Hide modal permanently
+        ShowToast("info", `Continuing with existing topic: ${existingConversation.topic}`);
+        await loadMessageHistory(existingConversation._id);
+        messageSocket.init({
+          userId: user._id,
+          token: user.accessToken,
+          conversationId: existingConversation._id,
+        });
+      } else {
+        throw new Error("Invalid response from server");
       }
     } catch (error) {
       console.error("Create conversation error:", error);
-      ShowToast("error", "Không thể tạo cuộc trò chuyện");
+      const errorMessage = error.message || error.data?.message || "Failed to start conversation";
+      ShowToast("error", errorMessage);
+    } finally {
+      setIsCreating(false);
     }
+  };
+
+  const handleBack = () => {
+    navigation.navigate("home");
+    ShowToast("info", "You need to start a conversation to chat");
   };
 
   const handleImagePress = (imageUrl) => {
@@ -267,15 +295,14 @@ function Message({ navigation }) {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
-          "Quyền truy cập bị từ chối",
-          "Ứng dụng cần quyền truy cập vào thư viện ảnh để chọn ảnh. Vui lòng cấp quyền trong cài đặt.",
+          "Permission denied",
+          "The app needs access to your photo library to select images.",
           [
-            { text: "Hủy", style: "cancel" },
-            { text: "Mở Cài đặt", onPress: () => Linking.openSettings() },
-          ],
-          { cancelable: false }
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ]
         );
-        ShowToast("error", "Cần quyền truy cập vào thư viện ảnh để sử dụng tính năng này");
+        ShowToast("error", "Photo library access required");
         return;
       }
 
@@ -291,7 +318,7 @@ function Message({ navigation }) {
       }
     } catch (error) {
       console.error("Error in pickImages:", error);
-      ShowToast("error", "Có lỗi xảy ra khi chọn ảnh. Vui lòng thử lại.");
+      ShowToast("error", "Failed to select images");
     }
   };
 
@@ -315,12 +342,18 @@ function Message({ navigation }) {
       return uploadedImages;
     } catch (error) {
       console.error("Upload images error:", error);
-      ShowToast("error", "Không thể tải ảnh lên. Vui lòng thử lại.");
+      ShowToast("error", "Failed to upload images");
       throw error;
     }
   };
 
   const onSend = async () => {
+    if (!conversation) {
+      ShowToast("error", "Please start a conversation first");
+      setVisible({ ...visible, inputTopic: true });
+      return;
+    }
+
     if (inputText.trim() === "" && selectedImages.length === 0) return;
     if (isSending) return;
 
@@ -339,7 +372,6 @@ function Message({ navigation }) {
           type: "text",
         };
 
-        // Gửi tin nhắn qua socket mà không thêm vào messages ngay
         await messageSocket.sendMessage(conversation._id, messageData);
       }
 
@@ -360,7 +392,6 @@ function Message({ navigation }) {
             type: "image",
           };
 
-          // Gửi tin nhắn qua socket mà không thêm vào messages ngay
           await messageSocket.sendMessage(conversation._id, messageData);
         }
       }
@@ -370,7 +401,7 @@ function Message({ navigation }) {
       setUploadProgress(0);
     } catch (error) {
       console.error("Send message error:", error);
-      ShowToast("error", "Có lỗi xảy ra khi gửi tin nhắn");
+      ShowToast("error", "Failed to send message");
     } finally {
       setIsSending(false);
     }
@@ -414,17 +445,7 @@ function Message({ navigation }) {
     return (
       <MainLayoutWrapper headerHidden={true}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading messages...</Text>
-        </View>
-      </MainLayoutWrapper>
-    );
-  }
-
-  if (!conversation) {
-    return (
-      <MainLayoutWrapper headerHidden={true}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Select a conversation to start</Text>
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </MainLayoutWrapper>
     );
@@ -432,27 +453,11 @@ function Message({ navigation }) {
 
   return (
     <MainLayoutWrapper headerHidden={true}>
-      {screenState === "onboarding" ? (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-          style={{
-            ...styles.messagesList,
-            paddingTop: HEIGHT * 0.05,
-            alignItems: "center",
-          }}
-        >
-          <Text style={styles.onboardingTitle}>Chatting App That Connects People</Text>
-          <Text style={styles.onboardingDescription}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore.
-          </Text>
-          <TouchableOpacity style={styles.getStartedButton} onPress={getStarted}>
-            <Text style={styles.getStartedButtonText}>Get Started</Text>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
-      ) : (
+      {conversation ? (
         <>
+          <View style={styles.topicHeader}>
+            <Text style={styles.topicHeaderText}>{conversation.topic}</Text>
+          </View>
           <FlatList
             ref={flatListRef}
             data={messages}
@@ -514,7 +519,7 @@ function Message({ navigation }) {
               <TouchableOpacity
                 style={[styles.attachButton, isSending ? styles.attachButtonDisabled : {}]}
                 onPress={pickImages}
-                disabled={isSending}
+                disabled={isSending || !conversation}
               >
                 <Ionicons name="image-outline" size={24} color={isSending ? "#ccc" : "#999"} />
               </TouchableOpacity>
@@ -525,18 +530,24 @@ function Message({ navigation }) {
                 onChangeText={setInputText}
                 placeholder="Type a message..."
                 multiline
-                editable={!isSending}
+                editable={!isSending && !!conversation}
               />
 
               <TouchableOpacity
                 style={[
                   styles.sendButton,
-                  (inputText.trim() === "" && selectedImages.length === 0) || isSending
+                  (inputText.trim() === "" && selectedImages.length === 0) ||
+                  isSending ||
+                  !conversation
                     ? styles.sendButtonDisabled
                     : {},
                 ]}
                 onPress={onSend}
-                disabled={(inputText.trim() === "" && selectedImages.length === 0) || isSending}
+                disabled={
+                  (inputText.trim() === "" && selectedImages.length === 0) ||
+                  isSending ||
+                  !conversation
+                }
               >
                 {isSending ? (
                   <ActivityIndicator size="small" color="#fff" />
@@ -547,99 +558,41 @@ function Message({ navigation }) {
             </View>
           </KeyboardAvoidingView>
         </>
-      )}
+      ) : null}
 
-      <Modal
-        visible={imageViewerVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setImageViewerVisible(false)}
-      >
-        <View style={styles.imageViewerContainer}>
-          <TouchableOpacity style={styles.closeButton} onPress={() => setImageViewerVisible(false)}>
-            <Ionicons name="close" size={30} color="#fff" />
-          </TouchableOpacity>
-
-          {selectedViewImage && (
-            <Image
-              source={{ uri: selectedViewImage }}
-              style={styles.fullImage}
-              resizeMode="contain"
-            />
-          )}
-        </View>
-      </Modal>
-
-      <InputModal
+      <ConversationStarter
         visible={visible.inputTopic}
-        onClose={() => {
-          setVisible({ ...visible, inputTopic: false });
-        }}
-        onSubmit={handleCreateConversation}
-        title={"Enter Topic Name"}
-        placeholder={"Type here..."}
+        onClose={() => setVisible({ ...visible, inputTopic: false })}
+        onStartConversation={handleCreateConversation}
+        onBack={handleBack}
+        title="Start Consultation"
+        placeholder="Enter your consultation topic..."
       />
     </MainLayoutWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  header: {
-    height: 60,
-    backgroundColor: "#075E54",
-    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 10,
+    alignItems: "center",
   },
-  headerTitle: {
-    color: "#fff",
+  loadingText: {
+    fontSize: 16,
+    color: "#999",
+  },
+  topicHeader: {
+    padding: 15,
+    backgroundColor: "#A4DC5D",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e5e5",
+  },
+  topicHeaderText: {
     fontSize: 18,
     fontWeight: "bold",
-  },
-  onboardingTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-    width: "70%",
-  },
-  onboardingDescription: {
-    fontSize: 16,
-    marginBottom: 20,
-    color: "#6A6D75",
-    textAlign: "center",
-    width: "70%",
-  },
-  getStartedButton: {
-    width: WIDTH * 0.9,
-    backgroundColor: "#40B491",
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    borderRadius: 50,
-    alignItems: "center",
-  },
-  getStartedButtonText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  backgroundImage: {
-    position: "absolute",
-    top: -HEIGHT * 0.15,
-    left: 0,
-    right: 0,
-    width: WIDTH,
-    height: HEIGHT,
-  },
-  backIcon: {
-    position: "absolute",
-    left: "8%",
-    top: "8%",
-    zIndex: 999,
+    textAlign: "center",
   },
   messagesList: {
     flex: 1,
@@ -661,10 +614,17 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
     borderBottomRightRadius: 5,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  otherMessage: {
+    backgroundColor: "white",
+    alignSelf: "flex-start",
+    borderBottomLeftRadius: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
@@ -674,23 +634,6 @@ const styles = StyleSheet.create({
   },
   mySender: {
     color: "white",
-  },
-  otherMessage: {
-    backgroundColor: "white",
-    alignSelf: "flex-start",
-    borderBottomLeftRadius: 5,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  messageText: {
-    fontSize: 16,
-    color: "#000",
   },
   messageImageContainer: {
     flexDirection: "row",
@@ -711,7 +654,6 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   inputContainer: {
-    position: "relative",
     flexDirection: "row",
     backgroundColor: "white",
     padding: 10,
@@ -795,7 +737,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   introduceText: {
-    width: "100%",
     padding: 12,
     paddingVertical: 6,
     borderRadius: 50,
@@ -803,23 +744,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.2)",
   },
-  loadingContainer: {
-    flex: 1,
+  progressOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: 5,
   },
-  loadingText: {
-    fontSize: 16,
-    color: "#999",
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#999",
+  progressText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
   },
 });
 

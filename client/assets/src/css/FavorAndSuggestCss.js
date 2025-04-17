@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   tabViewContainer: {
-    height: "65%", // From first stylesheet
+    height: "15%", // From first stylesheet
     paddingHorizontal: 16,
   },
   tabView: {

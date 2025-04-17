@@ -9,58 +9,79 @@ const UserChatButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentConversation, setCurrentConversation] = useState(null);
   const { user } = useSelector(selectAuth);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     const fetchConversation = async () => {
-      if (user?._id) {
-        try {
-          const response = await ChatService.getUserConversations(user._id);
-          if (response?.data?.data && response.data.data.length > 0) {
-            const conversation = response.data.data[0];
-            setCurrentConversation(conversation);
-            localStorage.setItem("currentConversation", JSON.stringify(conversation));
-          }
-        } catch (error) {
-          console.error("Error fetching conversation:", error);
-        }
-      } else {
+      if (!user?._id) {
         setCurrentConversation(null);
         localStorage.removeItem("currentConversation");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const savedConversation = localStorage.getItem("currentConversation");
+        if (savedConversation) {
+          setCurrentConversation(JSON.parse(savedConversation));
+        }
+
+        const response = await ChatService.getUserConversations(user._id);
+        console.log("Get conversations response:", response);
+
+        if (response?.data?.data?.length > 0) {
+          const conversation = response.data.data[0];
+          setCurrentConversation(conversation);
+          localStorage.setItem("currentConversation", JSON.stringify(conversation));
+        } else {
+          setCurrentConversation(null);
+          localStorage.removeItem("currentConversation");
+        }
+      } catch (error) {
+        console.error("Error fetching conversation:", error.message || error);
+        setCurrentConversation(null);
+        localStorage.removeItem("currentConversation");
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    if (user?._id) {
-      const savedConversation = localStorage.getItem("currentConversation");
-      if (savedConversation) {
-        setCurrentConversation(JSON.parse(savedConversation));
-      }
-      fetchConversation();
-    }
+    fetchConversation();
   }, [user?._id]);
 
   const handleStartChat = async (selectedTopic) => {
     try {
       if (!user?._id) {
-        console.error("User ID not found, please sign in!");
+        setErrorMessage("User ID not found, please sign in!");
         return;
       }
 
       if (!selectedTopic) {
-        console.error("Please select a consultation topic!");
+        setErrorMessage("Please select a consultation topic!");
         return;
       }
 
-      const response = await ChatService.createConversation({
-        userId: user._id,
-        topic: selectedTopic,
-      });
+      // Create the conversation
+      const createResponse = await ChatService.createConversation(user._id, selectedTopic);
+      console.log("Create conversation response:", createResponse);
 
-      if (response?.data?.data) {
-        setCurrentConversation(response.data.data);
-        localStorage.setItem("currentConversation", JSON.stringify(response.data.data));
+      // Re-fetch conversations to ensure we have the latest data
+      const response = await ChatService.getUserConversations(user._id);
+      console.log("Get conversations after creation:", response);
+
+      if (response?.data?.data?.length > 0) {
+        const conversation = response.data.data[0];
+        setCurrentConversation(conversation);
+        localStorage.setItem("currentConversation", JSON.stringify(conversation));
+        setErrorMessage(null); // Clear any error messages
+      } else {
+        setErrorMessage("Failed to load conversation after creation. Please try again.");
       }
     } catch (error) {
-      console.error("Error creating conversation:", error);
+      console.error("Error creating conversation:", error.message || error);
+      setErrorMessage(error.message || "Failed to start conversation. Please try again.");
     }
   };
 
@@ -80,8 +101,9 @@ const UserChatButton = () => {
       const finalTopic = selectedTopic === "Other" ? customTopic : selectedTopic;
       if (finalTopic.trim()) {
         onSubmit(finalTopic);
+        // Do not call onClose here to keep the chat interface open
       } else {
-        console.error("Invalid topic!");
+        setErrorMessage("Invalid topic!");
       }
     };
 
@@ -93,6 +115,10 @@ const UserChatButton = () => {
             <FiX size={20} />
           </button>
         </div>
+
+        {errorMessage && (
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-lg">{errorMessage}</div>
+        )}
 
         <div className="flex-1 space-y-4 overflow-y-auto">
           <div>
@@ -143,7 +169,9 @@ const UserChatButton = () => {
   return (
     <>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen); // Simply toggle isOpen to open/close the chat interface
+        }}
         className="fixed bottom-4 right-4 p-4 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 z-50"
       >
         {isOpen ? <FiX size={24} /> : <FiMessageCircle size={24} />}
@@ -151,7 +179,11 @@ const UserChatButton = () => {
 
       {isOpen && (
         <div className="fixed bottom-20 right-4 w-[380px] h-[400px] bg-white rounded-lg shadow-xl z-40 overflow-hidden">
-          {currentConversation ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          ) : currentConversation ? (
             <ChatWindow
               conversation={currentConversation}
               setCurrentConversation={setCurrentConversation}

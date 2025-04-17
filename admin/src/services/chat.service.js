@@ -151,8 +151,13 @@ const ChatService = {
     return api.post(`/conversations/${conversationId}/messages`, messageData);
   },
 
-  getUserConversations: (userId) => {
-    return api.get(`/conversations/${userId}`);
+  getUserConversations: async (userId) => {
+    try {
+      return await api.get(`/conversations/${userId}`);
+    } catch (error) {
+      console.error("Get user conversations error:", error);
+      throw error;
+    }
   },
 
   getPendingConversation: () => {
@@ -167,8 +172,14 @@ const ChatService = {
     return api.get(`/conversations/${nutritionistId}/active`);
   },
 
-  createConversation: (data) => {
-    return api.post(`/conversations`, data);
+  createConversation: async (userId, topic) => {
+    try {
+      const response = await api.post(`/conversations`, { userId, topic });
+      return response.data; // Return { status, data } as is
+    } catch (error) {
+      console.error("Create conversation error:", error);
+      throw error.response?.data || { message: error.message, status: 500 }; // Standardize error format
+    }
   },
 
   acceptConversation: (conversationId, nutritionistId) => {

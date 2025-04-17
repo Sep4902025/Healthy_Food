@@ -40,21 +40,38 @@ exports.getAllRecipes = async (query, token) => {
   };
 };
 
-exports.createRecipe = async (dishId, data, token) => {
-  if (!token) throw Object.assign(new Error("Unauthorized"), { status: 401 });
-
-  const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-  const user = await UserModel.findById(decoded.id);
-  if (!user) throw Object.assign(new Error("User not found"), { status: 401 });
-  if (user.role !== "admin" && user.role !== "nutritionist") {
-    throw Object.assign(new Error("Forbidden: You do not have permission to create recipes"), {
-      status: 403,
-    });
-  }
-
+exports.createRecipe = async (dishId, data) => {
+  // Validate dish
   const dish = await Dish.findById(dishId);
   if (!dish) throw Object.assign(new Error("Dish not found"), { status: 404 });
 
+  // Validate ingredients
+  if (!data.ingredients || data.ingredients.length === 0) {
+    throw Object.assign(new Error("At least one ingredient is required"), { status: 400 });
+  }
+
+  // Validate instructions
+  if (!data.instruction || data.instruction.length === 0) {
+    throw Object.assign(new Error("At least one instruction is required"), { status: 400 });
+  }
+  for (const inst of data.instruction) {
+    if (!inst.step || typeof inst.step !== "number" || inst.step <= 0) {
+      throw Object.assign(new Error("Each instruction must have a valid step number"), {
+        status: 400,
+      });
+    }
+    if (
+      !inst.description ||
+      typeof inst.description !== "string" ||
+      inst.description.trim() === ""
+    ) {
+      throw Object.assign(new Error("Each instruction must have a valid description"), {
+        status: 400,
+      });
+    }
+  }
+
+  // Calculate nutritional data
   let totalCalories = 0,
     totalProtein = 0,
     totalCarbs = 0,
@@ -85,9 +102,26 @@ exports.createRecipe = async (dishId, data, token) => {
   totalCarbs = Math.round(totalCarbs * 100) / 100;
   totalFat = Math.round(totalFat * 100) / 100;
 
-  const recipeData = { ...data, dishId, totalCalories, totalProtein, totalCarbs, totalFat };
+  // Map description to description
+  const formattedInstruction = data.instruction.map((inst) => ({
+    step: inst.step,
+    description: inst.description,
+  }));
+
+  // Prepare recipe data
+  const recipeData = {
+    ...data,
+    dishId,
+    instruction: formattedInstruction,
+    totalCalories,
+    totalProtein,
+    totalCarbs,
+    totalFat,
+  };
+
   const newRecipe = await Recipe.create(recipeData);
 
+  // Update dish
   dish.recipeId = newRecipe._id;
   dish.calories = totalCalories;
   dish.protein = totalProtein;
@@ -108,35 +142,45 @@ exports.createRecipe = async (dishId, data, token) => {
   };
 };
 
-exports.getRecipeById = async (dishId, recipeId) => {
-  const recipe = await Recipe.findById(recipeId)
-    .populate("dishId")
-    .populate({ path: "ingredients.ingredientId", match: { isDelete: false, isVisible: true } });
-
-  if (!recipe) throw Object.assign(new Error("Recipe not found"), { status: 404 });
-  if (!recipe.dishId) throw Object.assign(new Error("Associated dish not found"), { status: 404 });
-  if (recipe.dishId._id.toString() !== dishId) {
-    throw Object.assign(new Error("Dish ID does not match the recipe's associated dish"), {
-      status: 404,
-    });
-  }
-  if (recipe.dishId.isDelete || !recipe.dishId.isVisible) {
-    throw Object.assign(new Error("Associated dish is deleted or hidden"), { status: 404 });
-  }
-
-  recipe.ingredients = recipe.ingredients.filter((ing) => ing.ingredientId);
-  return recipe;
-};
-
 exports.updateRecipeById = async (recipeId, data) => {
   const recipe = await Recipe.findById(recipeId);
   if (!recipe) throw Object.assign(new Error("Recipe not found"), { status: 404 });
 
+  // Validate ingredients if provided
+  if (data.ingredients && data.ingredients.length === 0) {
+    throw Object.assign(new Error("At least one ingredient is required"), { status: 400 });
+  }
+
+  // Validate instructions if provided
+  if (data.instruction && data.instruction.length === 0) {
+    throw Object.assign(new Error("At least one instruction is required"), { status: 400 });
+  }
+  if (data.instruction) {
+    for (const inst of data.instruction) {
+      if (!inst.step || typeof inst.step !== "number" || inst.step <= 0) {
+        throw Object.assign(new Error("Each instruction must have a valid step number"), {
+          status: 400,
+        });
+      }
+      if (
+        !inst.description ||
+        typeof inst.description !== "string" ||
+        inst.description.trim() === ""
+      ) {
+        throw Object.assign(new Error("Each instruction must have a valid description"), {
+          status: 400,
+        });
+      }
+    }
+  }
+
+  // Calculate nutritional data if ingredients are provided
+  let totalCalories, totalProtein, totalCarbs, totalFat;
   if (data.ingredients) {
-    let totalCalories = 0,
-      totalProtein = 0,
-      totalCarbs = 0,
-      totalFat = 0;
+    totalCalories = 0;
+    totalProtein = 0;
+    totalCarbs = 0;
+    totalFat = 0;
 
     for (const ingredientItem of data.ingredients) {
       const ingredientInfo = await Ingredient.findById(ingredientItem.ingredientId);
@@ -162,19 +206,36 @@ exports.updateRecipeById = async (recipeId, data) => {
     totalProtein = Math.round(totalProtein * 100) / 100;
     totalCarbs = Math.round(totalCarbs * 100) / 100;
     totalFat = Math.round(totalFat * 100) / 100;
-
-    data.totalCalories = totalCalories;
-    data.totalProtein = totalProtein;
-    data.totalCarbs = totalCarbs;
-    data.totalFat = totalFat;
   }
 
-  const updatedRecipe = await Recipe.findByIdAndUpdate(recipeId, data, {
+  // Map description to description
+  const formattedInstruction = data.instruction
+    ? data.instruction.map((inst) => ({
+        step: inst.step,
+        description: inst.description,
+      }))
+    : undefined;
+
+  // Prepare update data
+  const updateData = {
+    ...data,
+    instruction: formattedInstruction,
+    totalCalories,
+    totalProtein,
+    totalCarbs,
+    totalFat,
+  };
+
+  // Remove undefined fields to avoid overwriting with undefined
+  Object.keys(updateData).forEach((key) => updateData[key] === undefined && delete updateData[key]);
+
+  const updatedRecipe = await Recipe.findByIdAndUpdate(recipeId, updateData, {
     new: true,
     runValidators: true,
   });
   if (!updatedRecipe) throw Object.assign(new Error("Recipe not found"), { status: 404 });
 
+  // Update dish
   const dish = await Dish.findById(updatedRecipe.dishId);
   if (dish) {
     dish.calories = updatedRecipe.totalCalories;
@@ -187,6 +248,26 @@ exports.updateRecipeById = async (recipeId, data) => {
   }
 
   return updatedRecipe;
+};
+
+exports.getRecipeById = async (dishId, recipeId) => {
+  const recipe = await Recipe.findById(recipeId)
+    .populate("dishId")
+    .populate({ path: "ingredients.ingredientId", match: { isDelete: false, isVisible: true } });
+
+  if (!recipe) throw Object.assign(new Error("Recipe not found"), { status: 404 });
+  if (!recipe.dishId) throw Object.assign(new Error("Associated dish not found"), { status: 404 });
+  if (recipe.dishId._id.toString() !== dishId) {
+    throw Object.assign(new Error("Dish ID does not match the recipe's associated dish"), {
+      status: 404,
+    });
+  }
+  if (recipe.dishId.isDelete || !recipe.dishId.isVisible) {
+    throw Object.assign(new Error("Associated dish is deleted or hidden"), { status: 404 });
+  }
+
+  recipe.ingredients = recipe.ingredients.filter((ing) => ing.ingredientId);
+  return recipe;
 };
 
 exports.deleteRecipeById = async (recipeId) => {
