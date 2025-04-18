@@ -76,8 +76,14 @@ const MessageItem = memo(({ item, index, theme, handleImagePress }) => {
 
 function Message({ navigation }) {
   const user = useSelector(userSelector);
+  console.log("USM", user?.accessToken);
+
   const [messages, setMessages] = useState([]);
+  console.log("ME", messages);
+
   const [conversation, setConversation] = useState(null);
+  console.log("CONNN", conversation);
+
   const [inputText, setInputText] = useState("");
   const [visible, setVisible] = useState({ inputTopic: false }); // Initialize to false
   const [selectedImages, setSelectedImages] = useState([]);
@@ -92,11 +98,13 @@ function Message({ navigation }) {
 
   useEffect(() => {
     if (!user?._id || !user?.accessToken) {
+      console.log("User not authenticated:", { _id: user?._id, accessToken: user?.accessToken });
       setInitialLoading(false);
-      setVisible({ ...visible, inputTopic: true }); // Show modal if no user
+      setVisible({ ...visible, inputTopic: true });
       return;
     }
 
+    console.log("User authenticated:", { _id: user._id, accessToken: user.accessToken });
     messageSocket.init({
       userId: user._id,
       token: user.accessToken,
@@ -109,7 +117,6 @@ function Message({ navigation }) {
       messageSocket.disconnect();
     };
   }, [user?._id, user?.accessToken]);
-
   useEffect(() => {
     if (!conversation?._id) return;
 

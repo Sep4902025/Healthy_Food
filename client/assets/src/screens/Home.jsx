@@ -35,7 +35,6 @@ function Home({ navigation }) {
 
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
-  console.log("USSOWOWOW", user);
 
   const dispatch = useDispatch();
   const season = useCurrentSeason();

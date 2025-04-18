@@ -190,7 +190,7 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
             )}
             {isAlreadyAdded && (
               <View className="absolute inset-0 flex items-center justify-center">
-                <Text className="text-white font-bold">Added</Text>
+                <Text className="text-gray-400 font-bold">Added</Text>
               </View>
             )}
             {isSelected && !isAlreadyAdded && (
