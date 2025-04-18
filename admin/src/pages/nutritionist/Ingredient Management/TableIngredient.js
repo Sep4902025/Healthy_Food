@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import UploadComponent from "../../../components/UploadComponent";
 import ingredientService from "../../../services/nutritionist/ingredientsServices";
 import {
-  Clock,
   Ruler,
   Dumbbell,
   Wheat,
@@ -70,7 +69,6 @@ const IngredientList = memo(
                     </span>
                     <div className="flex items-center">
                       <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-
                       <span className="flex items-center">
                         Calories: {ingredient.calories || "N/A"} kcal
                       </span>
@@ -122,10 +120,11 @@ const IngredientList = memo(
             </div>
             <button
               onClick={() => onToggleVisibility(ingredient)}
-              className={`absolute top-2 right-2 p-2 rounded-md text-white ${ingredient.isVisible
-                ? "bg-gray-500 hover:bg-gray-600"
-                : "bg-[#40B491] hover:bg-[#359c7a]"
-                } transition duration-200`}
+              className={`absolute top-2 right-2 p-2 rounded-md text-white ${
+                ingredient.isVisible
+                  ? "bg-gray-500 hover:bg-gray-600"
+                  : "bg-[#40B491] hover:bg-[#359c7a]"
+              } transition duration-200`}
               disabled={isLoading}
             >
               {ingredient.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
@@ -175,6 +174,7 @@ const TableIngredient = () => {
 
   const fetchIngredients = async () => {
     try {
+      setIsLoading(true);
       const response = await ingredientService.getAllIngredients(
         currentPage + 1,
         itemsPerPage,
@@ -190,10 +190,12 @@ const TableIngredient = () => {
         setTotalItems(0);
         setTotalPages(1);
       }
-    } catch (err) {
+    } catch {
       setPendingIngredients([]);
       setTotalItems(0);
       setTotalPages(1);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -236,27 +238,41 @@ const TableIngredient = () => {
     const newErrors = {};
 
     if (!editData.name.trim()) newErrors.name = "Name is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.name)) {
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():\-;]/i.test(editData.name)) {
       newErrors.name = "Input must not contain special characters.";
+    } else if (editData.name.length > 100) {
+      newErrors.name = "Name must not exceed 100 characters.";
     }
+
     if (!editData.description.trim()) newErrors.description = "Description is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.description)) {
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():\-;]/i.test(editData.description)) {
       newErrors.description = "Input must not contain special characters.";
+    } else if (editData.description.length > 500) {
+      newErrors.description = "Description must not exceed 500 characters.";
     }
+
     if (!editData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required";
     if (!editData.type) newErrors.type = "Type is required";
     if (editData.type === "Others" && !editData.customType.trim()) {
       newErrors.customType = "Custom type is required when 'Others' is selected";
     }
     if (!editData.unit) newErrors.unit = "Unit is required";
-    if (editData.calories === "" || isNaN(editData.calories))
-      newErrors.calories = "Calories is required and must be a number";
-    if (editData.protein === "" || isNaN(editData.protein))
-      newErrors.protein = "Protein is required and must be a number";
-    if (editData.carbs === "" || isNaN(editData.carbs))
-      newErrors.carbs = "Carbs is required and must be a number";
-    if (editData.fat === "" || isNaN(editData.fat))
-      newErrors.fat = "Fat is required and must be a number";
+    if (editData.calories === "" || isNaN(editData.calories) || editData.calories < 0)
+      newErrors.calories = "Calories must be greater than or equal to 0";
+    else if (editData.calories > 1000)
+      newErrors.calories = "Calories must not exceed 1000 kcal";
+    if (editData.protein === "" || isNaN(editData.protein) || editData.protein < 0)
+      newErrors.protein = "Protein must be greater than or equal to 0";
+    else if (editData.protein > 100)
+      newErrors.protein = "Protein must not exceed 100 g";
+    if (editData.carbs === "" || isNaN(editData.carbs) || editData.carbs < 0)
+      newErrors.carbs = "Carbs must be greater than or equal to 0";
+    else if (editData.carbs > 100)
+      newErrors.carbs = "Carbs must not exceed 100 g";
+    if (editData.fat === "" || isNaN(editData.fat) || editData.fat < 0)
+      newErrors.fat = "Fat must be greater than or equal to 0";
+    else if (editData.fat > 100)
+      newErrors.fat = "Fat must not exceed 100 g";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -269,11 +285,6 @@ const TableIngredient = () => {
     if (["calories", "protein", "carbs", "fat"].includes(name)) {
       updatedValue = value.replace(/[^0-9]/g, "");
       updatedValue = updatedValue === "" ? "" : parseInt(updatedValue, 10);
-      if (name === "calories") {
-        updatedValue = isNaN(updatedValue) ? "" : Math.min(Math.max(0, updatedValue), 1000);
-      } else {
-        updatedValue = isNaN(updatedValue) ? "" : Math.min(Math.max(0, updatedValue), 100);
-      }
     }
 
     setEditData((prev) => {
@@ -348,9 +359,8 @@ const TableIngredient = () => {
       } else {
         toast.error("Failed to update visibility. Please try again.");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update visibility. Please try again.");
-      console.error("Error toggling visibility:", error);
     }
   };
 
@@ -399,10 +409,11 @@ const TableIngredient = () => {
               setFilterType("all");
               setCurrentPage(0);
             }}
-            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
-              ? "bg-[#40B491] text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+            className={`px-4 py-2 rounded-md font-semibold ${
+              filterType === "all"
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            } transition duration-200`}
             disabled={isLoading}
           >
             All
@@ -414,10 +425,11 @@ const TableIngredient = () => {
                 setFilterType(filterType === type ? "all" : type);
                 setCurrentPage(0);
               }}
-              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
+                filterType === type
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
               disabled={isLoading}
             >
               {type}
@@ -467,8 +479,9 @@ const TableIngredient = () => {
               <div className="ml-auto flex space-x-3">
                 <button
                   onClick={handleSaveEdit}
-                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isEditLoading ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                    isEditLoading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                   disabled={isEditLoading}
                 >
                   {isEditLoading ? "Saving..." : "Save"}
@@ -493,11 +506,14 @@ const TableIngredient = () => {
                     value={editData.name || ""}
                     onChange={handleChange}
                     placeholder="Enter ingredient name"
-                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    maxLength={100}
+                    className={`w-full border ${
+                      errors.name ? "border-red-500" : "border-gray-300"
+                    } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     disabled={isEditLoading}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                  <p className="text-gray-500 text-sm mt-1">{editData.name.length}/100 characters</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -507,8 +523,9 @@ const TableIngredient = () => {
                       name="type"
                       value={editData.type || ""}
                       onChange={handleChange}
-                      className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${
+                        errors.type ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       disabled={isEditLoading}
                     >
                       <option value="">Select type</option>
@@ -527,8 +544,9 @@ const TableIngredient = () => {
                           value={editData.customType || ""}
                           onChange={handleChange}
                           placeholder="Enter custom type"
-                          className={`w-full mt-2 border ${errors.customType ? "border-red-500" : "border-gray-300"
-                            } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                          className={`w-full mt-2 border ${
+                            errors.customType ? "border-red-500" : "border-gray-300"
+                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                           disabled={isEditLoading}
                         />
                         {errors.customType && (
@@ -550,9 +568,9 @@ const TableIngredient = () => {
                         onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                         placeholder="0"
                         min="0"
-                        max="1000"
-                        className={`w-full border ${errors.calories ? "border-red-500" : "border-gray-300"
-                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${
+                          errors.calories ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                         disabled={isEditLoading}
                       />
                       <span className="ml-2 text-sm text-gray-500">kcal</span>
@@ -577,9 +595,9 @@ const TableIngredient = () => {
                         onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                         placeholder="0"
                         min="0"
-                        max="100"
-                        className={`w-full border ${errors.protein ? "border-red-500" : "border-gray-300"
-                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${
+                          errors.protein ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                         disabled={isEditLoading}
                       />
                       <span className="ml-2 text-sm text-gray-500">g</span>
@@ -599,9 +617,9 @@ const TableIngredient = () => {
                         onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                         placeholder="0"
                         min="0"
-                        max="100"
-                        className={`w-full border ${errors.carbs ? "border-red-500" : "border-gray-300"
-                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${
+                          errors.carbs ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                         disabled={isEditLoading}
                       />
                       <span className="ml-2 text-sm text-gray-500">g</span>
@@ -619,9 +637,9 @@ const TableIngredient = () => {
                         onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                         placeholder="0"
                         min="0"
-                        max="100"
-                        className={`w-full border ${errors.fat ? "border-red-500" : "border-gray-300"
-                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                        className={`w-full border ${
+                          errors.fat ? "border-red-500" : "border-gray-300"
+                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                         disabled={isEditLoading}
                       />
                       <span className="ml-2 text-sm text-gray-500">g</span>
@@ -636,8 +654,9 @@ const TableIngredient = () => {
                     name="unit"
                     value={editData.unit || ""}
                     onChange={handleChange}
-                    className={`w-full border ${errors.unit ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${
+                      errors.unit ? "border-red-500" : "border-gray-300"
+                    } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     disabled={isEditLoading}
                   >
                     <option value="">Select unit</option>
@@ -654,7 +673,7 @@ const TableIngredient = () => {
                     {editData.imageUrl ? (
                       <img
                         src={editData.imageUrl}
-                        alt="Ingredient preview"
+                        alt="Ingredient"
                         className="w-24 h-24 object-cover rounded-lg shadow-sm"
                       />
                     ) : (
@@ -679,8 +698,9 @@ const TableIngredient = () => {
                       value={editData.imageUrl || ""}
                       onChange={(e) => handleImageUpload(e.target.value)}
                       placeholder="Enter image URL"
-                      className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${
+                        errors.imageUrl ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       disabled={isEditLoading}
                     />
                     {errors.imageUrl && (
@@ -700,13 +720,18 @@ const TableIngredient = () => {
                     value={editData.description || ""}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    maxLength={500}
+                    className={`w-full border ${
+                      errors.description ? "border-red-500" : "border-gray-300"
+                    } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     disabled={isEditLoading}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">{errors.description}</p>
                   )}
+                  <p className="text-gray-500 text-sm mt-1">
+                    {editData.description.length}/500 characters
+                  </p>
                 </div>
               </div>
             </div>

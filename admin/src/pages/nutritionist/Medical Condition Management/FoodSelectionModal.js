@@ -40,13 +40,13 @@ const FoodSelectionModal = ({
   const [filterType, setFilterType] = useState("all");
   const [tempSelectedDishes, setTempSelectedDishes] = useState(selectedDishes || []);
   const [currentPage, setCurrentPage] = useState(0);
-  const [limit, setLimit] = useState(8); // 8 items per page to fit 4x2 grid
+  const [limit, setLimit] = useState(8);
   const [enrichedDishes, setEnrichedDishes] = useState([]);
 
   const debouncedSearch = useCallback(
     debounce((value) => {
       setSearchTerm(value);
-      setCurrentPage(0); // Reset to first page when searching
+      setCurrentPage(0);
     }, 500),
     []
   );
@@ -59,7 +59,7 @@ const FoodSelectionModal = ({
 
   const handleFilterChange = (e) => {
     setFilterType(e.target.value);
-    setCurrentPage(0); // Reset to first page when filtering
+    setCurrentPage(0);
   };
 
   // Fetch recipe data for dishes with recipeId
@@ -71,11 +71,10 @@ const FoodSelectionModal = ({
             try {
               const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
               if (recipeResponse.success) {
-                console.log(`Recipe for ${dish.name}:`, recipeResponse.data); // Debug log
                 return { ...dish, recipe: recipeResponse.data };
               }
             } catch (error) {
-              console.error(`Failed to fetch recipe for dish ${dish._id}:`, error);
+              // Silent error handling
             }
           }
           return dish;
@@ -98,13 +97,10 @@ const FoodSelectionModal = ({
 
   const totalItems = filteredDishes.length;
   const totalPages = Math.ceil(totalItems / limit);
-  const paginatedDishes = filteredDishes.slice(
-    currentPage * limit,
-    (currentPage + 1) * limit
-  );
+  const paginatedDishes = filteredDishes.slice(currentPage * limit, (currentPage + 1) * limit);
 
   const handleDishClick = (dishId) => {
-    if (conflictingDishes.includes(dishId)) return; // Prevent selecting conflicting dishes
+    if (conflictingDishes.includes(dishId)) return;
     const isSelected = tempSelectedDishes.includes(dishId);
     if (isSelected) {
       setTempSelectedDishes(tempSelectedDishes.filter((id) => id !== dishId));
@@ -141,9 +137,8 @@ const FoodSelectionModal = ({
           <div className="ml-auto flex space-x-3">
             <button
               onClick={handleConfirm}
-              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
-                tempSelectedDishes.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${tempSelectedDishes.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               disabled={tempSelectedDishes.length === 0}
             >
               Confirm
@@ -185,16 +180,13 @@ const FoodSelectionModal = ({
                   totalProtein: "N/A",
                   totalCarbs: "N/A",
                   totalFat: "N/A",
-                }; // Use recipe data with correct field names
-
-                console.log(`Dish ${dish.name} nutritionData:`, nutritionData); // Debug log
+                };
 
                 return (
                   <div
                     key={dish._id}
-                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${
-                      isSelected ? "border-[#40B491] border-2" : "border-gray-200"
-                    } ${isConflicting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative flex flex-col h-[280px] ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                      } ${isConflicting ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => !isConflicting && handleDishClick(dish._id)}
                   >
                     <div className="relative h-40 bg-gray-200">
@@ -218,7 +210,9 @@ const FoodSelectionModal = ({
                       )}
                       {isConflicting && (
                         <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-                          <span className="text-white font-semibold">Added</span>
+                          <span className="text-white font-semibold">
+                            {foodModalType === "restricted" ? "In Recommended" : "In Restricted"}
+                          </span>
                         </div>
                       )}
                       {isSelected && !isConflicting && (
@@ -229,15 +223,16 @@ const FoodSelectionModal = ({
                         </div>
                       )}
                     </div>
-                    <div className="p-3">
+                    <div className="p-3 flex flex-col justify-between h-[100px]">
                       <div className="flex justify-between items-start">
-                        <h3 className="font-medium text-gray-800">{dish.name}</h3>
-                        <span className="text-sm font-bold text-blue-600">
-                          {nutritionData.totalCalories}{" "}
-                          {nutritionData.totalCalories !== "N/A" ? "kcal" : ""}
+                        <h3 className="font-medium text-gray-800 truncate w-[70%]">{dish.name}</h3>
+                        <span className="text-sm font-bold text-blue-600 min-w-[80px] text-right">
+                          {nutritionData.totalCalories !== "N/A"
+                            ? `${nutritionData.totalCalories} kcal`
+                            : "N/A"}
                         </span>
                       </div>
-                      <div className="mt-2 text-sm">
+                      <div className="text-sm flex flex-col h-[60px] justify-between">
                         <div className="flex justify-between">
                           <span className="text-gray-700">Protein:</span>
                           <span className="font-medium">

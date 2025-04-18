@@ -70,10 +70,10 @@ const AddMedicalCondition = () => {
         dishesResponse?.success && Array.isArray(dishesResponse.data.items)
           ? dishesResponse.data.items
           : [];
-      setDishes(dishesData); // Store raw dishes; enrichment happens in modal
+      setDishes(dishesData);
     } catch (error) {
-      console.error("Error fetching dishes:", error);
       setDishes([]);
+      toast.error("Failed to load dishes.");
     }
     setIsLoading(false);
   };
@@ -81,15 +81,11 @@ const AddMedicalCondition = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name in formData.nutritionalConstraints) {
-      let constrainedValue = value;
-      if (value !== "" && !isNaN(value)) {
-        constrainedValue = Math.min(Number(value), 10000).toString();
-      }
       setFormData({
         ...formData,
         nutritionalConstraints: {
           ...formData.nutritionalConstraints,
-          [name]: constrainedValue,
+          [name]: value,
         },
       });
     } else {
@@ -100,28 +96,48 @@ const AddMedicalCondition = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = "Name is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.name)) {
-      newErrors.name = "Input must not contain special characters.";
-    }
-    if (!formData.description.trim()) newErrors.description = "Description is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.description)) {
-      newErrors.description = "Input must not contain special characters.";
-    }
-    if (formData.restrictedFoods.length === 0)
-      newErrors.restrictedFoods = "At least one restricted food is required";
-    if (formData.recommendedFoods.length === 0)
-      newErrors.recommendedFoods = "At least one recommended food is required";
-    if (formData.restrictedFoods.some((food) => formData.recommendedFoods.includes(food))) {
-      newErrors.foodConflict = "A dish cannot be both restricted and recommended!";
+
+    // Validate Name
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.name)) {
+      newErrors.name = "Name must not contain special characters";
+    } else if (formData.name.length > 100) {
+      newErrors.name = "Name must not exceed 100 characters";
     }
 
+    // Validate Description
+    if (!formData.description.trim()) {
+      newErrors.description = "Description is required";
+    } else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.description)) {
+      newErrors.description = "Description must not contain special characters";
+    } else if (formData.description.length > 500) {
+      newErrors.description = "Description must not exceed 500 characters";
+    }
+
+    // Validate Restricted and Recommended Foods
+    if (formData.restrictedFoods.length === 0) {
+      newErrors.restrictedFoods = "At least one restricted food is required";
+    }
+    if (formData.recommendedFoods.length === 0) {
+      newErrors.recommendedFoods = "At least one recommended food is required";
+    }
+    if (formData.restrictedFoods.some((food) => formData.recommendedFoods.includes(food))) {
+      newErrors.foodConflict = "A dish cannot be both restricted and recommended";
+    }
+
+    // Validate Nutritional Constraints
     ["carbs", "fat", "protein", "calories"].forEach((field) => {
       const value = formData.nutritionalConstraints[field];
       if (value === "" || value === null || value === undefined) {
-        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)
+          } is required`;
       } else if (isNaN(value) || Number(value) < 0) {
-        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} must be a positive number`;
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)
+          } must be a positive number`;
+      } else if (Number(value) > 10000) {
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)
+          } must not exceed 10000`;
       }
     });
 
@@ -169,7 +185,6 @@ const AddMedicalCondition = () => {
       }
     } catch (error) {
       setIsSubmitting(false);
-      console.error("Error creating medical condition:", error);
       toast.error("An error occurred while creating the medical condition.");
     }
   };
@@ -219,11 +234,13 @@ const AddMedicalCondition = () => {
           Create New Medical Condition
         </h2>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name *
+                </label>
                 <input
                   type="text"
                   name="name"
@@ -233,7 +250,13 @@ const AddMedicalCondition = () => {
                   className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
                     } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isSubmitting}
+                  maxLength={100}
                 />
+                {formData.name && (
+                  <p className="text-gray-500 text-sm mt-1">
+                    {formData.name.length}/100 characters
+                  </p>
+                )}
                 {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
               </div>
 
@@ -249,7 +272,13 @@ const AddMedicalCondition = () => {
                   className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
                     } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isSubmitting}
+                  maxLength={500}
                 />
+                {formData.description && (
+                  <p className="text-gray-500 text-sm mt-1">
+                    {formData.description.length}/500 characters
+                  </p>
+                )}
                 {errors.description && (
                   <p className="text-red-500 text-sm mt-1">{errors.description}</p>
                 )}
@@ -271,6 +300,7 @@ const AddMedicalCondition = () => {
                       >
                         {dish.name}
                         <button
+                          type="button"
                           onClick={() =>
                             setFormData({
                               ...formData,
@@ -330,6 +360,7 @@ const AddMedicalCondition = () => {
                       >
                         {dish.name}
                         <button
+                          type="button"
                           onClick={() =>
                             setFormData({
                               ...formData,
@@ -442,7 +473,9 @@ const AddMedicalCondition = () => {
                         } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       disabled={isSubmitting}
                     />
-                    {errors.carbs && <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>}
+                    {errors.carbs && (
+                      <p className="text-red-500 text-sm mt-1">{errors.carbs}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-gray-600">Fat (g)</label>
@@ -500,7 +533,6 @@ const AddMedicalCondition = () => {
   );
 };
 
-// Updated FoodSelectionModal (from first snippet)
 const FoodSelectionModal = ({
   isOpen,
   onClose,
@@ -537,7 +569,6 @@ const FoodSelectionModal = ({
     setCurrentPage(0);
   };
 
-  // Fetch recipe data for dishes with recipeId
   useEffect(() => {
     const fetchRecipeData = async () => {
       const dishesWithRecipes = await Promise.all(
@@ -549,7 +580,7 @@ const FoodSelectionModal = ({
                 return { ...dish, recipe: recipeResponse.data };
               }
             } catch (error) {
-              console.error(`Failed to fetch recipe for dish ${dish._id}:`, error);
+              // Silent error handling
             }
           }
           return dish;
@@ -563,7 +594,6 @@ const FoodSelectionModal = ({
     }
   }, [isOpen, availableDishes]);
 
-  // Filter dishes based on searchTerm and filterType
   const filteredDishes = enrichedDishes.filter((dish) => {
     const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === "all" || dish.type === filterType;
@@ -572,10 +602,7 @@ const FoodSelectionModal = ({
 
   const totalItems = filteredDishes.length;
   const totalPages = Math.ceil(totalItems / limit);
-  const paginatedDishes = filteredDishes.slice(
-    currentPage * limit,
-    (currentPage + 1) * limit
-  );
+  const paginatedDishes = filteredDishes.slice(currentPage * limit, (currentPage + 1) * limit);
 
   const handleDishClick = (dishId) => {
     if (conflictingDishes.includes(dishId)) return;
@@ -601,7 +628,7 @@ const FoodSelectionModal = ({
     setCurrentPage(data.selected);
   };
 
-  const isFavorite = (dishId) => false; // Placeholder; integrate with actual favorites if available
+  const isFavorite = (dishId) => false;
 
   if (!isOpen) return null;
 
@@ -663,7 +690,7 @@ const FoodSelectionModal = ({
                 return (
                   <div
                     key={dish._id}
-                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative flex flex-col h-[280px] ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"
                       } ${isConflicting ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => !isConflicting && handleDishClick(dish._id)}
                   >
@@ -688,7 +715,9 @@ const FoodSelectionModal = ({
                       )}
                       {isConflicting && (
                         <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-                          <span className="text-white font-semibold">Added</span>
+                          <span className="text-white font-semibold">
+                            {foodModalType === "restricted" ? "In Recommended" : "In Restricted"}
+                          </span>
                         </div>
                       )}
                       {isSelected && !isConflicting && (
@@ -699,15 +728,16 @@ const FoodSelectionModal = ({
                         </div>
                       )}
                     </div>
-                    <div className="p-3">
+                    <div className="p-3 flex flex-col justify-between h-[100px]">
                       <div className="flex justify-between items-start">
-                        <h3 className="font-medium text-gray-800">{dish.name}</h3>
-                        <span className="text-sm font-bold text-blue-600">
-                          {nutritionData.totalCalories}{" "}
-                          {nutritionData.totalCalories !== "N/A" ? "kcal" : ""}
+                        <h3 className="font-medium text-gray-800 truncate w-[70%]">{dish.name}</h3>
+                        <span className="text-sm font-bold text-blue-600 min-w-[80px] text-right">
+                          {nutritionData.totalCalories !== "N/A"
+                            ? `${nutritionData.totalCalories} kcal`
+                            : "N/A"}
                         </span>
                       </div>
-                      <div className="mt-2 text-sm">
+                      <div className="text-sm flex flex-col h-[60px] justify-between">
                         <div className="flex justify-between">
                           <span className="text-gray-700">Protein:</span>
                           <span className="font-medium">

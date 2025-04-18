@@ -18,7 +18,6 @@ import {
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
 import { toast } from "react-toastify";
-import HomeService from "../../../services/home.service";
 
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
 
@@ -68,8 +67,6 @@ const TableRecipes = () => {
     cookingTime: "",
     totalServing: "",
   });
-  console.log("NRRRR", newRecipeData);
-
   const [nutritionData, setNutritionData] = useState({
     calories: 0,
     protein: 0,
@@ -86,7 +83,9 @@ const TableRecipes = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingInstruction, setIsEditingInstruction] = useState(null);
-  const [newInstructionStep, setNewInstructionStep] = useState({ step: "", description: "" });
+  const [newInstructionStep, setNewInstructionStep] = useState({ description: "" });
+  const [addingAfterStep, setAddingAfterStep] = useState(null);
+  const [showNewInstructionInput, setShowNewInstructionInput] = useState(false);
 
   // Debounced search
   const debouncedSearch = useCallback(
@@ -175,7 +174,7 @@ const TableRecipes = () => {
             conversionFactor = ing.quantity / 100;
           } else if (ing.unit === "tbsp") {
             conversionFactor = (ing.quantity * 15) / 100;
-          } else if (ing.unit === "tsp" || ing.unit === "tp") {
+          } else if (ing.unit === "tsp") {
             conversionFactor = (ing.quantity * 5) / 100;
           } else {
             conversionFactor = ing.quantity / 100;
@@ -201,8 +200,10 @@ const TableRecipes = () => {
   const handleAddRecipeClick = async (dish) => {
     setSelectedDish(dish);
     setErrors({});
-    setNewInstructionStep({ step: "", description: "" });
+    setNewInstructionStep({ description: "" });
     setIsEditingInstruction(null);
+    setAddingAfterStep(null);
+    setShowNewInstructionInput(false);
 
     try {
       let recipeData = null;
@@ -254,134 +255,179 @@ const TableRecipes = () => {
   };
 
   const handleAddInstruction = () => {
-    if (
-      !newInstructionStep ||
-      typeof newInstructionStep.step === "undefined" ||
-      typeof newInstructionStep.description === "undefined"
-    ) {
-      setErrors({ ...errors, instruction: "Invalid instruction data!" });
-      return;
-    }
-
-    const step = newInstructionStep.step;
     const description = newInstructionStep.description.trim();
 
-    if (!step && !description) {
-      setErrors({ ...errors, instruction: "Please enter both step number and description!" });
-      return;
-    }
-    if (!step) {
-      setErrors({ ...errors, instruction: "Please enter a step number!" });
-      return;
-    }
     if (!description) {
       setErrors({ ...errors, instruction: "Please enter a description!" });
       return;
     }
 
     if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(description)) {
-      setErrors({ ...errors, instruction: "Direction contains invalid characters!" });
+      setErrors({ ...errors, instruction: "Description contains invalid characters!" });
       return;
     }
 
-    const stepExists = newRecipeData.instruction.some((inst) => inst.step === parseInt(step));
-    if (stepExists) {
-      setErrors({ ...errors, instruction: "Step number already exists!" });
+    if (description.length > 300) {
+      setErrors({ ...errors, instruction: "Description must not exceed 300 characters!" });
       return;
     }
+
+    const nextStep = newRecipeData.instruction.length + 1;
 
     setNewRecipeData({
       ...newRecipeData,
-      instruction: [...newRecipeData.instruction, { step: parseInt(step), description }].sort(
+      instruction: [...newRecipeData.instruction, { step: nextStep, description }].sort(
         (a, b) => a.step - b.step
       ),
     });
-    setNewInstructionStep({ step: "", description: "" });
+    setNewInstructionStep({ description: "" });
+    setShowNewInstructionInput(false);
+    setErrors({ ...errors, instruction: "" });
+  };
+
+  const handleAddAfterStep = (currentStep) => {
+    const description = newInstructionStep.description.trim();
+
+    if (!description) {
+      setErrors({ ...errors, instruction: "Please enter a description!" });
+      return;
+    }
+
+    if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(description)) {
+      setErrors({ ...errors, instruction: "Description contains invalid characters!" });
+      return;
+    }
+
+    if (description.length > 300) {
+      setErrors({ ...errors, instruction: "Description must not exceed 300 characters!" });
+      return;
+    }
+
+    const updatedInstructions = newRecipeData.instruction.map((inst) => {
+      if (inst.step > currentStep) {
+        return { ...inst, step: inst.step + 1 };
+      }
+      return inst;
+    });
+
+    updatedInstructions.push({ step: currentStep + 1, description });
+
+    setNewRecipeData({
+      ...newRecipeData,
+      instruction: updatedInstructions.sort((a, b) => a.step - b.step),
+    });
+    setNewInstructionStep({ description: "" });
+    setAddingAfterStep(null);
+    setErrors({ ...errors, instruction: "" });
+  };
+
+  const handleShowAddAfterInput = (step) => {
+    setAddingAfterStep(step);
+    setNewInstructionStep({ description: "" });
+    setShowNewInstructionInput(false);
+    setIsEditingInstruction(null);
+    setErrors({ ...errors, instruction: "" });
+  };
+
+  const handleShowNewInstructionInput = () => {
+    setShowNewInstructionInput(true);
+    setAddingAfterStep(null);
+    setNewInstructionStep({ description: "" });
+    setIsEditingInstruction(null);
+    setErrors({ ...errors, instruction: "" });
+  };
+
+  const handleCancelInstructionInput = () => {
+    setShowNewInstructionInput(false);
+    setAddingAfterStep(null);
+    setNewInstructionStep({ description: "" });
     setErrors({ ...errors, instruction: "" });
   };
 
   const handleSaveInstruction = (index) => {
-    if (
-      !newInstructionStep ||
-      typeof newInstructionStep.step === "undefined" ||
-      typeof newInstructionStep.description === "undefined"
-    ) {
-      setErrors({ ...errors, instruction: "Invalid instruction data!" });
-      return;
-    }
-
-    const step = newInstructionStep.step;
     const description = newInstructionStep.description.trim();
 
-    if (!step && !description) {
-      setErrors({ ...errors, instruction: "Please enter both step number and description!" });
-      return;
-    }
-    if (!step) {
-      setErrors({ ...errors, instruction: "Please enter a step number!" });
-      return;
-    }
     if (!description) {
       setErrors({ ...errors, instruction: "Please enter a description!" });
       return;
     }
 
     if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(description)) {
-      setErrors({ ...errors, instruction: "Direction contains invalid characters!" });
+      setErrors({ ...errors, instruction: "Description contains invalid characters!" });
       return;
     }
 
-    const stepExists = newRecipeData.instruction.some(
-      (inst, i) => inst.step === parseInt(step) && i !== index
-    );
-    if (stepExists) {
-      setErrors({ ...errors, instruction: "Step number already exists!" });
+    if (description.length > 300) {
+      setErrors({ ...errors, instruction: "Description must not exceed 300 characters!" });
       return;
     }
 
     const updatedInstructions = [...newRecipeData.instruction];
-    updatedInstructions[index] = { step: parseInt(step), description };
+    updatedInstructions[index] = { ...updatedInstructions[index], description };
+
     setNewRecipeData({
       ...newRecipeData,
       instruction: updatedInstructions.sort((a, b) => a.step - b.step),
     });
     setIsEditingInstruction(null);
-    setNewInstructionStep({ step: "", description: "" });
+    setNewInstructionStep({ description: "" });
     setErrors({ ...errors, instruction: "" });
   };
 
   const handleDeleteInstruction = (index) => {
-    const updatedInstructions = newRecipeData.instruction.filter((_, i) => i !== index);
+    const deletedStep = newRecipeData.instruction[index].step;
+    const updatedInstructions = newRecipeData.instruction
+      .filter((_, i) => i !== index)
+      .map((inst) => {
+        if (inst.step > deletedStep) {
+          return { ...inst, step: inst.step - 1 };
+        }
+        return inst;
+      });
+
     setNewRecipeData({
       ...newRecipeData,
       instruction: updatedInstructions,
     });
     setErrors({
       ...errors,
-      instruction:
-        updatedInstructions.length === 0 ? "Please add at least one Instruction step!" : "",
+      instruction: updatedInstructions.length === 0 ? "Please add at least one Instruction step!" : "",
     });
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!newRecipeData.cookingTime || newRecipeData.cookingTime <= 0) {
-      newErrors.cookingTime = "Cooking Time must be greater than 0!";
+    if (newRecipeData.cookingTime === "" || isNaN(newRecipeData.cookingTime) || newRecipeData.cookingTime < 0) {
+      newErrors.cookingTime = "Cooking Time must be greater than or equal to 0";
+    } else if (newRecipeData.cookingTime > 1440) {
+      newErrors.cookingTime = "Cooking Time must not exceed 1440 minutes";
     }
-    if (!newRecipeData.totalServing || newRecipeData.totalServing <= 0) {
-      newErrors.totalServing = "Serving Size must be greater than 0!";
+
+    if (newRecipeData.totalServing === "" || isNaN(newRecipeData.totalServing) || newRecipeData.totalServing < 1) {
+      newErrors.totalServing = "Serving Size must be at least 1";
+    } else if (newRecipeData.totalServing > 10) {
+      newErrors.totalServing = "Serving Size must not exceed 10";
     }
+
     if (newRecipeData.ingredients.length === 0) {
       newErrors.ingredients = "Please add at least one Ingredient!";
     } else {
-      const invalidIngredient = newRecipeData.ingredients.find(
-        (ing) => !ing.quantity || ing.quantity <= 0 || !ing.unit
-      );
+      const invalidIngredient = newRecipeData.ingredients.find((ing) => {
+        if (!ing.quantity || ing.quantity < 0 || isNaN(ing.quantity) || !ing.unit) {
+          return true;
+        }
+        const maxValue = ing.unit === "g" || ing.unit === "ml" ? 10000 : 100;
+        return ing.quantity > maxValue;
+      });
       if (invalidIngredient) {
-        newErrors.ingredients = "Please enter Quantity and Unit for all ingredients!";
+        const maxValue = invalidIngredient.unit === "g" || invalidIngredient.unit === "ml" ? 10000 : 100;
+        newErrors.ingredients = invalidIngredient.quantity > maxValue
+          ? `Quantity must not exceed ${maxValue} ${invalidIngredient.unit}`
+          : "Please enter a valid Quantity and Unit for all ingredients!";
       }
     }
+
     if (newRecipeData.instruction.length === 0) {
       newErrors.instruction = "Please add at least one Instruction step!";
     }
@@ -392,6 +438,7 @@ const TableRecipes = () => {
 
   const handleSaveRecipe = async () => {
     if (!validateForm()) {
+      toast.error("Please fill in all required fields correctly!");
       return;
     }
 
@@ -512,6 +559,13 @@ const TableRecipes = () => {
     }
   };
 
+  const formatNutrition = (value) => {
+    if (isNaN(value) || value === null) return "N/A";
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+    return value.toFixed(2);
+  };
+
   useEffect(() => {
     if (!isAddRecipeModalOpen) {
       setNewRecipeData({
@@ -521,8 +575,10 @@ const TableRecipes = () => {
         totalServing: "",
       });
       setSelectedDish(null);
-      setNewInstructionStep({ step: "", description: "" });
+      setNewInstructionStep({ description: "" });
       setIsEditingInstruction(null);
+      setAddingAfterStep(null);
+      setShowNewInstructionInput(false);
       setErrors({});
     }
   }, [isAddRecipeModalOpen]);
@@ -540,11 +596,10 @@ const TableRecipes = () => {
               setFilterType("all");
               setCurrentPage(1);
             }}
-            className={`px-4 py-2 rounded-md font-semibold ${
-              filterType === "all"
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            } transition duration-200`}
+            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
+              ? "bg-[#40B491] text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
           >
             All
           </button>
@@ -555,11 +610,10 @@ const TableRecipes = () => {
                 setFilterType(type);
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
-                filterType === type
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
             >
               {type}
             </button>
@@ -589,59 +643,59 @@ const TableRecipes = () => {
                       {dish.name}
                     </h3>
                     <div className="text-sm text-gray-600 mt-2">
-                      <div className="flex justify-between">
-                        <div className="flex flex-col space-y-2">
+                      <div className="flex justify-between gap-2">
+                        <div className="flex-1 flex flex-col space-y-2">
                           <div className="flex items-center">
                             <Clock className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                            <span className="text-xs">
+                            <span className="text-xs truncate">
                               Time: {dish.recipe?.cookingTime || "N/A"} m
                             </span>
                           </div>
                           <div className="flex items-center">
                             <Dumbbell className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                            <span className="text-xs">
+                            <span className="text-xs truncate">
                               Protein:{" "}
                               {dish.totalServing && dish.protein
-                                ? (dish.protein / dish.totalServing).toFixed(2)
-                                : "N/A"}
+                                ? formatNutrition(dish.protein / dish.totalServing)
+                                : "N/A"}{" "}
                               g
                             </span>
                           </div>
                           <div className="flex items-center">
                             <Droplet className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                            <span className="text-xs">
+                            <span className="text-xs truncate">
                               Fat:{" "}
                               {dish.totalServing && dish.fat
-                                ? (dish.fat / dish.totalServing).toFixed(2)
-                                : "N/A"}
+                                ? formatNutrition(dish.fat / dish.totalServing)
+                                : "N/A"}{" "}
                               g
                             </span>
                           </div>
                         </div>
-                        <div className="flex flex-col space-y-2">
+                        <div className="flex-1 flex flex-col space-y-2">
                           <div className="flex items-center">
                             <Users className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                            <span className="text-xs">
+                            <span className="text-xs truncate">
                               Serving size: {dish.totalServing || "N/A"}
                             </span>
                           </div>
                           <div className="flex items-center">
                             <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                            <span className="text-xs">
+                            <span className="text-xs truncate">
                               Calories:{" "}
                               {dish.totalServing && dish.calories
-                                ? (dish.calories / dish.totalServing).toFixed(2)
-                                : "N/A"}
+                                ? formatNutrition(dish.calories / dish.totalServing)
+                                : "N/A"}{" "}
                               kcal
                             </span>
                           </div>
                           <div className="flex items-center">
                             <Wheat className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                            <span className="text-xs">
+                            <span className="text-xs truncate">
                               Carbs:{" "}
                               {dish.totalServing && dish.carbs
-                                ? (dish.carbs / dish.totalServing).toFixed(2)
-                                : "N/A"}
+                                ? formatNutrition(dish.carbs / dish.totalServing)
+                                : "N/A"}{" "}
                               g
                             </span>
                           </div>
@@ -724,9 +778,8 @@ const TableRecipes = () => {
                 <button
                   onClick={handleSaveRecipe}
                   disabled={isSaving}
-                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
-                    isSaving ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isSaving ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </button>
@@ -739,8 +792,10 @@ const TableRecipes = () => {
                       totalServing: "",
                     });
                     setSelectedDish(null);
-                    setNewInstructionStep({ step: "", description: "" });
+                    setNewInstructionStep({ description: "" });
                     setIsEditingInstruction(null);
+                    setAddingAfterStep(null);
+                    setShowNewInstructionInput(false);
                     setErrors({});
                     setIsAddRecipeModalOpen(false);
                   }}
@@ -771,17 +826,12 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${
-                        errors.cookingTime ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.cookingTime ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.cookingTime}
-                      onInput={(e) => {
+                      onChange={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
                         value = value === "" ? "" : parseInt(value, 10);
-                        if (value > 1440) {
-                          value = 1440;
-                          e.target.value = value;
-                        }
                         setNewRecipeData({ ...newRecipeData, cookingTime: value });
                         setErrors({ ...errors, cookingTime: "" });
                       }}
@@ -791,8 +841,7 @@ const TableRecipes = () => {
                         }
                       }}
                       placeholder="Enter cooking time"
-                      min="1"
-                      max="1440"
+                      min="0"
                     />
                     {errors.cookingTime && (
                       <p className="text-red-500 text-sm mt-1">{errors.cookingTime}</p>
@@ -804,17 +853,12 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${
-                        errors.totalServing ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${errors.totalServing ? "border-red-500" : "border-gray-300"
+                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.totalServing}
-                      onInput={(e) => {
+                      onChange={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
                         value = value === "" ? "" : parseInt(value, 10);
-                        if (value > 50) {
-                          value = 50;
-                          e.target.value = value;
-                        }
                         setNewRecipeData({ ...newRecipeData, totalServing: value });
                         setErrors({ ...errors, totalServing: "" });
                       }}
@@ -824,7 +868,7 @@ const TableRecipes = () => {
                         }
                       }}
                       placeholder="Enter serving size"
-                      min="1"
+                      min="0"
                     />
                     {errors.totalServing && (
                       <p className="text-red-500 text-sm mt-1">{errors.totalServing}</p>
@@ -837,70 +881,60 @@ const TableRecipes = () => {
                     <h3 className="text-lg font-semibold text-gray-800">Directions</h3>
                   </div>
                   {newRecipeData.instruction.length > 0 ? (
-                    <ul className="space-y-2">
+                    <ul className="space-y-4">
                       {newRecipeData.instruction.map((inst, index) => (
-                        <li key={inst._id || index} className="flex justify-between items-center">
+                        <li key={inst.step} className="flex flex-col gap-2">
                           {isEditingInstruction === index ? (
-                            <div className="flex items-start w-full space-x-2">
-                              <input
-                                type="number"
-                                className="w-16 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
-                                value={newInstructionStep.step}
-                                onChange={(e) => {
-                                  let value = e.target.value.replace(/[^0-9]/g, "");
-                                  value = value === "" ? "" : parseInt(value, 10);
-                                  if (value > 100) value = 100;
-                                  setNewInstructionStep({ ...newInstructionStep, step: value });
-                                  setErrors({ ...errors, instruction: "" });
-                                }}
-                                placeholder="Step #"
-                                min="1"
-                              />
-                              <textarea
-                                className="flex-1 min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
-                                value={newInstructionStep.description}
-                                onChange={(e) => {
-                                  setNewInstructionStep({
-                                    ...newInstructionStep,
-                                    description: e.target.value,
-                                  });
-                                  setErrors({ ...errors, instruction: "" });
-                                }}
-                                placeholder="Enter description"
-                              />
-                              <div className="flex space-x-2">
-                                <button
-                                  className="text-green-500 hover:text-green-700"
-                                  onClick={() => handleSaveInstruction(index)}
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  className="text-gray-500 hover:text-gray-700"
-                                  onClick={() => {
-                                    setIsEditingInstruction(null);
-                                    setNewInstructionStep({ step: "", description: "" });
+                            <div className="flex items-start gap-4 w-full">
+                              <span className="min-w-[80px] font-medium pt-2">Step {inst.step}:</span>
+                              <div className="flex-1 flex flex-col gap-2">
+                                <textarea
+                                  className="w-full min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
+                                  value={newInstructionStep.description}
+                                  onChange={(e) => {
+                                    setNewInstructionStep({
+                                      ...newInstructionStep,
+                                      description: e.target.value,
+                                    });
                                     setErrors({ ...errors, instruction: "" });
                                   }}
-                                >
-                                  Cancel
-                                </button>
+                                  placeholder="Enter description"
+                                  maxLength={300}
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    className="text-green-500 hover:text-green-700"
+                                    onClick={() => handleSaveInstruction(index)}
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    className="text-gray-500 hover:text-gray-700"
+                                    onClick={() => {
+                                      setIsEditingInstruction(null);
+                                      setNewInstructionStep({ description: "" });
+                                      setErrors({ ...errors, instruction: "" });
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           ) : (
-                            <>
-                              <span className="flex-1">
-                                Step {inst.step}: {inst.description}
-                              </span>
-                              <div className="flex items-center space-x-2">
+                            <div className="flex items-start gap-4 w-full">
+                              <span className="min-w-[80px] font-medium">Step {inst.step}:</span>
+                              <span className="flex-1 max-w-full break-words">{inst.description}</span>
+                              <div className="min-w-[120px] flex flex-col gap-2 items-end">
                                 <button
                                   className="text-blue-500 hover:text-blue-700"
                                   onClick={() => {
                                     setNewInstructionStep({
-                                      step: inst.step,
                                       description: inst.description,
                                     });
                                     setIsEditingInstruction(index);
+                                    setAddingAfterStep(null);
+                                    setShowNewInstructionInput(false);
                                   }}
                                 >
                                   Edit
@@ -911,8 +945,56 @@ const TableRecipes = () => {
                                 >
                                   Delete
                                 </button>
+                                <button
+                                  className="text-[#40B491] hover:text-[#359c7a]"
+                                  onClick={() => handleShowAddAfterInput(inst.step)}
+                                >
+                                  Add After
+                                </button>
                               </div>
-                            </>
+                            </div>
+                          )}
+                          {addingAfterStep === inst.step && (
+                            <div className="flex items-start gap-4 mt-2 w-full">
+                              <span className="min-w-[80px] font-medium pt-2">Step {inst.step + 1}:</span>
+                              <div className="flex-1 flex flex-col gap-2">
+                                <textarea
+                                  className="w-full min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
+                                  value={newInstructionStep.description}
+                                  onChange={(e) => {
+                                    setNewInstructionStep({
+                                      ...newInstructionStep,
+                                      description: e.target.value,
+                                    });
+                                    setErrors({ ...errors, instruction: "" });
+                                  }}
+                                  placeholder="Enter description for new step"
+                                  maxLength={300}
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
+                                    onClick={() => handleAddAfterStep(inst.step)}
+                                  >
+                                    Add
+                                  </button>
+                                  <button
+                                    className="text-gray-500 hover:text-gray-700"
+                                    onClick={handleCancelInstructionInput}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {addingAfterStep === inst.step && newInstructionStep.description && (
+                            <p className="text-gray-500 text-sm mt-1 ml-[96px]">
+                              {newInstructionStep.description.length}/300 characters
+                            </p>
+                          )}
+                          {addingAfterStep === inst.step && errors.instruction && (
+                            <p className="text-red-500 text-sm mt-1 ml-[96px]">{errors.instruction}</p>
                           )}
                         </li>
                       ))}
@@ -936,44 +1018,59 @@ const TableRecipes = () => {
                       <p>Looks like you haven't added any descriptions yet.</p>
                     </div>
                   )}
-                  {isEditingInstruction === null && (
-                    <div className="flex items-start space-x-2 mt-2">
-                      <input
-                        type="number"
-                        className="w-16 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
-                        value={newInstructionStep.step}
-                        onChange={(e) => {
-                          let value = e.target.value.replace(/[^0-9]/g, "");
-                          value = value === "" ? "" : parseInt(value, 10);
-                          if (value > 100) value = 100;
-                          setNewInstructionStep({ ...newInstructionStep, step: value });
-                          setErrors({ ...errors, instruction: "" });
-                        }}
-                        placeholder="Step #"
-                        min="1"
-                      />
-                      <textarea
-                        className="flex-1 min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
-                        value={newInstructionStep.description}
-                        onChange={(e) => {
-                          setNewInstructionStep({
-                            ...newInstructionStep,
-                            description: e.target.value,
-                          });
-                          setErrors({ ...errors, instruction: "" });
-                        }}
-                        placeholder="Enter description"
-                      />
-                      <button
-                        className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
-                        onClick={handleAddInstruction}
-                      >
-                        Add
-                      </button>
+                  {showNewInstructionInput && isEditingInstruction === null && addingAfterStep === null && (
+                    <div className="flex items-start gap-4 mt-4 w-full">
+                      <span className="min-w-[80px] font-medium pt-2">
+                        Step {newRecipeData.instruction.length + 1}:
+                      </span>
+                      <div className="flex-1 flex flex-col gap-2">
+                        <textarea
+                          className="w-full min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
+                          value={newInstructionStep.description}
+                          onChange={(e) => {
+                            setNewInstructionStep({
+                              ...newInstructionStep,
+                              description: e.target.value,
+                            });
+                            setErrors({ ...errors, instruction: "" });
+                          }}
+                          placeholder="Enter description for new step"
+                          maxLength={300}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
+                            onClick={handleAddInstruction}
+                          >
+                            Add
+                          </button>
+                          <button
+                            className="text-gray-500 hover:text-gray-700"
+                            onClick={handleCancelInstructionInput}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
-                  {errors.instruction && (
-                    <p className="text-red-500 text-sm mt-1">{errors.instruction}</p>
+                  {showNewInstructionInput && newInstructionStep.description && (
+                    <p className="text-gray-500 text-sm mt-1 ml-[96px]">
+                      {newInstructionStep.description.length}/300 characters
+                    </p>
+                  )}
+                  {showNewInstructionInput && errors.instruction && (
+                    <p className="text-red-500 text-sm mt-1 ml-[96px]">{errors.instruction}</p>
+                  )}
+                  {isEditingInstruction === null && addingAfterStep === null && !showNewInstructionInput && (
+                    <div className="mt-4">
+                      <button
+                        className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
+                        onClick={handleShowNewInstructionInput}
+                      >
+                        Add New Step
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -992,9 +1089,12 @@ const TableRecipes = () => {
                   {newRecipeData.ingredients.length > 0 ? (
                     <ul className="space-y-2">
                       {newRecipeData.ingredients.map((ing, index) => (
-                        <li key={ing._id} className="flex justify-between items-center">
-                          <span>{ing.name}</span>
-                          <div className="flex items-center space-x-2">
+                        <li
+                          key={ing._id}
+                          className="flex items-center gap-4"
+                        >
+                          <span className="w-1/2 min-w-0 truncate text-left">{ing.name}</span>
+                          <div className="flex items-center gap-2 min-w-[200px]">
                             <input
                               type="number"
                               className="w-16 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
@@ -1003,12 +1103,6 @@ const TableRecipes = () => {
                               onChange={(e) => {
                                 let value = e.target.value.replace(/[^0-9]/g, "");
                                 value = value === "" ? "" : parseInt(value, 10);
-                                const unit = ing.unit || "";
-                                const maxValue = unit === "g" || unit === "ml" ? 10000 : 100;
-                                if (value > maxValue) {
-                                  value = maxValue;
-                                  e.target.value = value;
-                                }
                                 const updatedIngredients = [...newRecipeData.ingredients];
                                 updatedIngredients[index].quantity = value;
                                 setNewRecipeData({
@@ -1022,19 +1116,14 @@ const TableRecipes = () => {
                                   e.preventDefault();
                                 }
                               }}
-                              min="1"
+                              min="0"
                             />
                             <select
-                              className="border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+                              className="w-20 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
                               value={ing.unit || ""}
                               onChange={(e) => {
                                 const updatedIngredients = [...newRecipeData.ingredients];
                                 updatedIngredients[index].unit = e.target.value;
-                                const maxValue =
-                                  e.target.value === "g" || e.target.value === "ml" ? 10000 : 100;
-                                if (updatedIngredients[index].quantity > maxValue) {
-                                  updatedIngredients[index].quantity = maxValue;
-                                }
                                 setNewRecipeData({
                                   ...newRecipeData,
                                   ingredients: updatedIngredients,
@@ -1101,8 +1190,9 @@ const TableRecipes = () => {
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">
                     Nutrition (Total for {newRecipeData.totalServing || 1} Servings)
                   </h3>
-                  {newRecipeData.ingredients.length > 0 &&
-                  newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
+                  {newRecipeData.instruction.length > 0 &&
+                    newRecipeData.ingredients.length > 0 &&
+                    newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
@@ -1255,9 +1345,8 @@ const IngredientSelectionModal = ({
           <div className="ml-auto flex space-x-3">
             <button
               onClick={handleConfirm}
-              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
-                tempSelectedIngredients.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${tempSelectedIngredients.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               disabled={tempSelectedIngredients.length === 0}
             >
               Confirm
@@ -1278,11 +1367,10 @@ const IngredientSelectionModal = ({
                 setFilterType("all");
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold ${
-                filterType === "all"
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
             >
               All
             </button>
@@ -1293,11 +1381,10 @@ const IngredientSelectionModal = ({
                   setFilterType(type);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
-                  filterType === type
-                    ? "bg-[#40B491] text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                } transition duration-200`}
+                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  } transition duration-200`}
               >
                 {type}
               </button>
@@ -1326,9 +1413,8 @@ const IngredientSelectionModal = ({
                 return (
                   <div
                     key={ing._id}
-                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${
-                      isSelected ? "border-[#40B491] border-2" : "border-gray-200"
-                    } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                      } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => !isAlreadyAdded && handleIngredientClick(ing)}
                   >
                     <div className="relative h-40 bg-gray-200">
@@ -1362,9 +1448,9 @@ const IngredientSelectionModal = ({
                     </div>
                     <div className="p-3">
                       <div className="flex justify-between items-start">
-                        <h3 className="font-medium text-gray-800">{ing.name}</h3>
-                        <span className="text-sm font-bold text-blue-600">
-                          {ing.calories || "N/A"} {ing.calories !== "N/A" ? "kcal" : ""}
+                        <h3 className="font-medium text-gray-800 truncate w-[70%]">{ing.name}</h3>
+                        <span className="text-sm font-bold text-blue-600 min-w-[80px] text-right">
+                          {ing.calories !== "N/A" ? `${ing.calories} kcal` : "N/A"}
                         </span>
                       </div>
                       <div className="mt-2 text-sm">

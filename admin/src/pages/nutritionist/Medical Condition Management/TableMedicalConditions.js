@@ -120,7 +120,7 @@ const TableMedicalConditions = () => {
   const [recommendedPage, setRecommendedPage] = useState(0);
   const [foodsPerPage, setFoodsPerPage] = useState(5);
 
-  // Fetch conditions and dishes (unchanged)
+  // Fetch conditions and dishes
   const fetchConditions = async () => {
     try {
       const response = searchTerm
@@ -144,13 +144,13 @@ const TableMedicalConditions = () => {
         setConditions([]);
         setTotalItems(0);
         setTotalPages(1);
-        toast.error("Failed to fetch medical conditions: " + response?.message);
+        toast.error("Failed to fetch medical conditions.");
       }
     } catch (error) {
       setConditions([]);
       setTotalItems(0);
       setTotalPages(1);
-      toast.error("Error fetching conditions: " + error.message);
+      toast.error("Error fetching conditions.");
     }
   };
 
@@ -170,7 +170,7 @@ const TableMedicalConditions = () => {
                   return { ...dish, nutritions };
                 }
               } catch (error) {
-                console.error(`Error fetching recipe for dish ${dish._id}:`, error);
+                // Silent error handling
               }
             }
             return {
@@ -182,11 +182,11 @@ const TableMedicalConditions = () => {
         setDishes(enrichedDishes);
       } else {
         setDishes([]);
-        toast.error("Failed to fetch dishes: " + response?.message);
+        toast.error("Failed to fetch dishes.");
       }
     } catch (error) {
       setDishes([]);
-      toast.error("Error fetching dishes: " + error.message);
+      toast.error("Error fetching dishes.");
     }
   };
 
@@ -260,10 +260,10 @@ const TableMedicalConditions = () => {
       restrictedFoods: normalizedRestrictedFoods || [],
       recommendedFoods: normalizedRecommendedFoods || [],
       nutritionalConstraints: {
-        carbs: condition.nutritionalConstraints?.carbs || "",
-        fat: condition.nutritionalConstraints?.fat || "",
-        protein: condition.nutritionalConstraints?.protein || "",
-        calories: condition.nutritionalConstraints?.calories || "",
+        carbs: condition.nutritionalConstraints?.carbs?.toString() || "",
+        fat: condition.nutritionalConstraints?.fat?.toString() || "",
+        protein: condition.nutritionalConstraints?.protein?.toString() || "",
+        calories: condition.nutritionalConstraints?.calories?.toString() || "",
       },
     });
     setErrors({});
@@ -290,15 +290,19 @@ const TableMedicalConditions = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this medical condition?")) {
-      const response = await medicalConditionService.deleteMedicalCondition(id);
-      if (response.success) {
-        toast.success("Deleted successfully!");
-        fetchConditions();
-        if (conditions.length === 1 && currentPage > 0) {
-          setCurrentPage(currentPage - 1);
+      try {
+        const response = await medicalConditionService.deleteMedicalCondition(id);
+        if (response.success) {
+          toast.success("Deleted successfully!");
+          fetchConditions();
+          if (conditions.length === 1 && currentPage > 0) {
+            setCurrentPage(currentPage - 1);
+          }
+        } else {
+          toast.error("Failed to delete medical condition.");
         }
-      } else {
-        toast.error("Failed to delete medical condition: " + response.message);
+      } catch (error) {
+        toast.error("Error deleting medical condition.");
       }
     }
   };
@@ -307,15 +311,12 @@ const TableMedicalConditions = () => {
     const { name, value } = e.target;
 
     if (name in editData.nutritionalConstraints) {
-      let constrainedValue = value;
-      if (value !== "" && !isNaN(value)) {
-        constrainedValue = Math.min(Number(value), 10000).toString();
-      }
+      // Allow free input for numbers, validation happens on submit
       setEditData({
         ...editData,
         nutritionalConstraints: {
           ...editData.nutritionalConstraints,
-          [name]: constrainedValue,
+          [name]: value,
         },
       });
     } else {
@@ -326,28 +327,51 @@ const TableMedicalConditions = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!editData.name.trim()) newErrors.name = "Name is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.name)) {
-      newErrors.name = "Input must not contain special characters.";
-    }
-    if (!editData.description.trim()) newErrors.description = "Description is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.description)) {
-      newErrors.description = "Input must not contain special characters.";
-    }
-    if (editData.restrictedFoods.length === 0)
-      newErrors.restrictedFoods = "At least one restricted food is required";
-    if (editData.recommendedFoods.length === 0)
-      newErrors.recommendedFoods = "At least one recommended food is required";
-    if (editData.restrictedFoods.some((food) => editData.recommendedFoods.includes(food))) {
-      newErrors.foodConflict = "A dish cannot be both restricted and recommended!";
+
+    // Validate Name
+    if (!editData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.name)) {
+      newErrors.name = "Name must not contain special characters";
+    } else if (editData.name.length > 100) {
+      newErrors.name = "Name must not exceed 100 characters";
     }
 
+    // Validate Description
+    if (!editData.description.trim()) {
+      newErrors.description = "Description is required";
+    } else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.description)) {
+      newErrors.description = "Description must not contain special characters";
+    } else if (editData.description.length > 500) {
+      newErrors.description = "Description must not exceed 500 characters";
+    }
+
+    // Validate Restricted and Recommended Foods
+    if (editData.restrictedFoods.length === 0) {
+      newErrors.restrictedFoods = "At least one restricted food is required";
+    }
+    if (editData.recommendedFoods.length === 0) {
+      newErrors.recommendedFoods = "At least one recommended food is required";
+    }
+    if (editData.restrictedFoods.some((food) => editData.recommendedFoods.includes(food))) {
+      newErrors.foodConflict = "A dish cannot be both restricted and recommended";
+    }
+
+    // Validate Nutritional Constraints
     ["carbs", "fat", "protein", "calories"].forEach((field) => {
       const value = editData.nutritionalConstraints[field];
       if (value === "" || value === null || value === undefined) {
-        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
+        newErrors[field] = `${
+          field.charAt(0).toUpperCase() + field.slice(1)
+        } is required`;
       } else if (isNaN(value) || Number(value) < 0) {
-        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} must be a positive number`;
+        newErrors[field] = `${
+          field.charAt(0).toUpperCase() + field.slice(1)
+        } must be a positive number`;
+      } else if (Number(value) > 10000) {
+        newErrors[field] = `${
+          field.charAt(0).toUpperCase() + field.slice(1)
+        } must not exceed 10000`;
       }
     });
 
@@ -374,15 +398,20 @@ const TableMedicalConditions = () => {
         calories: Number(editData.nutritionalConstraints.calories),
       },
     };
-    const response = await medicalConditionService.updateMedicalCondition(editData.id, updatedData);
-    setIsSaving(false);
 
-    if (response.success) {
-      toast.success(`Medical condition "${editData.name}" has been saved!`);
-      setIsEditModalOpen(false);
-      fetchConditions();
-    } else {
-      toast.error("Failed to update medical condition: " + response.message);
+    try {
+      const response = await medicalConditionService.updateMedicalCondition(editData.id, updatedData);
+      setIsSaving(false);
+      if (response.success) {
+        toast.success(`Medical condition "${editData.name}" has been saved!`);
+        setIsEditModalOpen(false);
+        fetchConditions();
+      } else {
+        toast.error("Failed to update medical condition.");
+      }
+    } catch (error) {
+      setIsSaving(false);
+      toast.error("Error updating medical condition.");
     }
   };
 
@@ -507,7 +536,9 @@ const TableMedicalConditions = () => {
               <div className="ml-auto flex space-x-3">
                 <button
                   onClick={handleSaveEdit}
-                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                    isSaving ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                   disabled={isSaving}
                 >
                   {isSaving ? "Saving..." : "Save"}
@@ -524,27 +555,47 @@ const TableMedicalConditions = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <div className="mb-4">
-                  <label className="block text-sm font-bold text-[#40B491] mb-1">Name *</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">
+                    Name *
+                  </label>
                   <input
                     type="text"
                     name="name"
                     value={editData.name}
                     onChange={handleChange}
                     placeholder="Enter condition name"
-                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${
+                      errors.name ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    maxLength={100}
                   />
+                  {editData.name && (
+                    <p className="text-gray-500 text-sm mt-1">
+                      {editData.name.length}/100 characters
+                    </p>
+                  )}
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-bold text-[#40B491] mb-1">Description *</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">
+                    Description *
+                  </label>
                   <textarea
                     name="description"
                     value={editData.description}
                     onChange={handleChange}
                     placeholder="Enter description"
-                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"} rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${
+                      errors.description ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    maxLength={500}
                   />
+                  {editData.description && (
+                    <p className="text-gray-500 text-sm mt-1">
+                      {editData.description.length}/500 characters
+                    </p>
+                  )}
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">{errors.description}</p>
                   )}
@@ -553,7 +604,9 @@ const TableMedicalConditions = () => {
 
               <div>
                 <div className="mb-4">
-                  <label className="block text-sm font-bold text-[#40B491] mb-1">Restricted Foods *</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">
+                    Restricted Foods *
+                  </label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {paginatedRestrictedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
@@ -564,6 +617,7 @@ const TableMedicalConditions = () => {
                         >
                           {dish.name}
                           <button
+                            type="button"
                             onClick={() =>
                               setEditData({
                                 ...editData,
@@ -608,7 +662,9 @@ const TableMedicalConditions = () => {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-bold text-[#40B491] mb-1">Recommended Foods *</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">
+                    Recommended Foods *
+                  </label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {paginatedRecommendedFoods.map((foodId) => {
                       const dish = dishes.find((d) => d._id === foodId);
@@ -619,6 +675,7 @@ const TableMedicalConditions = () => {
                         >
                           {dish.name}
                           <button
+                            type="button"
                             onClick={() =>
                               setEditData({
                                 ...editData,
@@ -780,7 +837,9 @@ const TableMedicalConditions = () => {
                   <p className="text-lg font-semibold text-gray-800">{viewData.name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-[#40B491] mb-1">Restricted Foods</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">
+                    Restricted Foods
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {viewData.restrictedFoods.length > 0 ? (
                       viewData.restrictedFoods.map((foodId) => {
@@ -802,7 +861,9 @@ const TableMedicalConditions = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-[#40B491] mb-1">Recommended Foods</label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">
+                    Recommended Foods
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {viewData.recommendedFoods.length > 0 ? (
                       viewData.recommendedFoods.map((foodId) => {
@@ -856,10 +917,14 @@ const TableMedicalConditions = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-[#40B491] mb-1">Description</label>
+                <label className="block text-sm font-bold text-[#40B491] mb-1">
+                  Description
+                </label>
                 <div
                   className="text-gray-900 h-96 overflow-y-auto p-3 border border-gray-300 rounded-md whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{ __html: viewData.description.replace(/\n/g, '<br />') }}
+                  dangerouslySetInnerHTML={{
+                    __html: viewData.description.replace(/\n/g, "<br />"),
+                  }}
                 />
               </div>
             </div>
@@ -873,8 +938,12 @@ const TableMedicalConditions = () => {
           onClose={() => setIsFoodModalOpen(false)}
           onSelect={handleFoodSelect}
           availableDishes={dishes}
-          selectedDishes={foodModalType === "restricted" ? editData.restrictedFoods : editData.recommendedFoods}
-          conflictingDishes={foodModalType === "restricted" ? editData.recommendedFoods : editData.restrictedFoods}
+          selectedDishes={
+            foodModalType === "restricted" ? editData.restrictedFoods : editData.recommendedFoods
+          }
+          conflictingDishes={
+            foodModalType === "restricted" ? editData.recommendedFoods : editData.restrictedFoods
+          }
           foodModalType={foodModalType}
         />
       )}

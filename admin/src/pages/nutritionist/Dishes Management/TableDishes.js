@@ -144,16 +144,11 @@ const TableDishes = () => {
   const fetchDishes = async () => {
     try {
       const response = await dishesService.getAllDishesForNutri(currentPage + 1, itemsPerPage, searchTerm);
-      console.log("Dishes API response:", response);
       if (response.success) {
         const filteredByType =
           filterType === "all"
             ? response.data.items
             : response.data.items.filter((dish) => dish.type === filterType);
-        console.log(
-          "Dishes with IDs and recipeIds:",
-          filteredByType.map((d) => ({ _id: d._id, recipeId: d.recipeId }))
-        );
         setDishes(filteredByType);
         setTotalItems(response.data.total);
         setTotalPages(response.data.totalPages);
@@ -162,7 +157,7 @@ const TableDishes = () => {
         setTotalItems(0);
         setTotalPages(1);
       }
-    } catch (err) {
+    } catch {
       setDishes([]);
       setTotalItems(0);
       setTotalPages(1);
@@ -188,28 +183,18 @@ const TableDishes = () => {
     const counts = {};
     await Promise.all(
       dishes.map(async (dish) => {
-        console.log(`Fetching for dish ${dish._id}, recipeId: ${dish.recipeId}`);
         if (dish.recipeId) {
           try {
-            const recipeResponse = await recipeService.getRecipeById(dish._id, dish.recipeId); // Dùng getRecipeById
-            console.log(`Recipe response for dish ${dish._id}:`, recipeResponse);
-            if (recipeResponse.success) {
-              counts[dish._id] = recipeResponse.data.ingredients?.length || 0;
-            } else {
-              counts[dish._id] = 0;
-              console.log(`No success for dish ${dish._id}`);
-            }
-          } catch (error) {
-            console.error(`Error fetching recipe for dish ${dish._id}:`, error);
+            const recipeResponse = await recipeService.getRecipeById(dish._id, dish.recipeId);
+            counts[dish._id] = recipeResponse.success ? recipeResponse.data.ingredients?.length || 0 : 0;
+          } catch {
             counts[dish._id] = 0;
           }
         } else {
           counts[dish._id] = 0;
-          console.log(`No recipeId for dish ${dish._id}`);
         }
       })
     );
-    console.log("Final ingredient counts:", counts);
     setIngredientCounts(counts);
     setLoadingIngredients(false);
   }, [dishes]);
@@ -259,13 +244,19 @@ const TableDishes = () => {
     const newErrors = {};
 
     if (!editData.name.trim()) newErrors.name = "Name is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.name)) {
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():\-;]/i.test(editData.name)) {
       newErrors.name = "Input must not contain special characters.";
+    } else if (editData.name.length > 100) {
+      newErrors.name = "Name must not exceed 100 characters.";
     }
+
     if (!editData.description.trim()) newErrors.description = "Description is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.description)) {
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():\-;]/i.test(editData.description)) {
       newErrors.description = "Input must not contain special characters.";
+    } else if (editData.description.length > 500) {
+      newErrors.description = "Description must not exceed 500 characters.";
     }
+
     if (!editData.imageFile && !editData.imageUrl.trim() && !imagePreview) {
       newErrors.imageUrl = "Image (file or URL) is required";
     } else if (editData.imageUrl && !isValidImageUrl) {
@@ -302,11 +293,9 @@ const TableDishes = () => {
     if (editData.imageFile) {
       try {
         const compressedFile = await compressImage(editData.imageFile);
-        const uploadedImage = await uploadFile(compressedFile, (percentComplete) => {
-          console.log(`Upload progress: ${percentComplete}%`);
-        });
+        const uploadedImage = await uploadFile(compressedFile, () => {});
         imageUrl = uploadedImage.secure_url;
-      } catch (error) {
+      } catch {
         setIsSaving(false);
         toast.error("Image upload failed!");
         return;
@@ -359,9 +348,8 @@ const TableDishes = () => {
       } else {
         toast.error("Failed to update visibility. Please try again.");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update visibility. Please try again.");
-      console.error("Error toggling visibility:", error);
     }
   };
 
@@ -433,12 +421,10 @@ const TableDishes = () => {
     try {
       const compressedFile = await imageCompression(file, options);
       return compressedFile;
-    } catch (error) {
-      console.error("Image compression error:", error);
+    } catch {
       return file;
     }
   };
-
 
   const handlePageClick = ({ selected }) => {
     setCurrentPage(selected);
@@ -581,10 +567,12 @@ const TableDishes = () => {
                     value={editData.name || ""}
                     onChange={handleChange}
                     placeholder="Enter dish name"
+                    maxLength={100}
                     className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
                       } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                  <p className="text-gray-500 text-sm mt-1">{editData.name.length}/100 characters</p>
                 </div>
 
                 <div className="space-y-4">
@@ -623,7 +611,6 @@ const TableDishes = () => {
                     )}
                   </div>
                 </div>
-
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Season *</label>
@@ -676,6 +663,7 @@ const TableDishes = () => {
                     </label>
                     <input
                       type="text"
+                      name="imageUrl"
                       value={editData.imageUrl || ""}
                       onChange={handleImageUrlChange}
                       placeholder="Enter image URL"
@@ -690,7 +678,7 @@ const TableDishes = () => {
                     <div className="mt-4 flex justify-center">
                       <img
                         src={imagePreview}
-                        alt="Image Preview"
+                        alt="Dish preview"
                         className="w-32 h-32 object-cover rounded border"
                       />
                     </div>
@@ -708,12 +696,14 @@ const TableDishes = () => {
                     value={editData.description || ""}
                     onChange={handleChange}
                     placeholder="Enter description"
+                    maxLength={500}
                     className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
                       } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">{errors.description}</p>
                   )}
+                  <p className="text-gray-500 text-sm mt-1">{editData.description.length}/500 characters</p>
                 </div>
               </div>
             </div>

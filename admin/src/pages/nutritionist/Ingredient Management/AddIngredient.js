@@ -16,7 +16,7 @@ const TYPE_OPTIONS = [
   "Others",
 ];
 
-const AddIngredient = ({ onIngredientAdded = () => { } }) => {
+const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
@@ -36,36 +36,50 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState("");
   const [isValidImageUrl, setIsValidImageUrl] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Added loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) newErrors.name = "Name is required!";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.name)) {
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():\-;]/i.test(formData.name)) {
       newErrors.name = "Input must not contain special characters.";
+    } else if (formData.name.length > 100) {
+      newErrors.name = "Name must not exceed 100 characters.";
     }
-    if (!formData.description.trim()) newErrors.description = "Description is required!";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.description)) {
+
+    if (!formData.description.trim()) newErrors.description = "Description is required";
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():\-;]/i.test(formData.description)) {
       newErrors.description = "Input must not contain special characters.";
+    } else if (formData.description.length > 500) {
+      newErrors.description = "Description must not exceed 500 characters.";
     }
+
     if (!formData.imageFile && !formData.imageUrl.trim())
-      newErrors.imageUrl = "Image (file or URL) is required!";
+      newErrors.imageUrl = "Image (file or URL) is required";
     else if (formData.imageUrl && !isValidImageUrl)
       newErrors.imageUrl = "Invalid image URL. Please provide a valid image link.";
-    if (!formData.type) newErrors.type = "Type is required!";
+    if (!formData.type) newErrors.type = "Type is required";
     if (formData.type === "Others" && !formData.customType.trim())
-      newErrors.customType = "Custom Type is required when Type is 'Others'!";
-    if (!formData.season) newErrors.season = "Season is required!";
-    if (!formData.unit) newErrors.unit = "Unit is required!";
-    if (formData.calories === "" || formData.calories < 0)
-      newErrors.calories = "Calories must be greater than or equal to 0!";
-    if (formData.protein === "" || formData.protein < 0)
-      newErrors.protein = "Protein must be greater than or equal to 0!";
-    if (formData.carbs === "" || formData.carbs < 0)
-      newErrors.carbs = "Carbs must be greater than or equal to 0!";
-    if (formData.fat === "" || formData.fat < 0)
-      newErrors.fat = "Fat must be greater than or equal to 0!";
+      newErrors.customType = "Custom Type is required when Type is 'Others'";
+    if (!formData.season) newErrors.season = "Season is required";
+    if (!formData.unit) newErrors.unit = "Unit is required";
+    if (formData.calories === "" || isNaN(formData.calories) || formData.calories < 0)
+      newErrors.calories = "Calories must be greater than or equal to 0";
+    else if (formData.calories > 1000)
+      newErrors.calories = "Calories must not exceed 1000 kcal";
+    if (formData.protein === "" || isNaN(formData.protein) || formData.protein < 0)
+      newErrors.protein = "Protein must be greater than or equal to 0";
+    else if (formData.protein > 100)
+      newErrors.protein = "Protein must not exceed 100 g";
+    if (formData.carbs === "" || isNaN(formData.carbs) || formData.carbs < 0)
+      newErrors.carbs = "Carbs must be greater than or equal to 0";
+    else if (formData.carbs > 100)
+      newErrors.carbs = "Carbs must not exceed 100 g";
+    if (formData.fat === "" || isNaN(formData.fat) || formData.fat < 0)
+      newErrors.fat = "Fat must be greater than or equal to 0";
+    else if (formData.fat > 100)
+      newErrors.fat = "Fat must not exceed 100 g";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -83,36 +97,11 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
     }
   };
 
-  const handleCaloriesChange = (e) => {
+  const handleNumericChange = (e, field) => {
     let value = e.target.value.replace(/[^0-9]/g, "");
     value = value === "" ? "" : parseInt(value, 10);
-    if (value > 1000) value = 1000;
-    setFormData({ ...formData, calories: value });
-    setErrors({ ...errors, calories: "" });
-  };
-
-  const handleProteinChange = (e) => {
-    let value = e.target.value.replace(/[^0-9]/g, "");
-    value = value === "" ? "" : parseInt(value, 10);
-    if (value > 100) value = 100;
-    setFormData({ ...formData, protein: value });
-    setErrors({ ...errors, protein: "" });
-  };
-
-  const handleCarbsChange = (e) => {
-    let value = e.target.value.replace(/[^0-9]/g, "");
-    value = value === "" ? "" : parseInt(value, 10);
-    if (value > 100) value = 100;
-    setFormData({ ...formData, carbs: value });
-    setErrors({ ...errors, carbs: "" });
-  };
-
-  const handleFatChange = (e) => {
-    let value = e.target.value.replace(/[^0-9]/g, "");
-    value = value === "" ? "" : parseInt(value, 10);
-    if (value > 100) value = 100;
-    setFormData({ ...formData, fat: value });
-    setErrors({ ...errors, fat: "" });
+    setFormData({ ...formData, [field]: value });
+    setErrors({ ...errors, [field]: "" });
   };
 
   const handleFileSelect = (file) => {
@@ -165,8 +154,7 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
     try {
       const compressedFile = await imageCompression(file, options);
       return compressedFile;
-    } catch (error) {
-      console.error("Image compression error:", error);
+    } catch {
       return file;
     }
   };
@@ -178,20 +166,17 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
       return;
     }
 
-    setIsLoading(true); // Set loading true when submission starts
+    setIsLoading(true);
 
     let imageUrl = formData.imageUrl;
     if (formData.imageFile) {
       try {
         const compressedFile = await compressImage(formData.imageFile);
-        const uploadedImage = await uploadFile(compressedFile, (percentComplete) => {
-          console.log(`Upload progress: ${percentComplete}%`);
-        });
+        const uploadedImage = await uploadFile(compressedFile, () => {});
         imageUrl = uploadedImage.secure_url;
-      } catch (error) {
-        setIsLoading(false); // Reset loading on error
+      } catch {
+        setIsLoading(false);
         toast.error("Image upload failed!");
-        console.error("Upload error:", error);
         return;
       }
     }
@@ -203,7 +188,7 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
     };
     const response = await ingredientService.createIngredient(finalData);
 
-    setIsLoading(false); // Reset loading after response
+    setIsLoading(false);
 
     if (response.success) {
       toast.success("Ingredient added successfully!");
@@ -257,8 +242,9 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
           <button
             onClick={handleSubmit}
             disabled={isLoading}
-            className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isLoading ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+            className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+              isLoading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
             {isLoading ? "Saving..." : "Save Ingredient"}
           </button>
@@ -275,11 +261,14 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Name of ingredient"
-              className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              maxLength={100}
+              className={`w-full border ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               disabled={isLoading}
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            <p className="text-gray-500 text-sm mt-1">{formData.name.length}/100 characters</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
@@ -289,8 +278,9 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${
+                  errors.type ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                 disabled={isLoading}
               >
                 <option value="">Select Type</option>
@@ -309,8 +299,9 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
                     value={formData.customType}
                     onChange={handleChange}
                     placeholder="Enter custom type"
-                    className={`w-full border ${errors.customType ? "border-red-500" : "border-gray-300"
-                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${
+                      errors.customType ? "border-red-500" : "border-gray-300"
+                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                     disabled={isLoading}
                   />
                   {errors.customType && (
@@ -326,13 +317,13 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
                   type="number"
                   name="calories"
                   value={formData.calories}
-                  onChange={handleCaloriesChange}
+                  onChange={(e) => handleNumericChange(e, "calories")}
                   onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter calories"
                   min="0"
-                  max="1000"
-                  className={`w-full border ${errors.calories ? "border-red-500" : "border-gray-300"
-                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  className={`w-full border ${
+                    errors.calories ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">kcal</span>
@@ -349,13 +340,13 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
                   type="number"
                   name="protein"
                   value={formData.protein}
-                  onChange={handleProteinChange}
+                  onChange={(e) => handleNumericChange(e, "protein")}
                   onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter protein"
                   min="0"
-                  max="100"
-                  className={`w-full border ${errors.protein ? "border-red-500" : "border-gray-300"
-                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  className={`w-full border ${
+                    errors.protein ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">g</span>
@@ -369,13 +360,13 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
                   type="number"
                   name="carbs"
                   value={formData.carbs}
-                  onChange={handleCarbsChange}
+                  onChange={(e) => handleNumericChange(e, "carbs")}
                   onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter carbs"
                   min="0"
-                  max="100"
-                  className={`w-full border ${errors.carbs ? "border-red-500" : "border-gray-300"
-                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  className={`w-full border ${
+                    errors.carbs ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">g</span>
@@ -392,13 +383,13 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
                   type="number"
                   name="fat"
                   value={formData.fat}
-                  onChange={handleFatChange}
+                  onChange={(e) => handleNumericChange(e, "fat")}
                   onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter fat"
                   min="0"
-                  max="100"
-                  className={`w-full border ${errors.fat ? "border-red-500" : "border-gray-300"
-                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                  className={`w-full border ${
+                    errors.fat ? "border-red-500" : "border-gray-300"
+                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                   disabled={isLoading}
                 />
                 <span className="ml-2 text-sm text-gray-500">g</span>
@@ -411,8 +402,9 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
                 name="season"
                 value={formData.season}
                 onChange={handleChange}
-                className={`w-full border ${errors.season ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${
+                  errors.season ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                 disabled={isLoading}
               >
                 <option value="">Select Season</option>
@@ -432,8 +424,9 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
               name="unit"
               value={formData.unit}
               onChange={handleChange}
-              className={`w-full border ${errors.unit ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              className={`w-full border ${
+                errors.unit ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               disabled={isLoading}
             >
               <option value="">Select unit of measurement</option>
@@ -461,8 +454,9 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
                 value={formData.imageUrl}
                 onChange={handleImageUrlChange}
                 placeholder="Enter image URL"
-                className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"
-                  } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                className={`w-full border ${
+                  errors.imageUrl ? "border-red-500" : "border-gray-300"
+                } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                 disabled={isLoading}
               />
               {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
@@ -471,7 +465,7 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
               <div className="mt-2 flex justify-center">
                 <img
                   src={imagePreview}
-                  alt="Ingredient preview"
+                  alt="Ingredient"
                   className="w-24 h-24 object-cover rounded border"
                 />
               </div>
@@ -487,13 +481,16 @@ const AddIngredient = ({ onIngredientAdded = () => { } }) => {
               value={formData.description}
               onChange={handleChange}
               placeholder="Enter description"
-              className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
-                } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+              maxLength={500}
+              className={`w-full border ${
+                errors.description ? "border-red-500" : "border-gray-300"
+              } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               disabled={isLoading}
             />
             {errors.description && (
               <p className="text-red-500 text-sm mt-1">{errors.description}</p>
             )}
+            <p className="text-gray-500 text-sm mt-1">{formData.description.length}/500 characters</p>
           </div>
         </div>
       </div>
