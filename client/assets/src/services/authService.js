@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axiosInstance from "./axiosInstance";
 
 export const login = async ({ email, password }) => {
@@ -144,5 +145,111 @@ export const deleteUser = async (userId) => {
   } catch (error) {
     console.log("deleteUser error: ", error);
     return error;
+  }
+};
+export const requestDeleteAccount = async (email) => {
+  try {
+    if (!email) {
+      return {
+        success: false,
+        message: "Email is required!",
+      };
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return {
+        success: false,
+        message: "Invalid email format!",
+      };
+    }
+
+    const response = await axiosInstance.post("/users/request-delete-account", { email });
+
+    const { success, message } = response.data;
+
+    if (success) {
+      console.log("requestDeleteAccount Response:", { message });
+
+      return {
+        success: true,
+        message: message || "OTP has been sent to your email to confirm account deletion",
+      };
+    } else {
+      return {
+        success: false,
+        message: message || "Unable to send account deletion request",
+      };
+    }
+  } catch (error) {
+    console.error("Error sending account deletion request:", error.response?.data || error.message);
+    return {
+      success: false,
+      message: error.response?.data?.message || "Error sending account deletion request",
+      error: error.response?.status || 500,
+    };
+  }
+};
+export const confirmDeleteAccount = async (email, otp) => {
+  try {
+    // Validate inputs
+    if (!email || !otp) {
+      return {
+        success: false,
+        message: "Email and OTP are required!",
+      };
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return {
+        success: false,
+        message: "Invalid email format!",
+      };
+    }
+
+    // Validate OTP format (4-digit number)
+    const otpRegex = /^\d{4}$/;
+    if (!otpRegex.test(otp)) {
+      return {
+        success: false,
+        message: "Invalid OTP (must be 4 digits)!",
+      };
+    }
+
+    // Send request to confirm account deletion
+    const response = await axiosInstance.post("/users/confirm-delete-account", { email, otp });
+
+    const { success, message } = response.data;
+
+    if (success) {
+      console.log("confirmDeleteAccount Response:", { message });
+
+      // Remove token from AsyncStorage
+      try {
+        await AsyncStorage.removeItem("accessToken");
+      } catch (storageError) {
+        console.error("Error removing token from AsyncStorage:", storageError);
+      }
+
+      return {
+        success: true,
+        message: message || "Account has been successfully deleted",
+      };
+    } else {
+      return {
+        success: false,
+        message: message || "Unable to delete account",
+      };
+    }
+  } catch (error) {
+    console.error("Error confirming account deletion:", error.response?.data || error.message);
+    return {
+      success: false,
+      message: error.response?.data?.message || "Error confirming account deletion",
+      error: error.response?.status || 500,
+    };
   }
 };

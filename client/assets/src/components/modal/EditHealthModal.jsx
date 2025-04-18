@@ -247,18 +247,19 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
             ))}
           </View>
         </ScrollView>
-
-        <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>Reset</Text>
-          )}
-        </TouchableOpacity>
+        {userPreference && Object.keys(userPreference).length > 0 ? (
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Reset</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
       </View>
     </Modal>
   );

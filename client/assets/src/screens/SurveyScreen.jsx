@@ -10,6 +10,7 @@ import { userSelector } from "../redux/selectors/selector";
 const SurveyScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const user = useSelector(userSelector);
+  console.log("dsfsdfsdf", user);
   console.log("uPS", user?.userPreferenceId);
 
   // Kiểm tra userPreferenceId và điều hướng nếu đã tồn tại

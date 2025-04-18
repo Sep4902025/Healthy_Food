@@ -14,39 +14,36 @@ import AntDesignIcon from "../common/VectorIcons/AntDesignIcon";
 import ShowToast from "../common/CustomToast";
 import { useSelector } from "react-redux";
 import { userSelector } from "../../redux/selectors/selector";
-import { forgetPassword, verifyOtp } from "../../services/authService";
+import { requestDeleteAccount, confirmDeleteAccount } from "../../services/authService";
 import OTPInput from "../common/OtpInput";
 
-const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
-  const [confirmUserName, setConfirmUserName] = useState("");
+const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title, phase, userEmail }) => {
+  const [confirmEmail, setConfirmEmail] = useState(userEmail || "");
   const [otpCode, setOtpCode] = useState("");
-  const [isOtpSent, setIsOtpSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [countTime, setCountTime] = useState(300); // 5 minutes countdown
   const [attemptCount, setAttemptCount] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [isNetworkError, setIsNetworkError] = useState(false);
 
   const user = useSelector(userSelector);
 
   useEffect(() => {
-    // Reset states when modal opens/closes
+    // Reset states when modal opens/closes or phase changes
     if (visible) {
-      setConfirmUserName("");
+      setConfirmEmail(userEmail || "");
       setOtpCode("");
-      setIsOtpSent(false);
       setErrorMessage("");
+      setCountTime(300);
       setAttemptCount(0);
       setIsBlocked(false);
-      setIsNetworkError(false);
     }
-  }, [visible]);
+  }, [visible, phase, userEmail]);
 
   // Countdown timer for OTP expiration
   useEffect(() => {
     let interval;
-    if (isOtpSent && countTime > 0) {
+    if (phase === "otp" && countTime > 0 && visible) {
       interval = setInterval(() => {
         setCountTime((prevTime) => prevTime - 1);
       }, 1000);
@@ -54,7 +51,7 @@ const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isOtpSent, countTime]);
+  }, [phase, countTime, visible]);
 
   // Format seconds to minutes:seconds
   const formatTime = (seconds) => {
@@ -63,38 +60,43 @@ const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
   };
 
-  const handleUsernameSubmit = async () => {
-    if (user.email.trim() != confirmUserName.trim()) {
-      ShowToast("error", "Email does not match");
-      setErrorMessage("Email does not match");
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailSubmit = async () => {
+    // Validate email format
+    if (!validateEmail(confirmEmail)) {
+      ShowToast("error", "Please enter a valid email address");
+      setErrorMessage("Please enter a valid email address");
       return;
     }
 
-    // Username matched, send OTP
+    // Check if email matches user's email (case-insensitive)
+    if (user.email?.toLowerCase().trim() !== confirmEmail.toLowerCase().trim()) {
+      ShowToast("error", "Email does not match your account");
+      setErrorMessage("Email does not match your account");
+      return;
+    }
+
+    // Send OTP via requestDeleteAccount
     try {
       setIsLoading(true);
       setErrorMessage("");
-      setIsNetworkError(false);
 
-      const response = await forgetPassword({ email: user.email?.trim() });
-      if (response.status === 200) {
-        setCountTime(300); // 5 minutes countdown
-        setAttemptCount(0);
+      const response = await requestDeleteAccount(confirmEmail.trim());
+      if (response.success) {
+        ShowToast("success", "An OTP code has been sent to your email");
+        onSubmit({ email: confirmEmail, otp: "" }); // Trigger phase change to "otp"
       } else {
-        console.log(response);
-        setErrorMessage("Không thể gửi mã OTP. Vui lòng thử lại.");
+        ShowToast("error", response.message || "Unable to send OTP code. Please try again.");
+        setErrorMessage(response.message || "Unable to send OTP code. Please try again.");
       }
-
-      setIsOtpSent(true);
-      setCountTime(300); // 5 minutes countdown
-      setAttemptCount(0);
-      ShowToast("success", "OTP code has been sent to your email");
     } catch (error) {
-      console.error("Network error:", error);
-      setIsNetworkError(true);
-      setErrorMessage(
-        "Cannot send OTP code. Check your network connection and try again."
-      );
+      console.error("Error sending OTP:", error);
+      ShowToast("error", "Failed to send OTP code. Check your network and try again.");
+      setErrorMessage("Failed to send OTP code. Check your network and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -104,53 +106,44 @@ const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
     try {
       setIsLoading(true);
       setErrorMessage("");
-      setIsNetworkError(false);
 
       // Check if user is blocked due to too many attempts
       if (isBlocked) {
-        setErrorMessage(
-          "You have exceeded the maximum number of attempts. Please try again later."
-        );
+        ShowToast("error", "Too many attempts. Please try again later.");
+        setErrorMessage("Too many attempts. Please try again later.");
         return;
       }
 
       // Check if OTP has expired
       if (countTime === 0) {
-        setErrorMessage("OTP code has expired.");
+        ShowToast("error", "OTP code has expired. Please resend a new code.");
+        setErrorMessage("OTP code has expired. Please resend a new code.");
         return;
       }
 
-      // Simulate OTP verification - replace with actual API call
-      const response = await verifyOtp({
-        email: user.email,
-        otp: otpCode,
-      });
-
-      if (response.status === 200) {
-        // OTP verification successful, proceed with account deletion
-        onSubmit();
+      // Verify OTP via confirmDeleteAccount
+      const response = await confirmDeleteAccount(confirmEmail, otpCode);
+      if (response.success) {
+        ShowToast("success", response.message || "Account deleted successfully");
+        onSubmit({ email: confirmEmail, otp: otpCode }); // Complete deletion
       } else {
-        // Increment attempt count and check if max attempts reached
+        // Increment attempt count
         const newAttemptCount = attemptCount + 1;
         setAttemptCount(newAttemptCount);
 
         if (newAttemptCount >= 3) {
           setIsBlocked(true);
-          setErrorMessage(
-            "You have exceeded the maximum number of attempts. Please try again later."
-          );
+          ShowToast("error", "Too many attempts. Please try again later.");
+          setErrorMessage("Too many attempts. Please try again later.");
         } else {
-          setErrorMessage(
-            `Invalid OTP code. Please try again. (Attempt ${newAttemptCount}/3)`
-          );
+          ShowToast("error", `Invalid OTP code. Attempt ${newAttemptCount}/3`);
+          setErrorMessage(`Invalid OTP code. Attempt ${newAttemptCount}/3`);
         }
       }
     } catch (error) {
-      console.error("Network error:", error);
-      setIsNetworkError(true);
-      setErrorMessage(
-        "Cannot verify OTP code. Check your network connection and try again."
-      );
+      console.error("Error verifying OTP:", error);
+      ShowToast("error", "Failed to verify OTP code. Check your network and try again.");
+      setErrorMessage("Failed to verify OTP code. Check your network and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -160,20 +153,21 @@ const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
     try {
       setIsLoading(true);
       setErrorMessage("");
-      setIsNetworkError(false);
 
-      await forgetPassword({ email: user.email?.trim() });
-
-      setCountTime(300); // Reset 5 minutes countdown
-      setAttemptCount(0); // Reset attempt count
-      setIsBlocked(false); // Unblock if was blocked
-      ShowToast("success", "New OTP code has been sent to your email");
+      const response = await requestDeleteAccount(confirmEmail.trim());
+      if (response.success) {
+        ShowToast("success", "A new OTP code has been sent to your email");
+        setCountTime(300); // Reset 5 minutes countdown
+        setAttemptCount(0); // Reset attempt count
+        setIsBlocked(false); // Unblock if was blocked
+      } else {
+        ShowToast("error", response.message || "Unable to resend OTP code. Please try again.");
+        setErrorMessage(response.message || "Unable to resend OTP code. Please try again.");
+      }
     } catch (error) {
-      console.error("Network error:", error);
-      setIsNetworkError(true);
-      setErrorMessage(
-        "Cannot resend OTP code. Check your network connection and try again."
-      );
+      console.error("Error resending OTP:", error);
+      ShowToast("error", "Failed to resend OTP code. Check your network and try again.");
+      setErrorMessage("Failed to resend OTP code. Check your network and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -184,28 +178,23 @@ const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.centeredView}
       >
-        <TouchableOpacity style={styles.backGroundView} onPress={onClose} activeOpacity={1}/>
+        <TouchableOpacity style={styles.backGroundView} onPress={onClose} activeOpacity={1} />
         <View style={styles.modalView}>
           <View style={styles.modalIcon}>
             <AntDesignIcon name="delete" size={28} color="#DE0A0A" />
           </View>
           <Text style={styles.modalTitle}>{title || "Delete Account"}</Text>
           <Text style={styles.modalWarning}>
-            WARNING this action is permanent and cannot be undone!
+            WARNING: This action is permanent and cannot be undone!
           </Text>
 
-          {!isOtpSent ? (
-            // Username confirmation screen
+          {phase === "email" ? (
+            // Email confirmation screen
             <>
               <Text style={styles.modalDescription}>
                 All your information will be deleted immediately.
@@ -216,21 +205,28 @@ const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
               <Text style={styles.modalDescription}>Confirm your email:</Text>
               <TextInput
                 style={styles.input}
-                value={confirmUserName}
-                onChangeText={setConfirmUserName}
+                value={confirmEmail}
+                onChangeText={setConfirmEmail}
                 placeholder="Enter your email..."
                 autoFocus={true}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
 
-              {errorMessage ? (
-                <Text style={styles.errorText}>{errorMessage}</Text>
-              ) : null}
+              {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={[styles.button, styles.nextButton]}
-                  onPress={handleUsernameSubmit}
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={onClose}
                   disabled={isLoading}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.nextButton]}
+                  onPress={handleEmailSubmit}
+                  disabled={isLoading || !confirmEmail}
                 >
                   {isLoading ? (
                     <ActivityIndicator size="small" color="#fff" />
@@ -250,9 +246,7 @@ const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
                 Please enter the code to confirm account deletion.
               </Text>
 
-              <Text style={styles.otpTimeText}>
-                Time remaining: {formatTime(countTime)}
-              </Text>
+              <Text style={styles.otpTimeText}>Time remaining: {formatTime(countTime)}</Text>
 
               <OTPInput
                 length={4}
@@ -261,19 +255,27 @@ const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
                 disabled={isBlocked || countTime === 0}
               />
 
-              {errorMessage ? (
-                <Text style={styles.errorText}>{errorMessage}</Text>
-              ) : null}
+              {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
               <TouchableOpacity
-                style={styles.resendButton}
+                style={[
+                  styles.resendButton,
+                  { opacity: countTime > 0 && countTime < 290 ? 0.5 : 1 },
+                ]}
                 onPress={handleResendOtp}
-                disabled={countTime > 0 && countTime < 290} // Prevent spam clicking
+                disabled={countTime > 0 && countTime < 290}
               >
                 <Text style={styles.resendButtonText}>Resend OTP code</Text>
               </TouchableOpacity>
 
               <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={onClose}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, styles.submitButton]}
                   onPress={handleVerifyOtp}
@@ -282,9 +284,7 @@ const ConfirmDeleteAccountModal = ({ visible, onClose, onSubmit, title }) => {
                   {isLoading ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.submitButtonText}>
-                      Confirm Deletion
-                    </Text>
+                    <Text style={styles.submitButtonText}>Confirm Deletion</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -359,17 +359,6 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
   },
-  otpInput: {
-    backgroundColor: "white",
-    borderWidth: 1,
-    borderColor: "#C4C4C4",
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 15,
-    fontSize: 18,
-    textAlign: "center",
-    letterSpacing: 5,
-  },
   otpTimeText: {
     fontSize: 16,
     fontWeight: "600",
@@ -393,13 +382,14 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    gap: 10,
   },
   button: {
     borderRadius: 5,
     padding: 10,
     elevation: 2,
-    minWidth: "40%",
+    flex: 1,
     alignItems: "center",
   },
   submitButton: {
@@ -426,6 +416,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#000000",
     textAlign: "center",
+    fontWeight: "bold",
   },
 });
 

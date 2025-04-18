@@ -10,7 +10,6 @@ import medicalConditionService from "../../services/medicalConditionService";
 
 const UnderDisease = ({ navigation }) => {
   const user = useSelector(userSelector);
-  console.log("UsrA", user.accessToken);
 
   const [selectedItems, setSelectedItems] = useState([]);
   const [medicalConditions, setMedicalConditions] = useState([]);
@@ -21,9 +20,6 @@ const UnderDisease = ({ navigation }) => {
   useEffect(() => {
     const fetchMedicalConditions = async () => {
       try {
-        if (!user.accessToken) {
-          throw new Error("Không tìm thấy accessToken. Vui lòng đăng nhập lại.");
-        }
         const result = await medicalConditionService.getAllMedicalConditions(1, 6);
         if (!result.success) {
           throw new Error(result.message);
@@ -57,7 +53,7 @@ const UnderDisease = ({ navigation }) => {
       }
     };
     loadData();
-  }, [user.accessToken]);
+  }, [user]);
 
   const toggleItemSelection = (id) => {
     setSelectedItems((prev) => {

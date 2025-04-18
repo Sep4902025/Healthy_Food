@@ -68,7 +68,7 @@ const HomeService = {
           order, // Thứ tự sắp xếp (asc/desc)
         },
       });
-      console.log(`🔍 Danh sách món ăn theo mùa ${season} từ API:`, response.data);
+      //console.log(`🔍 Danh sách món ăn theo mùa ${season} từ API:`, response.data);
       return {
         success: true,
         data: {

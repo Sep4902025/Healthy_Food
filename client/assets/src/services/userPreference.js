@@ -10,15 +10,30 @@ export const getUserPreference = async (userId) => {
   }
 };
 
-export const resetUserPreference = async (userPreferenceId) => {
+export const deleteUserPreference = async (userPreferenceId) => {
   try {
-    const response = await axiosInstance.put(`/userPreference/reset/${userPreferenceId}`);
-    console.log("LOIXO", response);
+    const response = await axiosInstance.delete(`/userpreference/${userPreferenceId}`);
 
-    return { success: true, data: response.data };
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message || "User preference has been permanently deleted",
+      };
+    } else {
+      return {
+        success: false,
+        message: response.data.message || "Failed to delete user preference",
+      };
+    }
   } catch (error) {
-    console.log("resetUserPreference error: ", error);
-    return { success: false, error };
+    console.error("deleteUserPreference error:", error);
+    const message =
+      error.response?.data?.message || "An error occurred while deleting user preference";
+    return {
+      success: false,
+      message,
+      status: error.response?.status, // Include status for session error handling
+    };
   }
 };
 

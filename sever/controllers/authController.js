@@ -70,6 +70,23 @@ exports.requestOTP = catchAsync(async (req, res, next) => {
   }
   res.status(200).json(result);
 });
+// Yêu cầu xóa tài khoản
+exports.requestDeleteAccount = catchAsync(async (req, res, next) => {
+  const result = await authService.requestDeleteAccount(req.body);
+  if (!result.success) {
+    return next(result.error); // Trả về lỗi 400, 404 hoặc 500 nếu có vấn đề
+  }
+  res.status(200).json(result);
+});
+
+// Xác nhận xóa tài khoản
+exports.confirmDeleteAccount = catchAsync(async (req, res, next) => {
+  const result = await authService.confirmDeleteAccount(req.body);
+  if (!result.success) {
+    return next(result.error); // Trả về lỗi 400 hoặc 404 nếu có vấn đề
+  }
+  res.status(200).json(result);
+});
 
 // Đăng nhập
 exports.login = catchAsync(async (req, res, next) => {

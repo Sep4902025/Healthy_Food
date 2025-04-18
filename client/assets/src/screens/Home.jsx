@@ -35,6 +35,7 @@ function Home({ navigation }) {
 
   const favor = useSelector(favorSelector);
   const user = useSelector(userSelector);
+  console.log("USSOWOWOW", user);
 
   const dispatch = useDispatch();
   const season = useCurrentSeason();
@@ -73,19 +74,12 @@ function Home({ navigation }) {
     try {
       if (!season) return;
 
-      const response = await HomeService.getDishBySeason(
-        season,
-        pageNum,
-        limit
-      );
-      console.log(response);
+      const response = await HomeService.getDishBySeason(season, pageNum, limit);
 
       if (response?.success) {
         const newDishes = response.data.items;
 
-        setSeasonalDishes((prev) =>
-          isRefresh ? newDishes : [...prev, ...newDishes]
-        );
+        setSeasonalDishes((prev) => (isRefresh ? newDishes : [...prev, ...newDishes]));
 
         setPage(pageNum);
         setHasMore(pageNum < response.data.totalPages);
@@ -124,10 +118,7 @@ function Home({ navigation }) {
     ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
       const paddingToBottom = normalize(20);
-      if (
-        layoutMeasurement.height + contentOffset.y >=
-        contentSize.height - paddingToBottom
-      ) {
+      if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
         loadMoreDishes();
       }
     },
@@ -141,9 +132,7 @@ function Home({ navigation }) {
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <SearchBar
           placeholder="What do you need?"
@@ -160,9 +149,7 @@ function Home({ navigation }) {
               <CategoryCard
                 key={key}
                 category={{ id: key, ...category }}
-                onPress={() =>
-                  navigation.navigate(ScreensName.search, { category })
-                }
+                onPress={() => navigation.navigate(ScreensName.search, { category })}
                 style={styles.categoryCard}
               />
             ))}
@@ -183,16 +170,12 @@ function Home({ navigation }) {
               item?.season?.toLowerCase()?.includes(season?.toLowerCase())
             ).length > 0 ? (
             seasonalDishes
-              .filter((item) =>
-                item?.season?.toLowerCase()?.includes(season?.toLowerCase())
-              )
+              .filter((item) => item?.season?.toLowerCase()?.includes(season?.toLowerCase()))
               .map((dish, index) => (
                 <DishedV1
                   dish={dish}
                   key={dish._id + index}
-                  onPress={() =>
-                    navigation.navigate(ScreensName.favorAndSuggest, { dish })
-                  }
+                  onPress={() => navigation.navigate(ScreensName.favorAndSuggest, { dish })}
                 />
               ))
           ) : (
@@ -200,11 +183,7 @@ function Home({ navigation }) {
           )}
 
           {loading.more && (
-            <ActivityIndicator
-              size="large"
-              color="#38B2AC"
-              style={styles.loadingMore}
-            />
+            <ActivityIndicator size="large" color="#38B2AC" style={styles.loadingMore} />
           )}
         </View>
       </ScrollView>

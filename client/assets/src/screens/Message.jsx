@@ -29,6 +29,7 @@ import { arrayToString, stringToArray } from "../utils/common";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import ConversationStarter from "../components/modal/ConversationStarter";
+import { ScreensName } from "../constants/ScreensName";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -281,7 +282,7 @@ function Message({ navigation }) {
   };
 
   const handleBack = () => {
-    navigation.navigate("home");
+    navigation.navigate(ScreensName.home);
     ShowToast("info", "You need to start a conversation to chat");
   };
 

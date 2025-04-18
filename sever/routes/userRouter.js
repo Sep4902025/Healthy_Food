@@ -11,6 +11,8 @@ const {
   changePassword,
   requestOTP,
   verifyOtp,
+  requestDeleteAccount,
+  confirmDeleteAccount,
 } = require("../controllers/authController");
 const {
   updateUserById,
@@ -40,25 +42,12 @@ userRouter.post("/logout", logout);
 userRouter.post("/forget-password", forgetPassword);
 userRouter.post("/reset-password", resetPassword);
 userRouter.post("/change-password", isAuthenticated, changePassword);
-
+userRouter.post("/request-delete-account", requestDeleteAccount);
+userRouter.post("/confirm-delete-account", confirmDeleteAccount);
 // Nutritionist application routes (tĩnh, cụ thể)
-userRouter.post(
-  "/submit-nutritionist",
-  isAuthenticated,
-  submitNutritionistApplication
-);
-userRouter.post(
-  "/review-nutritionist",
-  isAuthenticated,
-  isAdmin,
-  reviewNutritionistApplication
-);
-userRouter.get(
-  "/pending-nutritionists",
-  isAuthenticated,
-  isAdmin,
-  getPendingNutritionists
-);
+userRouter.post("/submit-nutritionist", isAuthenticated, submitNutritionistApplication);
+userRouter.post("/review-nutritionist", isAuthenticated, isAdmin, reviewNutritionistApplication);
+userRouter.get("/pending-nutritionists", isAuthenticated, isAdmin, getPendingNutritionists);
 
 // User management routes (tĩnh, cụ thể)
 userRouter.post("/", createUser);

@@ -9,13 +9,11 @@ const {
   filterUserPreferencesByDiet,
   getUserPreferenceByUserId,
   createUserPreference,
-  resetUserPreference,
 } = require("../controllers/userPreferenceController");
 const userPreferenceRouter = express.Router();
 
 // Create User Preference
 userPreferenceRouter.post("/", createUserPreference);
-userPreferenceRouter.put("/reset/:userPreferenceId", resetUserPreference);
 // Get All User Preferences (not deleted)
 userPreferenceRouter.get("/", getAllUserPreferences);
 

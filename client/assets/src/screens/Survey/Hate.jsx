@@ -95,7 +95,6 @@ const Hate = ({ navigation }) => {
     const loadData = async () => {
       try {
         const savedData = JSON.parse(await AsyncStorage.getItem("quizData")) || {};
-        // Ensure hate and favorite are arrays of strings
         const hateData = Array.isArray(savedData.hate) ? savedData.hate.map(String) : [];
         const favoriteData = Array.isArray(savedData.favorite)
           ? savedData.favorite.map(String)
@@ -111,8 +110,23 @@ const Hate = ({ navigation }) => {
     loadData();
   }, []);
 
+  // Sync selectedItemIds to AsyncStorage whenever it changes
+  useEffect(() => {
+    const saveHateData = async () => {
+      try {
+        const savedData = JSON.parse(await AsyncStorage.getItem("quizData")) || {};
+        const updatedData = { ...savedData, hate: selectedItemIds };
+        await AsyncStorage.setItem("quizData", JSON.stringify(updatedData));
+        console.log("Saved hate to AsyncStorage:", selectedItemIds);
+      } catch (error) {
+        console.error("Error saving hate data:", error);
+      }
+    };
+    saveHateData();
+  }, [selectedItemIds]);
+
   const toggleItemSelection = (id) => {
-    const idAsString = String(id); // Ensure the ID is a string
+    const idAsString = String(id);
     console.log("Toggling ID:", idAsString);
     console.log("Is in favoriteItemIds?", favoriteItemIds.includes(idAsString));
     if (favoriteItemIds.includes(idAsString)) return;
@@ -142,17 +156,22 @@ const Hate = ({ navigation }) => {
     try {
       console.log("SEND");
 
+      // Read current quizData
       const rawData = await AsyncStorage.getItem("quizData");
       console.log("Raw quizData:", rawData);
       const currentData = rawData ? JSON.parse(rawData) : {};
-      const updatedData = { ...currentData, hate: selectedItemIds };
-      await AsyncStorage.setItem("quizData", JSON.stringify(updatedData));
 
       if (!user || !user._id || !user.email || !user.username) {
         Alert.alert("Error", "User information is incomplete. Please log in again!");
         console.error("❌ Missing user information in Redux:", user);
         return;
       }
+
+      // Include current selectedItemIds in validation
+      const updatedQuizData = {
+        ...currentData,
+        hate: Array.isArray(selectedItemIds) ? selectedItemIds : [],
+      };
 
       const requiredFields = [
         "age",
@@ -169,9 +188,11 @@ const Hate = ({ navigation }) => {
         "activityLevel",
         "gender",
         "underDisease",
+        "favorite",
+        "hate",
       ];
       const missingFields = requiredFields.filter(
-        (field) => !currentData[field] && currentData[field] !== 0
+        (field) => !updatedQuizData[field] && updatedQuizData[field] !== 0
       );
       if (missingFields.length > 0) {
         Alert.alert(
@@ -181,6 +202,10 @@ const Hate = ({ navigation }) => {
         console.error("❌ Missing fields in quizData:", missingFields);
         return;
       }
+
+      // Save hate to AsyncStorage
+      await AsyncStorage.setItem("quizData", JSON.stringify(updatedQuizData));
+      console.log("Saved quizData with hate:", updatedQuizData);
 
       const finalData = {
         userId: user._id,
@@ -203,36 +228,48 @@ const Hate = ({ navigation }) => {
         underDisease: currentData.underDisease || [],
         theme: currentData.theme || false,
         isDelete: false,
-        userPreference: {
-          favorite: currentData.favorite || [],
-          hate: selectedItemIds,
-        },
+        favorite: Array.isArray(currentData.favorite) ? currentData.favorite : [],
+        hate: Array.isArray(selectedItemIds) ? selectedItemIds : [],
       };
-      console.log("Final data to submit:", finalData);
+      console.log("Final data to submit:", JSON.stringify(finalData, null, 2));
+
+      // Validate favorite and hate arrays
+      if (!Array.isArray(finalData.favorite) || !Array.isArray(finalData.hate)) {
+        console.error("❌ Invalid favorite or hate arrays:", finalData);
+        Alert.alert("Error", "Favorite or hate preferences are invalid.");
+        return;
+      }
 
       const result = await quizService.submitQuizData(finalData);
-      console.log("API result:", result);
+      console.log("API result:", JSON.stringify(result, null, 2));
 
       if (result.success) {
         const responseData = result.data.data || result.data;
-        if (responseData) {
-          const updatedUser = responseData.user
-            ? {
-                ...responseData.user,
-                userPreference: responseData.userPreference,
-              }
-            : {
-                ...user,
-                userPreferenceId: responseData.userPreference?._id,
-                userPreference: responseData.userPreference,
-              };
-          console.log("Updated user to dispatch:", updatedUser);
-          dispatch(updateUserAct(updatedUser));
-          navigation.navigate("forYou");
-        } else {
-          console.error("❌ Missing data in result:", result);
-          Alert.alert("Error", "Unable to retrieve user data.");
-        }
+        console.log("responseData:", JSON.stringify(responseData, null, 2));
+
+        // Ensure userPreference is always an object
+        const userPreference = responseData.userPreference || {
+          favorite: finalData.favorite,
+          hate: finalData.hate,
+          eatHabit: finalData.eatHabit,
+          underDisease: finalData.underDisease,
+          _id: null,
+        };
+
+        const updatedUser = {
+          ...user,
+          ...(responseData.user || {}),
+          userPreferenceId: userPreference._id || null,
+          userPreference: {
+            ...userPreference,
+            favorite: Array.isArray(userPreference.favorite) ? userPreference.favorite : [],
+            hate: Array.isArray(userPreference.hate) ? userPreference.hate : [],
+          },
+        };
+
+        console.log("Updated user to dispatch:", JSON.stringify(updatedUser, null, 2));
+        dispatch(updateUserAct(updatedUser));
+        navigation.navigate("forYou");
       } else {
         console.error("❌ Failed to submit quiz:", result.message);
         Alert.alert("Error", `Failed to submit quiz: ${result.message || "Unknown error."}`);
