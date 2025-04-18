@@ -29,6 +29,7 @@ import { arrayToString, stringToArray } from "../utils/common";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import ConversationStarter from "../components/modal/ConversationStarter";
+import { ScreensName } from "../constants/ScreensName";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -75,8 +76,14 @@ const MessageItem = memo(({ item, index, theme, handleImagePress }) => {
 
 function Message({ navigation }) {
   const user = useSelector(userSelector);
+  console.log("USM", user?.accessToken);
+
   const [messages, setMessages] = useState([]);
+  console.log("ME", messages);
+
   const [conversation, setConversation] = useState(null);
+  console.log("CONNN", conversation);
+
   const [inputText, setInputText] = useState("");
   const [visible, setVisible] = useState({ inputTopic: false }); // Initialize to false
   const [selectedImages, setSelectedImages] = useState([]);
@@ -91,11 +98,13 @@ function Message({ navigation }) {
 
   useEffect(() => {
     if (!user?._id || !user?.accessToken) {
+      console.log("User not authenticated:", { _id: user?._id, accessToken: user?.accessToken });
       setInitialLoading(false);
-      setVisible({ ...visible, inputTopic: true }); // Show modal if no user
+      setVisible({ ...visible, inputTopic: true });
       return;
     }
 
+    console.log("User authenticated:", { _id: user._id, accessToken: user.accessToken });
     messageSocket.init({
       userId: user._id,
       token: user.accessToken,
@@ -108,7 +117,6 @@ function Message({ navigation }) {
       messageSocket.disconnect();
     };
   }, [user?._id, user?.accessToken]);
-
   useEffect(() => {
     if (!conversation?._id) return;
 
@@ -281,7 +289,7 @@ function Message({ navigation }) {
   };
 
   const handleBack = () => {
-    navigation.navigate("home");
+    navigation.navigate(ScreensName.home);
     ShowToast("info", "You need to start a conversation to chat");
   };
 

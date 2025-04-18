@@ -20,7 +20,7 @@ const medicalConditionService = {
           limit,
           search, // Add search
           sort: "createdAt", // Sort by creation date
-          order: "desc",     // Descending (newest first)
+          order: "desc", // Descending (newest first)
         },
       });
       return {
@@ -35,7 +35,8 @@ const medicalConditionService = {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to load medical conditions!",
+        message:
+          error.response?.data?.message || "Failed to load medical conditions!",
       };
     }
   },
@@ -60,7 +61,8 @@ const medicalConditionService = {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || "Medical condition not found!",
+        message:
+          error.response?.data?.message || "Medical condition not found!",
       };
     }
   },
@@ -80,7 +82,10 @@ const medicalConditionService = {
         data: response.data.data,
       };
     } catch (error) {
-      if (error.response?.data?.message === "Medical condition with this name already exists") {
+      if (
+        error.response?.data?.message ===
+        "Medical condition with this name already exists"
+      ) {
         return {
           success: false,
           message: "Medical condition with this name already exists",
@@ -88,7 +93,8 @@ const medicalConditionService = {
       }
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to add medical condition!",
+        message:
+          error.response?.data?.message || "Failed to add medical condition!",
       };
     }
   },
@@ -114,7 +120,9 @@ const medicalConditionService = {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to update medical condition!",
+        message:
+          error.response?.data?.message ||
+          "Failed to update medical condition!",
       };
     }
   },
@@ -132,12 +140,15 @@ const medicalConditionService = {
       );
       return {
         success: true,
-        message: response.data.message || "Medical condition has been soft deleted",
+        message:
+          response.data.message || "Medical condition has been soft deleted",
       };
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to soft delete medical condition!",
+        message:
+          error.response?.data?.message ||
+          "Failed to soft delete medical condition!",
       };
     }
   },
@@ -166,7 +177,9 @@ const medicalConditionService = {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to search medical conditions!",
+        message:
+          error.response?.data?.message ||
+          "Failed to search medical conditions!",
       };
     }
   },

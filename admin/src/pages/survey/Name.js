@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const Name = () => {
   const navigate = useNavigate();
   const [selectedName, setSelectedName] = useState("");
-  const [error, setError] = useState(""); // State để hiển thị lỗi
+  const [error, setError] = useState(""); // State to display errors
 
-  // Load dữ liệu từ sessionStorage khi mở trang
+  // Load data from sessionStorage when the page opens
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.name) {
@@ -15,9 +15,9 @@ const Name = () => {
     }
   }, []);
 
-  // Hàm kiểm tra input
+  // Function to validate input
   const validateName = (name) => {
-    // Chỉ cho phép chữ cái và dấu cách
+    // Allow only letters and spaces
     const lettersOnly = /^[A-Za-z\s]+$/;
 
     if (!name.trim()) {
@@ -28,7 +28,7 @@ const Name = () => {
       return "Name must contain only letters and spaces.";
     }
 
-    // Kiểm tra xem có ít nhất 2 từ (họ và tên)
+    // Check if there are at least two words (first and last name)
     const nameParts = name.trim().split(/\s+/);
     if (nameParts.length < 2) {
       return "Please enter both first and last name.";
@@ -40,27 +40,27 @@ const Name = () => {
   const handleNext = () => {
     const validationError = validateName(selectedName);
     if (validationError) {
-      setError(validationError); // Chỉ hiển thị lỗi khi nhấn Next
+      setError(validationError); // Only display error when Next is clicked
       return;
     }
 
-    // Lấy dữ liệu hiện tại từ sessionStorage
+    // Get current data from sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật dữ liệu mới
+    // Update data
     const updatedData = {
       ...currentData,
       name: selectedName.trim(),
     };
 
-    // Lưu vào sessionStorage
+    // Save to sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
-    // Điều hướng sang trang tiếp theo
+    // Navigate to the next page
     navigate("/survey/phonenumber");
   };
 
-  // Hàm xử lý khi nhấn phím
+  // Handle key press
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.keyCode === 13) {
       handleNext();
@@ -70,7 +70,7 @@ const Name = () => {
   return (
     <div className="max-w-md mx-auto p-4">
       {/* Header with back button & progress bar */}
-      <div className="w-full flex items-center justify-center mt-2">
+      <div className="w-[400px] flex items-center justify-center mt-2">
         <ProgressBar progress={5.25} />
       </div>
 
@@ -81,9 +81,10 @@ const Name = () => {
       {/* Input field */}
       <div className="mt-4">
         <input
+          autoFocus
           type="text"
           value={selectedName}
-          onChange={(e) => setSelectedName(e.target.value)} // Chỉ cập nhật giá trị, không kiểm tra lỗi
+          onChange={(e) => setSelectedName(e.target.value)} // Only update value, no error checking
           onKeyDown={handleKeyDown}
           placeholder="Enter your full name"
           className={`w-full p-4 rounded-lg shadow border ${
@@ -91,7 +92,7 @@ const Name = () => {
           } focus:ring-2 focus:ring-green-400 outline-none`}
         />
 
-        {/* Hiển thị thông báo lỗi */}
+        {/* Display error message */}
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
         {/* Next button */}

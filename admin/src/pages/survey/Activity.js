@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
-
-// Danh sách mức độ hoạt động kèm theo giá trị số
+import { RiArrowLeftSLine } from "react-icons/ri";
+// List of activity levels with corresponding values
 const activitylevelGroups = [
   {
     activitylevel: "Sedentary",
@@ -35,7 +35,7 @@ const ActivityLevel = () => {
   const navigate = useNavigate();
   const [selectedActivityLevel, setSelectedActivityLevel] = useState(null);
 
-  // Load dữ liệu từ sessionStorage khi mở trang
+  // Load data from sessionStorage when the page loads
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.activityLevel && savedData.activityLevel.name) {
@@ -49,15 +49,15 @@ const ActivityLevel = () => {
       return;
     }
 
-    // Tìm object tương ứng với selectedActivityLevel
+    // Find the object corresponding to selectedActivityLevel
     const selectedItem = activitylevelGroups.find(
       (item) => item.activitylevel === selectedActivityLevel
     );
 
-    // Lấy dữ liệu hiện tại từ sessionStorage
+    // Get current data from sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật dữ liệu mới
+    // Update data
     const updatedData = {
       ...currentData,
       activityLevel: {
@@ -66,15 +66,15 @@ const ActivityLevel = () => {
       },
     };
 
-    // Lưu vào sessionStorage
+    // Save to sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
-    console.log("🚀 Dữ liệu ActivityLevel đã lưu:", updatedData);
+    console.log("🚀 ActivityLevel data saved:", updatedData);
 
-    // Điều hướng trang tiếp theo
+    // Navigate to the next page
     navigate("/survey/waterdrink");
   };
 
-  // Hàm xử lý khi nhấn phím
+  // Handle key press
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.keyCode === 13) {
       handleNext();
@@ -83,28 +83,28 @@ const ActivityLevel = () => {
 
   return (
     <div
-      className="max-w-md mx-auto p-4"
+      className="w-[400px] mx-auto p-4"
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      {/* Header với back button và progress bar */}
+      {/* Header with back button and progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/sleeptime")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={52.5} />
       </div>
 
-      {/* Tiêu đề và mô tả */}
+      {/* Title and description */}
       <h2 className="text-2xl font-bold text-center">Activity Level</h2>
       <p className="text-center text-gray-600">
         What is your daily activity level?
       </p>
 
-      {/* Danh sách lựa chọn */}
+      {/* Selection list */}
       <div className="space-y-4 mt-4">
         {activitylevelGroups.map((item, index) => (
           <div
@@ -114,17 +114,17 @@ const ActivityLevel = () => {
                 ? "bg-green-400 text-black"
                 : "bg-gray-100 hover:bg-green-200"
             }`}
-            onClick={() => setSelectedActivityLevel(item.activitylevel)} // Lưu giá trị tên
+            onClick={() => setSelectedActivityLevel(item.activitylevel)} // Store the name value
           >
             <span className="text-lg font-semibold flex-1 text-left">
               {item.label || item.activitylevel}{" "}
-              {/* Hiển thị label nếu có, nếu không thì hiển thị activitylevel */}
+              {/* Display label if available, otherwise display activitylevel */}
             </span>
           </div>
         ))}
       </div>
 
-      {/* Nút Next */}
+      {/* Next button */}
       <button
         onClick={handleNext}
         className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"

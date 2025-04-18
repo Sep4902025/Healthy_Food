@@ -3,7 +3,7 @@ import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 import Thin from "../../assets/images/goal/thin.jpg";
 import Fat from "../../assets/images/goal/fat.jpg";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const goalGroups = [
   { goal: "Muscle gain", img: Thin },
   { goal: "Fat loss", img: Fat },
@@ -13,7 +13,7 @@ const Goal = () => {
   const navigate = useNavigate();
   const [selectedGoal, setSelectedGoal] = useState(null);
 
-  // Load dữ liệu từ sessionStorage khi vào trang
+  // Load data from sessionStorage when the page loads
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.goal) {
@@ -27,23 +27,23 @@ const Goal = () => {
       return;
     }
 
-    // Lấy dữ liệu hiện tại từ sessionStorage
+    // Get current data from sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật goal
+    // Update goal
     const updatedData = {
       ...currentData,
       goal: selectedGoal,
     };
 
-    // Lưu lại quizData vào sessionStorage
+    // Save quizData back to sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
-    // Điều hướng sang trang tiếp theo
+    // Navigate to the next page
     navigate("/survey/sleeptime");
   };
 
-  // Hàm xử lý khi nhấn phím
+  // Handle key press
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.keyCode === 13) {
       handleNext();
@@ -52,16 +52,16 @@ const Goal = () => {
 
   return (
     <div
-      className="max-w-md mx-auto p-4"
+      className="w-[400px] mx-auto p-4"
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/age")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={47.25} />
       </div>

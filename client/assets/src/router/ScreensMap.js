@@ -120,18 +120,17 @@ export const ScreensMap = [
     hiddenBottomTab: true,
   },
   {
-    name: ScreensName.survey,
-    component: SurveyScreen, // Màn hình đầu tiên của khảo sát
+    name: ScreensName.mealPlan,
+    component: MealPlan,
     options: {
       tabBarIcon: ({ color, focused }) => <AntDesignIcon name="calendar" size={28} color={color} />,
       iconStyles: { transform: [{ translateX: 25 }] },
       requireAuthen: true,
     },
-    hiddenBottomTab: true,
   },
   {
-    name: ScreensName.mealPlan,
-    component: MealPlan,
+    name: ScreensName.survey,
+    component: SurveyScreen, // Màn hình đầu tiên của khảo sát
     options: {
       tabBarIcon: ({ color, focused }) => {
         return (

@@ -9,7 +9,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 const MealPlanAimChart = ({
   mealPlanId,
   userId,
-  duration = 7,
+  duration,
   onNutritionTargetsCalculated = () => {},
   isMealPlanExpired,
   isMealPlanPaused,
@@ -64,8 +64,8 @@ const MealPlanAimChart = ({
       return ageMap[ageRange] || 30;
     };
     const age = convertAge(preferences.age);
-    const { height, weight, activityLevel, gender } = preferences;
-    if (!age || !weight || !height || !activityLevel || !gender) {
+    const { height, weight, activityLevel, gender, weightGoal } = preferences;
+    if (!age || !weight || !height || !activityLevel || !gender || !weightGoal) {
       return null;
     }
     const BMR =
@@ -73,7 +73,21 @@ const MealPlanAimChart = ({
         ? 10 * weight + 6.25 * height - 5 * age - 161
         : 10 * weight + 6.25 * height - 5 * age + 5;
     const TDEE = BMR * activityLevel;
-    const dailyCalories = TDEE;
+
+    // Adjust calories based on goal
+    const weightToLose = weight - weightGoal;
+    let dailyCalories;
+    if (weightToLose > 0) {
+      // Weight loss: 500 kcal deficit
+      dailyCalories = TDEE - 500;
+    } else if (weightToLose < 0) {
+      // Weight gain: 500 kcal surplus
+      dailyCalories = TDEE + 500;
+    } else {
+      // Maintenance: use TDEE
+      dailyCalories = TDEE;
+    }
+
     const protein = weight * 1.5;
     const fat = weight * 0.8;
     const carbs = (dailyCalories - (protein * 4 + fat * 9)) / 4;
@@ -169,7 +183,13 @@ const MealPlanAimChart = ({
   }
 
   const weightToLose = userPreference ? userPreference.weight - userPreference.weightGoal : 0;
-  const weeksToGoal = Math.ceil(weightToLose / 0.5);
+  const weightToGain = weightToLose < 0 ? Math.abs(weightToLose) : 0;
+  const weeksToGoal =
+    weightToLose > 0
+      ? Math.ceil(weightToLose / 0.5) // Weight loss
+      : weightToGain > 0
+      ? Math.ceil(weightToGain / 0.5) // Weight gain
+      : 0; // Maintenance
 
   return (
     <View className="flex-col items-center relative">
@@ -266,6 +286,17 @@ const MealPlanAimChart = ({
                 <Text className="text-text dark:text-dark-text">
                   To achieve your goal of losing {weightToLose} kg, maintain a proper diet for about{" "}
                   <Text className="font-bold text-blue-500">{weeksToGoal} weeks</Text>.
+                </Text>
+              )}
+              {weightToLose < 0 && (
+                <Text className="text-text dark:text-dark-text">
+                  To achieve your goal of gaining {weightToGain} kg, maintain a proper diet for
+                  about <Text className="font-bold text-blue-500">{weeksToGoal} weeks</Text>.
+                </Text>
+              )}
+              {weightToLose === 0 && (
+                <Text className="text-text dark:text-dark-text">
+                  Your goal is to maintain your current weight. Follow this plan to stay on track!
                 </Text>
               )}
               <Text className="text-text dark:text-dark-text">

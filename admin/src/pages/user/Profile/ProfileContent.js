@@ -19,31 +19,31 @@ const ProfileContent = ({ activeTab }) => {
       id: "profile",
       component: <ProfileInfo />,
       icon: <FaUser />,
-      title: "Thông tin cá nhân",
+      title: "Personal Information",
     },
     {
       id: "favoriteFood",
       component: <FavoriteFood />,
       icon: <FaHeart />,
-      title: "Thực phẩm yêu thích",
+      title: "Favorite Food",
     },
     {
       id: "dontEatFood",
       component: <DontEatFood />,
       icon: <FaBan />,
-      title: "Thực phẩm không ăn",
+      title: "Foods to Avoid",
     },
     {
       id: "changePassword",
       component: <ChangePassword />,
       icon: <FaLock />,
-      title: "Đổi mật khẩu",
+      title: "Change Password",
     },
     {
       id: "faqs",
       component: <FAQs />,
       icon: <FaQuestionCircle />,
-      title: "Câu hỏi thường gặp",
+      title: "Frequently Asked Questions",
     },
   ];
 
@@ -57,9 +57,9 @@ const ProfileContent = ({ activeTab }) => {
         <div className="text-center bg-white p-6 rounded-lg shadow-md max-w-md w-full">
           <FaQuestionCircle className="mx-auto mb-4 text-gray-400 text-4xl" />
           <h2 className="text-xl font-semibold text-gray-700 mb-2">
-            Không tìm thấy trang
+            Page Not Found
           </h2>
-          <p className="text-gray-500">Vui lòng chọn một mục từ menu</p>
+          <p className="text-gray-500">Please select an item from the menu</p>
         </div>
       </div>
     );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -19,9 +19,9 @@ import { EditProfileModal } from "../components/modal/EditProfileModal";
 import { EditMealPlanModal } from "../components/modal/EditMealPlanModal";
 import { ScreensName } from "../constants/ScreensName";
 import ShowToast from "../components/common/CustomToast";
-import { deleteUser, updateUser } from "../services/authService";
+import { updateUser } from "../services/authService";
 import { removeUser, updateUserAct } from "../redux/reducers/userReducer";
-import { createUserPreference, resetUserPreference } from "../services/userPreference";
+import { createUserPreference, deleteUserPreference } from "../services/userPreference";
 import { useFocusEffect } from "@react-navigation/native";
 import ConfirmDeleteAccountModal from "../components/modal/ConfirmDeleteAccountModal";
 import { toggleVisible } from "../redux/reducers/drawerReducer";
@@ -29,6 +29,7 @@ import Ionicons from "../components/common/VectorIcons/Ionicons";
 import FontAwesomeIcon from "../components/common/VectorIcons/FontAwesomeIcon";
 import quizService from "../services/quizService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { requestDeleteAccount, confirmDeleteAccount } from "../services/authService";
 
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
@@ -47,44 +48,57 @@ function Profile({ navigation }) {
     ConfirmDeleteModal: false,
   });
   const [userPreference, setUserPreference] = useState({});
-  const user = useSelector(userSelector);
+  const [deletePhase, setDeletePhase] = useState("email");
+  const user = useSelector(userSelector) || {};
+
+  useEffect(() => {
+    console.log("Profile mounted - user:", JSON.stringify(user, null, 2));
+  }, []);
 
   useFocusEffect(
-    React.useCallback(() => {
-      if (!user) {
+    useCallback(() => {
+      if (!user?._id) {
         ShowToast("error", "Please login first");
         navigation.navigate(ScreensName.signin);
       }
-    }, [user])
+    }, [user, navigation])
   );
 
   useEffect(() => {
-    if (user?.userPreferenceId) {
+    if (user?.userPreferenceId && !user?.userPreference) {
       loadUserPreference();
+    } else {
+      setUserPreference(user?.userPreference || {});
     }
-  }, [user?.userPreferenceId]);
+  }, [user?.userPreferenceId, user?.userPreference]);
 
   const loadUserPreference = async () => {
-    if (!user) return;
+    if (!user?._id || !user?.userPreferenceId) return;
     setIsFetchingPreferences(true);
     setError(null);
 
     try {
-      if (!user?.userPreferenceId) {
-        await handleCreateUserPreference();
-        return;
-      }
-
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Request timeout")), 30000)
       );
       const responsePromise = quizService.getUserPreferenceByUserPreferenceId(
-        user?.userPreferenceId
+        user.userPreferenceId
       );
       const response = await Promise.race([responsePromise, timeoutPromise]);
 
       if (response?.data) {
-        setUserPreference(response.data || {});
+        const preferences = response.data || {};
+        setUserPreference(preferences);
+        dispatch(
+          updateUserAct({
+            ...user,
+            userPreference: {
+              ...preferences,
+              favorite: Array.isArray(preferences.favorite) ? preferences.favorite : [],
+              hate: Array.isArray(preferences.hate) ? preferences.hate : [],
+            },
+          })
+        );
       } else {
         throw new Error("Failed to load user preferences");
       }
@@ -106,11 +120,11 @@ function Profile({ navigation }) {
       age: "",
       diet: "",
       eatHabit: [],
-      email: user?.email,
+      email: user?.email || "",
       favorite: [],
       longOfPlan: "",
       mealNumber: "",
-      name: user.username,
+      name: user?.username || "",
       goal: "",
       sleepTime: "",
       waterDrink: "",
@@ -131,8 +145,19 @@ function Profile({ navigation }) {
     try {
       const response = await createUserPreference(emptyUserPreferenceData);
       if (response.status === 201) {
-        dispatch(updateUserAct({ ...user, userPreferenceId: response.data._id }));
-        await loadUserPreference();
+        const newPreference = response.data || {};
+        dispatch(
+          updateUserAct({
+            ...user,
+            userPreferenceId: newPreference._id,
+            userPreference: {
+              ...newPreference,
+              favorite: Array.isArray(newPreference.favorite) ? newPreference.favorite : [],
+              hate: Array.isArray(newPreference.hate) ? newPreference.hate : [],
+            },
+          })
+        );
+        setUserPreference(newPreference);
       } else {
         ShowToast("error", "Failed to create user preferences");
       }
@@ -145,43 +170,50 @@ function Profile({ navigation }) {
     toggleTheme();
   };
 
-  const handleEditHealth = async (data) => {
+  const handleEditHealth = async () => {
     try {
-      const response = await resetUserPreference(user?.userPreferenceId);
+      if (!user?._id) {
+        ShowToast("error", "User not found. Please log in again.");
+        navigation.navigate(ScreensName.signin);
+        return;
+      }
+      if (!user.userPreferenceId) {
+        await handleCreateUserPreference(); // Create new preference instead of throwing error
+        ShowToast("success", "Please complete the survey to provide more information.");
+        navigation.navigate(ScreensName.home);
+        return;
+      }
+      console.log("User before deletion:", user);
+
+      const response = await deleteUserPreference(user.userPreferenceId);
+      console.log("Delete response:", response);
 
       if (response.success) {
-        // Clear userPreference state
         setUserPreference({});
-
-        // Update Redux state to remove userPreferenceId and userPreference
         const updatedUser = {
           ...user,
           userPreferenceId: null,
           userPreference: null,
         };
+        console.log("Updated user:", updatedUser);
         dispatch(updateUserAct(updatedUser));
-
-        // Remove quizData from AsyncStorage
         await AsyncStorage.removeItem("quizData");
-
         ShowToast(
           "success",
-          "You have reset the survey. Please complete it to provide more information."
+          "User preference has been deleted. Please complete the survey to provide more information."
         );
-
-        // Navigate to the survey screen
-        navigation.navigate(ScreensName.survey);
+        navigation.navigate(ScreensName.home);
       } else {
-        throw new Error("Failed to reset health information");
+        throw new Error(response.message);
       }
     } catch (err) {
-      ShowToast("error", "Failed to reset health information. Please try again later.");
+      ShowToast(
+        "error",
+        err.message || "Failed to delete health information. Please try again later."
+      );
       console.error("handleEditHealth error:", err);
     } finally {
-      setModalVisible({
-        ...modalVisible,
-        EditHealthModal: false,
-      });
+      setModalVisible({ ...modalVisible, EditHealthModal: false });
     }
   };
 
@@ -192,8 +224,16 @@ function Profile({ navigation }) {
 
       if (response.status === 200) {
         ShowToast("success", "Profile updated successfully");
-        dispatch(updateUserAct(response.data?.data?.user || {}));
-        await loadUserPreference(); // Reload user preferences after updating profile
+        dispatch(
+          updateUserAct({
+            ...user,
+            ...response.data?.data?.user,
+            userPreference: user.userPreference || response.data?.data?.user?.userPreference || {},
+          })
+        );
+        if (user?.userPreferenceId) {
+          await loadUserPreference();
+        }
       } else {
         ShowToast("error", "Failed to update profile");
       }
@@ -201,45 +241,69 @@ function Profile({ navigation }) {
       ShowToast("error", "Unable to update profile. Please try again later.");
     } finally {
       setIsUpdatingProfile(false);
-      setModalVisible({
-        ...modalVisible,
-        EditProfileModal: false,
-      });
+      setModalVisible({ ...modalVisible, EditProfileModal: false });
     }
   };
 
   const handleEditMealPlan = (data) => {
-    setModalVisible({
-      ...modalVisible,
-      EditMealPlanModal: false,
-    });
+    setModalVisible({ ...modalVisible, EditMealPlanModal: false });
   };
 
-  const handleDeleteAccount = async () => {
-    setIsDeletingAccount(true);
-    try {
-      const response = await deleteUser(user?._id);
+  const handleRequestDeleteAccount = () => {
+    setDeletePhase("email");
+    setModalVisible({ ...modalVisible, ConfirmDeleteModal: true });
+  };
 
-      if (response.status === 200) {
-        ShowToast("success", "Account deleted successfully");
-        handleLogout();
-      } else {
-        const message = response?.response?.data?.message || "Something went wrong";
-        ShowToast("error", message);
+  const handleConfirmDeleteAccount = async ({ email, otp }) => {
+    setIsDeletingAccount(true);
+
+    try {
+      if (deletePhase === "email") {
+        if (!email) {
+          ShowToast("error", "Please enter your email");
+          return;
+        }
+
+        const response = await requestDeleteAccount(email);
+        if (response.success) {
+          ShowToast("success", response.message);
+          setDeletePhase("otp");
+        } else {
+          ShowToast("error", response.message);
+        }
+      } else if (deletePhase === "otp") {
+        if (!email || !otp) {
+          ShowToast("error", "Email and OTP are required");
+          return;
+        }
+
+        const response = await confirmDeleteAccount(email, otp);
+        if (response.success) {
+          ShowToast("success", response.message);
+          handleLogout();
+        } else {
+          ShowToast("error", response.message);
+        }
       }
     } catch (err) {
-      ShowToast("error", "Unable to delete account. Please try again later.");
+      ShowToast(
+        "error",
+        `Unable to ${
+          deletePhase === "email" ? "request" : "confirm"
+        } account deletion. Please try again later.`
+      );
+      console.error(`handleConfirmDeleteAccount error (${deletePhase}):`, err);
     } finally {
       setIsDeletingAccount(false);
-      setModalVisible({
-        ...modalVisible,
-        ConfirmDeleteModal: false,
-      });
+      if (deletePhase === "otp" && !modalVisible.ConfirmDeleteModal) {
+        setModalVisible({ ...modalVisible, ConfirmDeleteModal: false });
+      }
     }
   };
 
   const handleLogout = async () => {
     dispatch(removeUser());
+    await AsyncStorage.removeItem("token");
     navigation.navigate(ScreensName.signin);
   };
 
@@ -271,12 +335,7 @@ function Profile({ navigation }) {
     <NonBottomTabWrapper headerHidden={true}>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }} style={styles.scrollView}>
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => {
-              dispatch(toggleVisible());
-            }}
-            style={styles.backButton}
-          >
+          <TouchableOpacity onPress={() => dispatch(toggleVisible())} style={styles.backButton}>
             <Ionicons name="reorder-three" size={24} color={theme.textColor} />
           </TouchableOpacity>
           <Text style={{ ...styles.headerTitle, color: theme.textColor }}>My Profile</Text>
@@ -290,17 +349,16 @@ function Profile({ navigation }) {
             style={styles.profileImage}
           />
           <View style={styles.profileInfoContainer}>
-            <Text style={{ ...styles.profileName, color: theme.textColor }}>{user?.username}</Text>
-            <Text style={{ ...styles.profileEmail, color: theme.textColor }}>{user?.email}</Text>
+            <Text style={{ ...styles.profileName, color: theme.textColor }}>
+              {user?.username || "N/A"}
+            </Text>
+            <Text style={{ ...styles.profileEmail, color: theme.textColor }}>
+              {user?.email || "N/A"}
+            </Text>
             <View style={styles.editButtonContainer}>
               <TouchableOpacity
                 style={styles.editButton}
-                onPress={() => {
-                  setModalVisible({
-                    ...modalVisible,
-                    EditProfileModal: true,
-                  });
-                }}
+                onPress={() => setModalVisible({ ...modalVisible, EditProfileModal: true })}
               >
                 <Text style={{ ...styles.editButtonText, color: "white" }}>Edit Profile</Text>
               </TouchableOpacity>
@@ -311,9 +369,7 @@ function Profile({ navigation }) {
         <View style={styles.menuContainer}>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => {
-              navigation.navigate(ScreensName.favorList);
-            }}
+            onPress={() => navigation.navigate(ScreensName.favorList)}
           >
             <Ionicons name="heart-outline" size={24} color={theme.textColor} />
             <Text style={{ ...styles.menuText, color: theme.textColor }}>Favorites</Text>
@@ -322,12 +378,7 @@ function Profile({ navigation }) {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => {
-              setModalVisible({
-                ...modalVisible,
-                EditHealthModal: true,
-              });
-            }}
+            onPress={() => setModalVisible({ ...modalVisible, EditHealthModal: true })}
           >
             <Ionicons name="body-outline" size={24} color={theme.textColor} />
             <Text style={{ ...styles.menuText, color: theme.textColor }}>Health Information</Text>
@@ -338,11 +389,9 @@ function Profile({ navigation }) {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => {
-              navigation.navigate(ScreensName.changePassword, {
-                type: "changePassword",
-              });
-            }}
+            onPress={() =>
+              navigation.navigate(ScreensName.changePassword, { type: "changePassword" })
+            }
           >
             <FontAwesomeIcon name="edit" size={24} color={theme.textColor} />
             <Text style={{ ...styles.menuText, color: theme.textColor }}>Change password</Text>
@@ -361,12 +410,8 @@ function Profile({ navigation }) {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => {
-              setModalVisible({
-                ...modalVisible,
-                ConfirmDeleteModal: true,
-              });
-            }}
+            onPress={handleRequestDeleteAccount}
+            disabled={isDeletingAccount}
           >
             <Ionicons name="trash-bin-outline" size={24} color={theme.textColor} />
             <Text style={{ ...styles.menuText, color: theme.textColor }}>Delete Account</Text>
@@ -391,40 +436,31 @@ function Profile({ navigation }) {
 
       <EditHealthModal
         visible={modalVisible.EditHealthModal}
-        onClose={() => {
-          setModalVisible({ ...modalVisible, EditHealthModal: false });
-        }}
-        onSave={(data) => {
-          handleEditHealth(data);
-        }}
+        onClose={() => setModalVisible({ ...modalVisible, EditHealthModal: false })}
+        onSave={handleEditHealth}
         userPreference={userPreference}
       />
       <EditMealPlanModal
         visible={modalVisible.EditMealPlanModal}
-        onClose={() => {
-          setModalVisible({ ...modalVisible, EditMealPlanModal: false });
-        }}
-        onSave={(data) => {
-          handleEditMealPlan(data);
-        }}
+        onClose={() => setModalVisible({ ...modalVisible, EditMealPlanModal: false })}
+        onSave={handleEditMealPlan}
       />
       <EditProfileModal
         visible={modalVisible.EditProfileModal}
-        onClose={() => {
-          setModalVisible({ ...modalVisible, EditProfileModal: false });
-        }}
-        onSave={(data) => {
-          handleEditProfile(data);
-        }}
-        userPreference={userPreference} // Pass userPreference as a prop
+        onClose={() => setModalVisible({ ...modalVisible, EditProfileModal: false })}
+        onSave={handleEditProfile}
+        userPreference={userPreference}
         readOnly={false}
       />
       <ConfirmDeleteAccountModal
         visible={modalVisible.ConfirmDeleteModal}
         onClose={() => {
           setModalVisible({ ...modalVisible, ConfirmDeleteModal: false });
+          setDeletePhase("email");
         }}
-        onSubmit={handleDeleteAccount}
+        onSubmit={handleConfirmDeleteAccount}
+        phase={deletePhase}
+        userEmail={user?.email || ""}
       />
     </NonBottomTabWrapper>
   );

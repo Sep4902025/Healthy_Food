@@ -259,3 +259,73 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* UserSidebar Styles */
+.user-container-1 {
+  width: 220px; /* Match profile-sidebar width */
+  background-color: #f8f8f8; /* Consistent with profile-sidebar */
+  padding-left: 10px; /* Consistent padding */
+  border-right: 1px solid #eaeaea; /* Match border */
+  min-height: 600px; /* Match edit-profile-container */
+}
+
+.user-list {
+  list-style: none; /* Remove default bullets */
+  padding: 0;
+  margin: 0;
+}
+
+.user-item {
+  width: 200px;
+  display: flex;
+  align-items: center; /* Align icon and text */
+  padding: 15px 10px; /* Consistent with profile-menu */
+  color: #666; /* Match profile-menu text color */
+  font-size: 16px; /* Consistent font size */
+  font-weight: 500; /* Medium weight */
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s; /* Smooth transitions */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; /* Match system font stack */
+}
+
+.user-item i {
+  margin-right: 15px; /* Consistent with menu-icon */
+  font-size: 20px; /* Slightly larger for visibility */
+  color: #e74c3c; /* Match menu-icon color */
+}
+
+.user-item:hover {
+  width: 200px;
+  background-color: #f0f0f0; /* Match profile-menu hover */
+  color: #333; /* Darker text on hover */
+}
+
+.user-item.selected {
+  width: 200px;
+  background-color: #54d77e; /* Match edit-profile-header for active state */
+  color: #333; /* White text for contrast */
+  font-weight: 600; /* Slightly bolder */
+}
+
+.user-item.selected i {
+  color: #fff; /* White icon for active state */
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .user-container-1 {
+    width: 100%; /* Full width on small screens */
+    padding: 10px 0; /* Reduced padding */
+    border-right: none; /* Remove border for mobile */
+    border-bottom: 1px solid #eaeaea; /* Add bottom border for separation */
+  }
+
+  .user-item {
+    padding: 12px 15px; /* Smaller padding for mobile */
+    font-size: 14px; /* Smaller font size */
+  }
+
+  .user-item i {
+    font-size: 18px; /* Adjust icon size */
+  }
+}

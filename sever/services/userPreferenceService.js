@@ -245,32 +245,36 @@ exports.softDeleteUserPreference = async (id) => {
 
 // Xóa vĩnh viễn User Preference
 exports.deleteUserPreference = async (id) => {
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return {
+        success: false,
+        message: "Invalid ID!",
+      };
+    }
+
+    const deletedPreference = await UserPreferenceModel.findByIdAndDelete(id);
+    if (!deletedPreference) {
+      return {
+        success: false,
+        message: "User Preference not found!",
+      };
+    }
+
+    await UserModel.findOneAndUpdate({ userPreferenceId: id }, { userPreferenceId: null });
+
+    return {
+      success: true,
+      message:
+        "User Preference has been permanently deleted and userPreferenceId has been removed!",
+    };
+  } catch (error) {
+    console.error("Error deleting user preference:", error);
     return {
       success: false,
-      message: "ID không hợp lệ!",
+      message: "Server error: " + error.message,
     };
   }
-
-  const deletedPreference = await UserPreferenceModel.findByIdAndDelete(id);
-  if (!deletedPreference) {
-    return {
-      success: false,
-      message: "Không tìm thấy sở thích người dùng!",
-    };
-  }
-
-  const updatedUser = await UserModel.findOneAndUpdate(
-    { userPreferenceId: id },
-    { userPreferenceId: null },
-    { new: true }
-  );
-
-  return {
-    success: true,
-    message: "Sở thích người dùng đã được xóa vĩnh viễn và userPreferenceId đã được xóa!",
-    data: { deletedPreference, updatedUser },
-  };
 };
 
 // Tìm kiếm User Preferences theo tên
@@ -344,29 +348,7 @@ exports.filterUserPreferencesByDiet = async (query) => {
 };
 
 // Reset User Preference
-// Reset User Preference
 exports.resetUserPreference = async (userPreferenceId) => {
-  const defaultValues = {
-    age: "",
-    diet: "",
-    eatHabit: [],
-    favorite: [],
-    longOfPlan: "",
-    mealNumber: "0",
-    goal: "",
-    sleepTime: "",
-    waterDrink: "",
-    hate: [],
-    weight: 0,
-    weightGoal: 0,
-    height: 0,
-    gender: "",
-    phoneNumber: "",
-    underDisease: [],
-    theme: false,
-    isDelete: false,
-  };
-
   try {
     // Kiểm tra xem userPreference có tồn tại không
     const existingPreference = await UserPreferenceModel.findOne({
@@ -381,36 +363,19 @@ exports.resetUserPreference = async (userPreferenceId) => {
       };
     }
 
-    // Cập nhật UserPreference
-    const updatedPreference = await UserPreferenceModel.findByIdAndUpdate(
-      userPreferenceId,
-      { $set: defaultValues },
-      { new: true }
-    );
+    // Xóa UserPreference
+    await UserPreferenceModel.findByIdAndDelete(userPreferenceId);
 
-    if (!updatedPreference) {
-      return {
-        status: "fail",
-        message: "User Preference could not be updated",
-      };
-    }
-
-    // Tìm và cập nhật UserModel để xóa userPreferenceId
-    const user = await UserModel.findOneAndUpdate(
+    // Cập nhật UserModel để xóa userPreferenceId
+    await UserModel.findOneAndUpdate(
       { userPreferenceId: userPreferenceId },
-      { $unset: { userPreferenceId: "" } }, // Xóa trường userPreferenceId
-      { new: true }
+      { $unset: { userPreferenceId: "" } }
     );
-
-    if (!user) {
-      console.warn(`No user found with userPreferenceId: ${userPreferenceId}`);
-      // Không trả về lỗi vì reset preference vẫn thành công
-    }
 
     return {
       status: "success",
-      message: "User Preference reset successfully",
-      data: updatedPreference,
+      message:
+        "The user ownership has been permanently deleted and the userPreferenceId has been deleted!",
     };
   } catch (error) {
     console.error("Error resetting user preference:", error);

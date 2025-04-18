@@ -150,6 +150,8 @@ exports.resendOTP = async (body) => {
     };
   }
 };
+
+// Đăng kí tài khoản
 exports.verifyOtp = async (body) => {
   const { email, otp } = body;
 
@@ -462,5 +464,125 @@ exports.changePassword = async (body, reqUser) => {
   return {
     success: true,
     data: { user },
+  };
+};
+
+// Yêu cầu xóa tài khoản
+exports.requestDeleteAccount = async (body) => {
+  const { email } = body;
+
+  if (!email) {
+    return {
+      success: false,
+      error: new AppError("Email is required to delete account", 400),
+    };
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return {
+      success: false,
+      error: new AppError("Invalid email format", 400),
+    };
+  }
+
+  // Check if email exists
+  const user = await UserModel.findOne({ email });
+  if (!user) {
+    return {
+      success: false,
+      error: new AppError("No user found with that email", 404),
+    };
+  }
+
+  // Generate OTP and set expiration (10 minutes)
+  const newOtp = generateOtp();
+  const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  // Delete any existing OTP for this email
+  await TempOTP.deleteOne({ email });
+
+  // Store OTP in TempOTP collection
+  await TempOTP.create({
+    email,
+    otp: newOtp,
+    otpExpires,
+  });
+
+  // Send OTP via email
+  try {
+    await sendEmail({
+      email,
+      subject: "OTP for Account Deletion",
+      html: `<h1>Your OTP for account deletion is ${newOtp}</h1><p>This OTP is valid for 10 minutes.</p>`,
+    });
+
+    return {
+      success: true,
+      status: "success",
+      message: "An OTP has been sent to your email to confirm account deletion.",
+    };
+  } catch (error) {
+    // Delete OTP if email sending fails
+    await TempOTP.deleteOne({ email });
+    return {
+      success: false,
+      error: new AppError("There was an error sending the email. Please try again.", 500),
+    };
+  }
+};
+
+// Xác nhận xóa tài khoản
+exports.confirmDeleteAccount = async (body) => {
+  const { email, otp } = body;
+
+  if (!email || !otp) {
+    return {
+      success: false,
+      error: new AppError("Email and OTP are required", 400),
+    };
+  }
+
+  // Check OTP in TempOTP
+  const tempOtp = await TempOTP.findOne({ email, otp });
+
+  if (!tempOtp) {
+    return {
+      success: false,
+      error: new AppError("Invalid OTP", 400),
+    };
+  }
+
+  // Check expiration
+  if (tempOtp.otpExpires < Date.now()) {
+    await TempOTP.deleteOne({ email });
+    return {
+      success: false,
+      error: new AppError("OTP has expired. Please request a new one.", 400),
+    };
+  }
+
+  // Find user
+  const user = await UserModel.findOne({ email });
+  if (!user) {
+    await TempOTP.deleteOne({ email });
+    return {
+      success: false,
+      error: new AppError("User not found", 404),
+    };
+  }
+
+  // Soft delete user by setting isDelete to true
+  user.isDelete = true;
+  await user.save({ validateBeforeSave: false });
+
+  // Delete OTP
+  await TempOTP.deleteOne({ email });
+
+  return {
+    success: true,
+    status: "success",
+    message: "Account deleted successfully.",
   };
 };

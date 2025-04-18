@@ -10,15 +10,23 @@ import {
   FaRuler,
   FaCalculator,
   FaKey,
+  FaEye,
+  FaEyeSlash,
 } from "react-icons/fa";
 import quizService from "../../../../services/quizService";
 import { selectUser } from "../../../../store/selectors/authSelectors";
 import axios from "axios";
 import UserProfileUpdate from "../../UpdateUser";
 import AuthService from "../../../../services/auth.service";
+
 import uploadFile from "../../../../helpers/uploadFile";
 import { updateUser } from "../../../../store/actions/authActions";
 import { toast } from "react-toastify";
+import { getFavoriteNamesByIds } from "../../../survey/Favorite";
+import { getHateNamesByIds } from "../../../survey/Hate";
+import medicalConditionService from "../../../../services/nutritionist/medicalConditionServices";
+import { loginSuccess } from "../../../../store/slices/authSlice";
+import UserService from "../../../../services/user.service";
 
 const UserProfile = () => {
   const user = useSelector(selectUser);
@@ -28,18 +36,26 @@ const UserProfile = () => {
   const [userData, setUserData] = useState(null);
   const [resetInProgress, setResetInProgress] = useState(false);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
-  const [passwordChangeInProgress, setPasswordChangeInProgress] = useState(false); // Đổi tên biến
-  const [showChangePassword, setShowChangePassword] = useState(false); // Đổi tên state
+  const [passwordChangeInProgress, setPasswordChangeInProgress] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [otp, setOtp] = useState(["", "", "", ""]); // Updated to 4-digit OTP
+  const [otpError, setOtpError] = useState("");
+  const inputRefs = useRef([]);
   const [passwordData, setPasswordData] = useState({
-    currentPassword: "", // Đổi từ email thành currentPassword
-    newPassword: "", // Đổi từ password thành newPassword
-    newPasswordConfirm: "", // Đổi từ passwordConfirm thành newPasswordConfirm
+    currentPassword: "",
+    newPassword: "",
+    newPasswordConfirm: "",
   });
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null); // For image preview
+  const [previewImage, setPreviewImage] = useState(null);
   const fileInputRef = useRef(null);
+  const [medicalConditionNames, setMedicalConditionNames] = useState([]);
+
   const fetchUserData = async () => {
     if (!user || !user._id) {
       console.error("🚨 User or user._id does not exist:", user);
@@ -58,13 +74,26 @@ const UserProfile = () => {
       );
       if (success) {
         setUserData(data);
+        if (data.underDisease && Array.isArray(data.underDisease)) {
+          const names = await Promise.all(
+            data.underDisease.map(async (id) => {
+              const result = await medicalConditionService.getMedicalConditionById(id);
+              return result.success ? result.data.name : "Unknown";
+            })
+          );
+          setMedicalConditionNames(names);
+        } else {
+          setMedicalConditionNames(["None"]);
+        }
       } else {
         console.error("🚨 Error fetching userPreference data:", message);
         setUserData(null);
+        setMedicalConditionNames(["None"]);
       }
     } catch (error) {
       console.error("🚨 Error in fetchUserData:", error);
       setUserData(null);
+      setMedicalConditionNames(["None"]);
     } finally {
       setLoading(false);
     }
@@ -80,8 +109,19 @@ const UserProfile = () => {
     }
   }, [user, navigate]);
 
+  useEffect(() => {
+    if (showOtpModal && inputRefs.current[0]) {
+      inputRefs.current[0].focus();
+    }
+  }, [showOtpModal]);
+
   const handleEditClick = () => {
     setShowEditModal(true);
+  };
+
+  const handleReSurvey = () => {
+    setShowEditModal(true);
+    navigate("/survey/name");
   };
 
   const handleReset = async () => {
@@ -89,16 +129,21 @@ const UserProfile = () => {
       toast.error("No userPreferenceId found to delete!");
       return;
     }
-    const confirmReset = window.confirm(
-      "Are you sure you want to delete all personal information? This action cannot be undone."
-    );
-    if (!confirmReset) return;
     try {
       setResetInProgress(true);
       const { success, message } = await quizService.deleteUserPreference(user.userPreferenceId);
       if (success) {
         toast.success("Information deleted successfully");
         setUserData(null);
+        setMedicalConditionNames(["None"]);
+        const updatedUser = { ...user, userPreferenceId: null };
+        dispatch(
+          loginSuccess({
+            user: updatedUser,
+            token: localStorage.getItem("token"),
+          })
+        );
+        console.log("✅ Updated user in Redux after reset:", updatedUser);
         fetchUserData();
       } else {
         toast.error(`Error deleting: ${message}`);
@@ -143,9 +188,9 @@ const UserProfile = () => {
           newPassword: "",
           newPasswordConfirm: "",
         });
-        localStorage.removeItem("token"); // Xóa token
-        localStorage.removeItem("username"); // Xóa username nếu có
-        navigate("/signin"); // Chuyển về trang đăng nhập
+        localStorage.removeItem("token");
+        localStorage.removeItem("username");
+        navigate("/signin");
       } else {
         toast.error(`Error: ${result.message || "Unable to change password"}`);
       }
@@ -156,35 +201,147 @@ const UserProfile = () => {
     }
   };
 
-  const handleDeleteUser = async () => {
-    if (!user || !user._id) {
-      toast.error("No user information found to delete!");
+  const handleRequestDeleteAccount = async () => {
+    if (!deleteEmail) {
+      toast.error("Email is required!");
       return;
     }
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this account? This action cannot be undone, and you will be logged out!"
-    );
-    if (!confirmDelete) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(deleteEmail)) {
+      toast.error("Invalid email format!");
+      return;
+    }
     try {
       setDeleteInProgress(true);
-      const { success, message } = await quizService.deleteUserById(user._id);
-      if (success) {
-        toast.success("Account deleted successfully!");
-        localStorage.removeItem("token");
-        navigate("/signin");
+      const result = await UserService.requestDeleteAccount(deleteEmail);
+      if (result.success) {
+        toast.success(result.message);
+        sessionStorage.setItem("deleteEmail", deleteEmail);
+        setShowDeleteAccount(false);
+        setShowOtpModal(true);
       } else {
-        toast.error(`Error deleting account: ${message}`);
+        toast.error(result.message);
       }
     } catch (error) {
-      toast.error("An error occurred while deleting the account!");
-      console.error("🚨 Delete user error:", error);
+      toast.error("An error occurred while requesting account deletion!");
+      console.error("🚨 Request delete account error:", error);
     } finally {
       setDeleteInProgress(false);
     }
   };
 
+  const handleConfirmDeleteAccount = async () => {
+    const email = sessionStorage.getItem("deleteEmail");
+    if (!email) {
+      toast.error("Missing email data. Please request OTP again.");
+      setOtpError("Missing email data. Please request OTP again.");
+      return;
+    }
+    const otpValue = otp.join("");
+    if (otpValue.length !== 4) {
+      // Updated to check for 4-digit OTP
+      toast.error("Please enter a valid 4-digit OTP!");
+      setOtpError("Please enter a valid 4-digit OTP!");
+      return;
+    }
+    try {
+      setDeleteInProgress(true);
+      const result = await UserService.confirmDeleteAccount(email, otpValue);
+      if (result.success) {
+        toast.success(result.message);
+        sessionStorage.removeItem("deleteEmail");
+        localStorage.removeItem("token");
+        localStorage.removeItem("username");
+        navigate("/signin");
+      } else {
+        toast.error(result.message);
+        setOtpError(result.message);
+      }
+    } catch (error) {
+      toast.error("An error occurred while deleting the account!");
+      setOtpError("An error occurred while deleting the account!");
+      console.error("🚨 Confirm delete account error:", error);
+    } finally {
+      setDeleteInProgress(false);
+      setShowOtpModal(false);
+      setOtp(["", "", "", ""]); // Reset to 4-digit OTP
+      setOtpError("");
+    }
+  };
+
+  const handleResendOTP = async () => {
+    const email = sessionStorage.getItem("deleteEmail");
+    if (!email) {
+      toast.error("Missing email data. Please request OTP again.");
+      setOtpError("Missing email data. Please request OTP again.");
+      return;
+    }
+    try {
+      const result = await UserService.requestDeleteAccount(email);
+      if (result.success) {
+        toast.success("A new OTP has been sent to your email.");
+        setOtpError("");
+      } else {
+        toast.error(result.message);
+        setOtpError(result.message);
+      }
+    } catch (error) {
+      toast.error("An error occurred while resending OTP!");
+      setOtpError("An error occurred while resending OTP!");
+      console.error("🚨 Resend OTP error:", error);
+    }
+  };
+
+  const handleOtpChange = (index, event) => {
+    const { value } = event.target;
+    const newOtp = [...otp];
+
+    if (/^[0-9]?$/.test(value)) {
+      newOtp[index] = value;
+      setOtp(newOtp);
+      setOtpError("");
+
+      if (value && index < otp.length - 1) {
+        inputRefs.current[index + 1].focus();
+      }
+    }
+  };
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handleOtpPaste = (event) => {
+    event.preventDefault();
+    const pasteData = event.clipboardData.getData("text").trim();
+
+    if (/^\d{4}$/.test(pasteData)) {
+      // Updated to check for 4-digit OTP
+      const newOtp = pasteData.split("");
+      setOtp(newOtp);
+      setOtpError("");
+      inputRefs.current[3].focus(); // Focus on last input
+    } else {
+      setOtpError("Invalid OTP format. Please paste a 4-digit number.");
+    }
+  };
+
   const handleUpdateProfile = (updatedData) => {
     setUserData((prev) => ({ ...prev, ...updatedData }));
+    if (updatedData.underDisease) {
+      if (updatedData.underDisease && Array.isArray(updatedData.underDisease)) {
+        Promise.all(
+          updatedData.underDisease.map(async (id) => {
+            const result = await medicalConditionService.getMedicalConditionById(id);
+            return result.success ? result.data.name : "Unknown";
+          })
+        ).then((names) => setMedicalConditionNames(names));
+      } else {
+        setMedicalConditionNames(["None"]);
+      }
+    }
   };
 
   const handleFileChange = (e) => {
@@ -200,7 +357,6 @@ const UserProfile = () => {
       toast.error("No image selected to upload!");
       return;
     }
-
     setUploading(true);
     try {
       const result = await uploadFile(
@@ -209,17 +365,12 @@ const UserProfile = () => {
         (cancel) => console.log("Upload canceled")
       );
       const avatarUrl = result.secure_url;
-
-      // Đảm bảo _id là string
       const userId = typeof user._id === "object" && user._id.$oid ? user._id.$oid : user._id;
-      const userData = { _id: userId, avatarUrl }; // Only send necessary fields
-
+      const userData = { _id: userId, avatarUrl };
       const updatedUser = await dispatch(updateUser(userData));
       if (!updatedUser) {
         throw new Error("Failed to update user");
       }
-
-      // Update local state with the full updated user
       setUserData((prev) => ({ ...prev, ...updatedUser }));
     } catch (error) {
       console.error("🚨 Error uploading avatar:", error);
@@ -233,10 +384,12 @@ const UserProfile = () => {
       }
     }
   };
+
   const handleCancelPreview = () => {
     setPreviewImage(null);
-    fileInputRef.current.value = null; // Reset input file
+    fileInputRef.current.value = null;
   };
+
   const triggerFileInput = () => {
     fileInputRef.current.click();
   };
@@ -312,7 +465,6 @@ const UserProfile = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
-        {/* Sidebar */}
         <aside className="lg:w-1/4 w-full">
           <div className="bg-white p-6 rounded-xl shadow-lg sticky top-6">
             <div className="space-y-4">
@@ -323,7 +475,7 @@ const UserProfile = () => {
                 <FaEdit /> Edit Profile
               </button>
               <button
-                onClick={() => setShowChangePassword(!showChangePassword)} // Đổi tên
+                onClick={() => setShowChangePassword(!showChangePassword)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-300 shadow-md"
               >
                 <FaKey /> Change Password
@@ -336,7 +488,7 @@ const UserProfile = () => {
                 {resetInProgress ? "Deleting..." : "Delete Personal Data"}
               </button>
               <button
-                onClick={handleDeleteUser}
+                onClick={() => setShowDeleteAccount(true)}
                 disabled={deleteInProgress}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-all duration-300 shadow-md disabled:bg-red-400"
               >
@@ -346,14 +498,11 @@ const UserProfile = () => {
           </div>
         </aside>
 
-        {/* Main Content */}
         <main className="lg:w-3/4 w-full">
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            {/* Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-blue-500 p-6 text-white">
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative">
-                  {/* Progress bar khi đang upload */}
                   {uploading && (
                     <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
                       <div
@@ -362,7 +511,6 @@ const UserProfile = () => {
                       ></div>
                     </div>
                   )}
-                  {/* Hiển thị hình ảnh: preview nếu có, nếu không thì avatar hoặc placeholder */}
                   {previewImage ? (
                     <img
                       src={previewImage.url}
@@ -380,7 +528,6 @@ const UserProfile = () => {
                       {user.username ? user.username[0].toUpperCase() : "?"}
                     </div>
                   )}
-                  {/* Nút "X" ở góc trên bên phải, không có background */}
                   {previewImage && (
                     <button
                       onClick={handleCancelPreview}
@@ -390,7 +537,6 @@ const UserProfile = () => {
                       <span className="text-lg font-bold">X</span>
                     </button>
                   )}
-                  {/* Nút Upload hoặc Save */}
                   <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2">
                     {previewImage ? (
                       <button
@@ -433,9 +579,7 @@ const UserProfile = () => {
               </div>
             </div>
 
-            {/* Body */}
             <div className="p-6">
-              {/* Body Measurements */}
               <SectionTitle
                 title="Body Measurements"
                 icon={<FaCalculator className="text-indigo-600" />}
@@ -474,7 +618,6 @@ const UserProfile = () => {
                 </div>
               </div>
 
-              {/* Personal Info */}
               {userData ? (
                 <>
                   <SectionTitle
@@ -509,7 +652,7 @@ const UserProfile = () => {
                     </div>
                     <div>
                       <h4 className="text-lg font-semibold text-gray-700 mb-4">Nutrition Goals</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <InfoItem
                           label="Goal"
                           value={userData.goal}
@@ -519,6 +662,12 @@ const UserProfile = () => {
                         <InfoItem
                           label="Plan Duration"
                           value={userData.longOfPlan}
+                          colorClass="bg-teal-50"
+                          textClass="text-teal-700"
+                        />
+                        <InfoItem
+                          label="Weight Goal"
+                          value={userData.weightGoal}
                           colorClass="bg-teal-50"
                           textClass="text-teal-700"
                         />
@@ -543,19 +692,25 @@ const UserProfile = () => {
                         />
                         <InfoItem
                           label="Favorite Foods"
-                          value={userData.favorite?.join(", ")}
+                          value={getFavoriteNamesByIds(userData.favorite)?.join(", ")}
                           colorClass="bg-yellow-50"
                           textClass="text-yellow-700"
                         />
                         <InfoItem
                           label="Food Allergies"
-                          value={userData.hate?.join(", ")}
+                          value={getHateNamesByIds(userData.hate)?.join(", ")}
                           colorClass="bg-red-50"
                           textClass="text-red-700"
                         />
                         <InfoItem
                           label="Meals per Day"
                           value={userData.mealNumber}
+                          colorClass="bg-amber-50"
+                          textClass="text-amber-700"
+                        />
+                        <InfoItem
+                          label="Activity Level"
+                          value={userData.activityLevel}
                           colorClass="bg-amber-50"
                           textClass="text-amber-700"
                         />
@@ -578,7 +733,7 @@ const UserProfile = () => {
                         />
                         <InfoItem
                           label="Medical Conditions"
-                          value={userData.underDisease || "None"}
+                          value={medicalConditionNames.join(", ") || "None"}
                           colorClass="bg-pink-50"
                           textClass="text-pink-700"
                         />
@@ -591,7 +746,7 @@ const UserProfile = () => {
                   <FaUser className="text-4xl text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 mb-4">No personal data available</p>
                   <button
-                    onClick={handleEditClick}
+                    onClick={handleReSurvey}
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300"
                   >
                     Enter Information Now
@@ -603,7 +758,6 @@ const UserProfile = () => {
         </main>
       </div>
 
-      {/* Change Password Modal */}
       {showChangePassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
@@ -674,7 +828,96 @@ const UserProfile = () => {
         </div>
       )}
 
-      {/* Edit Profile Modal */}
+      {showDeleteAccount && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Delete Account</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={deleteEmail}
+                  onChange={(e) => setDeleteEmail(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Enter your email"
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowDeleteAccount(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRequestDeleteAccount}
+                  disabled={deleteInProgress}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-300 disabled:bg-red-300"
+                >
+                  {deleteInProgress ? "Processing..." : "Request OTP"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showOtpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Verify OTP</h2>
+            <p className="text-gray-600 mb-6">Please enter the 4-digit OTP sent to your email</p>
+            <div className="flex justify-center space-x-2 mb-4">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(el) => (inputRefs.current[index] = el)}
+                  type="text"
+                  className="w-10 h-10 border border-gray-300 rounded text-center text-lg"
+                  maxLength="1"
+                  value={digit}
+                  onChange={(e) => handleOtpChange(index, e)}
+                  onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                  onPaste={handleOtpPaste}
+                />
+              ))}
+            </div>
+            {otpError && <p className="text-red-500 text-sm mb-4">{otpError}</p>}
+            <div className="space-y-4">
+              <button
+                onClick={handleConfirmDeleteAccount}
+                disabled={deleteInProgress}
+                className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-indigo-300"
+              >
+                {deleteInProgress ? "Verifying..." : "Verify OTP"}
+              </button>
+              <p className="text-gray-600 text-center">
+                Didn’t receive OTP?{" "}
+                <span
+                  onClick={handleResendOTP}
+                  className="text-indigo-600 cursor-pointer hover:underline"
+                >
+                  Resend
+                </span>
+              </p>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => {
+                  setShowOtpModal(false);
+                  setOtp(["", "", "", ""]);
+                  setOtpError("");
+                }}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showEditModal && (
         <UserProfileUpdate
           userPreferenceId={user.userPreferenceId}

@@ -9,12 +9,14 @@ import {
   Dimensions,
   Modal,
   Platform,
-  ActivityIndicator, // Import ActivityIndicator for loading
+  ActivityIndicator,
 } from "react-native";
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
 import { useTheme } from "../../contexts/ThemeContext";
 import { normalize } from "../../utils/common";
+import HomeService from "../../services/HomeService";
+import medicalConditionService from "../../services/medicalConditionService";
 
 const HEIGHT = Dimensions.get("window").height;
 
@@ -26,13 +28,61 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     ...userPreference,
   });
   const [bmi, setBmi] = useState(null);
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false);
+  // State to store fetched names
+  const [diseaseNames, setDiseaseNames] = useState([]);
+  const [recommendedFoodNames, setRecommendedFoodNames] = useState([]);
+  const [dislikedFoodNames, setDislikedFoodNames] = useState([]);
+  const [fetchingNames, setFetchingNames] = useState(false);
 
-  // Update healthData when userPreference changes
+  // Update healthData and fetch names when userPreference changes
   useEffect(() => {
     setHealthData(userPreference || {});
     calculateBMI(userPreference?.weight, userPreference?.height);
+    fetchNames();
   }, [userPreference]);
+
+  // Function to fetch names for diseases and ingredients
+  const fetchNames = async () => {
+    if (!userPreference) return;
+    setFetchingNames(true);
+
+    try {
+      // Fetch medical condition names
+      const underDiseaseIds = userPreference?.underDisease || [];
+      const diseasePromises = underDiseaseIds.map((id) =>
+        medicalConditionService
+          .getMedicalConditionById(id)
+          .then((result) => (result.success ? result.data.name : "Unknown"))
+      );
+      const diseases = await Promise.all(diseasePromises);
+      setDiseaseNames(diseases);
+
+      // Fetch recommended food names
+      const recommendedFoodIds = userPreference?.favorite || [];
+      const recommendedPromises = recommendedFoodIds.map((id) =>
+        HomeService.getIngredientById(id)
+          .then((result) => result.data.name || "Unknown")
+          .catch(() => "Unknown")
+      );
+      const recommended = await Promise.all(recommendedPromises);
+      setRecommendedFoodNames(recommended);
+
+      // Fetch disliked food names
+      const dislikedFoodIds = userPreference?.hate || [];
+      const dislikedPromises = dislikedFoodIds.map((id) =>
+        HomeService.getIngredientById(id)
+          .then((result) => result.data.name || "Unknown")
+          .catch(() => "Unknown")
+      );
+      const disliked = await Promise.all(dislikedPromises);
+      setDislikedFoodNames(disliked);
+    } catch (error) {
+      console.error("Error fetching names:", error);
+    } finally {
+      setFetchingNames(false);
+    }
+  };
 
   // Calculate BMI
   const calculateBMI = (weight, height) => {
@@ -48,7 +98,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     }
   };
 
-  // Handle input changes (not used since fields are not editable)
+  // Handle input changes
   const handleInputChange = (field, value) => {
     setHealthData((prev) => {
       const updatedData = { ...prev, [field]: value };
@@ -63,15 +113,13 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
   };
 
   const handleSave = async () => {
-    setLoading(true); // Start loading
-
+    setLoading(true);
     try {
-      // Call onSave to trigger the reset in Profile.jsx
       onSave(healthData);
     } catch (error) {
       console.error("handleSave error:", error);
     } finally {
-      setLoading(false); // Stop loading
+      setLoading(false);
     }
   };
 
@@ -144,7 +192,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
       {
         label: "Underlying Diseases",
         field: "underDisease",
-        value: healthData?.underDisease?.join(", ") ?? "",
+        value: diseaseNames.join(", ") || "",
         keyboardType: "default",
         editable: false,
       },
@@ -162,20 +210,20 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     {
       label: "Recommended Foods",
       field: "recommendedFoods",
-      value: healthData?.recommendedFoods || [],
+      value: recommendedFoodNames || [],
       keyboardType: "default",
       editable: false,
     },
     {
       label: "Disliked Foods",
       field: "hate",
-      value: healthData?.hate || [],
+      value: dislikedFoodNames || [],
       keyboardType: "default",
       editable: false,
     },
   ];
 
-  // Render input field based on field config
+  // Render input field
   const renderInputField = (fieldConfig) => {
     if (!fieldConfig) return <View style={styles.formItem} />;
 
@@ -196,10 +244,11 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     );
   };
 
+  // Render view field (for tags)
   const renderViewField = (fieldConfig) => {
     if (!fieldConfig) return <View style={styles.formItem} />;
 
-    const { label, field, value, keyboardType, editable } = fieldConfig;
+    const { label, field, value } = fieldConfig;
 
     // Ensure value is an array
     const items = Array.isArray(value) ? value : [];
@@ -208,7 +257,9 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
       <View style={styles.formItemFull}>
         <Text style={{ ...styles.label, color: theme.greyTextColor }}>{label}</Text>
         <View style={styles.tagsContainer}>
-          {items.length > 0 ? (
+          {fetchingNames ? (
+            <ActivityIndicator size="small" color={theme.greyTextColor} />
+          ) : items.length > 0 ? (
             items.map((item, index) => (
               <View key={`${field}-${index}`} style={styles.tagItem}>
                 <Text style={styles.tagText}>{item}</Text>
@@ -225,12 +276,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <EditModalHeader onCancel={onClose} />
-      <View
-        style={{
-          ...styles.container,
-          backgroundColor: theme.editModalbackgroundColor,
-        }}
-      >
+      <View style={{ ...styles.container, backgroundColor: theme.editModalbackgroundColor }}>
         <Text style={{ ...styles.headerTitle, color: theme.textColor }}>Health Information</Text>
         <ScrollView style={styles.scrollContent}>
           <View style={styles.formGrid}>
@@ -247,18 +293,19 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
             ))}
           </View>
         </ScrollView>
-
-        <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>Reset</Text>
-          )}
-        </TouchableOpacity>
+        {userPreference && Object.keys(userPreference).length > 0 ? (
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Reset</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
       </View>
     </Modal>
   );
