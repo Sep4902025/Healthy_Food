@@ -18,6 +18,7 @@ import { selectUser } from "../../../../store/selectors/authSelectors";
 import axios from "axios";
 import UserProfileUpdate from "../../UpdateUser";
 import AuthService from "../../../../services/auth.service";
+
 import uploadFile from "../../../../helpers/uploadFile";
 import { updateUser } from "../../../../store/actions/authActions";
 import { toast } from "react-toastify";
@@ -25,8 +26,7 @@ import { getFavoriteNamesByIds } from "../../../survey/Favorite";
 import { getHateNamesByIds } from "../../../survey/Hate";
 import medicalConditionService from "../../../../services/nutritionist/medicalConditionServices";
 import { loginSuccess } from "../../../../store/slices/authSlice";
-
-// Assuming getMedicalConditionById is exported from quizService
+import UserService from "../../../../services/user.service";
 
 const UserProfile = () => {
   const user = useSelector(selectUser);
@@ -36,23 +36,24 @@ const UserProfile = () => {
   const [userData, setUserData] = useState(null);
   const [resetInProgress, setResetInProgress] = useState(false);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
-  const [passwordChangeInProgress, setPasswordChangeInProgress] =
-    useState(false);
+  const [passwordChangeInProgress, setPasswordChangeInProgress] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [otp, setOtp] = useState(["", "", "", ""]); // Updated to 4-digit OTP
+  const [otpError, setOtpError] = useState("");
+  const inputRefs = useRef([]);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
     newPasswordConfirm: "",
   });
-  const [deletePassword, setDeletePassword] = useState("");
-  const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const fileInputRef = useRef(null);
-  // State for medical condition names
   const [medicalConditionNames, setMedicalConditionNames] = useState([]);
 
   const fetchUserData = async () => {
@@ -68,18 +69,15 @@ const UserProfile = () => {
       return;
     }
     try {
-      const { success, data, message } =
-        await quizService.getUserPreferenceByUserPreferenceId(
-          user.userPreferenceId
-        );
+      const { success, data, message } = await quizService.getUserPreferenceByUserPreferenceId(
+        user.userPreferenceId
+      );
       if (success) {
         setUserData(data);
-        // Fetch medical condition names if underDisease exists
         if (data.underDisease && Array.isArray(data.underDisease)) {
           const names = await Promise.all(
             data.underDisease.map(async (id) => {
-              const result =
-                await medicalConditionService.getMedicalConditionById(id);
+              const result = await medicalConditionService.getMedicalConditionById(id);
               return result.success ? result.data.name : "Unknown";
             })
           );
@@ -111,6 +109,12 @@ const UserProfile = () => {
     }
   }, [user, navigate]);
 
+  useEffect(() => {
+    if (showOtpModal && inputRefs.current[0]) {
+      inputRefs.current[0].focus();
+    }
+  }, [showOtpModal]);
+
   const handleEditClick = () => {
     setShowEditModal(true);
   };
@@ -127,15 +131,11 @@ const UserProfile = () => {
     }
     try {
       setResetInProgress(true);
-      const { success, message } = await quizService.deleteUserPreference(
-        user.userPreferenceId
-      );
+      const { success, message } = await quizService.deleteUserPreference(user.userPreferenceId);
       if (success) {
         toast.success("Information deleted successfully");
         setUserData(null);
         setMedicalConditionNames(["None"]);
-
-        // Update Redux store with the updated user data
         const updatedUser = { ...user, userPreferenceId: null };
         dispatch(
           loginSuccess({
@@ -144,7 +144,6 @@ const UserProfile = () => {
           })
         );
         console.log("✅ Updated user in Redux after reset:", updatedUser);
-
         fetchUserData();
       } else {
         toast.error(`Error deleting: ${message}`);
@@ -202,47 +201,140 @@ const UserProfile = () => {
     }
   };
 
-  const handleDeleteUser = async () => {
-    if (!user || !user._id) {
-      toast.error("No user information found to delete!");
+  const handleRequestDeleteAccount = async () => {
+    if (!deleteEmail) {
+      toast.error("Email is required!");
       return;
     }
-    if (!deletePassword) {
-      toast.error("Password is required!");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(deleteEmail)) {
+      toast.error("Invalid email format!");
       return;
     }
     try {
       setDeleteInProgress(true);
-      const { success, message } = await quizService.deleteUserByUserId(
-        user._id,
-        deletePassword
-      );
-      if (success) {
-        toast.success("Account deleted successfully!");
+      const result = await UserService.requestDeleteAccount(deleteEmail);
+      if (result.success) {
+        toast.success(result.message);
+        sessionStorage.setItem("deleteEmail", deleteEmail);
+        setShowDeleteAccount(false);
+        setShowOtpModal(true);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error("An error occurred while requesting account deletion!");
+      console.error("🚨 Request delete account error:", error);
+    } finally {
+      setDeleteInProgress(false);
+    }
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    const email = sessionStorage.getItem("deleteEmail");
+    if (!email) {
+      toast.error("Missing email data. Please request OTP again.");
+      setOtpError("Missing email data. Please request OTP again.");
+      return;
+    }
+    const otpValue = otp.join("");
+    if (otpValue.length !== 4) {
+      // Updated to check for 4-digit OTP
+      toast.error("Please enter a valid 4-digit OTP!");
+      setOtpError("Please enter a valid 4-digit OTP!");
+      return;
+    }
+    try {
+      setDeleteInProgress(true);
+      const result = await UserService.confirmDeleteAccount(email, otpValue);
+      if (result.success) {
+        toast.success(result.message);
+        sessionStorage.removeItem("deleteEmail");
         localStorage.removeItem("token");
+        localStorage.removeItem("username");
         navigate("/signin");
       } else {
-        toast.error(`Error deleting account: ${message}`);
+        toast.error(result.message);
+        setOtpError(result.message);
       }
     } catch (error) {
       toast.error("An error occurred while deleting the account!");
-      console.error("🚨 Delete user error:", error);
+      setOtpError("An error occurred while deleting the account!");
+      console.error("🚨 Confirm delete account error:", error);
     } finally {
       setDeleteInProgress(false);
-      setShowDeleteAccount(false);
-      setDeletePassword("");
+      setShowOtpModal(false);
+      setOtp(["", "", "", ""]); // Reset to 4-digit OTP
+      setOtpError("");
+    }
+  };
+
+  const handleResendOTP = async () => {
+    const email = sessionStorage.getItem("deleteEmail");
+    if (!email) {
+      toast.error("Missing email data. Please request OTP again.");
+      setOtpError("Missing email data. Please request OTP again.");
+      return;
+    }
+    try {
+      const result = await UserService.requestDeleteAccount(email);
+      if (result.success) {
+        toast.success("A new OTP has been sent to your email.");
+        setOtpError("");
+      } else {
+        toast.error(result.message);
+        setOtpError(result.message);
+      }
+    } catch (error) {
+      toast.error("An error occurred while resending OTP!");
+      setOtpError("An error occurred while resending OTP!");
+      console.error("🚨 Resend OTP error:", error);
+    }
+  };
+
+  const handleOtpChange = (index, event) => {
+    const { value } = event.target;
+    const newOtp = [...otp];
+
+    if (/^[0-9]?$/.test(value)) {
+      newOtp[index] = value;
+      setOtp(newOtp);
+      setOtpError("");
+
+      if (value && index < otp.length - 1) {
+        inputRefs.current[index + 1].focus();
+      }
+    }
+  };
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handleOtpPaste = (event) => {
+    event.preventDefault();
+    const pasteData = event.clipboardData.getData("text").trim();
+
+    if (/^\d{4}$/.test(pasteData)) {
+      // Updated to check for 4-digit OTP
+      const newOtp = pasteData.split("");
+      setOtp(newOtp);
+      setOtpError("");
+      inputRefs.current[3].focus(); // Focus on last input
+    } else {
+      setOtpError("Invalid OTP format. Please paste a 4-digit number.");
     }
   };
 
   const handleUpdateProfile = (updatedData) => {
     setUserData((prev) => ({ ...prev, ...updatedData }));
-    // Refetch medical condition names if underDisease is updated
     if (updatedData.underDisease) {
       if (updatedData.underDisease && Array.isArray(updatedData.underDisease)) {
         Promise.all(
           updatedData.underDisease.map(async (id) => {
-            const result =
-              await medicalConditionService.getMedicalConditionById(id);
+            const result = await medicalConditionService.getMedicalConditionById(id);
             return result.success ? result.data.name : "Unknown";
           })
         ).then((names) => setMedicalConditionNames(names));
@@ -273,10 +365,7 @@ const UserProfile = () => {
         (cancel) => console.log("Upload canceled")
       );
       const avatarUrl = result.secure_url;
-      const userId =
-        typeof user._id === "object" && user._id.$oid
-          ? user._id.$oid
-          : user._id;
+      const userId = typeof user._id === "object" && user._id.$oid ? user._id.$oid : user._id;
       const userData = { _id: userId, avatarUrl };
       const updatedUser = await dispatch(updateUser(userData));
       if (!updatedUser) {
@@ -285,9 +374,7 @@ const UserProfile = () => {
       setUserData((prev) => ({ ...prev, ...updatedUser }));
     } catch (error) {
       console.error("🚨 Error uploading avatar:", error);
-      toast.error(
-        `An error occurred while uploading the avatar: ${error.message}`
-      );
+      toast.error(`An error occurred while uploading the avatar: ${error.message}`);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -311,8 +398,7 @@ const UserProfile = () => {
     if (userData) {
       const weight = parseFloat(userData.weight);
       const heightCm = parseFloat(userData.height);
-      if (!weight || !heightCm || weight <= 0 || heightCm <= 0)
-        return "No data";
+      if (!weight || !heightCm || weight <= 0 || heightCm <= 0) return "No data";
       const heightM = heightCm / 100;
       return (weight / (heightM * heightM)).toFixed(2);
     }
@@ -327,10 +413,8 @@ const UserProfile = () => {
         color: "text-gray-600",
         bg: "bg-gray-100",
       };
-    if (bmi < 18)
-      return { text: "Underweight", color: "text-blue-600", bg: "bg-blue-100" };
-    if (bmi < 30)
-      return { text: "Normal", color: "text-green-600", bg: "bg-green-100" };
+    if (bmi < 18) return { text: "Underweight", color: "text-blue-600", bg: "bg-blue-100" };
+    if (bmi < 30) return { text: "Normal", color: "text-green-600", bg: "bg-green-100" };
     if (bmi < 40)
       return {
         text: "Overweight",
@@ -381,7 +465,6 @@ const UserProfile = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
-        {/* Sidebar */}
         <aside className="lg:w-1/4 w-full">
           <div className="bg-white p-6 rounded-xl shadow-lg sticky top-6">
             <div className="space-y-4">
@@ -415,10 +498,8 @@ const UserProfile = () => {
           </div>
         </aside>
 
-        {/* Main Content */}
         <main className="lg:w-3/4 w-full">
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            {/* Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-blue-500 p-6 text-white">
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative">
@@ -498,7 +579,6 @@ const UserProfile = () => {
               </div>
             </div>
 
-            {/* Body */}
             <div className="p-6">
               <SectionTitle
                 title="Body Measurements"
@@ -510,8 +590,7 @@ const UserProfile = () => {
                   <div>
                     <p className="text-gray-600">Weight</p>
                     <p className="text-xl font-semibold text-blue-700">
-                      {userData?.weight || "?"}{" "}
-                      <span className="text-sm">kg</span>
+                      {userData?.weight || "?"} <span className="text-sm">kg</span>
                     </p>
                   </div>
                 </div>
@@ -520,8 +599,7 @@ const UserProfile = () => {
                   <div>
                     <p className="text-gray-600">Height</p>
                     <p className="text-xl font-semibold text-green-700">
-                      {userData?.height || "?"}{" "}
-                      <span className="text-sm">cm</span>
+                      {userData?.height || "?"} <span className="text-sm">cm</span>
                     </p>
                   </div>
                 </div>
@@ -533,11 +611,7 @@ const UserProfile = () => {
                   <FaCalculator className="text-gray-600 text-2xl" />
                   <div>
                     <p className="text-gray-600">BMI</p>
-                    <p
-                      className={`text-xl font-semibold ${
-                        getBMIStatus().color
-                      }`}
-                    >
+                    <p className={`text-xl font-semibold ${getBMIStatus().color}`}>
                       {calculateBMI()} - {getBMIStatus().text}
                     </p>
                   </div>
@@ -577,9 +651,7 @@ const UserProfile = () => {
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
-                        Nutrition Goals
-                      </h4>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">Nutrition Goals</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <InfoItem
                           label="Goal"
@@ -620,9 +692,7 @@ const UserProfile = () => {
                         />
                         <InfoItem
                           label="Favorite Foods"
-                          value={getFavoriteNamesByIds(userData.favorite)?.join(
-                            ", "
-                          )}
+                          value={getFavoriteNamesByIds(userData.favorite)?.join(", ")}
                           colorClass="bg-yellow-50"
                           textClass="text-yellow-700"
                         />
@@ -647,9 +717,7 @@ const UserProfile = () => {
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-700 mb-4">
-                        Health Metrics
-                      </h4>
+                      <h4 className="text-lg font-semibold text-gray-700 mb-4">Health Metrics</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <InfoItem
                           label="Sleep Duration"
@@ -676,9 +744,7 @@ const UserProfile = () => {
               ) : (
                 <div className="text-center p-8 bg-gray-50 rounded-lg">
                   <FaUser className="text-4xl text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">
-                    No personal data available
-                  </p>
+                  <p className="text-gray-600 mb-4">No personal data available</p>
                   <button
                     onClick={handleReSurvey}
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300"
@@ -692,18 +758,13 @@ const UserProfile = () => {
         </main>
       </div>
 
-      {/* Change Password Modal */}
       {showChangePassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Change Password
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Change Password</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-700 mb-1">
-                  Current Password
-                </label>
+                <label className="block text-gray-700 mb-1">Current Password</label>
                 <input
                   type="password"
                   value={passwordData.currentPassword}
@@ -733,9 +794,7 @@ const UserProfile = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-1">
-                  Confirm New Password
-                </label>
+                <label className="block text-gray-700 mb-1">Confirm New Password</label>
                 <input
                   type="password"
                   value={passwordData.newPasswordConfirm}
@@ -769,31 +828,20 @@ const UserProfile = () => {
         </div>
       )}
 
-      {/* Delete Account Modal */}
       {showDeleteAccount && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Delete Account
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Delete Account</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-700 mb-1">Password</label>
-                <div className="password-wrapper">
-                  <input
-                    type={showDeletePassword ? "text" : "password"}
-                    value={deletePassword}
-                    onChange={(e) => setDeletePassword(e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                    placeholder="Enter your password"
-                  />
-                  <span
-                    className="password-toggle"
-                    onClick={() => setShowDeletePassword(!showDeletePassword)}
-                  >
-                    {showDeletePassword ? <FaEyeSlash /> : <FaEye />}
-                  </span>
-                </div>
+                <label className="block text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={deleteEmail}
+                  onChange={(e) => setDeleteEmail(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Enter your email"
+                />
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button
@@ -803,11 +851,11 @@ const UserProfile = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleDeleteUser}
+                  onClick={handleRequestDeleteAccount}
                   disabled={deleteInProgress}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-300 disabled:bg-red-300"
                 >
-                  {deleteInProgress ? "Deleting..." : "Confirm"}
+                  {deleteInProgress ? "Processing..." : "Request OTP"}
                 </button>
               </div>
             </div>
@@ -815,7 +863,61 @@ const UserProfile = () => {
         </div>
       )}
 
-      {/* Edit Profile Modal */}
+      {showOtpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Verify OTP</h2>
+            <p className="text-gray-600 mb-6">Please enter the 4-digit OTP sent to your email</p>
+            <div className="flex justify-center space-x-2 mb-4">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(el) => (inputRefs.current[index] = el)}
+                  type="text"
+                  className="w-10 h-10 border border-gray-300 rounded text-center text-lg"
+                  maxLength="1"
+                  value={digit}
+                  onChange={(e) => handleOtpChange(index, e)}
+                  onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                  onPaste={handleOtpPaste}
+                />
+              ))}
+            </div>
+            {otpError && <p className="text-red-500 text-sm mb-4">{otpError}</p>}
+            <div className="space-y-4">
+              <button
+                onClick={handleConfirmDeleteAccount}
+                disabled={deleteInProgress}
+                className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-indigo-300"
+              >
+                {deleteInProgress ? "Verifying..." : "Verify OTP"}
+              </button>
+              <p className="text-gray-600 text-center">
+                Didn’t receive OTP?{" "}
+                <span
+                  onClick={handleResendOTP}
+                  className="text-indigo-600 cursor-pointer hover:underline"
+                >
+                  Resend
+                </span>
+              </p>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => {
+                  setShowOtpModal(false);
+                  setOtp(["", "", "", ""]);
+                  setOtpError("");
+                }}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showEditModal && (
         <UserProfileUpdate
           userPreferenceId={user.userPreferenceId}

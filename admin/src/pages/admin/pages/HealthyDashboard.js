@@ -357,7 +357,7 @@ const HealthyDashboard = () => {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex w-full h-full">
       <div className="flex-grow flex flex-col">
         <div className="flex justify-end mr-6 mt-6">
           <button

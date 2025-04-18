@@ -119,7 +119,7 @@ const AdminLayout = ({ defaultActiveMenu = "Dashboard" }) => {
           </nav>
         </div>
         {/* Main Content */}
-        <div className="flex-grow p-6 bg-white shadow">
+        <div className="bg-white shadow w-full">
           <Outlet />
         </div>
       </div>
