@@ -3,19 +3,35 @@ import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
 import Thin from "../../assets/images/goal/thin.jpg";
 import Fat from "../../assets/images/goal/fat.jpg";
+import ThinWoman from "../../assets/images/goal/thin_Woman.webp";
+import FatWoman from "../../assets/images/goal/fat_Woman.webp";
 import { RiArrowLeftSLine } from "react-icons/ri";
+
+// Define goal groups with gender property
 const goalGroups = [
-  { goal: "Muscle gain", img: Thin },
-  { goal: "Fat loss", img: Fat },
+  { goal: "Muscle gain", img: Thin, gender: "Male" },
+  { goal: "Fat loss", img: Fat, gender: "Male" },
+  { goal: "Muscle gain", img: ThinWoman, gender: "Female" },
+  { goal: "Fat loss", img: FatWoman, gender: "Female" },
 ];
 
 const Goal = () => {
   const navigate = useNavigate();
   const [selectedGoal, setSelectedGoal] = useState(null);
+  const [filteredGoalGroups, setFilteredGoalGroups] = useState([]);
 
-  // Load data from sessionStorage when the page loads
+  // Load saved data and filter goal groups based on gender
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    const selectedGender = savedData.gender || "Male"; // Default to Male if no gender is selected
+
+    // Filter goal groups based on selected gender
+    const filteredGroups = goalGroups.filter(
+      (group) => group.gender === selectedGender
+    );
+    setFilteredGoalGroups(filteredGroups);
+
+    // Set previously selected goal if available
     if (savedData.goal) {
       setSelectedGoal(savedData.goal);
     }
@@ -69,7 +85,7 @@ const Goal = () => {
       <p className="text-center text-gray-600">Select your goal</p>
 
       <div className="space-y-4 mt-4">
-        {goalGroups.map((item, index) => (
+        {filteredGoalGroups.map((item, index) => (
           <div
             key={index}
             className={`flex items-center p-4 rounded-lg shadow cursor-pointer transition duration-300 ${

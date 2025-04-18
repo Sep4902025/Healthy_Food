@@ -168,7 +168,7 @@ const TableRecipes = () => {
 
       newRecipeData.ingredients.forEach((ing) => {
         const ingredientData = availableIngredients.find((item) => item._id === ing._id);
-        if (ingredientData && ing.quantity && ing.unit) {
+        if (ingredientData && ing.quantity >= 0 && ing.unit) { // Allow quantity to be 0
           let conversionFactor;
           if (ing.unit === "g" || ing.unit === "ml") {
             conversionFactor = ing.quantity / 100;
@@ -482,7 +482,7 @@ const TableRecipes = () => {
         setSelectedDish(null);
         setErrors({});
       } else {
-        toast.error("Failed to save: " + response.message);
+        toast.error("Please select Unit type");
       }
     } catch (error) {
       setIsSaving(false);
@@ -503,7 +503,12 @@ const TableRecipes = () => {
       if (alreadyExists) {
         duplicates.push(newIng.name);
       } else {
-        newIngredients.push(newIng);
+        newIngredients.push({
+          _id: newIng._id,
+          name: newIng.name,
+          quantity: newIng.quantity || 0, // Default to 0 if not provided
+          unit: newIng.unit || "g", // Default to "g" if not provided
+        });
       }
     });
 
@@ -514,9 +519,7 @@ const TableRecipes = () => {
 
     if (duplicates.length > 0) {
       toast.error(
-        `The following ingredients are already in the recipe: ${duplicates.join(
-          ", "
-        )}. Please edit the existing entries instead.`
+        `The following ingredients are already in the recipe: ${duplicates.join(", ")}. Please edit the existing entries instead.`
       );
     } else {
       setErrors({ ...errors, ingredients: "" });
@@ -1190,9 +1193,8 @@ const TableRecipes = () => {
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">
                     Nutrition (Total for {newRecipeData.totalServing || 1} Servings)
                   </h3>
-                  {newRecipeData.instruction.length > 0 &&
-                    newRecipeData.ingredients.length > 0 &&
-                    newRecipeData.ingredients.every((ing) => ing.quantity && ing.unit) ? (
+                  {newRecipeData.ingredients.length > 0 &&
+                    newRecipeData.ingredients.every((ing) => ing.quantity >= 0 && ing.unit) ? (
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
@@ -1216,8 +1218,7 @@ const TableRecipes = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
                         <span className="font-medium">
-                          {(nutritionData.calories / (newRecipeData.totalServing || 1)).toFixed(2)}{" "}
-                          kcal
+                          {(nutritionData.calories / (newRecipeData.totalServing || 1)).toFixed(2)} kcal
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1241,8 +1242,7 @@ const TableRecipes = () => {
                     </div>
                   ) : (
                     <p className="text-gray-500">
-                      No nutrition data available. Add ingredients with quantities and units to see
-                      nutrition details.
+                      No nutrition data available. Add ingredients with valid quantities and units to see nutrition details.
                     </p>
                   )}
                 </div>
@@ -1318,7 +1318,7 @@ const IngredientSelectionModal = ({
     } else {
       setTempSelectedIngredients([
         ...tempSelectedIngredients,
-        { ...ingredient, quantity: "", unit: "" },
+        { ...ingredient, quantity: 0, unit: "Unit" }, // Default values
       ]);
     }
   };

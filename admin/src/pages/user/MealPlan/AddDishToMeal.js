@@ -80,7 +80,7 @@ const DishCard = memo(
       </div>
       <div className="p-3">
         <div className="flex justify-between items-start">
-          <h3 className="font-medium text-gray-800">{dish.name}</h3>
+          <h3 className="font-medium text-gray-800 truncate">{dish.name}</h3>
           <span className="text-sm font-bold text-blue-600">
             {(dish.calories / (dish.totalServing || 1)).toFixed(2)} kcal
           </span>

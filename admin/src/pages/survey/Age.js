@@ -5,21 +5,41 @@ import Age1825 from "../../assets/images/age/18-25.png";
 import Age2635 from "../../assets/images/age/26-35.png";
 import Age3645 from "../../assets/images/age/36-45.png";
 import Age46 from "../../assets/images/age/46.png";
+import AgeWoman1825 from "../../assets/images/age/18-25_Woman.png";
+import AgeWoman2635 from "../../assets/images/age/26-35_Woman.png";
+import AgeWoman3645 from "../../assets/images/age/36-45_Woman.png";
+import AgeWoman46 from "../../assets/images/age/46_Woman.png";
 import { RiArrowLeftSLine } from "react-icons/ri";
+
+// Define age groups with gender property
 const ageGroups = [
-  { age: "18-25", img: Age1825 },
-  { age: "26-35", img: Age2635 },
-  { age: "36-45", img: Age3645 },
-  { age: "46+", img: Age46 },
+  { age: "18-25", img: Age1825, gender: "Male" },
+  { age: "26-35", img: Age2635, gender: "Male" },
+  { age: "36-45", img: Age3645, gender: "Male" },
+  { age: "46+", img: Age46, gender: "Male" },
+  { age: "18-25", img: AgeWoman1825, gender: "Female" },
+  { age: "26-35", img: AgeWoman2635, gender: "Female" },
+  { age: "36-45", img: AgeWoman3645, gender: "Female" },
+  { age: "46+", img: AgeWoman46, gender: "Female" },
 ];
 
 const Age = () => {
   const navigate = useNavigate();
   const [selectedAge, setSelectedAge] = useState(null);
+  const [filteredAgeGroups, setFilteredAgeGroups] = useState([]);
 
-  // When the component loads, check if any age is already saved
+  // Load saved data and filter age groups based on gender
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
+    const selectedGender = savedData.gender || "Male"; // Default to Male if no gender is selected
+
+    // Filter age groups based on selected gender
+    const filteredGroups = ageGroups.filter(
+      (group) => group.gender === selectedGender
+    );
+    setFilteredAgeGroups(filteredGroups);
+
+    // Set previously selected age if available
     if (savedData.age) {
       setSelectedAge(savedData.age);
     }
@@ -31,7 +51,7 @@ const Age = () => {
       return;
     }
 
-    // Get existing data (if any) from sessionStorage
+    // Get existing data from sessionStorage
     const existingData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
     // Update age in sessionStorage
@@ -71,7 +91,7 @@ const Age = () => {
       <p className="text-center text-gray-600">Select your age</p>
 
       <div className="space-y-4 mt-4">
-        {ageGroups.map((item, index) => (
+        {filteredAgeGroups.map((item, index) => (
           <div
             key={index}
             className={`flex items-center p-4 rounded-lg shadow cursor-pointer transition duration-300 ${
@@ -86,7 +106,7 @@ const Age = () => {
             </span>
             <img
               src={item.img}
-              alt=""
+              alt={item.age}
               className="w-16 h-16 rounded-full object-cover"
             />
           </div>

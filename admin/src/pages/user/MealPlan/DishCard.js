@@ -13,7 +13,7 @@ const DishCard = ({ dish, onDelete, deletingDishId, disableDelete }) => {
           alt={dish.name}
           className="w-[80px] h-[80px] rounded-full object-cover flex-shrink-0"
         />
-        <p className="text-xl font-semibold text-gray-800">{dish.name}</p>
+        <p className="text-xl font-semibold text-gray-800 truncate">{dish.name}</p>
         {/* Delete Button (Top-right corner) */}
         <button
           onClick={(e) => {
