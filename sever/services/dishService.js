@@ -46,6 +46,34 @@ exports.getAllDishes = async (query) => {
     totalPages: Math.ceil(totalItems / limitNum),
   };
 };
+// New service for searchDishByName
+exports.searchDishByName = async (query) => {
+  const { name = "", page = 1, limit = 10, sort = "createdAt", order = "desc" } = query;
+  let filter = { isDelete: false, isVisible: true }; // Default filter
+
+  // If name is provided, search for dishes with matching names (case-insensitive)
+  if (name) {
+    filter.name = { $regex: name, $options: "i" };
+  } else {
+    throw new Error("Search term 'name' is required");
+  }
+
+  const pageNum = parseInt(page, 10);
+  const limitNum = parseInt(limit, 10);
+  const skip = (pageNum - 1) * limitNum;
+  const sortOrder = order === "desc" ? -1 : 1;
+  const sortOptions = { [sort]: sortOrder };
+
+  const totalItems = await Dish.countDocuments(filter);
+  const dishes = await Dish.find(filter).sort(sortOptions).skip(skip).limit(limitNum).lean();
+
+  return {
+    items: dishes,
+    total: totalItems,
+    currentPage: pageNum,
+    totalPages: Math.ceil(totalItems / limitNum),
+  };
+};
 
 // In dishService.js
 // dishService.js
@@ -116,16 +144,23 @@ exports.getDishById = async (dishId) => {
 };
 
 exports.getDishByType = async (type, query) => {
-  const { page = 1, limit = 10 } = query;
-  const filter = { type, isDelete: false, isVisible: true };
+  const { page = 1, limit = 10, sort = "createdAt", order = "desc" } = query;
+
+  // Ensure type is case-insensitive
+  const filter = {
+    type: { $regex: `^${type}$`, $options: "i" }, // Exact match, case-insensitive
+    isDelete: false,
+    isVisible: true,
+  };
+
   const pageNum = parseInt(page, 10);
   const limitNum = parseInt(limit, 10);
   const skip = (pageNum - 1) * limitNum;
+  const sortOrder = order === "desc" ? -1 : 1;
+  const sortOptions = { [sort]: sortOrder };
 
   const totalItems = await Dish.countDocuments(filter);
-  const dishes = await Dish.find(filter).skip(skip).limit(limitNum).lean();
-
-  if (dishes.length === 0) throw new Error("No dishes found for this type");
+  const dishes = await Dish.find(filter).sort(sortOptions).skip(skip).limit(limitNum).lean();
 
   return {
     items: dishes,

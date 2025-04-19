@@ -37,7 +37,7 @@ const MealPlan = ({ navigation }) => {
   const fetchUserMealPlan = async () => {
     try {
       setLoading(true);
-      const response = await mealPlanService.getUserMealPlan(user._id);
+      const response = await mealPlanService.getUserMealPlan(user?._id);
       if (response.success && response.data) {
         const mealPlan = response.data;
         setUserMealPlan(mealPlan);
@@ -53,7 +53,6 @@ const MealPlan = ({ navigation }) => {
         setIsMealPlanExpired(false);
       }
     } catch (error) {
-      console.log("❌ Error fetching MealPlan:", error.message);
       setUserMealPlan(null);
       setShowCreateForm(true);
       setIsMealPlanExpired(false);
@@ -89,7 +88,6 @@ const MealPlan = ({ navigation }) => {
         await fetchUserMealPlan();
       } else {
         setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
-        ShowToast("error", `❌ Error: ${response.message}`);
       }
     } catch (error) {
       setUserMealPlan((prev) => ({ ...prev, isPause: !newIsPause }));
@@ -101,6 +99,7 @@ const MealPlan = ({ navigation }) => {
 
   const handleDeleteMealPlan = async () => {
     if (!userMealPlan) return;
+
     const confirmed = await new Promise((resolve) => {
       Alert.alert(
         "Confirm Deletion",
@@ -111,14 +110,17 @@ const MealPlan = ({ navigation }) => {
         ]
       );
     });
+
     if (!confirmed) return;
+
     try {
       setProcessingAction(true);
       const response = await mealPlanService.deleteMealPlan(userMealPlan._id);
+
       if (response.success) {
         setUserMealPlan(null);
-        setShowCreateForm(true);
-        setIsMealPlanExpired(false);
+        setShowCreateForm(true); // Show form immediately after deletion
+        await fetchUserMealPlan(); // Refresh data
         ShowToast("success", "🗑️ MealPlan deleted successfully!");
       } else {
         ShowToast("error", `❌ Error: ${response.message}`);
@@ -154,7 +156,7 @@ const MealPlan = ({ navigation }) => {
       <SafeAreaView className="flex-1 bg-background dark:bg-dark-background">
         <View className="flex-1 p-4">
           {userMealPlan ? (
-            <View className="flex-1 bg-surface dark:bg-dark-surface rounded-lg shadow-md p-4">
+            <View className="flex-1 dark:bg-dark-surface rounded-lg p-4">
               <View className="mb-4">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
@@ -217,10 +219,10 @@ const MealPlan = ({ navigation }) => {
 
               {userMealPlan._id && (
                 <View className="mb-4 pt-4">
-                  {user.userPreferenceId ? (
+                  {user?.userPreferenceId ? (
                     <MealPlanAimChart
                       mealPlanId={userMealPlan._id}
-                      userId={user.userPreferenceId}
+                      userId={user?.userPreferenceId}
                       duration={userMealPlan.duration || 7}
                       onNutritionTargetsCalculated={handleNutritionTargetsCalculated}
                       isMealPlanExpired={isMealPlanExpired}
@@ -252,12 +254,12 @@ const MealPlan = ({ navigation }) => {
             <View className="flex-1 bg-surface dark:bg-dark-surface p-6 rounded-lg shadow-md">
               {showCreateForm && (
                 <View className="w-full">
-                  <Text className="text-2xl font-bold text-text dark:text-dark-text mb-4">
+                  <Text className="text-2xl font-bold dark:text-dark-text mb-4 text-custom-green">
                     Create New Meal Plan
                   </Text>
                   <CreateMealPlanForm
-                    userId={user._id}
-                    userRole={user.role}
+                    userId={user?._id}
+                    userRole={user?.role}
                     onSuccess={handleCreateSuccess}
                   />
                 </View>

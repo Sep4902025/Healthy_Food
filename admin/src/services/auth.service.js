@@ -99,7 +99,27 @@ const AuthService = {
       throw error;
     }
   },
+  verifyOtpForSignUp: async ({ email, otp }) => {
+    try {
+      const data = { email, otp };
+      const response = await axiosInstance.post("/users/verify-otp", data);
+      return response;
+    } catch (error) {
+      console.log("verifyOtp error: ", error);
+      return error;
+    }
+  },
 
+  requestOtpForSignUp: async ({ email }) => {
+    try {
+      const data = { email };
+      const response = await axiosInstance.post("/users/request-otp", data);
+      return response;
+    } catch (error) {
+      console.log("requestOtp error: ", error);
+      return error;
+    }
+  },
   login: async (credentials) => {
     try {
       console.log("Sending login request:", credentials);

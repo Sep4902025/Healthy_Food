@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const eathabitGroups = [
-  { id: "lactose", label: "I am lactose intolerant", icon: "🥛" },
-  { id: "gluten", label: "I don't eat gluten", icon: "🧁" },
-  { id: "vegetarian", label: "I am a vegetarian", icon: "🥦" },
-  { id: "vegan", label: "I am a vegan", icon: "🌿" },
-  { id: "none", label: "There's none below", icon: "❌" },
+  { id: "Lactose", label: "I am lactose intolerant", icon: "🥛" },
+  { id: "Gluten", label: "I don't eat gluten", icon: "🧁" },
+  { id: "Vegetarian", label: "I am a vegetarian", icon: "🥦" },
+  { id: "Vegan", label: "I am a vegan", icon: "🌿" },
+  { id: "None", label: "There's none below", icon: "❌" },
 ];
 
 const EatHabit = () => {
   const navigate = useNavigate();
   const [selectedItems, setSelectedItems] = useState([]);
 
-  // Load dữ liệu từ sessionStorage khi vào trang
+  // Load data from sessionStorage when the page loads
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.eatHabit) {
@@ -24,15 +24,15 @@ const EatHabit = () => {
 
   const toggleItemSelection = (id) => {
     if (id === "none") {
-      // Nếu chọn "none", chỉ giữ "none" và xóa các lựa chọn khác
+      // If "none" is selected, keep only "none" and clear other selections
       setSelectedItems(["none"]);
     } else {
-      // Nếu chọn một mục khác
+      // If another item is selected
       if (selectedItems.includes("none")) {
-        // Nếu "none" đã được chọn trước đó, xóa "none" và thêm lựa chọn mới
+        // If "none" was previously selected, remove "none" and add the new selection
         setSelectedItems([id]);
       } else {
-        // Thêm hoặc xóa mục như bình thường, nhưng không cho phép "none" cùng lúc
+        // Add or remove the item as usual, but do not allow "none" at the same time
         setSelectedItems((prev) =>
           prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
         );
@@ -59,22 +59,18 @@ const EatHabit = () => {
   };
 
   return (
-    <div
-      className="max-w-md mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/longofplan")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={78.75} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Eat Habit</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Eat Habit</h2>
       <p className="text-center text-gray-600">Choose your eating habits</p>
 
       <div className="space-y-3 mt-4">
@@ -82,9 +78,7 @@ const EatHabit = () => {
           <div
             key={eathabit.id}
             className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer ${
-              isSelected(eathabit.id)
-                ? "bg-yellow-50 border-yellow-400"
-                : "bg-gray-100"
+              isSelected(eathabit.id) ? "bg-yellow-50 border-yellow-400" : "bg-gray-100"
             }`}
             onClick={() => toggleItemSelection(eathabit.id)}
           >
@@ -94,10 +88,8 @@ const EatHabit = () => {
                 checked={isSelected(eathabit.id)}
                 onChange={() => toggleItemSelection(eathabit.id)}
                 className="w-5 h-5"
-                // Vô hiệu hóa các tùy chọn khác nếu "none" được chọn
-                disabled={
-                  eathabit.id !== "none" && selectedItems.includes("none")
-                }
+                // Disable other options if "none" is selected
+                disabled={eathabit.id !== "none" && selectedItems.includes("none")}
               />
               <span
                 className={`font-medium ${

@@ -64,7 +64,7 @@ const RecipeModal = ({ dishId, recipeId, onClose }) => {
 
         {/* Header Section */}
         <div className="flex flex-col items-center justify-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-800">{dish.name}</h2>
+          <h2 className="text-2xl font-bold text-gray-800 truncate">{dish.name}</h2>
           <img
             src={dish.imageUrl}
             alt={dish.name}

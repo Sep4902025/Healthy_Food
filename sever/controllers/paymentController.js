@@ -1,5 +1,17 @@
+const querystring = require("querystring");
+const crypto = require("crypto");
+const moment = require("moment");
+const VNPAY_CONFIG = require("../config/vnpay");
+const Payment = require("../models/Payment");
+const { MealPlan, UserMealPlan, MealDay, Meal, MealTracking } = require("../models/MealPlan");
+const Reminder = require("../models/Reminder");
+const { agenda } = require("../config/agenda");
+const UserModel = require("../models/UserModel");
+const PaymentModel = require("../models/Payment");
+const sendEmail = require("../utils/email");
 const catchAsync = require("../utils/catchAsync");
 const paymentService = require("../services/paymentService");
+const SalaryPayment = require("../models/SalaryPayment");
 
 exports.getAllPayments = catchAsync(async (req, res) => {
   const paymentStats = await paymentService.getAllPayments();
@@ -194,16 +206,134 @@ exports.getSalaryPaymentHistory = catchAsync(async (req, res) => {
   res.status(200).json({ status: "success", data: payments });
 });
 
-exports.getSalaryHistoryByMonthYear = catchAsync(async (req, res) => {
-  const { month, year } = req.query;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const salaryHistory = await paymentService.getSalaryHistoryByMonthYear(month, year, page, limit);
-  res.status(200).json({ status: "success", ...salaryHistory });
-});
+exports.getSalaryHistoryByMonthYear = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-exports.acceptSalary = catchAsync(async (req, res) => {
+    // Validate month and year
+    if (!month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "Month and year are required",
+      });
+    }
+
+    const monthNum = parseInt(month);
+    const yearNum = parseInt(year);
+
+    if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid month. Must be between 1 and 12",
+      });
+    }
+
+    if (isNaN(yearNum) || yearNum < 2000 || yearNum > new Date().getFullYear() + 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid year",
+      });
+    }
+
+    // Query salary payments with valid userId
+    const query = {
+      month: monthNum,
+      year: yearNum,
+      userId: { $ne: null, $exists: true }, // Chỉ lấy các bản ghi có userId
+    };
+    const salaryHistory = await SalaryPayment.find(query)
+      .populate("userId", "username")
+      .sort({ paymentDate: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const totalPayments = await SalaryPayment.countDocuments(query);
+
+    res.status(200).json({
+      status: "success",
+      data: salaryHistory,
+      pagination: {
+        total: totalPayments,
+        page,
+        limit,
+        totalPages: Math.ceil(totalPayments / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching salary history by month and year:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Thanh toán lương cho nutritionist Admin
+exports.acceptSalary = catchAsync(async (req, res, next) => {
   const { userId, amount, month, year } = req.body;
+
+  // Kiểm tra nutritionist
+  const nutritionist = await UserModel.findById(userId);
+  if (!nutritionist || nutritionist.role !== "nutritionist") {
+    return next(new AppError("Nutritionist not found or invalid role", 404));
+  }
+
+  // Kiểm tra xem đã thanh toán cho tháng này chưa
+  const existingPayment = await SalaryPayment.findOne({
+    userId,
+    month,
+    year,
+    status: "success",
+  });
+  if (existingPayment) {
+    return next(new AppError(`Salary for ${month}/${year} has already been paid`, 400));
+  }
+
+  // Tính lương cho tháng được chọn
+  const startOfMonth = new Date(year, month - 1, 1);
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+  const mealPlans = await MealPlan.find({
+    createdBy: userId,
+    startDate: { $gte: startOfMonth, $lte: endOfMonth },
+    isDelete: false,
+  });
+
+  const mealPlanIds = mealPlans.map((mp) => mp._id);
+  const payments = await PaymentModel.find({
+    mealPlanId: { $in: mealPlanIds },
+    status: "success",
+  });
+
+  const baseSalary = 5000000;
+  const commission = payments.reduce((sum, payment) => {
+    const mealPlan = mealPlans.find((mp) => mp._id.toString() === payment.mealPlanId.toString());
+    return sum + (mealPlan ? mealPlan.price * 0.1 : 0);
+  }, 0);
+  const totalSalary = baseSalary + commission;
+
+  if (Math.round(totalSalary) !== Math.round(amount)) {
+    return next(
+      new AppError(
+        `Calculated salary (${totalSalary}) does not match provided amount (${amount})`,
+        400
+      )
+    );
+  }
+
+  // Tạo bản ghi thanh toán
+  const payment = new SalaryPayment({
+    userId,
+    amount: totalSalary,
+    status: "pending",
+    paymentMethod: "vnpay",
+    paymentType: "salary",
+    month,
+    year,
+  });
+  await payment.save();
+
+  // Tạo URL thanh toán VNPay
   const clientIp =
     req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.ip || "127.0.0.1";
   const paymentData = await paymentService.acceptSalary(userId, amount, month, year, clientIp);

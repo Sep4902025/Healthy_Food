@@ -19,14 +19,6 @@ const UserSidebar = ({ activeTab, setActiveTab }) => {
         </li>
         <li
           className={`user-item ${
-            activeTab === "dontEatFood" ? "selected" : ""
-          }`}
-          onClick={() => setActiveTab("dontEatFood")}
-        >
-          <i className="fas fa-ban"></i> Change Password
-        </li>
-        <li
-          className={`user-item ${
             activeTab === "changePassword" ? "selected" : ""
           }`}
           onClick={() => setActiveTab("changePassword")}

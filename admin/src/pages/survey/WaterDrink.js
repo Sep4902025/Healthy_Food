@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const waterdrinkGroups = [
-  { waterdrink: "0,5 - 1,5L (2-6 cups)" },
-  { waterdrink: "1,5 - 2,5L (7-10 cups)" },
-  { waterdrink: "More than 2,5L (More than 10 cups)" },
-  { waterdrink: "No count, depends on the day" },
+  { waterdrink: "0,5L - 1,5L" },
+  { waterdrink: "1,5L - 2,5L" },
+  { waterdrink: "More than 2,5L" },
+  { waterdrink: "Depends on the day" },
 ];
 
 const WaterDrink = () => {
   const navigate = useNavigate();
   const [selectedWaterDrink, setSelectedWaterDrink] = useState(null);
 
-  // Load dữ liệu từ sessionStorage khi vào trang
+  // Load data from sessionStorage when the page opens
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.waterDrink) {
@@ -27,23 +27,23 @@ const WaterDrink = () => {
       return;
     }
 
-    // Lấy dữ liệu hiện tại từ sessionStorage
+    // Get current data from sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật dữ liệu mới
+    // Update data
     const updatedData = {
       ...currentData,
       waterDrink: selectedWaterDrink,
     };
 
-    // Lưu vào sessionStorage
+    // Save to sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
-    // Chuyển sang trang tiếp theo
+    // Navigate to the next page
     navigate("/survey/diet");
   };
 
-  // Hàm xử lý khi nhấn phím
+  // Handle key press
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.keyCode === 13) {
       handleNext();
@@ -51,29 +51,23 @@ const WaterDrink = () => {
   };
 
   return (
-    <div
-      className="max-w-md mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
-      {/* Header với back button và progress bar */}
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
+      {/* Header with back button and progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/activitylevel")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
-        <ProgressBar progress={57.75} /> {/* Điều chỉnh progress theo flow */}
+        <ProgressBar progress={57.75} /> {/* Adjust progress according to flow */}
       </div>
 
-      {/* Tiêu đề và mô tả */}
-      <h2 className="text-2xl font-bold text-center">Water Drink</h2>
-      <p className="text-center text-gray-600">
-        How much water do you drink per day?
-      </p>
+      {/* Title and description */}
+      <h2 className="text-2xl font-bold text-center text-custom-green">Water Drink</h2>
+      <p className="text-center text-gray-600">How much water do you drink per day?</p>
 
-      {/* Danh sách lựa chọn */}
+      {/* Selection list */}
       <div className="space-y-4 mt-4">
         {waterdrinkGroups.map((item, index) => (
           <div
@@ -85,14 +79,12 @@ const WaterDrink = () => {
             }`}
             onClick={() => setSelectedWaterDrink(item.waterdrink)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.waterdrink}
-            </span>
+            <span className="text-lg font-semibold flex-1 text-left">{item.waterdrink}</span>
           </div>
         ))}
       </div>
 
-      {/* Nút Next */}
+      {/* Next button */}
       <button
         onClick={handleNext}
         className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"

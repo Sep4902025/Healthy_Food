@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-
 import {
   View,
   Text,
@@ -10,29 +9,85 @@ import {
   Dimensions,
   Modal,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import Ionicons from "../common/VectorIcons/Ionicons";
 import { EditModalHeader } from "../common/EditModalHeader";
 import { useTheme } from "../../contexts/ThemeContext";
+import { normalize } from "../../utils/common";
+import HomeService from "../../services/HomeService";
+import medicalConditionService from "../../services/medicalConditionService";
 
 const HEIGHT = Dimensions.get("window").height;
 
 export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) => {
+  console.log("User Preference:", userPreference);
+
   const { theme } = useTheme();
   const [healthData, setHealthData] = useState({
     ...userPreference,
   });
   const [bmi, setBmi] = useState(null);
+  const [loading, setLoading] = useState(false);
+  // State to store fetched names
+  const [diseaseNames, setDiseaseNames] = useState([]);
+  const [recommendedFoodNames, setRecommendedFoodNames] = useState([]);
+  const [dislikedFoodNames, setDislikedFoodNames] = useState([]);
+  const [fetchingNames, setFetchingNames] = useState(false);
 
+  // Update healthData and fetch names when userPreference changes
   useEffect(() => {
-    setHealthData(userPreference);
-    calculateBMI(userPreference.weight, userPreference.height);
-    calculateBMI(userPreference.weight, userPreference.height);
+    setHealthData(userPreference || {});
+    calculateBMI(userPreference?.weight, userPreference?.height);
+    fetchNames();
   }, [userPreference]);
 
+  // Function to fetch names for diseases and ingredients
+  const fetchNames = async () => {
+    if (!userPreference) return;
+    setFetchingNames(true);
+
+    try {
+      // Fetch medical condition names
+      const underDiseaseIds = userPreference?.underDisease || [];
+      const diseasePromises = underDiseaseIds.map((id) =>
+        medicalConditionService
+          .getMedicalConditionById(id)
+          .then((result) => (result.success ? result.data.name : "Unknown"))
+      );
+      const diseases = await Promise.all(diseasePromises);
+      setDiseaseNames(diseases);
+
+      // Fetch recommended food names
+      const recommendedFoodIds = userPreference?.favorite || [];
+      const recommendedPromises = recommendedFoodIds.map((id) =>
+        HomeService.getIngredientById(id)
+          .then((result) => result.data.name || "Unknown")
+          .catch(() => "Unknown")
+      );
+      const recommended = await Promise.all(recommendedPromises);
+      setRecommendedFoodNames(recommended);
+
+      // Fetch disliked food names
+      const dislikedFoodIds = userPreference?.hate || [];
+      const dislikedPromises = dislikedFoodIds.map((id) =>
+        HomeService.getIngredientById(id)
+          .then((result) => result.data.name || "Unknown")
+          .catch(() => "Unknown")
+      );
+      const disliked = await Promise.all(dislikedPromises);
+      setDislikedFoodNames(disliked);
+    } catch (error) {
+      console.error("Error fetching names:", error);
+    } finally {
+      setFetchingNames(false);
+    }
+  };
+
+  // Calculate BMI
   const calculateBMI = (weight, height) => {
     const w = parseFloat(weight);
-    const h = parseFloat(height) / 100;
+    const h = parseFloat(height) / 100; // Convert from cm to m
     if (w && h && !isNaN(w) && !isNaN(h) && h > 0) {
       const bmiValue = (w / (h * h)).toFixed(1);
       setBmi(bmiValue);
@@ -43,6 +98,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     }
   };
 
+  // Handle input changes
   const handleInputChange = (field, value) => {
     setHealthData((prev) => {
       const updatedData = { ...prev, [field]: value };
@@ -56,8 +112,15 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     });
   };
 
-  const handleSave = () => {
-    onSave(healthData);
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      onSave(healthData);
+    } catch (error) {
+      console.error("handleSave error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formData = [
@@ -70,9 +133,9 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
         editable: false,
       },
       {
-        label: "WaterDrink",
+        label: "Water Drink",
         field: "waterDrink",
-        value: healthData.waterDrink ?? "",
+        value: healthData?.waterDrink ?? "",
         keyboardType: "default",
         editable: false,
       },
@@ -81,14 +144,14 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
       {
         label: "Age",
         field: "age",
-        value: healthData.age ?? "",
+        value: healthData?.age ?? "",
         keyboardType: "default",
         editable: false,
       },
       {
-        label: "SleepTime",
+        label: "Sleep Time",
         field: "sleepTime",
-        value: healthData.sleepTime,
+        value: healthData?.sleepTime ?? "",
         keyboardType: "default",
         editable: false,
       },
@@ -97,14 +160,14 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
       {
         label: "Goal",
         field: "goal",
-        value: healthData.goal ?? "",
+        value: healthData?.goal ?? "",
         keyboardType: "default",
         editable: false,
       },
       {
-        label: "LongOfPlan",
+        label: "Plan Duration",
         field: "longOfPlan",
-        value: healthData.longOfPlan ?? "",
+        value: healthData?.longOfPlan ?? "",
         keyboardType: "default",
         editable: false,
       },
@@ -113,23 +176,23 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
       {
         label: "Diet",
         field: "diet",
-        value: healthData.diet ?? "",
+        value: healthData?.diet ?? "",
         keyboardType: "default",
         editable: false,
       },
       {
-        label: "MealNumber",
+        label: "Meal Number",
         field: "mealNumber",
-        value: healthData.mealNumber ?? "",
+        value: healthData?.mealNumber ?? "",
         keyboardType: "default",
         editable: false,
       },
     ],
     [
       {
-        label: "UnderDisease",
+        label: "Underlying Diseases",
         field: "underDisease",
-        value: "",
+        value: diseaseNames.join(", ") || "",
         keyboardType: "default",
         editable: false,
       },
@@ -138,28 +201,29 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
 
   const viewForm = [
     {
-      label: "EatHabit",
+      label: "Eating Habits",
       field: "eatHabit",
-      value: healthData.eatHabit || [],
+      value: healthData?.eatHabit || [],
       keyboardType: "default",
       editable: false,
     },
     {
-      label: "RecommendedFoods",
+      label: "Recommended Foods",
       field: "recommendedFoods",
-      value: healthData.recommendedFoods || [],
+      value: recommendedFoodNames || [],
       keyboardType: "default",
       editable: false,
     },
     {
-      label: "Hate",
+      label: "Disliked Foods",
       field: "hate",
-      value: healthData.hate || [],
+      value: dislikedFoodNames || [],
       keyboardType: "default",
       editable: false,
     },
   ];
 
+  // Render input field
   const renderInputField = (fieldConfig) => {
     if (!fieldConfig) return <View style={styles.formItem} />;
 
@@ -171,7 +235,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
           <TextInput
             style={styles.input}
             value={String(value)}
-            onChangeText={(text) => handleInputChange(field, String(value))}
+            onChangeText={(text) => handleInputChange(field, text)}
             keyboardType={keyboardType}
             editable={editable}
           />
@@ -180,22 +244,30 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
     );
   };
 
+  // Render view field (for tags)
   const renderViewField = (fieldConfig) => {
     if (!fieldConfig) return <View style={styles.formItem} />;
 
-    const { label, field, value, keyboardType, editable } = fieldConfig;
+    const { label, field, value } = fieldConfig;
 
+    // Ensure value is an array
     const items = Array.isArray(value) ? value : [];
 
     return (
       <View style={styles.formItemFull}>
         <Text style={{ ...styles.label, color: theme.greyTextColor }}>{label}</Text>
         <View style={styles.tagsContainer}>
-          {items.map((item, index) => (
-            <View key={`${field}-${index}`} style={styles.tagItem}>
-              <Text style={styles.tagText}>{item}</Text>
-            </View>
-          ))}
+          {fetchingNames ? (
+            <ActivityIndicator size="small" color={theme.greyTextColor} />
+          ) : items.length > 0 ? (
+            items.map((item, index) => (
+              <View key={`${field}-${index}`} style={styles.tagItem}>
+                <Text style={styles.tagText}>{item}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.tagText}>None</Text>
+          )}
         </View>
       </View>
     );
@@ -204,13 +276,7 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <EditModalHeader onCancel={onClose} />
-
-      <View
-        style={{
-          ...styles.container,
-          backgroundColor: theme.editModalbackgroundColor,
-        }}
-      >
+      <View style={{ ...styles.container, backgroundColor: theme.editModalbackgroundColor }}>
         <Text style={{ ...styles.headerTitle, color: theme.textColor }}>Health Information</Text>
         <ScrollView style={styles.scrollContent}>
           <View style={styles.formGrid}>
@@ -227,10 +293,19 @@ export const EditHealthModal = ({ visible, onClose, onSave, userPreference }) =>
             ))}
           </View>
         </ScrollView>
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Reset</Text>
-        </TouchableOpacity>
+        {userPreference && Object.keys(userPreference).length > 0 ? (
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Reset</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
       </View>
     </Modal>
   );
@@ -261,7 +336,7 @@ const styles = StyleSheet.create({
     bottom: "10%",
   },
   headerTitle: {
-    fontSize: 25,
+    fontSize: normalize(25),
     fontWeight: "600",
     textAlign: "center",
     marginTop: 16,
@@ -283,7 +358,7 @@ const styles = StyleSheet.create({
     width: "48%",
   },
   label: {
-    fontSize: 14,
+    fontSize: normalize(14),
     marginBottom: 8,
     color: "#666",
   },
@@ -298,7 +373,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    fontSize: 14,
+    fontSize: normalize(14),
     backgroundColor: "white",
     borderRadius: 8,
     borderWidth: 1,
@@ -326,7 +401,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     color: "#666",
-    fontSize: 14,
+    fontSize: normalize(14),
     textAlign: "center",
   },
   saveButton: {
@@ -338,9 +413,13 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     marginBottom: HEIGHT * 0.05,
   },
+  saveButtonDisabled: {
+    backgroundColor: "#A0D9C5",
+    opacity: 0.7,
+  },
   saveButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: "600",
   },
 });

@@ -1,16 +1,16 @@
-import React, { useRef, useContext, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
-import { DarkModeContext } from "../context/DarkModeContext";
 import UserService from "../../services/user.service";
 import { useSelector } from "react-redux";
 import { selectUser } from "../../store/selectors/authSelectors";
 import { toast } from "react-toastify";
 import HomeService from "../../services/home.service";
-
+import SearchResult from "./HomeSection/SearchResult";
+import { useSearch } from "../context/SearchContext";
 // Hàm debounce để giới hạn tần suất gọi handleScroll
 const debounce = (func, wait) => {
   let timeout;
@@ -22,11 +22,11 @@ const debounce = (func, wait) => {
 
 // Define fallback images based on type
 const FALLBACK_IMAGES = {
-  ALL: "https://i.pinimg.com/736x/93/00/a4/9300a4f74d823f7bb93be955493a0155.jpg",
-  "HEAVY MEALS": "https://i.pinimg.com/736x/e8/8b/12/e88b123fd4a3f0555d7e70045ac14f9c.jpg",
-  "LIGHT MEALS": "https://i.pinimg.com/474x/db/c5/36/dbc53635aad70a15ce04489d02467605.jpg",
-  DESSERT: "https://i.pinimg.com/474x/e0/7c/de/e07cde796c00d499dc5d93d517082c00.jpg",
-  BEVERAGES: "https://i.pinimg.com/474x/08/76/98/0876982d7a1c29ca365fc84c0731ee78.jpg",
+  ALL: "https://i.pinimg.com/736x/1d/92/d0/1d92d0984eb0597b5d9492db9c3ff6da.jpg",
+  "HEAVY MEALS": "https://i.pinimg.com/736x/09/a6/19/09a619b49ec913f426f2b1d857b711ed.jpg",
+  "LIGHT MEALS": "https://i.pinimg.com/736x/f8/b5/0d/f8b50d9e38c02d0f26ad3c663d286876.jpg",
+  DESSERTS: "https://i.pinimg.com/736x/a0/a8/c6/a0a8c6be34dfc82f5d1f14b0e4e0208e.jpg",
+  BEVERAGES: "https://i.pinimg.com/736x/f3/35/3d/f3353da22218a4de90629ea801d6d0ff.jpg",
   SNACKS: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
   BREAKFAST: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
   VEGAN: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
@@ -38,7 +38,7 @@ const FALLBACK_IMAGES = {
 
 const ForYouPage = () => {
   const sliderRef = useRef(null);
-  const { darkMode } = useContext(DarkModeContext);
+
   const user = useSelector(selectUser);
   const userId = user?._id;
   const navigate = useNavigate();
@@ -50,28 +50,43 @@ const ForYouPage = () => {
   const [error, setError] = useState(null);
   const [selectedType, setSelectedType] = useState("");
   const [categories, setCategories] = useState([]);
-  const [alertMessage, setAlertMessage] = useState(null);
+  const [alertMessage] = useState(null);
   const [likedFoods, setLikedFoods] = useState([]); // Thêm state để quản lý danh sách món ăn yêu thích
+  const { searchTerm } = useSearch();
+  const [filteredDishes, setFilteredDishes] = useState([]);
 
   const limit = 8;
 
   // Hàm lấy danh sách món ăn yêu thích từ API
   const fetchLikedFoods = useCallback(async () => {
     try {
-      const response = await UserService.getFavoriteDishes(userId);
-      if (response.success) {
-        const likedDishes = response.data.map((dish) => ({
-          dishId: dish._id,
+      const response = await HomeService.getFavoriteDishes(userId);
+      if (Array.isArray(response)) {
+        const likedDishes = response.map((dish) => ({
+          dishId: dish.dishId,
           isLike: true,
         }));
         setLikedFoods(likedDishes);
       } else {
-        console.error("Failed to fetch liked foods:", response.message);
+        console.error("Unexpected response format:", response);
       }
     } catch (err) {
       console.error("Error fetching liked foods:", err);
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (!searchTerm || searchTerm.trim() === "") {
+      setFilteredDishes(recommendedRecipes);
+    } else {
+      const filtered = recommendedRecipes.filter((dish) =>
+        dish.name && typeof dish.name === "string"
+          ? dish.name.toLowerCase().includes(searchTerm.toLowerCase())
+          : false
+      );
+      setFilteredDishes(filtered);
+    }
+  }, [searchTerm, recommendedRecipes]);
 
   // Gọi API để lấy danh sách món ăn yêu thích khi component mount
   useEffect(() => {
@@ -148,7 +163,11 @@ const ForYouPage = () => {
 
       try {
         const normalizedType = normalizeTypeForApi(type);
-        const result = await UserService.getForyou(userId, { page, limit, type: normalizedType });
+        const result = await UserService.getForyou(userId, {
+          page,
+          limit,
+          type: normalizedType,
+        });
 
         if (result.success) {
           setRecommendedRecipes((prevRecipes) =>
@@ -272,6 +291,13 @@ const ForYouPage = () => {
         </div>
       )}
 
+      {searchTerm?.trim() && (
+        <>
+          <SearchResult userId={userId} dishes={filteredDishes} />
+          <hr className="w-full border-t border-gray-300 my-6" />
+        </>
+      )}
+
       <div className="p-6 flex items-center justify-between mb-8">
         <h2 className="text-[48px] md:text-[56px] font-bold font-['Syne'] text-[#40b491] dark:text-white">
           Recipes by Category
@@ -373,7 +399,7 @@ const ForYouPage = () => {
               <div
                 className="absolute right-[-10px] bottom-[-5px] w-[55px] h-[35px] bg-[#40b491] rounded-tr-[37.50px] rounded-bl-[42.50px] flex items-center justify-center"
                 onClick={(e) => {
-                  e.stopPropagation(); // Ngăn sự kiện click lan lên thẻ cha
+                  e.stopPropagation();
                   handleLike(recipe._id);
                 }}
               >

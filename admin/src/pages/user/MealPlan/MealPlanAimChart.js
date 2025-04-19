@@ -102,30 +102,52 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
     };
 
     const age = convertAge(preferences.age);
-    const { height, weight, activityLevel, gender } = preferences;
+    const { height, weight, activityLevel, gender, weightGoal } = preferences;
 
-    if (!age || !weight || !height || !activityLevel || !gender) {
+    if (!age || !weight || !height || !activityLevel || !gender || !weightGoal) {
       console.log("Missing required fields for nutrition calculation:", {
         age,
         height,
         weight,
         activityLevel,
         gender,
+        weightGoal,
       });
       return null;
     }
 
+    // Calculate BMR (Basal Metabolic Rate)
     const BMR =
       gender === "female"
         ? 10 * weight + 6.25 * height - 5 * age - 161
         : 10 * weight + 6.25 * height - 5 * age + 5;
 
+    // Calculate TDEE (Total Daily Energy Expenditure)
     const TDEE = BMR * activityLevel;
-    const dailyCalories = TDEE;
 
-    const protein = weight * 1.5;
-    const fat = weight * 0.8;
-    const carbs = (dailyCalories - (protein * 4 + fat * 9)) / 4;
+    // Determine if user wants to lose or gain weight
+    const weightDifference = weight - weightGoal;
+    let dailyCalories;
+
+    if (weightDifference > 0) {
+      // Weight loss: Create a calorie deficit (500 kcal below TDEE for ~0.5kg/week loss)
+      dailyCalories = TDEE - 500;
+    } else if (weightDifference < 0) {
+      // Weight gain: Create a calorie surplus (500 kcal above TDEE for ~0.5kg/week gain)
+      dailyCalories = TDEE + 500;
+    } else {
+      // Maintain weight: Use TDEE directly
+      dailyCalories = TDEE;
+    }
+
+    // Ensure dailyCalories doesn't go below a safe minimum (e.g., 1200 kcal for women, 1500 for men)
+    const minimumCalories = gender === "female" ? 1200 : 1500;
+    dailyCalories = Math.max(dailyCalories, minimumCalories);
+
+    // Calculate macronutrients
+    const protein = weight * 1.5; // 1.5g per kg of body weight
+    const fat = weight * 0.8; // 0.8g per kg of body weight
+    const carbs = (dailyCalories - (protein * 4 + fat * 9)) / 4; // Remaining calories assigned to carbs
 
     return {
       calories: {
@@ -234,8 +256,10 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
     );
   }
 
-  const weightToLose = userPreference ? userPreference.weight - userPreference.weightGoal : 0;
-  const weeksToGoal = Math.ceil(weightToLose / 0.5);
+  const weightDifference = userPreference ? userPreference.weight - userPreference.weightGoal : 0;
+  const isWeightLoss = weightDifference > 0;
+  const isWeightGain = weightDifference < 0;
+  const weeksToGoal = Math.ceil(Math.abs(weightDifference) / 0.5);
 
   return (
     <div className="flex flex-col items-center relative">
@@ -286,7 +310,7 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
       </div>
 
       <Modal isOpen={showModal} onClose={handleCloseModal}>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Goal Information</h3>
+        <h3 className="text-lg font-semibold mb-4 text-custom-green">Goal Information</h3>
         <div className="space-y-3 text-sm text-gray-700">
           <div>
             <p>
@@ -302,10 +326,16 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
             </p>
           </div>
 
-          {weightToLose > 0 && (
+          {isWeightLoss && (
             <p>
-              To achieve your goal of losing {weightToLose} kg, you need to maintain a proper diet
-              for about <strong>{weeksToGoal} weeks</strong>.
+              To achieve your goal of losing {weightDifference} kg, you need to maintain a proper
+              diet with a calorie deficit for about <strong>{weeksToGoal} weeks</strong>.
+            </p>
+          )}
+          {isWeightGain && (
+            <p>
+              To achieve your goal of gaining {Math.abs(weightDifference)} kg, you need to maintain
+              a proper diet with a calorie surplus for about <strong>{weeksToGoal} weeks</strong>.
             </p>
           )}
           <p>

@@ -27,7 +27,7 @@ const ForYou = ({ navigation }) => {
   const [hasMore, setHasMore] = useState(true);
   const limit = 10;
   const user = useSelector(userSelector);
-  const userId = user._id;
+  const userId = user?._id; // Thay bằng userId thực tế, có thể lấy từ context hoặc props
 
   const loadForYouDishes = useCallback(
     async (pageNum, isRefresh = false) => {
@@ -35,7 +35,7 @@ const ForYou = ({ navigation }) => {
         const response = await quizService.getForyou(userId, pageNum, limit);
         if (response.success) {
           const newDishes = response.dishes || [];
-
+          // Loại bỏ các món ăn trùng lặp dựa trên _id
           setDishes((prev) => {
             const existingIds = isRefresh ? new Set() : new Set(prev.map((dish) => dish._id));
             const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));
@@ -45,7 +45,6 @@ const ForYou = ({ navigation }) => {
           setPage(pageNum);
           setHasMore(pageNum < response.pagination.totalPages);
         } else {
-          console.error("Failed to load for you dishes:", response?.message);
           setHasMore(false);
         }
       } catch (error) {

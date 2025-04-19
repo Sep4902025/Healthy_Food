@@ -10,6 +10,8 @@ import { userSelector } from "../redux/selectors/selector";
 const SurveyScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const user = useSelector(userSelector);
+  console.log("dsfsdfsdf", user);
+  console.log("uPS", user?.userPreferenceId);
 
   // Kiểm tra userPreferenceId và điều hướng nếu đã tồn tại
   useEffect(() => {
@@ -53,7 +55,7 @@ const SurveyScreen = ({ navigation }) => {
       >
         It only takes a few minutes to complete!
       </Text>
-
+      {/* Nút Start Survey */}
       <TouchableOpacity
         onPress={handleStartSurveyScreen}
         className="bg-custom-green p-4 px-10 rounded-lg shadow-lg"

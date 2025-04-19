@@ -6,42 +6,53 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  PixelRatio,
 } from "react-native";
 import { useTheme } from "../../contexts/ThemeContext";
 
-const WIDTH = Dimensions.get("window").width;
-const HEIGHT = Dimensions.get("window").height;
+const window = Dimensions.get("window");
+const scale = window.width / 375; // Using 375 as base width for scaling
 
-const CategoryCard = ({ category, onPress, cardWidth, imageSize, style }) => {
+// Function to normalize sizes for different screen dimensions
+const normalize = (size) => {
+  const newSize = size * scale;
+  return Math.round(PixelRatio.roundToNearestPixel(newSize));
+};
+
+const CategoryCard = ({ category, onPress, style }) => {
   const { theme } = useTheme();
+  
+  // Calculate dynamic sizes based on screen width
+  const cardWidth = normalize(150);
+  const imageSize = normalize(80);
+  const cardHeight = normalize(120);
 
   return (
     <TouchableOpacity
       key={category.id}
-      style={{
-        ...styles.categoryCard,
-        width: cardWidth ?? "45%",
-        backgroundColor: theme.cardBackgroundColor,
- 
-        ...style,
-      }}
+      style={[
+        styles.categoryCard,
+        {
+          width: cardWidth,
+          height: cardHeight,
+          backgroundColor: theme.cardBackgroundColor,
+        },
+        style,
+      ]}
       onPress={onPress}
     >
-      <View style={styles.categoryImageContainer}>
+      <View style={[styles.categoryImageContainer, { width: imageSize, height: imageSize }]}>
         <Image
           source={{ uri: category.image_url }}
-          style={{
-            ...styles.categoryImage,
-            width: imageSize ?? WIDTH * 0.25,
-            height: imageSize ?? WIDTH * 0.25,
-          }}
+          style={styles.categoryImage}
         />
       </View>
       <Text
-        style={{
-          ...styles.categoryTitle,
-          color: theme.textColor,
-        }}
+        style={[
+          styles.categoryTitle,
+          { color: theme.textColor }
+        ]}
+        numberOfLines={1}
       >
         {category.name}
       </Text>
@@ -52,35 +63,26 @@ const CategoryCard = ({ category, onPress, cardWidth, imageSize, style }) => {
 const styles = StyleSheet.create({
   categoryCard: {
     position: "relative",
-
-    width: "45%",
-    height: HEIGHT * 0.11,
-    backgroundColor: "white",
     borderRadius: 10,
-    marginBottom: 16,
+    marginBottom: normalize(12),
+    marginHorizontal: normalize(4),
     alignItems: "center",
     justifyContent: "flex-end",
-    padding: 12,
-    paddingVertical: 14,
-    marginTop: HEIGHT * 0.05,
+    padding: normalize(12),
     shadowColor: "#343C41",
     shadowOffset: {
       width: 0,
-      height: 3,
+      height: 2,
     },
-    shadowOpacity: 0.27,
-    shadowRadius: 4.65,
-
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
     elevation: 3,
   },
   categoryImageContainer: {
     position: "absolute",
-    width: WIDTH * 0.25,
-    height: WIDTH * 0.25,
     borderRadius: 150,
     overflow: "hidden",
-    marginBottom: 10,
-    transform: [{ translateY: -WIDTH * 0.1 }],
+    top: normalize(-10),
   },
   categoryImage: {
     width: "100%",
@@ -88,8 +90,9 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
   },
   categoryTitle: {
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: "bold",
+    textAlign: "center",
   },
 });
 

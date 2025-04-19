@@ -48,7 +48,7 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
     <Modal visible={isOpen} transparent animationType="slide">
       <View className="flex-1 items-center justify-center bg-black/50">
         <View className="bg-surface dark:bg-dark-surface p-4 m-4 rounded-lg max-w-md">
-          <Text className="text-xl font-bold text-text dark:text-dark-text mb-4">
+          <Text className="text-xl font-bold text-custom-green dark:text-dark-text mb-4">
             Nutrition Advice
           </Text>
           {["calories", "protein", "carbs", "fat"].map((nutrient) => (
@@ -81,7 +81,7 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
               </View>
             </View>
           ))}
-          <Text className="font-medium text-text dark:text-dark-text mb-2">Suggestions:</Text>
+          <Text className="font-medium text-blue-500 dark:text-dark-text mb-2">Suggestions:</Text>
           {generateAdvice().map((advice, index) => (
             <Text key={index} className="text-sm text-text-secondary dark:text-dark-text-secondary">
               • {advice}

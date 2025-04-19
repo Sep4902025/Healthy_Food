@@ -3,6 +3,8 @@ import mealPlanService from "../../../services/mealPlanServices";
 import UserService from "../../../services/user.service";
 import { convertTo24Hour } from "../../../utils/formatTime";
 import debounce from "lodash/debounce";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
   const [title, setTitle] = useState("");
@@ -17,6 +19,9 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
   const [customDuration, setCustomDuration] = useState(false);
   const [creating, setCreating] = useState(false);
   const [userSuggestions, setUserSuggestions] = useState([]);
+
+  // Lấy ngày hiện tại theo định dạng YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
 
   const searchUsers = debounce(async (email) => {
     if (!email) {
@@ -68,11 +73,17 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
 
   const handleCreateMealPlan = async () => {
     if (!title || !startDate || (type === "fixed" && meals.length === 0)) {
-      alert("❌ Please fill in all required fields!");
+      toast.error("❌ Please fill in all required fields!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
       return;
     }
     if (userRole === "nutritionist" && (!price || !targetUserId)) {
-      alert("❌ Please provide price and select a target user!");
+      toast.error("❌ Please provide price and select a target user!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
       return;
     }
 
@@ -89,7 +100,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
         createdBy: userId,
         type,
         duration,
-        startDate: new Date(startDate).toISOString(), // Đảm bảo định dạng ISO
+        startDate: new Date(startDate).toISOString(),
         meals: type === "fixed" ? updatedMeals : [],
         ...(userRole === "nutritionist" && {
           price: Number(price),
@@ -98,13 +109,19 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
 
       const response = await mealPlanService.createMealPlan(mealPlanData);
       if (response.success) {
-        alert("🎉 Meal Plan created successfully!");
+        toast.success("🎉 Meal Plan created successfully!");
         onSuccess();
       } else {
-        alert(`❌ Error: ${response.message}`);
+        toast.error(`❌ Error: ${response.message}`, {
+          position: "top-right",
+          autoClose: 3000,
+        });
       }
     } catch (error) {
-      alert("❌ Error creating Meal Plan");
+      toast.error("❌ Error creating Meal Plan", {
+        position: "top-right",
+        autoClose: 3000,
+      });
     } finally {
       setCreating(false);
     }
@@ -112,7 +129,9 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-l-4 border-[#40B491]">
-      <h2 className="text-xl font-semibold mb-6 text-gray-800">Create New Meal Plan</h2>
+      <ToastContainer />
+
+      <h2 className="text-xl text-custom-green font-bold mb-6 ">Create New Meal Plan</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Title */}
@@ -134,6 +153,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            min={today} // Giới hạn ngày tối thiểu là ngày hiện tại
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#40B491]"
           />
         </div>

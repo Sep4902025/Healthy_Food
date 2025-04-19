@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const WeightGoal = () => {
   const navigate = useNavigate();
   const [selectedWeightGoal, setSelectedWeightGoal] = useState("");
   const [error, setError] = useState("");
 
-  // Load dữ liệu từ sessionStorage khi vào trang
+  // Load data from sessionStorage when the page opens
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.weightGoal) {
@@ -15,7 +15,7 @@ const WeightGoal = () => {
     }
   }, []);
 
-  // Hàm kiểm tra cân nặng mục tiêu
+  // Function to validate goal weight
   const validateWeightGoal = (weightGoal) => {
     if (!weightGoal.trim()) {
       return "Please enter your goal weight.";
@@ -31,7 +31,7 @@ const WeightGoal = () => {
       return "Goal weight must be greater than 0.";
     }
 
-    // Kiểm tra với weight từ sessionStorage
+    // Check against current weight from sessionStorage
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     const weight = savedData.weight;
     if (weight && weightGoalNum === Number(weight)) {
@@ -68,24 +68,25 @@ const WeightGoal = () => {
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/height")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={31.5} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Weight Goal</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Weight Goal</h2>
       <p className="text-center text-gray-600">Please enter your goal weight</p>
 
       <div className="mt-4">
         <input
+          autoFocus
           type="number"
           value={selectedWeightGoal}
           onChange={(e) => setSelectedWeightGoal(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Enter your goal weight (kg)"
-          className={`w-full p-4 rounded-lg shadow border ${
+          className={`w-[400px] p-4 rounded-lg shadow border ${
             error ? "border-red-500" : "border-gray-300"
           } focus:ring-2 focus:ring-green-400 outline-none`}
           style={{ MozAppearance: "textfield" }}

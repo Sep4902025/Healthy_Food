@@ -9,7 +9,8 @@ import { userSelector } from "../../redux/selectors/selector";
 import medicalConditionService from "../../services/medicalConditionService";
 
 const UnderDisease = ({ navigation }) => {
-  const { accessToken } = useSelector(userSelector);
+  const user = useSelector(userSelector);
+
   const [selectedItems, setSelectedItems] = useState([]);
   const [medicalConditions, setMedicalConditions] = useState([]);
   const [error, setError] = useState(null);
@@ -19,9 +20,6 @@ const UnderDisease = ({ navigation }) => {
   useEffect(() => {
     const fetchMedicalConditions = async () => {
       try {
-        if (!accessToken) {
-          throw new Error("Không tìm thấy accessToken. Vui lòng đăng nhập lại.");
-        }
         const result = await medicalConditionService.getAllMedicalConditions(1, 6);
         if (!result.success) {
           throw new Error(result.message);
@@ -55,7 +53,7 @@ const UnderDisease = ({ navigation }) => {
       }
     };
     loadData();
-  }, [accessToken]);
+  }, [user]);
 
   const toggleItemSelection = (id) => {
     setSelectedItems((prev) => {

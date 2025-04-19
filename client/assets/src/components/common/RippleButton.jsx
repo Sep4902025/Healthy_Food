@@ -77,7 +77,11 @@ const RippleButton = ({
             }
           : undefined
       }
-      
+      // style={({ pressed }) => [
+      //   styles.defaultButtonStyle,
+      //   buttonStyle,
+      //   Platform.OS === "ios" && pressed && styles.iosPressed,
+      // ]}
       style={{ ...styles.defaultButtonStyle, ...buttonStyle }}
       disabled={loading}
     >

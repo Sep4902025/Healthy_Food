@@ -40,12 +40,14 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto">
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className=" rounded-lg p-8 max-w-md mx-auto">
         <div className="flex justify-center mb-6">
           <img src={VerifyLogo} alt="Verify Logo" className="w-[60%] h-[60%]" />
         </div>
-        <h2 className="text-2xl font-bold text-center mb-4">Change New Password</h2>
+        <h2 className="text-2xl font-bold text-center mb-4 text-custom-green">
+          Change New Password
+        </h2>
         <p className="text-gray-600 text-center mb-6">
           Enter a different password from the previous one
         </p>
@@ -83,7 +85,7 @@ const ResetPassword = () => {
 
           <button
             type="submit"
-            className="w-full py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition duration-200"
+            className="w-full py-2 bg-custom-green text-white font-semibold rounded-lg hover:bg-custom-green-hover transition duration-200"
           >
             Reset Password
           </button>

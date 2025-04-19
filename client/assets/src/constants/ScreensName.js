@@ -2,6 +2,7 @@ export const ScreensName = {
   signup: "signup",
   signin: "signin",
   changePassword: "changePassword",
+  resetPassword: "resetPassword",
   verifyEmail: "verifyEmail",
   favorAndSuggest: "favorAndSuggest",
   favorList: "favorList",

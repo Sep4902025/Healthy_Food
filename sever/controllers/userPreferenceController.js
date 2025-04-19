@@ -97,14 +97,20 @@ exports.softDeleteUserPreference = async (req, res) => {
 exports.deleteUserPreference = async (req, res) => {
   try {
     const result = await userPreferenceService.deleteUserPreference(req.params.id);
-    if (!result.success) {
-      return res.status(404).json(result); // Trả về lỗi 404 nếu không tìm thấy
+    if (result.status === "fail") {
+      return res.status(404).json({
+        success: false,
+        message: result.message,
+      });
     }
-    res.status(200).json(result);
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Lỗi server: " + error.message,
+      message: "Error Server: " + error.message,
     });
   }
 };

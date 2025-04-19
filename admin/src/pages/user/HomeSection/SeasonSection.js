@@ -9,7 +9,7 @@ import Logo from "../../../assets/images/Season/Logo.png";
 const categories = [
   { id: 1, name: "Spring", image: SpringImg },
   { id: 2, name: "Summer", image: SummerImg },
-  { id: 3, name: "Autumn", image: AutumnImg },
+  { id: 3, name: "Fall", image: AutumnImg },
   { id: 4, name: "Winter", image: WinterImg },
   { id: 5, name: "All Seasons", image: AllSeasonImg },
 ];

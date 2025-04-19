@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
-
-// Đồng bộ danh sách với hateGroups
+import { RiArrowLeftSLine } from "react-icons/ri";
+// Synchronize list with hateGroups
 const favoriteGroups = [
   {
     name: "Vegetables",
@@ -90,26 +90,41 @@ const favoriteGroups = [
   },
 ];
 
+// Function to map from id to name
+export const getFavoriteNameById = (id) => {
+  for (const group of favoriteGroups) {
+    const item = group.items.find((item) => item.id === id);
+    if (item) return item.name;
+  }
+  return "Unknown"; // Return "Unknown" if the id is not found
+};
+
+// Function to map a list of ids to a list of names
+export const getFavoriteNamesByIds = (ids) => {
+  if (!ids || !Array.isArray(ids)) return [];
+  return ids.map((id) => getFavoriteNameById(id));
+};
+
 const Favorite = () => {
   const navigate = useNavigate();
   const [selectedItemIds, setSelectedItemIds] = useState([]);
-  const [hatedItemIds, setHatedItemIds] = useState([]); // Lưu danh sách hate từ sessionStorage
+  const [hatedItemIds, setHatedItemIds] = useState([]); // Store the hate list from sessionStorage
 
-  // Load dữ liệu từ sessionStorage khi vào trang
+  // Load data from sessionStorage when the page loads
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.favorite) {
       setSelectedItemIds(savedData.favorite);
     }
     if (savedData.hate) {
-      setHatedItemIds(savedData.hate); // Lấy danh sách hate để kiểm tra
+      setHatedItemIds(savedData.hate); // Get the hate list for checking
     }
   }, []);
 
   const toggleItemSelection = (id) => {
-    // Không cho chọn nếu id đã có trong hatedItemIds
+    // Do not allow selection if the id is in hatedItemIds
     if (hatedItemIds.includes(id)) {
-      return; // Bỏ qua nếu đã bị ghét
+      return; // Skip if already hated
     }
     setSelectedItemIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -119,7 +134,7 @@ const Favorite = () => {
   const selectAll = () => {
     const allItemIds = favoriteGroups
       .flatMap((group) => group.items.map((item) => item.id))
-      .filter((id) => !hatedItemIds.includes(id)); // Loại bỏ các id đã bị ghét
+      .filter((id) => !hatedItemIds.includes(id)); // Exclude ids that are hated
     setSelectedItemIds(allItemIds);
   };
 
@@ -152,22 +167,18 @@ const Favorite = () => {
   };
 
   return (
-    <div
-      className="max-w-md mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/underdisease")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={94.5} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Favorite</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Favorite</h2>
       <p className="text-center text-gray-600">Select your favorite food</p>
 
       <div className="flex items-center justify-start space-x-2 my-4">
@@ -177,9 +188,8 @@ const Favorite = () => {
           onChange={handleSelectAllToggle}
           checked={
             selectedItemIds.length ===
-            favoriteGroups
-              .flatMap((c) => c.items)
-              .filter((item) => !hatedItemIds.includes(item.id)).length
+            favoriteGroups.flatMap((c) => c.items).filter((item) => !hatedItemIds.includes(item.id))
+              .length
           }
         />
         <label htmlFor="selectAll">Select All</label>
@@ -203,7 +213,7 @@ const Favorite = () => {
                     : "bg-gray-100 hover:bg-green-200"
                 } transition`}
                 onClick={() => toggleItemSelection(item.id)}
-                disabled={hatedItemIds.includes(item.id)} // Vô hiệu hóa nếu đã bị ghét
+                disabled={hatedItemIds.includes(item.id)} // Disable if already hated
               >
                 {item.name}
               </button>

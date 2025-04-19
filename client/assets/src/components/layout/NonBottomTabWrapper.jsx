@@ -6,7 +6,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import DecorationDot from "../common/DecorationDot";
 import { useTheme } from "../../contexts/ThemeContext";
 
-
 const WIDTH = Dimensions.get("window").width;
 const HEIGHT = Dimensions.get("window").height;
 
@@ -30,7 +29,7 @@ function NonBottomTabWrapper({ children, headerHidden, style }) {
           {children}
         </KeyboardAvoidingView>
       </LinearGradient>
-    
+
       <>
         <DecorationDot
           size={HEIGHT * 0.25}
@@ -52,7 +51,7 @@ function NonBottomTabWrapper({ children, headerHidden, style }) {
           size={HEIGHT * 0.25}
           top={HEIGHT - HEIGHT * 0.15}
           left={WIDTH - WIDTH * 0.4}
-          zIndex={1}
+          zIndex={-2}
           backgroundColor={theme.greenDecorationDotColor}
         />
         <DecorationDot
@@ -60,7 +59,7 @@ function NonBottomTabWrapper({ children, headerHidden, style }) {
           top={HEIGHT - HEIGHT * 0.3}
           left={WIDTH - WIDTH * 0.6}
           opacity={0.4}
-          zIndex={1}
+          zIndex={-1}
           transform={[{ translateX: 200 }, { translateY: 50 }]}
           backgroundColor={theme.blackDecorationDotColor}
         />

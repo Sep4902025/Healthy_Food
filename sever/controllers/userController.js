@@ -36,10 +36,18 @@ exports.updateUserById = catchAsync(async (req, res, next) => {
 
 // 📌 Xóa người dùng (Soft Delete)
 exports.deleteUser = catchAsync(async (req, res, next) => {
-  const result = await userService.deleteUser(req.params.id);
-  if (!result.success) {
-    return next(result.error); // Trả về lỗi 404 nếu không tìm thấy
+  const { id } = req.params;
+  const { password } = req.body; // Lấy mật khẩu từ body
+
+  if (!password) {
+    return next(new AppError("Password is required", 400));
   }
+
+  const result = await userService.deleteUser(id, password);
+  if (!result.success) {
+    return next(result.error); // Trả về lỗi 404 hoặc 401 nếu không tìm thấy hoặc mật khẩu sai
+  }
+
   res.status(200).json(result);
 });
 
@@ -66,7 +74,10 @@ exports.submitNutritionistApplication = catchAsync(async (req, res, next) => {
   if (!req.user || !req.user._id) {
     return next(new AppError("Unauthorized: No user found in request", 401));
   }
-  const result = await userService.submitNutritionistApplication(req.user._id, req.body);
+  const result = await userService.submitNutritionistApplication(
+    req.user._id,
+    req.body
+  );
   if (!result.success) {
     return next(result.error); // Trả về lỗi 400 hoặc 404 nếu có vấn đề
   }

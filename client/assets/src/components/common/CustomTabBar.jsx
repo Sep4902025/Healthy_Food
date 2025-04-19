@@ -8,23 +8,23 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { userSelector } from "../../redux/selectors/selector";
 import { useSelector } from "react-redux";
 
-
+// Get screen dimensions
 const HEIGHT = Dimensions.get("window").height;
 
 const CustomTabBar = ({ state, descriptors, navigation }) => {
-
+  // Get theme context
   const { theme } = useTheme();
   const user = useSelector(userSelector);
 
-  
+  // The main tab screen is named "Main" and contains a stack navigator
   const mainRoute = state.routes[0];
   const mainRouteState = mainRoute?.state;
 
-
+  // Get the current route index from the nested stack navigator
   const currentRouteIndex = mainRouteState?.index || 0;
 
- 
-  let currentScreenName = "Home"; 
+  // Get the current screen name from the nested navigator state
+  let currentScreenName = "Home"; // Default to Home if we can't determine
 
   if (
     mainRouteState &&
@@ -34,17 +34,17 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     currentScreenName = mainRouteState.routes[currentRouteIndex].name;
   }
 
-
+  // Find the current screen in ScreensMap
   const currentScreen =
     ScreensMap.find((screen) => screen.name === currentScreenName) ||
     ScreensMap[0];
 
-  
+  // If current screen should hide tab bar, return null but maintain layout space
   if (currentScreen?.hiddenBottomTab) {
     return <View />;
   }
 
- 
+  // Find visible tabs to display in the tab bar
   const visibleTabs = ScreensMap.filter(
     (screen) =>
       !(
@@ -67,11 +67,11 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: theme.mode === "dark" ? 0.3 : 0.1,
           shadowRadius: 3,
-          backgroundColor: "transparent", 
-          zIndex: 999, 
+          backgroundColor: "transparent", // Important to ensure visibility
+          zIndex: 999, // Ensure it stays on top
         }}
       >
-    
+        {/* Gradient background */}
         <LinearGradient
           colors={[theme.tabBarBackgroundColor, theme.tabBarBackgroundColor]}
           style={{
@@ -95,13 +95,13 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
           }}
         >
           {visibleTabs.map((screen, index) => {
-           
+            // Check if this tab is the current screen
             const isFocused = currentScreenName === screen.name;
 
-           
+            // Handle tab press - Navigate to screen within the Main navigator
             const onPress = () => {
               if (!isFocused) {
-              
+                // Navigate through the stack in Main
                 if (screen?.options?.requireAuthen) {
                   if (!user) {
                     navigation.navigate("Main", {
@@ -151,7 +151,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
             );
           })}
 
-         
+          {/* Center Button */}
           <TouchableOpacity
             style={{
               position: "absolute",
@@ -162,7 +162,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
               width: HEIGHT * 0.08,
               height: HEIGHT * 0.08,
               borderRadius: 50,
-              backgroundColor: theme.mode === "dark" ? "#333" : "#ff9900", 
+              backgroundColor: theme.mode === "dark" ? "#333" : "#ff9900", // Adjust based on theme
               justifyContent: "center",
               alignItems: "center",
             }}
@@ -188,7 +188,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
               start={{ x: 0, y: 1 }}
               end={{ x: 0, y: 0 }}
             >
-            
+              {/* Circle container code remains the same */}
             </LinearGradient>
             <MaterialCommunityIcons
               name="home"

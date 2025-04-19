@@ -1,24 +1,28 @@
 const UserModel = require("../models/UserModel");
 const AppError = require("../utils/appError");
 const sendEmail = require("../utils/email");
-
+const bcrypt = require("bcryptjs");
 // 📌 Lấy danh sách tất cả người dùng (bỏ qua user đã xóa)
 exports.getAllUsers = async (query, currentAdminId) => {
   const page = parseInt(query.page) || 1; // Mặc định là trang 1
   const limit = parseInt(query.limit) || 10; // Mặc định 10 users mỗi trang
   const skip = (page - 1) * limit; // Tính số bản ghi cần bỏ qua
 
-  // Điều kiện lọc: không bao gồm người dùng đã xóa và không phải admin đang đăng nhập
+  // Điều kiện lọc: không bao gồm người dùng đã xóa, không phải admin đang đăng nhập, và không có role admin
   const filter = {
     isDelete: false,
     _id: { $ne: currentAdminId }, // Loại trừ admin đang đăng nhập
+    role: { $ne: "admin" }, // Loại trừ người dùng có role admin
   };
 
   // Đếm tổng số người dùng thỏa mãn điều kiện
   const totalUsers = await UserModel.countDocuments(filter);
 
   // Lấy danh sách người dùng với phân trang
-  const users = await UserModel.find(filter).skip(skip).limit(limit).populate("userPreferenceId");
+  const users = await UserModel.find(filter)
+    .skip(skip)
+    .limit(limit)
+    .populate("userPreferenceId");
 
   // Tính tổng số trang
   const totalPages = Math.ceil(totalUsers / limit);
@@ -112,15 +116,29 @@ exports.updateUserById = async (id, updates) => {
 };
 
 // 📌 Xóa người dùng (Soft Delete)
-exports.deleteUser = async (id) => {
-  const user = await UserModel.findByIdAndUpdate(id, { isDelete: true }, { new: true });
+exports.deleteUser = async (id, password) => {
+  // Tìm người dùng theo ID
+  const user = await UserModel.findById(id).select("+password"); // Lấy trường password
 
-  if (!user) {
+  // Kiểm tra xem người dùng có tồn tại không
+  if (!user || user.isDelete) {
     return {
       success: false,
       error: new AppError("User not found or has been deleted", 404),
     };
   }
+
+  // Kiểm tra mật khẩu
+  const isPasswordCorrect = await bcrypt.compare(password, user.password);
+  if (!isPasswordCorrect) {
+    return {
+      success: false,
+      error: new AppError("Incorrect password", 401),
+    };
+  }
+
+  // Thực hiện soft delete
+  await UserModel.findByIdAndUpdate(id, { isDelete: true }, { new: true });
 
   return {
     success: true,
@@ -131,7 +149,11 @@ exports.deleteUser = async (id) => {
 
 // 📌 Khôi phục người dùng (Chỉ admin)
 exports.restoreUser = async (id) => {
-  const user = await UserModel.findByIdAndUpdate(id, { isDelete: false }, { new: true });
+  const user = await UserModel.findByIdAndUpdate(
+    id,
+    { isDelete: false },
+    { new: true }
+  );
 
   if (!user) {
     return {
@@ -150,7 +172,8 @@ exports.restoreUser = async (id) => {
 
 // 📌 Tạo mới người dùng
 exports.createUser = async (body) => {
-  const { userName, email, phoneNumber, gender, status, role, profileImage } = body;
+  const { userName, email, phoneNumber, gender, status, role, profileImage } =
+    body;
 
   // Kiểm tra xem user với email này đã tồn tại chưa
   const existingUser = await UserModel.findOne({ email, isDelete: false });
@@ -288,7 +311,8 @@ exports.reviewNutritionistApplication = async (body) => {
   if (action === "approve") {
     user.nutritionistApplication.status = "approved";
     user.role = "nutritionist";
-    emailSubject = "Chúc mừng! Đơn xin trở thành Nutritionist của bạn đã được phê duyệt";
+    emailSubject =
+      "Chúc mừng! Đơn xin trở thành Nutritionist của bạn đã được phê duyệt";
     emailHtml = `
       <h2>Chúc mừng ${user.username}!</h2>
       <p>Chúng tôi rất vui mừng thông báo rằng đơn xin trở thành Nutritionist của bạn đã được phê duyệt.</p>

@@ -1,7 +1,5 @@
 import axios from "axios";
 import axiosInstance from "./axiosInstance";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const quizService = {
@@ -18,9 +16,10 @@ const quizService = {
       }
 
       const response = await axiosInstance.post(`/userpreference`, finalData);
-      console.log("REU", response);
+      console.log("REU", response.data);
 
-      
+      // await AsyncStorage.removeItem("quizData"); // Thay sessionStorage bằng AsyncStorage nếu dùng React Native
+
       return { success: true, data: response.data };
     } catch (error) {
       console.error("Submit quiz error:", error);
@@ -30,6 +29,7 @@ const quizService = {
       };
     }
   },
+  // Lấy danh sách món ăn đề xuất cho người dùng dựa trên userId với phân trang
   getForyou: async (userId, page = 1, limit = 10) => {
     try {
       if (!userId) {
@@ -39,7 +39,7 @@ const quizService = {
         };
       }
 
-    
+      // Gửi request với query parameters page và limit
       const response = await axiosInstance.get(`/foryou/${userId}`, {
         params: {
           page,
@@ -53,9 +53,9 @@ const quizService = {
         return {
           success: true,
           message: message || "Danh sách món ăn được lấy thành công",
-          dishes: data.items,
+          dishes: data.items, // Danh sách món ăn trong trang hiện tại
           pagination: {
-         
+            // Thông tin phân trang
             totalItems: data.totalItems,
             currentPage: data.currentPage,
             totalPages: data.totalPages,
@@ -69,7 +69,6 @@ const quizService = {
         };
       }
     } catch (error) {
-      console.error("Lỗi lấy danh sách món ăn đề xuất:", error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || "Lỗi khi lấy danh sách món ăn",
@@ -112,7 +111,7 @@ const quizService = {
 
   updateUserPreference: async (userId, updatedData) => {
     try {
-      const response = await axios.put(`${API_URL}/userPreference/${userId}`, updatedData);
+      const response = await axios.put(`${API_URL}/userpreference/${userId}`, updatedData);
       return { success: true, data: response.data };
     } catch (error) {
       return {

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { selectAuth } from "../../store/selectors/authSelectors";
 import medicalConditionService from "../../services/nutritionist/medicalConditionServices";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const UnderDisease = () => {
   const navigate = useNavigate();
   const { token } = useSelector(selectAuth);
@@ -17,13 +17,13 @@ const UnderDisease = () => {
     const fetchMedicalConditions = async () => {
       try {
         if (!token) {
-          throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+          throw new Error("Token not found. Please log in again.");
         }
 
-        // Gọi service để lấy 6 bệnh
+        // Call service to fetch 6 conditions
         const result = await medicalConditionService.getAllMedicalConditions(
-          1, // Trang 1
-          6 // Giới hạn 6 bệnh
+          1, // Page 1
+          6 // Limit to 6 conditions
         );
 
         if (!result.success) {
@@ -32,17 +32,17 @@ const UnderDisease = () => {
 
         const conditions = result.data.items;
         if (conditions.length === 0) {
-          setError("Không có bệnh nền nào để hiển thị.");
+          setError("No medical conditions available to display.");
           setMedicalConditions([]);
         } else {
           const mappedData = conditions.map((condition) => ({
-            id: condition._id || condition.id, // Đảm bảo tương thích với API
+            id: condition._id || condition.id, // Ensure compatibility with API
             name: condition.name,
           }));
           setMedicalConditions(mappedData);
         }
       } catch (error) {
-        setError(`Không thể tải danh sách bệnh nền: ${error.message}`);
+        setError(`Unable to load medical conditions: ${error.message}`);
         setMedicalConditions([]);
       } finally {
         setLoading(false);
@@ -51,7 +51,7 @@ const UnderDisease = () => {
 
     fetchMedicalConditions();
 
-    // Khôi phục dữ liệu đã chọn từ sessionStorage
+    // Restore selected data from sessionStorage
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.underDisease) {
       const validObjectIds = savedData.underDisease.filter((id) => /^[0-9a-fA-F]{24}$/.test(id));
@@ -61,7 +61,7 @@ const UnderDisease = () => {
 
   const toggleItemSelection = (id) => {
     setSelectedItems((prev) => {
-      const noDiseaseId = medicalConditions.find((d) => d.name === "Không mắc bệnh")?.id;
+      const noDiseaseId = medicalConditions.find((d) => d.name === "No medical conditions")?.id;
       if (id === noDiseaseId) {
         return prev.includes(id) ? [] : [id];
       }
@@ -74,7 +74,7 @@ const UnderDisease = () => {
 
   const handleNext = () => {
     if (selectedItems.length === 0) {
-      alert("Vui lòng chọn ít nhất một lựa chọn.");
+      alert("Please select at least one option.");
       return;
     }
 
@@ -91,24 +91,24 @@ const UnderDisease = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/eathabit")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={84} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Underlying conditions</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Underlying conditions</h2>
       <p className="text-center text-gray-600">
         Please tell me about your underlying health conditions
       </p>
 
       {loading && (
-        <div className="text-center text-gray-500 mt-4">Đang tải danh sách bệnh nền...</div>
+        <div className="text-center text-gray-500 mt-4">Loading medical conditions...</div>
       )}
 
       {error && !loading && <div className="text-center text-red-500 mt-4">{error}</div>}
@@ -145,7 +145,7 @@ const UnderDisease = () => {
         onClick={handleNext}
         className="w-full bg-teal-500 text-white text-lg font-semibold py-3 rounded-lg hover:bg-teal-600 transition mt-5"
       >
-        Tiếp theo
+        Next
       </button>
     </div>
   );

@@ -6,12 +6,11 @@ import imageCompression from "browser-image-compression";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
-
 const FLAVOR_OPTIONS = ["Sweet", "Sour", "Salty", "Bitter", "Fatty"];
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
 const SEASON_OPTIONS = ["All Season", "Spring", "Summer", "Fall", "Winter"];
 
-const AddDishes = ({ onDishAdded = () => { } }) => {
+const AddDishes = ({ onDishAdded = () => {} }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
@@ -33,13 +32,19 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
     const newErrors = {};
 
     if (!formData.name.trim()) newErrors.name = "Name is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.name)) {
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():\-;]/i.test(formData.name)) {
       newErrors.name = "Input must not contain special characters.";
+    } else if (formData.name.length > 100) {
+      newErrors.name = "Name must not exceed 100 characters.";
     }
+
     if (!formData.description.trim()) newErrors.description = "Description is required";
-    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(formData.description)) {
+    else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():\-;]/i.test(formData.description)) {
       newErrors.description = "Input must not contain special characters.";
+    } else if (formData.description.length > 500) {
+      newErrors.description = "Description must not exceed 500 characters.";
     }
+
     if (!formData.imageFile && !formData.imageUrl.trim())
       newErrors.imageUrl = "Image (file or URL) is required";
     else if (formData.imageUrl && !isValidImageUrl)
@@ -120,7 +125,6 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
     img.src = url;
   };
 
-
   const compressImage = async (file) => {
     const options = {
       maxSizeMB: 1,
@@ -130,8 +134,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
     try {
       const compressedFile = await imageCompression(file, options);
       return compressedFile;
-    } catch (error) {
-      console.error("Image compression error:", error);
+    } catch {
       return file;
     }
   };
@@ -149,14 +152,11 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
     if (formData.imageFile) {
       try {
         const compressedFile = await compressImage(formData.imageFile);
-        const uploadedImage = await uploadFile(compressedFile, (percentComplete) => {
-          console.log(`Upload progress: ${percentComplete}%`);
-        });
+        const uploadedImage = await uploadFile(compressedFile, () => {});
         imageUrl = uploadedImage.secure_url;
-      } catch (error) {
+      } catch {
         setIsLoading(false);
-        toast.success("Image upload failed!");
-        console.error("Upload error:", error);
+        toast.error("Image upload failed!");
         return;
       }
     }
@@ -208,7 +208,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
           <p className="mt-4 text-white text-lg">Loading...</p>
         </div>
       )}
-  
+
       <div className="flex items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
           Add New Dish
@@ -225,7 +225,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
           </button>
         </div>
       </div>
-  
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="mb-4">
@@ -236,13 +236,15 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter dish name"
+              maxLength={100}
               className={`w-full border ${
                 errors.name ? "border-red-500" : "border-gray-300"
               } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            <p className="text-gray-500 text-sm mt-1">{formData.name.length}/100 characters</p>
           </div>
-  
+
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
             <select
@@ -262,7 +264,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
             </select>
             {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
           </div>
-  
+
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Video URL *</label>
             <input
@@ -277,7 +279,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
             />
             {errors.videoUrl && <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>}
           </div>
-  
+
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Season *</label>
             <select
@@ -297,7 +299,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
             </select>
             {errors.season && <p className="text-red-500 text-sm mt-1">{errors.season}</p>}
           </div>
-  
+
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">Flavor *</label>
             <div className="flex flex-wrap gap-4">
@@ -316,7 +318,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
             </div>
             {errors.flavor && <p className="text-red-500 text-sm mt-1">{errors.flavor}</p>}
           </div>
-  
+
           <div className="bg-gray-50 p-6 rounded-lg">
             <div className="text-center mb-4">
               <UploadComponent
@@ -333,7 +335,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
                 onChange={handleImageUrlChange}
                 placeholder="Enter image URL"
                 className={`w-full border ${
-                  errors.imageUrl ? "border-red-500" : "border-gray-300"
+                  errors.imageUrl ? "border-red500" : "border-gray-300"
                 } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
               />
               {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>}
@@ -342,14 +344,14 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
               <div className="mt-2 flex justify-center">
                 <img
                   src={imagePreview}
-                  alt="Image Preview"
+                  alt="Dish preview"
                   className="w-32 h-32 object-cover rounded border"
                 />
               </div>
             )}
           </div>
         </div>
-  
+
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
@@ -358,6 +360,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
               value={formData.description}
               onChange={handleChange}
               placeholder="Enter description"
+              maxLength={500}
               className={`w-full border ${
                 errors.description ? "border-red-500" : "border-gray-300"
               } rounded-md px-3 py-2 h-40 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
@@ -365,6 +368,7 @@ const AddDishes = ({ onDishAdded = () => { } }) => {
             {errors.description && (
               <p className="text-red-500 text-sm mt-1">{errors.description}</p>
             )}
+            <p className="text-gray-500 text-sm mt-1">{formData.description.length}/500 characters</p>
           </div>
         </div>
       </div>

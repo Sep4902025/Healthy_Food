@@ -180,20 +180,37 @@ const mealPlanService = {
   getUnpaidMealPlanForUser: async (userId) => {
     try {
       const response = await api.get(`/mealPlan/users/${userId}/unpaid`);
-      console.log("🔍 MealPlan cần thanh toán:", response.data);
-      return {
-        success: response.data.status === "success",
-        data: response.data.status === "success" ? response.data.data : null,
-        message:
-          response.data.status !== "success"
-            ? response.data.message || "No unpaid meal plan found"
-            : undefined,
-      };
+      if (response.data.status === "success") {
+        return {
+          success: true,
+          data: response.data.data,
+          message: undefined,
+        };
+      } else if (
+        response.data.message?.toLowerCase() === "no unpaid meal plans found for this user" ||
+        response.data.message?.toUpperCase() === "NO UNPAID MEAL PLANS FOR THIS USER"
+      ) {
+        return {
+          success: true,
+          data: [],
+          message: undefined,
+        };
+      } else {
+        return {
+          success: false,
+          data: null,
+          message: response.data.message || "No unpaid meal plan found",
+        };
+      }
     } catch (error) {
-      console.error(
-        "❌ Lỗi khi lấy MealPlan cần thanh toán:",
-        error.response?.data || error.message
-      );
+      console.error("Error in getUnpaidMealPlanForUser:", error);
+      if (error.response?.status === 404) {
+        return {
+          success: true, // Hoặc false tùy theo yêu cầu
+          data: [],
+          message: "Không tìm thấy MealPlan cần thanh toán!",
+        };
+      }
       return {
         success: false,
         message: "Không tìm thấy MealPlan cần thanh toán!",

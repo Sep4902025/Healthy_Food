@@ -162,7 +162,6 @@ const mealPlanService = {
       console.log("🔍 Chi tiết MealPlan:", response.data);
       return { success: true, data: response.data.data };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy MealPlan:", error.response?.data || error.message);
       return { success: false, message: "Không tìm thấy MealPlan!" };
     }
   },
@@ -171,8 +170,6 @@ const mealPlanService = {
   getUnpaidMealPlanForUser: async (userId) => {
     try {
       const response = await axiosInstance.get(`/mealPlan/users/${userId}/unpaid`);
-      console.log("RS", response);
-
       if (response.data.status === "success") {
         return {
           success: true,
@@ -266,7 +263,7 @@ const mealPlanService = {
             : undefined,
       };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy lịch sử giao dịch:", error.response?.data || error.message);
+      // console.error("❌ Lỗi khi lấy lịch sử giao dịch:", error.response?.data || error.message);
       return { success: false, message: "Không thể lấy lịch sử giao dịch!" };
     }
   },
@@ -357,7 +354,6 @@ const mealPlanService = {
       const response = await axiosInstance.get(`/mealPlan/users/${userId}`);
       return response.data;
     } catch (error) {
-      console.error("Lỗi lấy meal plan của user:", error);
       throw error;
     }
   },
@@ -394,7 +390,6 @@ const mealPlanService = {
       );
       return { success: true, data: response.data.data || [] };
     } catch (error) {
-      console.error("❌ Lỗi khi lấy Meals:", error.response?.data || error.message);
       return { success: false, message: "Không thể lấy Meals" };
     }
   },

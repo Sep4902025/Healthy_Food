@@ -13,7 +13,7 @@ const ConversationItem = ({ conversation, onAccept, onCheck, onClick }) => {
     >
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-medium text-sm">{conversation.userId.email}</h3>
+          <h3 className="font-medium text-sm truncate w-20">{conversation.userId?.email}</h3>
           <p className="text-xs text-gray-500">{conversation.topic}</p>
           <p className="text-xs text-gray-400">
             {new Date(conversation.createdAt).toLocaleString()}
@@ -110,12 +110,17 @@ const NutritionChat = () => {
 
   const handleAcceptChat = async (conversationId) => {
     try {
-      await ChatService.acceptConversation(conversationId, user._id);
+      const response = await ChatService.acceptConversation(conversationId, user._id);
       await loadConversations();
       setActiveTab("active");
       const updatedConversation = conversations.find((conv) => conv._id === conversationId);
       if (updatedConversation) {
         setSelectedConversation({ ...updatedConversation, status: "active" });
+        const socket = ChatService.connectSocket(user._id);
+        socket.emit("conversation_status_changed", {
+          conversationId,
+          status: "active",
+        });
       }
     } catch (error) {
       console.error("Error accepting chat:", error);
@@ -147,7 +152,7 @@ const NutritionChat = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-60px)]">
+    <div className="flex h-[calc(100vh-100px)] w-full">
       <div className="flex flex-1">
         <div className="w-64 border-r flex flex-col h-[calc(100vh-60px)]">
           <div className="flex border-b">
@@ -200,14 +205,14 @@ const NutritionChat = () => {
             )}
           </div>
         </div>
-
-        <div className="flex-1 flex flex-col bg-white h-[calc(100vh-60px)]">
+        <div className="flex-1 flex flex-col bg-white h-full">
           {error && <div className="p-2 bg-red-100 text-red-700 text-sm text-center">{error}</div>}
           <div className="flex-1 overflow-hidden">
             {selectedConversation ? (
               <ChatWindow
                 conversation={selectedConversation}
                 setCurrentConversation={handleUpdateConversation}
+                role="nutritionist"
               />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500 text-sm">

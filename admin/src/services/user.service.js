@@ -41,6 +41,112 @@ axiosInstance.interceptors.response.use(
 );
 
 const UserService = {
+  //Xóa tài khoản
+  requestDeleteAccount: async (email) => {
+    try {
+      if (!email) {
+        return {
+          success: false,
+          message: "Email is required!",
+        };
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return {
+          success: false,
+          message: "Invalid email format!",
+        };
+      }
+
+      const response = await axiosInstance.post("/users/request-delete-account", { email });
+
+      const { success, message } = response.data;
+
+      if (success) {
+        console.log("requestDeleteAccount Response:", { message });
+
+        return {
+          success: true,
+          message: message || "OTP has been sent to your email to confirm account deletion",
+        };
+      } else {
+        return {
+          success: false,
+          message: message || "Unable to send account deletion request",
+        };
+      }
+    } catch (error) {
+      console.error(
+        "Error sending account deletion request:",
+        error.response?.data || error.message
+      );
+      return {
+        success: false,
+        message: error.response?.data?.message || "Error sending account deletion request",
+        error: error.response?.status || 500,
+      };
+    }
+  },
+
+  confirmDeleteAccount: async (email, otp) => {
+    try {
+      if (!email || !otp) {
+        return {
+          success: false,
+          message: "Email and OTP are required!",
+        };
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return {
+          success: false,
+          message: "Invalid email format!",
+        };
+      }
+
+      // Validate OTP format (4-digit number)
+      const otpRegex = /^\d{4}$/;
+      if (!otpRegex.test(otp)) {
+        return {
+          success: false,
+          message: "Invalid OTP (must be 4 digits)!",
+        };
+      }
+
+      const response = await axiosInstance.post("/users/confirm-delete-account", { email, otp });
+
+      const { success, message } = response.data;
+
+      if (success) {
+        console.log("confirmDeleteAccount Response:", { message });
+
+        // Remove token from localStorage after successful account deletion
+        localStorage.removeItem("token");
+
+        return {
+          success: true,
+          message: message || "Account has been successfully deleted",
+        };
+      } else {
+        return {
+          success: false,
+          message: message || "Unable to delete account",
+        };
+      }
+    } catch (error) {
+      console.error("Error confirming account deletion:", error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Error confirming account deletion",
+        error: error.response?.status || 500,
+      };
+    }
+  },
+
   getForyou: async (userId, { page = 1, limit = 10, type = "" } = {}) => {
     try {
       if (!userId) {
@@ -268,9 +374,10 @@ const UserService = {
     }
   },
 
-  // Xóa mềm user (Chỉ admin)
+  // Xóa user (Chỉ admin)
   deleteUser: async (userId) => {
     try {
+      console.log("Sending delete request for userId:", userId); // Add this log
       await axiosInstance.delete(`/users/${userId}`);
       return {
         success: true,
@@ -302,37 +409,6 @@ const UserService = {
       };
     }
   },
-
-  // // Thay đổi mật khẩu
-  // changePassword: async (currentPassword, newPassword, passwordConfirm) => {
-  //   try {
-  //     const response = await axiosInstance.patch("/users/update-password", {
-  //       passwordCurrent: currentPassword,
-  //       password: newPassword,
-  //       passwordConfirm,
-  //     });
-
-  //     if (response.data.token) {
-  //       localStorage.setItem("token", response.data.token);
-  //     }
-
-  //     return {
-  //       success: true,
-  //       message: "Thay đổi mật khẩu thành công",
-  //       token: response.data.token,
-  //     };
-  //   } catch (error) {
-  //     console.error(
-  //       "Lỗi thay đổi mật khẩu:",
-  //       error.response?.data || error.message
-  //     );
-  //     return {
-  //       success: false,
-  //       message: error.response?.data?.message || "Thay đổi mật khẩu thất bại",
-  //     };
-  //   }
-  // },
-
   // Xóa tài khoản (deactivate)
   deactivateAccount: async () => {
     try {
@@ -489,6 +565,8 @@ const UserService = {
   getPendingNutritionists: async () => {
     try {
       const response = await axiosInstance.get("/users/pending-nutritionists");
+      console.log("PDN", response);
+
       return {
         success: true,
         users: response.data.data.users,

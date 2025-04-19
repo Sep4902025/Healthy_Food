@@ -2,19 +2,19 @@ import axios from "axios";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-
+// Hàm lấy token từ localStorage
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-
+// Tạo instance axios với config mặc định
 const axiosInstance = axios.create({
   baseURL: API_URL,
-  timeout: 5000,
+  timeout: 5000, // timeout sau 5 giây
 });
 
-
+// Thêm interceptor để xử lý lỗi và thêm token vào header
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -34,14 +34,14 @@ axiosInstance.interceptors.response.use(
     console.error("API Error:", error);
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
-      
+      // Có thể thêm redirect tới trang login ở đây
     }
     return Promise.reject(error);
   }
 );
 
 const UserService = {
-
+  // Lấy tất cả người dùng (Admin only)
   getAllUsers: async (page = 1, limit = 10) => {
     try {
       const response = await axiosInstance.get(`/users?page=${page}&limit=${limit}`);
@@ -61,7 +61,7 @@ const UserService = {
     }
   },
 
-
+  // Lấy thông tin người dùng theo ID
   getUserById: async (userId) => {
     try {
       const response = await axiosInstance.get(`/users/${userId}`);
@@ -77,7 +77,7 @@ const UserService = {
       };
     }
   },
-
+  // Tìm kiếm người dùng theo email
   searchUserByEmail: async (email) => {
     try {
       const response = await axiosInstance.get(`/users/search?email=${email}`);
@@ -94,7 +94,7 @@ const UserService = {
       };
     }
   },
- 
+  // Lấy thông tin người dùng hiện tại
   getCurrentUser: async () => {
     try {
       const response = await axiosInstance.get("/users/me");
@@ -111,7 +111,7 @@ const UserService = {
     }
   },
 
-
+  // 🔹 Cập nhật thông tin người dùng từ FE
   updateUser: async (id, data) => {
     try {
       console.log(`📤 Cập nhật user ID: ${id}`, data);
@@ -135,7 +135,7 @@ const UserService = {
     }
   },
 
-
+  // Cập nhật thông tin cá nhân
   updateProfile: async (userData) => {
     try {
       const response = await axiosInstance.patch("/users/update-me", userData);
@@ -153,7 +153,7 @@ const UserService = {
     }
   },
 
-
+  // Xóa mềm user (Chỉ admin)
   deleteUser: async (userId) => {
     try {
       await axiosInstance.delete(`/users/${userId}`);
@@ -170,7 +170,7 @@ const UserService = {
     }
   },
 
-
+  // Khôi phục user đã xóa mềm (Chỉ admin)
   restoreUser: async (userId) => {
     try {
       const response = await axiosInstance.patch(`/users/${userId}/restore`);
@@ -188,7 +188,7 @@ const UserService = {
     }
   },
 
-  
+  // Thay đổi mật khẩu
   changePassword: async (currentPassword, newPassword, passwordConfirm) => {
     try {
       const response = await axiosInstance.patch("/users/update-password", {
@@ -215,7 +215,7 @@ const UserService = {
     }
   },
 
-
+  // Xóa tài khoản (deactivate)
   deactivateAccount: async () => {
     try {
       const response = await axiosInstance.delete("/users/delete-me");
@@ -233,7 +233,7 @@ const UserService = {
     }
   },
 
-  
+  // Lấy lịch sử hoạt động
   getActivityHistory: async (page = 1, limit = 10) => {
     try {
       const response = await axiosInstance.get(`/users/activities?page=${page}&limit=${limit}`);
@@ -252,7 +252,7 @@ const UserService = {
     }
   },
 
-
+  // Cập nhật ảnh đại diện
   updateAvatar: async (fileData) => {
     try {
       const formData = new FormData();
@@ -278,7 +278,7 @@ const UserService = {
     }
   },
 
-
+  // Lấy danh sách thông báo
   getNotifications: async (page = 1, limit = 10) => {
     try {
       const response = await axiosInstance.get(`/users/notifications?page=${page}&limit=${limit}`);
@@ -297,6 +297,7 @@ const UserService = {
     }
   },
 
+  // Đánh dấu thông báo đã đọc
   markNotificationAsRead: async (notificationId) => {
     try {
       const response = await axiosInstance.patch(`/users/notifications/${notificationId}`);
@@ -313,7 +314,7 @@ const UserService = {
     }
   },
 
-
+  // Lấy các thiết lập của người dùng
   getUserSettings: async () => {
     try {
       const response = await axiosInstance.get("/users/settings");
@@ -330,7 +331,7 @@ const UserService = {
     }
   },
 
-
+  // Cập nhật thiết lập người dùng
   updateUserSettings: async (settings) => {
     try {
       const response = await axiosInstance.patch("/users/settings", settings);
@@ -349,12 +350,12 @@ const UserService = {
   },
 };
 
-
+// Hàm kiểm tra quyền admin
 export const isAdmin = (userRole) => {
   return userRole === "admin";
 };
 
-
+// Hàm kiểm tra quyền truy cập các tính năng đặc biệt
 export const hasSpecialAccess = (userRole) => {
   const specialRoles = ["admin", "nutritionist", "premium"];
   return specialRoles.includes(userRole);

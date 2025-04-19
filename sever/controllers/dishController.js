@@ -31,6 +31,27 @@ exports.getAllDishes = async (req, res) => {
     res.status(500).json({ status: "fail", message: error.message });
   }
 };
+// New controller for searchDishByName
+exports.searchDishByName = async (req, res) => {
+  try {
+    const result = await dishService.searchDishByName(req.query);
+    res.status(200).json({ status: "success", data: result });
+  } catch (error) {
+    res.status(500).json({ status: "fail", message: error.message });
+  }
+};
+
+exports.getDishByType = async (req, res) => {
+  try {
+    console.log("Request params:", req.params); // Debug log
+    console.log("Request query:", req.query); // Debug log
+    const result = await dishService.getDishByType(req.params.type, req.query);
+    res.status(200).json({ status: "success", data: result });
+  } catch (error) {
+    console.error("Error in getDishByType:", error.message); // Debug log
+    res.status(500).json({ status: "fail", message: error.message });
+  }
+};
 // getDishesBySeason
 exports.getDishesBySeason = async (req, res) => {
   try {

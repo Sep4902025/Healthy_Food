@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
 import { useNavigate } from "react-router-dom";
-
+import { RiArrowLeftSLine } from "react-icons/ri";
 const Height = () => {
   const navigate = useNavigate();
   const [selectedHeight, setSelectedHeight] = useState("");
-  const [error, setError] = useState(""); // State để hiển thị lỗi
+  const [error, setError] = useState(""); // State to display errors
 
-  // Load dữ liệu từ sessionStorage khi vào trang
+  // Load data from sessionStorage when the page loads
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.height) {
-      setSelectedHeight(savedData.height.toString()); // Chuyển thành chuỗi khi load
+      setSelectedHeight(savedData.height.toString()); // Convert to string when loading
     }
   }, []);
 
-  // Hàm kiểm tra chiều cao
+  // Function to validate height
   const validateHeight = (height) => {
     if (!height.trim()) {
       return "Please enter your height.";
     }
 
-    const numbersOnly = /^[0-9]+$/; // Chỉ cho phép số
+    const numbersOnly = /^[0-9]+$/; // Allow only numbers
     if (!numbersOnly.test(height)) {
       return "Height must contain only numbers.";
     }
@@ -37,27 +37,27 @@ const Height = () => {
   const handleNext = () => {
     const validationError = validateHeight(selectedHeight);
     if (validationError) {
-      setError(validationError); // Chỉ hiển thị lỗi khi nhấn Next
+      setError(validationError); // Only display error when Next is clicked
       return;
     }
 
-    // Lấy dữ liệu hiện tại từ sessionStorage
+    // Get current data from sessionStorage
     const currentData = JSON.parse(sessionStorage.getItem("quizData")) || {};
 
-    // Cập nhật dữ liệu với chiều cao mới
+    // Update data with the new height
     const updatedData = {
       ...currentData,
-      height: parseFloat(selectedHeight), // Chuyển thành số khi lưu
+      height: parseFloat(selectedHeight), // Convert to number when saving
     };
 
-    // Lưu lại quizData vào sessionStorage
+    // Save quizData back to sessionStorage
     sessionStorage.setItem("quizData", JSON.stringify(updatedData));
 
-    // Điều hướng sang trang tiếp theo
+    // Navigate to the next page
     navigate("/survey/weightgoal");
   };
 
-  // Hàm xử lý khi nhấn phím
+  // Handle key press
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.keyCode === 13) {
       handleNext();
@@ -69,29 +69,30 @@ const Height = () => {
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/weight")}
-          className="absolute left-20 p-2 bg-gray-300 rounded-full shadow hover:bg-gray-400 transition"
+          className="absolute left-20 w-12 h-12 p-2 bg-white border border-[#40B491] rounded-full shadow hover:bg-[#66e3ba] transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-arrow-left text-xl"></i>
+          <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
         <ProgressBar progress={26.25} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Height</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Height</h2>
       <p className="text-center text-gray-600">Please enter your height (cm)</p>
 
       <div className="mt-4">
         <input
+          autoFocus
           type="number"
           value={selectedHeight}
-          onChange={(e) => setSelectedHeight(e.target.value)} // Giữ giá trị là chuỗi
+          onChange={(e) => setSelectedHeight(e.target.value)} // Keep value as string
           onKeyDown={handleKeyDown}
           placeholder="Enter your height"
-          className={`w-full p-4 rounded-lg shadow border ${
+          className={`w-[400px] p-4 rounded-lg shadow border ${
             error ? "border-red-500" : "border-gray-300"
           } focus:ring-2 focus:ring-green-400 outline-none`}
-          style={{ MozAppearance: "textfield" }} // Tắt spinner cho Firefox
+          style={{ MozAppearance: "textfield" }} // Disable spinner for Firefox
         />
-        {/* Tắt nút tăng giảm cho Webkit (Chrome, Safari) */}
+        {/* Disable increment/decrement buttons for Webkit (Chrome, Safari) */}
         <style>
           {`
             input[type=number]::-webkit-inner-spin-button,
@@ -102,7 +103,7 @@ const Height = () => {
           `}
         </style>
 
-        {/* Hiển thị thông báo lỗi */}
+        {/* Display error message */}
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
         <button
