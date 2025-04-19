@@ -59,11 +59,7 @@ const EatHabit = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/longofplan")}
@@ -74,7 +70,7 @@ const EatHabit = () => {
         <ProgressBar progress={78.75} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Eat Habit</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Eat Habit</h2>
       <p className="text-center text-gray-600">Choose your eating habits</p>
 
       <div className="space-y-3 mt-4">
@@ -82,9 +78,7 @@ const EatHabit = () => {
           <div
             key={eathabit.id}
             className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer ${
-              isSelected(eathabit.id)
-                ? "bg-yellow-50 border-yellow-400"
-                : "bg-gray-100"
+              isSelected(eathabit.id) ? "bg-yellow-50 border-yellow-400" : "bg-gray-100"
             }`}
             onClick={() => toggleItemSelection(eathabit.id)}
           >
@@ -95,9 +89,7 @@ const EatHabit = () => {
                 onChange={() => toggleItemSelection(eathabit.id)}
                 className="w-5 h-5"
                 // Disable other options if "none" is selected
-                disabled={
-                  eathabit.id !== "none" && selectedItems.includes("none")
-                }
+                disabled={eathabit.id !== "none" && selectedItems.includes("none")}
               />
               <span
                 className={`font-medium ${

@@ -72,7 +72,7 @@ const Email = () => {
         <ProgressBar progress={15.75} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Email</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Email Contact</h2>
       <p className="text-center text-gray-600">Please enter your email</p>
 
       <div className="mt-4">

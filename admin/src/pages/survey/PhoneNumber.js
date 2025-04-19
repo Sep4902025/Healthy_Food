@@ -70,10 +70,8 @@ const PhoneNumber = () => {
         <ProgressBar progress={10.5} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Phone Number</h2>
-      <p className="text-center text-gray-600">
-        Please enter your phone number
-      </p>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Phone Number</h2>
+      <p className="text-center text-gray-600">Please enter your phone number</p>
 
       <div className="mt-4">
         <input

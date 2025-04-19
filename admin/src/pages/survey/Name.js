@@ -75,7 +75,7 @@ const Name = () => {
       </div>
 
       {/* Title & description */}
-      <h2 className="text-2xl font-bold text-center">Name</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Name</h2>
       <p className="text-center text-gray-600">Please enter your full name</p>
 
       {/* Input field */}

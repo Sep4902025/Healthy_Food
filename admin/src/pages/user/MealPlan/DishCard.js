@@ -44,10 +44,10 @@ const DishCard = ({ dish, onDelete, deletingDishId, disableDelete }) => {
 
       {/* Nutrition Info (Centered in the middle) */}
       <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 p-3 rounded-md">
-        <p>🔥 {dish.calories || 0} kcal</p>
-        <p>🥩 {dish.protein || 0}g</p>
-        <p>🍞 {dish.carbs || 0}g</p>
-        <p>🛢 {dish.fat || 0}g</p>
+        <p>🔥 {(dish.calories || 0).toFixed(2)} kcal</p>
+        <p>🥩 {(dish.protein || 0).toFixed(2)}g</p>
+        <p>🌾 {(dish.carbs || 0).toFixed(2)}g</p>
+        <p>🥑 {(dish.fat || 0).toFixed(2)}g</p>
       </div>
 
       {/* Recipe Button (Bottom) */}

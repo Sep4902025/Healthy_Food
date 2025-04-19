@@ -30,15 +30,12 @@ const UserProfileUpdate = ({ userPreferenceId, onClose, onUpdate }) => {
 
     setLoading(true);
     try {
-      const result = await quizService.getUserPreferenceByUserPreferenceId(
-        userPreferenceId
-      );
+      const result = await quizService.getUserPreferenceByUserPreferenceId(userPreferenceId);
       console.log("🚀 Result from API:", result);
       setLoading(false);
 
       if (result.success && result.data) {
-        const { name, email, phoneNumber, height, weight, weightGoal } =
-          result.data;
+        const { name, email, phoneNumber, height, weight, weightGoal } = result.data;
         setFormData({
           name: name || "",
           email: email || "",
@@ -91,10 +88,7 @@ const UserProfileUpdate = ({ userPreferenceId, onClose, onUpdate }) => {
     }
 
     try {
-      const result = await quizService.updateUserPreference(
-        userPreferenceId,
-        updatedData
-      );
+      const result = await quizService.updateUserPreference(userPreferenceId, updatedData);
       setLoading(false);
 
       if (result.success) {
@@ -113,7 +107,7 @@ const UserProfileUpdate = ({ userPreferenceId, onClose, onUpdate }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-3xl">
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
+        <h2 className="text-2xl font-bold text-center mb-6 text-blue-500">
           Update Personal Information
         </h2>
 
@@ -139,10 +133,7 @@ const UserProfileUpdate = ({ userPreferenceId, onClose, onUpdate }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="form-group">
-              <label
-                className="block text-gray-700 font-medium mb-2"
-                htmlFor="name"
-              >
+              <label className="block text-gray-700 font-medium mb-2" htmlFor="name">
                 Full Name
               </label>
               <input
@@ -157,10 +148,7 @@ const UserProfileUpdate = ({ userPreferenceId, onClose, onUpdate }) => {
             </div>
 
             <div className="form-group">
-              <label
-                className="block text-gray-700 font-medium mb-2"
-                htmlFor="email"
-              >
+              <label className="block text-gray-700 font-medium mb-2" htmlFor="email">
                 Email
               </label>
               <input
@@ -175,10 +163,7 @@ const UserProfileUpdate = ({ userPreferenceId, onClose, onUpdate }) => {
             </div>
 
             <div className="form-group">
-              <label
-                className="block text-gray-700 font-medium mb-2"
-                htmlFor="phoneNumber"
-              >
+              <label className="block text-gray-700 font-medium mb-2" htmlFor="phoneNumber">
                 Phone Number
               </label>
               <input
@@ -192,10 +177,7 @@ const UserProfileUpdate = ({ userPreferenceId, onClose, onUpdate }) => {
             </div>
 
             <div className="form-group">
-              <label
-                className="block text-gray-700 font-medium mb-2"
-                htmlFor="height"
-              >
+              <label className="block text-gray-700 font-medium mb-2" htmlFor="height">
                 Height (cm)
               </label>
               <input
@@ -209,10 +191,7 @@ const UserProfileUpdate = ({ userPreferenceId, onClose, onUpdate }) => {
             </div>
 
             <div className="form-group">
-              <label
-                className="block text-gray-700 font-medium mb-2"
-                htmlFor="weight"
-              >
+              <label className="block text-gray-700 font-medium mb-2" htmlFor="weight">
                 Weight (kg)
               </label>
               <input
@@ -226,10 +205,7 @@ const UserProfileUpdate = ({ userPreferenceId, onClose, onUpdate }) => {
             </div>
 
             <div className="form-group">
-              <label
-                className="block text-gray-700 font-medium mb-2"
-                htmlFor="weightGoal"
-              >
+              <label className="block text-gray-700 font-medium mb-2" htmlFor="weightGoal">
                 Weight Goal (kg)
               </label>
               <input

@@ -34,9 +34,7 @@ const Age = () => {
     const selectedGender = savedData.gender || "Male"; // Default to Male if no gender is selected
 
     // Filter age groups based on selected gender
-    const filteredGroups = ageGroups.filter(
-      (group) => group.gender === selectedGender
-    );
+    const filteredGroups = ageGroups.filter((group) => group.gender === selectedGender);
     setFilteredAgeGroups(filteredGroups);
 
     // Set previously selected age if available
@@ -73,11 +71,7 @@ const Age = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/gender")}
@@ -87,7 +81,7 @@ const Age = () => {
         </button>
         <ProgressBar progress={42} />
       </div>
-      <h2 className="text-2xl font-bold text-center">AGE</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Age</h2>
       <p className="text-center text-gray-600">Select your age</p>
 
       <div className="space-y-4 mt-4">
@@ -101,14 +95,8 @@ const Age = () => {
             }`}
             onClick={() => setSelectedAge(item.age)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.age}
-            </span>
-            <img
-              src={item.img}
-              alt={item.age}
-              className="w-16 h-16 rounded-full object-cover"
-            />
+            <span className="text-lg font-semibold flex-1 text-left">{item.age}</span>
+            <img src={item.img} alt={item.age} className="w-16 h-16 rounded-full object-cover" />
           </div>
         ))}
       </div>

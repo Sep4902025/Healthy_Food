@@ -51,11 +51,7 @@ const SleepTime = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       {/* Header with back button and progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
@@ -68,10 +64,8 @@ const SleepTime = () => {
       </div>
 
       {/* Title and description */}
-      <h2 className="text-2xl font-bold text-center">Sleep Time</h2>
-      <p className="text-center text-gray-600">
-        How long do you sleep per day?
-      </p>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Sleep Time</h2>
+      <p className="text-center text-gray-600">How long do you sleep per day?</p>
 
       {/* Selection list */}
       <div className="space-y-4 mt-4">
@@ -85,9 +79,7 @@ const SleepTime = () => {
             }`}
             onClick={() => setSelectedSleepTime(item.sleeptime)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.sleeptime}
-            </span>
+            <span className="text-lg font-semibold flex-1 text-left">{item.sleeptime}</span>
           </div>
         ))}
       </div>

@@ -254,7 +254,7 @@ const MealPlan = ({ navigation }) => {
             <View className="flex-1 bg-surface dark:bg-dark-surface p-6 rounded-lg shadow-md">
               {showCreateForm && (
                 <View className="w-full">
-                  <Text className="text-2xl font-bold text-text dark:text-dark-text mb-4">
+                  <Text className="text-2xl font-bold dark:text-dark-text mb-4 text-custom-green">
                     Create New Meal Plan
                   </Text>
                   <CreateMealPlanForm

@@ -761,7 +761,7 @@ const UserProfile = () => {
       {showChangePassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Change Password</h2>
+            <h2 className="text-2xl font-bold text-indigo-500 mb-4">Change Password</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-700 mb-1">Current Password</label>
@@ -831,7 +831,7 @@ const UserProfile = () => {
       {showDeleteAccount && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Delete Account</h2>
+            <h2 className="text-2xl font-bold text-red-500 mb-4">Delete Account</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-700 mb-1">Email</label>
