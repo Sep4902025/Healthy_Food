@@ -25,10 +25,25 @@ exports.createManyDishes = async (dishes) => {
 };
 
 exports.getAllDishes = async (query) => {
-  const { page = 1, limit = 10, search = "", sort = "createdAt", order = "desc" } = query;
-  let filter = { isDelete: false, isVisible: true }; // Default filter for all roles except nutritionist
+  const {
+    page = 1,
+    limit = 10,
+    type = "all",
+    search = "",
+    sort = "createdAt",
+    order = "desc",
+  } = query;
+  let filter = { isDelete: false, isVisible: true };
 
-  if (search) filter.name = { $regex: search, $options: "i" };
+  // Lọc theo type
+  if (type !== "all") {
+    filter.type = { $regex: `^${type}$`, $options: "i" }; // Khớp chính xác, không phân biệt hoa thường
+  }
+
+  // Lọc theo search
+  if (search) {
+    filter.name = { $regex: search, $options: "i" };
+  }
 
   const pageNum = parseInt(page, 10);
   const limitNum = parseInt(limit, 10);

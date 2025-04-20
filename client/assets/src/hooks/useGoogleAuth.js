@@ -14,26 +14,25 @@ export const useGoogleAuth = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: '155145337295-8k2hph51rqh94qmi1lpp93ro72vg1kva.apps.googleusercontent.com',
-    iosClientId: '155145337295-voo79g6h7n379738rce0ipoo4qoj1dom.apps.googleusercontent.com',
-    expoClientId: '155145337295-9479lepiisp13mebfporopgbcdpe64hi.apps.googleusercontent.com',
-    redirectUri: makeRedirectUri({ native: 'com.tructht.healthyfoodapp:/oauthredirect' }),
-    scopes: ['openid', 'profile', 'email'],
-    responseType: ResponseType.Code,  // Chỉnh sửa tại đây
-    usePKCE: true,  // Bật PKCE nếu sử dụng responseType.Code
+    androidClientId: "568478966262-63s7pm2ultokmuvieevje9ctjdk0lj1e.apps.googleusercontent.com",
+    iosClientId: "568478966262-63s7pm2ultokmuvieevje9ctjdk0lj1e.apps.googleusercontent.com",
+    expoClientId: "568478966262-63s7pm2ultokmuvieevje9ctjdk0lj1e.apps.googleusercontent.com",
+    redirectUri: makeRedirectUri({ native: "com.tructht.healthyfoodapp:/oauthredirect" }),
+    scopes: ["openid", "profile", "email"],
+    responseType: ResponseType.Code, // Chỉnh sửa tại đây
+    usePKCE: true, // Bật PKCE nếu sử dụng responseType.Code
   });
   useEffect(() => {
     if (response?.type === "success") {
-      const idToken = response?.authentication?.idToken
+      const idToken = response?.authentication?.idToken;
       if (idToken) getUserDataByIdtoken(idToken);
     } else if (response?.type === "error") {
       setError("Authentication failed");
     }
   }, [response]);
-
 
   const signIn = async () => {
     setLoading(true);
@@ -51,8 +50,8 @@ export const useGoogleAuth = () => {
     const credentials = {
       idToken: idtoken,
     };
-    dispatch(loginGoogleThunk(credentials))
-  }
+    dispatch(loginGoogleThunk(credentials));
+  };
 
   const signOut = async () => {
     await AsyncStorage.multiRemove(["userData", "googleToken"]);
