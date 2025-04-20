@@ -7,7 +7,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
 } from "react-native";
-import RemindService from "../../services/reminderService"; // Service đã chuyển đổi
+import RemindService from "../../services/reminderService"; // Service remains unchanged
 
 const ReminderNotification = ({ userId }) => {
   const [reminders, setReminders] = useState([]);
@@ -67,7 +67,7 @@ const ReminderNotification = ({ userId }) => {
 
   return (
     <View className="relative">
-      {/* Nút chuông thông báo */}
+      {/* Notification Bell Button */}
       <TouchableOpacity
         onPress={toggleNotifications}
         className="flex items-center justify-center"
@@ -85,7 +85,7 @@ const ReminderNotification = ({ userId }) => {
         </View>
       </TouchableOpacity>
 
-      {/* Modal hiển thị thông báo */}
+      {/* Notification Modal */}
       <Modal
         visible={showNotifications}
         transparent
@@ -98,10 +98,10 @@ const ReminderNotification = ({ userId }) => {
               <View className="absolute top-12 right-4 w-80 bg-white rounded-lg shadow-lg">
                 <View className="p-4">
                   <View className="flex-row justify-between items-center mb-2">
-                    <Text className="text-lg font-bold">Thông báo</Text>
+                    <Text className="text-lg font-bold">Notifications</Text>
                     {reminders.length > 0 && (
                       <TouchableOpacity onPress={clearReminders}>
-                        <Text className="text-red-500 text-sm underline">Xóa tất cả</Text>
+                        <Text className="text-red-500 text-sm underline">Clear All</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -127,7 +127,7 @@ const ReminderNotification = ({ userId }) => {
                     </ScrollView>
                   ) : (
                     <View className="py-4 items-center">
-                      <Text className="text-gray-500">Không có thông báo nào</Text>
+                      <Text className="text-gray-500">No notifications</Text>
                     </View>
                   )}
                 </View>
