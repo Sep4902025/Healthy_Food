@@ -55,7 +55,6 @@ const SearchInput = memo(({ value, onChange }) => {
 
 const TableRecipes = () => {
   const [dishes, setDishes] = useState([]);
-  const [filteredDishes, setFilteredDishes] = useState([]);
   const [availableIngredients, setAvailableIngredients] = useState([]);
   const [totalDishPages, setTotalDishPages] = useState(1);
   const [isAddRecipeModalOpen, setIsAddRecipeModalOpen] = useState(false);
@@ -102,15 +101,23 @@ const TableRecipes = () => {
     debouncedSearch(value);
   };
 
+  const handleFilterChange = useCallback(
+    (type) => {
+      setFilterType(type === filterType ? "all" : type);
+      setCurrentPage(1);
+    },
+    [filterType]
+  );
+
   useEffect(() => {
     fetchData();
-  }, [currentPage, itemsPerPage, searchTerm]);
+  }, [currentPage, itemsPerPage, searchTerm, filterType]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
       const [dishesResponse, ingredientsResponse] = await Promise.all([
-        dishService.getAllDishes(currentPage, itemsPerPage, searchTerm),
+        dishService.getAllDishes(currentPage, itemsPerPage, filterType, searchTerm),
         ingredientService.getAllIngredients(1, 1000),
       ]);
 
@@ -151,15 +158,6 @@ const TableRecipes = () => {
   };
 
   useEffect(() => {
-    if (filterType === "all") {
-      setFilteredDishes(dishes);
-    } else {
-      const filtered = dishes.filter((dish) => dish.type === filterType);
-      setFilteredDishes(filtered);
-    }
-  }, [dishes, filterType]);
-
-  useEffect(() => {
     const calculateTotalNutrition = () => {
       let totalCalories = 0;
       let totalProtein = 0;
@@ -168,7 +166,7 @@ const TableRecipes = () => {
 
       newRecipeData.ingredients.forEach((ing) => {
         const ingredientData = availableIngredients.find((item) => item._id === ing._id);
-        if (ingredientData && ing.quantity >= 0 && ing.unit) { // Allow quantity to be 0
+        if (ingredientData && ing.quantity >= 0 && ing.unit) {
           let conversionFactor;
           if (ing.unit === "g" || ing.unit === "ml") {
             conversionFactor = ing.quantity / 100;
@@ -391,20 +389,29 @@ const TableRecipes = () => {
     });
     setErrors({
       ...errors,
-      instruction: updatedInstructions.length === 0 ? "Please add at least one Instruction step!" : "",
+      instruction:
+        updatedInstructions.length === 0 ? "Please add at least one Instruction step!" : "",
     });
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (newRecipeData.cookingTime === "" || isNaN(newRecipeData.cookingTime) || newRecipeData.cookingTime < 0) {
+    if (
+      newRecipeData.cookingTime === "" ||
+      isNaN(newRecipeData.cookingTime) ||
+      newRecipeData.cookingTime < 0
+    ) {
       newErrors.cookingTime = "Cooking Time must be greater than or equal to 0";
     } else if (newRecipeData.cookingTime > 1440) {
       newErrors.cookingTime = "Cooking Time must not exceed 1440 minutes";
     }
 
-    if (newRecipeData.totalServing === "" || isNaN(newRecipeData.totalServing) || newRecipeData.totalServing < 1) {
+    if (
+      newRecipeData.totalServing === "" ||
+      isNaN(newRecipeData.totalServing) ||
+      newRecipeData.totalServing < 1
+    ) {
       newErrors.totalServing = "Serving Size must be at least 1";
     } else if (newRecipeData.totalServing > 10) {
       newErrors.totalServing = "Serving Size must not exceed 10";
@@ -421,10 +428,12 @@ const TableRecipes = () => {
         return ing.quantity > maxValue;
       });
       if (invalidIngredient) {
-        const maxValue = invalidIngredient.unit === "g" || invalidIngredient.unit === "ml" ? 10000 : 100;
-        newErrors.ingredients = invalidIngredient.quantity > maxValue
-          ? `Quantity must not exceed ${maxValue} ${invalidIngredient.unit}`
-          : "Please enter a valid Quantity and Unit for all ingredients!";
+        const maxValue =
+          invalidIngredient.unit === "g" || invalidIngredient.unit === "ml" ? 10000 : 100;
+        newErrors.ingredients =
+          invalidIngredient.quantity > maxValue
+            ? `Quantity must not exceed ${maxValue} ${invalidIngredient.unit}`
+            : "Please enter a valid Quantity and Unit for all ingredients!";
       }
     }
 
@@ -506,8 +515,8 @@ const TableRecipes = () => {
         newIngredients.push({
           _id: newIng._id,
           name: newIng.name,
-          quantity: newIng.quantity || 0, // Default to 0 if not provided
-          unit: newIng.unit || "g", // Default to "g" if not provided
+          quantity: newIng.quantity || 0,
+          unit: newIng.unit || "g",
         });
       }
     });
@@ -519,7 +528,9 @@ const TableRecipes = () => {
 
     if (duplicates.length > 0) {
       toast.error(
-        `The following ingredients are already in the recipe: ${duplicates.join(", ")}. Please edit the existing entries instead.`
+        `The following ingredients are already in the recipe: ${duplicates.join(
+          ", "
+        )}. Please edit the existing entries instead.`
       );
     } else {
       setErrors({ ...errors, ingredients: "" });
@@ -591,32 +602,29 @@ const TableRecipes = () => {
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">List of Dishes</h2>
       </div>
-
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => {
-              setFilterType("all");
-              setCurrentPage(1);
-            }}
-            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
-              ? "bg-[#40B491] text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+            onClick={() => handleFilterChange("all")}
+            className={`px-4 py-2 rounded-md font-semibold ${
+              filterType === "all"
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            } transition duration-200`}
+            disabled={isLoading}
           >
             All
           </button>
           {TYPE_OPTIONS.map((type) => (
             <button
               key={type}
-              onClick={() => {
-                setFilterType(type);
-                setCurrentPage(1);
-              }}
-              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                } transition duration-200`}
+              onClick={() => handleFilterChange(type)}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
+                filterType === type
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
+              disabled={isLoading}
             >
               {type}
             </button>
@@ -630,8 +638,8 @@ const TableRecipes = () => {
       <Loading isLoading={isLoading}>
         <div className="min-h-[calc(100vh-200px)]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredDishes?.length > 0 ? (
-              filteredDishes.map((dish) => (
+            {dishes?.length > 0 ? (
+              dishes.map((dish) => (
                 <div
                   key={dish._id}
                   className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
@@ -658,8 +666,8 @@ const TableRecipes = () => {
                             <Dumbbell className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs truncate">
                               Protein:{" "}
-                              {dish.totalServing && dish.protein
-                                ? formatNutrition(dish.protein / dish.totalServing)
+                              {dish.recipe?.totalServing && dish.recipe?.protein
+                                ? formatNutrition(dish.recipe.protein / dish.recipe.totalServing)
                                 : "N/A"}{" "}
                               g
                             </span>
@@ -668,8 +676,8 @@ const TableRecipes = () => {
                             <Droplet className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs truncate">
                               Fat:{" "}
-                              {dish.totalServing && dish.fat
-                                ? formatNutrition(dish.fat / dish.totalServing)
+                              {dish.recipe?.totalServing && dish.recipe?.fat
+                                ? formatNutrition(dish.recipe.fat / dish.recipe.totalServing)
                                 : "N/A"}{" "}
                               g
                             </span>
@@ -679,15 +687,15 @@ const TableRecipes = () => {
                           <div className="flex items-center">
                             <Users className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs truncate">
-                              Serving size: {dish.totalServing || "N/A"}
+                              Serving: {dish.recipe?.totalServing || "N/A"}
                             </span>
                           </div>
                           <div className="flex items-center">
                             <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs truncate">
                               Calories:{" "}
-                              {dish.totalServing && dish.calories
-                                ? formatNutrition(dish.calories / dish.totalServing)
+                              {dish.recipe?.totalServing && dish.recipe?.calories
+                                ? formatNutrition(dish.recipe.calories / dish.recipe.totalServing)
                                 : "N/A"}{" "}
                               kcal
                             </span>
@@ -696,8 +704,8 @@ const TableRecipes = () => {
                             <Wheat className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                             <span className="text-xs truncate">
                               Carbs:{" "}
-                              {dish.totalServing && dish.carbs
-                                ? formatNutrition(dish.carbs / dish.totalServing)
+                              {dish.recipe?.totalServing && dish.recipe?.carbs
+                                ? formatNutrition(dish.recipe.carbs / dish.recipe.totalServing)
                                 : "N/A"}{" "}
                               g
                             </span>
@@ -711,6 +719,7 @@ const TableRecipes = () => {
                       <button
                         onClick={() => handleAddRecipeClick(dish)}
                         className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition whitespace-nowrap"
+                        disabled={isLoading}
                       >
                         {dish.recipeId ? (
                           <>
@@ -730,6 +739,7 @@ const TableRecipes = () => {
                           <button
                             onClick={() => handleDeleteRecipe(dish)}
                             className="flex-1 text-red-500 flex items-center justify-center px-2 py-1 hover:text-red-600 transition whitespace-nowrap"
+                            disabled={isLoading}
                           >
                             <TrashIcon className="w-4 h-4 mr-1" />
                             Delete Recipe
@@ -759,7 +769,7 @@ const TableRecipes = () => {
             totalItems={totalItems}
             handlePageClick={handlePageClick}
             currentPage={currentPage - 1}
-            text={"Dishes"}
+            text="Dishes"
           />
         </div>
       )}
@@ -781,8 +791,9 @@ const TableRecipes = () => {
                 <button
                   onClick={handleSaveRecipe}
                   disabled={isSaving}
-                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isSaving ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                    isSaving ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </button>
@@ -829,8 +840,9 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${errors.cookingTime ? "border-red-500" : "border-gray-300"
-                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${
+                        errors.cookingTime ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.cookingTime}
                       onChange={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -856,8 +868,9 @@ const TableRecipes = () => {
                     </label>
                     <input
                       type="number"
-                      className={`w-full border ${errors.totalServing ? "border-red-500" : "border-gray-300"
-                        } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${
+                        errors.totalServing ? "border-red-500" : "border-gray-300"
+                      } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
                       value={newRecipeData.totalServing}
                       onChange={(e) => {
                         let value = e.target.value.replace(/[^0-9]/g, "");
@@ -889,7 +902,9 @@ const TableRecipes = () => {
                         <li key={inst.step} className="flex flex-col gap-2">
                           {isEditingInstruction === index ? (
                             <div className="flex items-start gap-4 w-full">
-                              <span className="min-w-[80px] font-medium pt-2">Step {inst.step}:</span>
+                              <span className="min-w-[80px] font-medium pt-2">
+                                Step {inst.step}:
+                              </span>
                               <div className="flex-1 flex flex-col gap-2">
                                 <textarea
                                   className="w-full min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
@@ -927,7 +942,9 @@ const TableRecipes = () => {
                           ) : (
                             <div className="flex items-start gap-4 w-full">
                               <span className="min-w-[80px] font-medium">Step {inst.step}:</span>
-                              <span className="flex-1 max-w-full break-words">{inst.description}</span>
+                              <span className="flex-1 max-w-full break-words">
+                                {inst.description}
+                              </span>
                               <div className="min-w-[120px] flex flex-col gap-2 items-end">
                                 <button
                                   className="text-blue-500 hover:text-blue-700"
@@ -959,7 +976,9 @@ const TableRecipes = () => {
                           )}
                           {addingAfterStep === inst.step && (
                             <div className="flex items-start gap-4 mt-2 w-full">
-                              <span className="min-w-[80px] font-medium pt-2">Step {inst.step + 1}:</span>
+                              <span className="min-w-[80px] font-medium pt-2">
+                                Step {inst.step + 1}:
+                              </span>
                               <div className="flex-1 flex flex-col gap-2">
                                 <textarea
                                   className="w-full min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
@@ -997,7 +1016,9 @@ const TableRecipes = () => {
                             </p>
                           )}
                           {addingAfterStep === inst.step && errors.instruction && (
-                            <p className="text-red-500 text-sm mt-1 ml-[96px]">{errors.instruction}</p>
+                            <p className="text-red-500 text-sm mt-1 ml-[96px]">
+                              {errors.instruction}
+                            </p>
                           )}
                         </li>
                       ))}
@@ -1021,42 +1042,44 @@ const TableRecipes = () => {
                       <p>Looks like you haven't added any descriptions yet.</p>
                     </div>
                   )}
-                  {showNewInstructionInput && isEditingInstruction === null && addingAfterStep === null && (
-                    <div className="flex items-start gap-4 mt-4 w-full">
-                      <span className="min-w-[80px] font-medium pt-2">
-                        Step {newRecipeData.instruction.length + 1}:
-                      </span>
-                      <div className="flex-1 flex flex-col gap-2">
-                        <textarea
-                          className="w-full min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
-                          value={newInstructionStep.description}
-                          onChange={(e) => {
-                            setNewInstructionStep({
-                              ...newInstructionStep,
-                              description: e.target.value,
-                            });
-                            setErrors({ ...errors, instruction: "" });
-                          }}
-                          placeholder="Enter description for new step"
-                          maxLength={300}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
-                            onClick={handleAddInstruction}
-                          >
-                            Add
-                          </button>
-                          <button
-                            className="text-gray-500 hover:text-gray-700"
-                            onClick={handleCancelInstructionInput}
-                          >
-                            Cancel
-                          </button>
+                  {showNewInstructionInput &&
+                    isEditingInstruction === null &&
+                    addingAfterStep === null && (
+                      <div className="flex items-start gap-4 mt-4 w-full">
+                        <span className="min-w-[80px] font-medium pt-2">
+                          Step {newRecipeData.instruction.length + 1}:
+                        </span>
+                        <div className="flex-1 flex flex-col gap-2">
+                          <textarea
+                            className="w-full min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
+                            value={newInstructionStep.description}
+                            onChange={(e) => {
+                              setNewInstructionStep({
+                                ...newInstructionStep,
+                                description: e.target.value,
+                              });
+                              setErrors({ ...errors, instruction: "" });
+                            }}
+                            placeholder="Enter description for new step"
+                            maxLength={300}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
+                              onClick={handleAddInstruction}
+                            >
+                              Add
+                            </button>
+                            <button
+                              className="text-gray-500 hover:text-gray-700"
+                              onClick={handleCancelInstructionInput}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                   {showNewInstructionInput && newInstructionStep.description && (
                     <p className="text-gray-500 text-sm mt-1 ml-[96px]">
                       {newInstructionStep.description.length}/300 characters
@@ -1065,16 +1088,18 @@ const TableRecipes = () => {
                   {showNewInstructionInput && errors.instruction && (
                     <p className="text-red-500 text-sm mt-1 ml-[96px]">{errors.instruction}</p>
                   )}
-                  {isEditingInstruction === null && addingAfterStep === null && !showNewInstructionInput && (
-                    <div className="mt-4">
-                      <button
-                        className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
-                        onClick={handleShowNewInstructionInput}
-                      >
-                        Add New Step
-                      </button>
-                    </div>
-                  )}
+                  {isEditingInstruction === null &&
+                    addingAfterStep === null &&
+                    !showNewInstructionInput && (
+                      <div className="mt-4">
+                        <button
+                          className="bg-[#40B491] text-white px-3 py-1 rounded-md hover:bg-[#359c7a]"
+                          onClick={handleShowNewInstructionInput}
+                        >
+                          Add New Step
+                        </button>
+                      </div>
+                    )}
                 </div>
               </div>
 
@@ -1092,10 +1117,7 @@ const TableRecipes = () => {
                   {newRecipeData.ingredients.length > 0 ? (
                     <ul className="space-y-2">
                       {newRecipeData.ingredients.map((ing, index) => (
-                        <li
-                          key={ing._id}
-                          className="flex items-center gap-4"
-                        >
+                        <li key={ing._id} className="flex items-center gap-4">
                           <span className="w-1/2 min-w-0 truncate text-left">{ing.name}</span>
                           <div className="flex items-center gap-2 min-w-[200px]">
                             <input
@@ -1194,7 +1216,7 @@ const TableRecipes = () => {
                     Nutrition (Total for {newRecipeData.totalServing || 1} Servings)
                   </h3>
                   {newRecipeData.ingredients.length > 0 &&
-                    newRecipeData.ingredients.every((ing) => ing.quantity >= 0 && ing.unit) ? (
+                  newRecipeData.ingredients.every((ing) => ing.quantity >= 0 && ing.unit) ? (
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
@@ -1218,7 +1240,8 @@ const TableRecipes = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
                         <span className="font-medium">
-                          {(nutritionData.calories / (newRecipeData.totalServing || 1)).toFixed(2)} kcal
+                          {(nutritionData.calories / (newRecipeData.totalServing || 1)).toFixed(2)}{" "}
+                          kcal
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1242,7 +1265,8 @@ const TableRecipes = () => {
                     </div>
                   ) : (
                     <p className="text-gray-500">
-                      No nutrition data available. Add ingredients with valid quantities and units to see nutrition details.
+                      No nutrition data available. Add ingredients with valid quantities and units
+                      to see nutrition details.
                     </p>
                   )}
                 </div>
@@ -1318,7 +1342,7 @@ const IngredientSelectionModal = ({
     } else {
       setTempSelectedIngredients([
         ...tempSelectedIngredients,
-        { ...ingredient, quantity: 0, unit: "Unit" }, // Default values
+        { ...ingredient, quantity: 0, unit: "Unit" },
       ]);
     }
   };
@@ -1345,8 +1369,9 @@ const IngredientSelectionModal = ({
           <div className="ml-auto flex space-x-3">
             <button
               onClick={handleConfirm}
-              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${tempSelectedIngredients.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                tempSelectedIngredients.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               disabled={tempSelectedIngredients.length === 0}
             >
               Confirm
@@ -1367,10 +1392,11 @@ const IngredientSelectionModal = ({
                 setFilterType("all");
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                } transition duration-200`}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                filterType === "all"
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
             >
               All
             </button>
@@ -1381,10 +1407,11 @@ const IngredientSelectionModal = ({
                   setFilterType(type);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
-                  ? "bg-[#40B491] text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  } transition duration-200`}
+                className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
+                  filterType === type
+                    ? "bg-[#40B491] text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                } transition duration-200`}
               >
                 {type}
               </button>
@@ -1413,8 +1440,9 @@ const IngredientSelectionModal = ({
                 return (
                   <div
                     key={ing._id}
-                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"
-                      } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative ${
+                      isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                    } ${isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => !isAlreadyAdded && handleIngredientClick(ing)}
                   >
                     <div className="relative h-40 bg-gray-200">

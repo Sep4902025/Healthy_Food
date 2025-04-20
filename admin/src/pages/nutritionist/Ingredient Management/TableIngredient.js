@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, memo } from "react";
+import React, { useEffect, useState, useCallback, memo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import UploadComponent from "../../../components/UploadComponent";
 import ingredientService from "../../../services/nutritionist/ingredientsServices";
@@ -16,6 +16,16 @@ import {
 } from "lucide-react";
 import Pagination from "../../../components/Pagination";
 import { toast } from "react-toastify";
+import uploadFile from "../../../helpers/uploadFile";
+import imageCompression from "browser-image-compression";
+
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
 
 const TYPE_OPTIONS = [
   "Meat & Seafood",
@@ -27,125 +37,122 @@ const TYPE_OPTIONS = [
   "Others",
 ];
 
-// Component ô tìm kiếm giống TableDishes
-const SearchInput = memo(({ value, onChange, disabled }) => {
+const SearchInput = memo(({ value, onChange, inputRef }) => {
   return (
     <input
+      ref={inputRef}
       type="text"
       placeholder="Search by ingredient name"
       className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
       value={value}
       onChange={onChange}
-      disabled={disabled}
+      data-testid="search-input"
     />
   );
 });
 
-// Component danh sách nguyên liệu
-const IngredientList = memo(
-  ({ ingredients, onEdit, onDelete, onToggleVisibility, isLoading }) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {ingredients.length > 0 ? (
-        ingredients.map((ingredient) => (
-          <div
-            key={ingredient._id}
-            className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
-          >
-            <img
-              src={ingredient.imageUrl || "https://via.placeholder.com/300"}
-              alt={ingredient.name}
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-center text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap w-full">
-                {ingredient.name}
-              </h3>
-              <div className="text-sm text-gray-600 mt-2">
-                <div className="flex justify-between">
-                  <div className="flex flex-col space-y-2">
+const IngredientList = memo(({ ingredients, onEdit, onDelete, onToggleVisibility, isLoading }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[400px]">
+    {isLoading ? (
+      <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+        <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#40B491]"></div>
+        <p className="text-lg font-semibold mt-4">Loading ingredients...</p>
+      </div>
+    ) : ingredients.length > 0 ? (
+      ingredients.map((ingredient) => (
+        <div
+          key={ingredient._id}
+          className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
+        >
+          <img
+            src={ingredient.imageUrl || "https://via.placeholder.com/300"}
+            alt={ingredient.name}
+            className="w-full h-48 object-cover"
+          />
+          <div className="p-4">
+            <h3 className="text-lg font-semibold text-center text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap w-full">
+              {ingredient.name}
+            </h3>
+            <div className="text-sm text-gray-600 mt-2">
+              <div className="flex justify-between">
+                <div className="flex flex-col space-y-2">
+                  <span className="flex items-center">
+                    <Ruler className="w-4 h-4 mr-1" />
+                    Unit {ingredient.unit || "N/A"}
+                  </span>
+                  <div className="flex items-center">
+                    <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                     <span className="flex items-center">
-                      <Ruler className="w-4 h-4 mr-1" />
-                      Unit {ingredient.unit || "N/A"}
+                      Calories: {ingredient.calories || "N/A"} kcal
                     </span>
-                    <div className="flex items-center">
-                      <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="flex items-center">
-                        Calories: {ingredient.calories || "N/A"} kcal
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Dumbbell className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="flex items-center">
-                        Protein: {ingredient.protein || "N/A"} g
-                      </span>
-                    </div>
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center">
-                      <Wheat className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="flex items-center">
-                        Carbs: {ingredient.carbs || "N/A"} g
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Droplet className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="flex items-center">
-                        Fat: {ingredient.fat || "N/A"} g
-                      </span>
-                    </div>
+                  <div className="flex items-center">
+                    <Dumbbell className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                    <span className="flex items-center">
+                      Protein: {ingredient.protein || "N/A"} g
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col space-y-2">
+                  <div className="flex items-center">
+                    <Wheat className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                    <span className="flex items-center">Carbs: {ingredient.carbs || "N/A"} g</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Droplet className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                    <span className="flex items-center">Fat: {ingredient.fat || "N/A"} g</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="p-2 bg-gray-50 border-t border-gray-200 h-16 flex items-center justify-center">
-              <div className="flex w-full justify-center items-center gap-2">
-                <button
-                  onClick={() => onEdit(ingredient)}
-                  className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition whitespace-nowrap"
-                  disabled={isLoading}
-                >
-                  <EditIcon className="w-4 h-4 mr-1" />
-                  Edit
-                </button>
-                <div className="h-4 border-l border-gray-300 mx-1"></div>
-                <button
-                  onClick={() => onDelete(ingredient._id)}
-                  className="flex-1 text-red-500 flex items-center justify-center px-2 py-1 hover:text-red-600 transition whitespace-nowrap"
-                  disabled={isLoading}
-                >
-                  <TrashIcon className="w-4 h-4 mr-1" />
-                  Delete
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => onToggleVisibility(ingredient)}
-              className={`absolute top-2 right-2 p-2 rounded-md text-white ${
-                ingredient.isVisible
-                  ? "bg-gray-500 hover:bg-gray-600"
-                  : "bg-[#40B491] hover:bg-[#359c7a]"
-              } transition duration-200`}
-              disabled={isLoading}
-            >
-              {ingredient.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-            </button>
           </div>
-        ))
-      ) : (
-        <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
-          <Wheat className="w-24 h-24 text-gray-400 mb-4" />
-          <p className="text-lg font-semibold">No ingredients</p>
-          <p className="text-sm">Looks like you haven't added any ingredients yet.</p>
+          <div className="p-2 bg-gray-50 border-t border-gray-200 h-16 flex items-center justify-center">
+            <div className="flex w-full justify-center items-center gap-2">
+              <button
+                onClick={() => onEdit(ingredient)}
+                className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition whitespace-nowrap"
+                disabled={isLoading}
+              >
+                <EditIcon className="w-4 h-4 mr-1" />
+                Edit
+              </button>
+              <div className="h-4 border-l border-gray-300 mx-1"></div>
+              <button
+                onClick={() => onDelete(ingredient._id)}
+                className="flex-1 text-red-500 flex items-center justify-center px-2 py-1 hover:text-red-600 transition whitespace-nowrap"
+                disabled={isLoading}
+              >
+                <TrashIcon className="w-4 h-4 mr-1" />
+                Delete
+              </button>
+            </div>
+          </div>
+          <button
+            onClick={() => onToggleVisibility(ingredient)}
+            className={`absolute top-2 right-2 p-2 rounded-md text-white ${
+              ingredient.isVisible
+                ? "bg-gray-500 hover:bg-gray-600"
+                : "bg-[#40B491] hover:bg-[#359c7a]"
+            } transition duration-200`}
+            disabled={isLoading}
+          >
+            {ingredient.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+          </button>
         </div>
-      )}
-    </div>
-  )
-);
+      ))
+    ) : (
+      <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+        <Wheat className="w-24 h-24 text-gray-400 mb-4" />
+        <p className="text-lg font-semibold">No ingredients</p>
+        <p className="text-sm">Looks like you haven't added any ingredients yet.</p>
+      </div>
+    )}
+  </div>
+));
 
 const TableIngredient = () => {
   const navigate = useNavigate();
   const [ingredients, setIngredients] = useState([]);
-  const [pendingIngredients, setPendingIngredients] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(8);
@@ -156,6 +163,7 @@ const TableIngredient = () => {
     name: "",
     description: "",
     imageUrl: "",
+    imageFile: null,
     type: "",
     customType: "",
     season: "",
@@ -171,65 +179,74 @@ const TableIngredient = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isEditLoading, setIsEditLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState("");
+  const searchInputRef = useRef(null);
 
-  const fetchIngredients = async () => {
-    try {
-      setIsLoading(true);
-      const response = await ingredientService.getAllIngredients(
-        currentPage + 1,
-        itemsPerPage,
-        filterType,
-        searchTerm
-      );
-      if (response.success) {
-        setPendingIngredients(response.data.items);
-        setTotalItems(response.data.total);
-        setTotalPages(response.data.totalPages);
-      } else {
-        setPendingIngredients([]);
+  const fetchIngredients = useCallback(
+    async (isInitialOrFilterChange = false) => {
+      try {
+        if (isInitialOrFilterChange) {
+          setIsLoading(true);
+        }
+        const response = await ingredientService.getAllIngredients(
+          currentPage + 1,
+          itemsPerPage,
+          filterType,
+          searchTerm
+        );
+        if (response.success) {
+          setIngredients(response.data.items);
+          setTotalItems(response.data.total);
+          setTotalPages(response.data.totalPages);
+        } else {
+          setIngredients([]);
+          setTotalItems(0);
+          setTotalPages(1);
+        }
+      } catch {
+        setIngredients([]);
         setTotalItems(0);
         setTotalPages(1);
+      } finally {
+        if (isInitialOrFilterChange) {
+          setIsLoading(false);
+        }
       }
-    } catch {
-      setPendingIngredients([]);
-      setTotalItems(0);
-      setTotalPages(1);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (pendingIngredients !== ingredients) {
-      setIngredients(pendingIngredients);
-    }
-  }, [pendingIngredients]);
+    },
+    [currentPage, itemsPerPage, filterType, searchTerm]
+  );
 
   const debouncedSearch = useCallback(
     debounce((value) => {
       setSearchTerm(value);
       setCurrentPage(0);
+      fetchIngredients();
     }, 500),
-    []
+    [fetchIngredients]
   );
 
   useEffect(() => {
-    fetchIngredients();
-  }, [currentPage, itemsPerPage, filterType, searchTerm]);
+    fetchIngredients(true);
+  }, [fetchIngredients, filterType, currentPage]);
 
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    setInputValue(value);
-    debouncedSearch(value);
-  };
+  const handleInputChange = useCallback(
+    (e) => {
+      const value = e.target.value;
+      setInputValue(value);
+      debouncedSearch(value);
+    },
+    [debouncedSearch]
+  );
 
   const handleEditClick = (ingredient) => {
     setEditData({
       ...ingredient,
       id: ingredient._id,
+      imageFile: null,
       customType: TYPE_OPTIONS.includes(ingredient.type) ? "" : ingredient.type,
       type: TYPE_OPTIONS.includes(ingredient.type) ? ingredient.type : "Others",
     });
+    setImagePreview(ingredient.imageUrl || "");
     setErrors({});
     setIsEditModalOpen(true);
   };
@@ -251,7 +268,9 @@ const TableIngredient = () => {
       newErrors.description = "Description must not exceed 500 characters.";
     }
 
-    if (!editData.imageUrl.trim()) newErrors.imageUrl = "Image URL is required";
+    if (!editData.imageFile && !editData.imageUrl.trim() && !imagePreview) {
+      newErrors.imageUrl = "Image (file or URL) is required";
+    }
     if (!editData.type) newErrors.type = "Type is required";
     if (editData.type === "Others" && !editData.customType.trim()) {
       newErrors.customType = "Custom type is required when 'Others' is selected";
@@ -259,20 +278,16 @@ const TableIngredient = () => {
     if (!editData.unit) newErrors.unit = "Unit is required";
     if (editData.calories === "" || isNaN(editData.calories) || editData.calories < 0)
       newErrors.calories = "Calories must be greater than or equal to 0";
-    else if (editData.calories > 1000)
-      newErrors.calories = "Calories must not exceed 1000 kcal";
+    else if (editData.calories > 1000) newErrors.calories = "Calories must not exceed 1000 kcal";
     if (editData.protein === "" || isNaN(editData.protein) || editData.protein < 0)
       newErrors.protein = "Protein must be greater than or equal to 0";
-    else if (editData.protein > 100)
-      newErrors.protein = "Protein must not exceed 100 g";
+    else if (editData.protein > 100) newErrors.protein = "Protein must not exceed 100 g";
     if (editData.carbs === "" || isNaN(editData.carbs) || editData.carbs < 0)
       newErrors.carbs = "Carbs must be greater than or equal to 0";
-    else if (editData.carbs > 100)
-      newErrors.carbs = "Carbs must not exceed 100 g";
+    else if (editData.carbs > 100) newErrors.carbs = "Carbs must not exceed 100 g";
     if (editData.fat === "" || isNaN(editData.fat) || editData.fat < 0)
       newErrors.fat = "Fat must be greater than or equal to 0";
-    else if (editData.fat > 100)
-      newErrors.fat = "Fat must not exceed 100 g";
+    else if (editData.fat > 100) newErrors.fat = "Fat must not exceed 100 g";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -297,9 +312,55 @@ const TableIngredient = () => {
     setErrors({ ...errors, [name]: "" });
   };
 
-  const handleImageUpload = (imageUrl) => {
-    setEditData({ ...editData, imageUrl });
+  const handleFileSelect = (file) => {
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setEditData({ ...editData, imageFile: file, imageUrl: "" });
+      setImagePreview(previewUrl);
+      setErrors({ ...errors, imageUrl: "" });
+    } else {
+      setEditData({ ...editData, imageFile: null, imageUrl: "" });
+      setImagePreview("");
+      setErrors({ ...errors, imageUrl: "" });
+    }
+  };
+
+  const handleImageUrlChange = (e) => {
+    const url = e.target.value;
+    setEditData({ ...editData, imageUrl: url, imageFile: null });
     setErrors({ ...errors, imageUrl: "" });
+
+    if (url) {
+      checkImageUrl(url);
+    } else {
+      setImagePreview("");
+    }
+  };
+
+  const checkImageUrl = (url) => {
+    const img = new Image();
+    img.onload = () => {
+      setImagePreview(url);
+    };
+    img.onerror = () => {
+      setImagePreview("");
+      setErrors({ ...errors, imageUrl: "Invalid image URL. Please provide a valid image link." });
+    };
+    img.src = url;
+  };
+
+  const compressImage = async (file) => {
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1024,
+      useWebWorker: true,
+    };
+    try {
+      const compressedFile = await imageCompression(file, options);
+      return compressedFile;
+    } catch {
+      return file;
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -309,8 +370,23 @@ const TableIngredient = () => {
     }
 
     setIsEditLoading(true);
+
+    let imageUrl = editData.imageUrl || imagePreview;
+    if (editData.imageFile) {
+      try {
+        const compressedFile = await compressImage(editData.imageFile);
+        const uploadedImage = await uploadFile(compressedFile, () => {});
+        imageUrl = uploadedImage.secure_url;
+      } catch {
+        setIsEditLoading(false);
+        toast.error("Image upload failed!");
+        return;
+      }
+    }
+
     const finalData = {
       ...editData,
+      imageUrl,
       type: editData.type === "Others" ? editData.customType : editData.type,
     };
     const response = await ingredientService.updateIngredient(editData.id, finalData);
@@ -319,7 +395,7 @@ const TableIngredient = () => {
     if (response.success) {
       toast.success(`Ingredient "${editData.name}" has been saved!`);
       setIsEditModalOpen(false);
-      fetchIngredients();
+      fetchIngredients(true);
     } else {
       toast.error("Failed to save ingredient. Please try again.");
     }
@@ -332,7 +408,7 @@ const TableIngredient = () => {
       setIsLoading(false);
       if (response.success) {
         toast.success("Deleted successfully!");
-        fetchIngredients();
+        fetchIngredients(true);
         if (ingredients.length === 1 && currentPage > 0) {
           setCurrentPage(currentPage - 1);
         }
@@ -368,6 +444,11 @@ const TableIngredient = () => {
     setCurrentPage(selected);
   };
 
+  const handleFilterChange = useCallback((type) => {
+    setFilterType((prev) => (prev === type ? "all" : type));
+    setCurrentPage(0);
+  }, []);
+
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setEditData({
@@ -375,6 +456,7 @@ const TableIngredient = () => {
       name: "",
       description: "",
       imageUrl: "",
+      imageFile: null,
       type: "",
       customType: "",
       season: "",
@@ -385,10 +467,36 @@ const TableIngredient = () => {
       unit: "",
     });
     setErrors({});
+    setImagePreview("");
   };
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   return (
     <div className="container mx-auto px-6 py-8">
+      <style>
+        {`
+          .loader {
+            border-top-color: #40B491;
+            border-bottom-color: #40B491;
+          }
+          .ingredient-list-container {
+            transition: opacity 0.2s ease-in-out;
+          }
+          .ingredient-list-container.loading {
+            opacity: 0.7;
+          }
+          input[type="text"] {
+            transition: none;
+          }
+        `}
+      </style>
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
           List of Ingredients
@@ -405,10 +513,7 @@ const TableIngredient = () => {
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => {
-              setFilterType("all");
-              setCurrentPage(0);
-            }}
+            onClick={() => handleFilterChange("all")}
             className={`px-4 py-2 rounded-md font-semibold ${
               filterType === "all"
                 ? "bg-[#40B491] text-white"
@@ -421,10 +526,7 @@ const TableIngredient = () => {
           {TYPE_OPTIONS.map((type) => (
             <button
               key={type}
-              onClick={() => {
-                setFilterType(filterType === type ? "all" : type);
-                setCurrentPage(0);
-              }}
+              onClick={() => handleFilterChange(type)}
               className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
                 filterType === type
                   ? "bg-[#40B491] text-white"
@@ -437,11 +539,14 @@ const TableIngredient = () => {
           ))}
         </div>
         <div className="flex items-center">
-          <SearchInput value={inputValue} onChange={handleInputChange} disabled={isLoading} />
+          <SearchInput value={inputValue} onChange={handleInputChange} inputRef={searchInputRef} />
         </div>
       </div>
 
-      <div className="min-h-[calc(100vh-200px)]">
+      <div
+        className={`ingredient-list-container ${isLoading ? "loading" : ""}`}
+        style={{ minHeight: "calc(100vh - 200px)" }}
+      >
         <IngredientList
           ingredients={ingredients}
           onEdit={handleEditClick}
@@ -469,7 +574,7 @@ const TableIngredient = () => {
           <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl relative">
             {isEditLoading && (
               <div className="absolute inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
-                <div className="loader"></div>
+                <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#40B491]"></div>
                 <p className="mt-4 text-white text-lg">Saving...</p>
               </div>
             )}
@@ -513,7 +618,9 @@ const TableIngredient = () => {
                     disabled={isEditLoading}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-                  <p className="text-gray-500 text-sm mt-1">{editData.name.length}/100 characters</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {editData.name.length}/100 characters
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -665,14 +772,16 @@ const TableIngredient = () => {
                     <option value="tbsp">tbsp</option>
                     <option value="tsp">tsp</option>
                   </select>
-                  {errors.unit && <p className="text-red-500 text-sm mt-1">{errors.unit}</p>}
+                  <div className="h-[24px]">
+                    {errors.unit && <p className="text-red-500 text-sm mt-1">{errors.unit}</p>}
+                  </div>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-center items-center mb-4">
-                    {editData.imageUrl ? (
+                    {imagePreview ? (
                       <img
-                        src={editData.imageUrl}
+                        src={imagePreview}
                         alt="Ingredient"
                         className="w-24 h-24 object-cover rounded-lg shadow-sm"
                       />
@@ -684,8 +793,8 @@ const TableIngredient = () => {
                   </div>
                   <div className="text-center">
                     <UploadComponent
-                      onUploadSuccess={handleImageUpload}
-                      reset={editData.imageUrl === ""}
+                      onFileSelect={handleFileSelect}
+                      reset={editData.imageFile === null && !editData.imageUrl}
                       disabled={isEditLoading}
                     />
                   </div>
@@ -696,7 +805,7 @@ const TableIngredient = () => {
                     <input
                       type="text"
                       value={editData.imageUrl || ""}
-                      onChange={(e) => handleImageUpload(e.target.value)}
+                      onChange={handleImageUrlChange}
                       placeholder="Enter image URL"
                       className={`w-full border ${
                         errors.imageUrl ? "border-red-500" : "border-gray-300"
@@ -740,14 +849,6 @@ const TableIngredient = () => {
       )}
     </div>
   );
-};
-
-const debounce = (func, delay) => {
-  let timeoutId;
-  return (...args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
 };
 
 export default TableIngredient;
