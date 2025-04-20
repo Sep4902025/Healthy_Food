@@ -15,6 +15,11 @@ const DishCard = ({ dish, onDelete, deletingDishId, disableDelete }) => {
     onDelete(dish._id || dish.dishId);
   };
 
+  // Hàm làm tròn số thành số nguyên
+  const roundToInteger = (value) => {
+    return Math.round(Number(value || 0));
+  };
+
   return (
     <View className="border border-gray-200 rounded-lg p-5 bg-white shadow-md mb-4 flex flex-col gap-4 relative">
       {/* Header: Image, Dish Name, and Delete Button */}
@@ -44,10 +49,10 @@ const DishCard = ({ dish, onDelete, deletingDishId, disableDelete }) => {
 
       {/* Nutrition Info (Centered in the middle) */}
       <View className="flex-row flex-wrap justify-between text-sm text-gray-600 p-3 rounded-md">
-        <Text className="w-1/2">🔥 {dish.calories || 0} kcal</Text>
-        <Text className="w-1/2">🥩 {dish.protein || 0}g</Text>
-        <Text className="w-1/2">🍞 {dish.carbs || 0}g</Text>
-        <Text className="w-1/2">🛢 {dish.fat || 0}g</Text>
+        <Text className="w-1/2">🔥 {roundToInteger(dish.calories)} kcal</Text>
+        <Text className="w-1/2">🥩 {roundToInteger(dish.protein)}g</Text>
+        <Text className="w-1/2">🍞 {roundToInteger(dish.carbs)}g</Text>
+        <Text className="w-1/2">🛢 {roundToInteger(dish.fat)}g</Text>
       </View>
 
       {/* Recipe Button (Bottom) */}

@@ -21,6 +21,7 @@ export const loginGoogle = async ({ idToken }) => {
       idToken: idToken,
     };
     const response = await axiosInstance.post(`/users/login-google`, data);
+    console.log("idTtoken", response);
     return response;
   } catch (error) {
     console.log("login in service/auth error : ", error);

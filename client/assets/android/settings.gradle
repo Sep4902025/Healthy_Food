@@ -21,7 +21,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
   }
 }
 
-rootProject.name = 'Healthy-Food-App'
+rootProject.name = 'Healthy Food'
 
 dependencyResolutionManagement {
   versionCatalogs {

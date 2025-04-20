@@ -7,6 +7,9 @@ const jwt = require("jsonwebtoken");
 const TempOTP = require("../models/TempOTP");
 
 const client = new OAuth2Client(process.env.GG_CLIENT_ID);
+console.log("CLIe", client);
+
+const clientAndroid = new OAuth2Client(process.env.GG_CLIENT_ID_ANDROID);
 
 // Hàm ký token
 exports.signToken = (id) => {
@@ -282,39 +285,85 @@ exports.login = async (body) => {
 
 // Đăng nhập bằng Google
 exports.googleLogin = async (body) => {
-  const { idToken } = body;
-  if (!idToken) {
+  try {
+    const { idToken } = body;
+    console.log("idToken:", idToken); // Thay logger.info bằng console.log
+
+    // Kiểm tra idToken có tồn tại không
+    if (!idToken) {
+      return {
+        success: false,
+        error: new AppError("No Google token provided", 400),
+      };
+    }
+
+    // Decode idToken để lấy giá trị aud (không cần xác thực)
+    const decodedToken = jwt.decode(idToken);
+    if (!decodedToken || !decodedToken.aud) {
+      return {
+        success: false,
+        error: new AppError("Invalid idToken format", 400),
+      };
+    }
+
+    const audience = decodedToken.aud;
+    console.log("Audience from idToken:", audience); // Thay logger.info
+
+    // Xác định client nào sẽ được dùng để xác thực token
+    let selectedClient;
+    let expectedAudience;
+
+    if (audience === process.env.GG_CLIENT_ID) {
+      selectedClient = client;
+      expectedAudience = process.env.GG_CLIENT_ID;
+      console.log("Using web client for verification"); // Thay logger.info
+    } else if (audience === process.env.GG_CLIENT_ID_ANDROID) {
+      selectedClient = clientAndroid;
+      expectedAudience = process.env.GG_CLIENT_ID_ANDROID;
+      console.log("Using Android client for verification"); // Thay logger.info
+    } else {
+      return {
+        success: false,
+        error: new AppError("Invalid audience in idToken", 400),
+      };
+    }
+
+    // Xác thực token với Google
+    const ticket = await selectedClient.verifyIdToken({
+      idToken,
+      audience: expectedAudience,
+    });
+
+    const { sub, email, name, picture } = ticket.getPayload();
+    console.log("Token verified successfully:", { sub, email, name }); // Thay logger.info
+
+    // Tìm người dùng trong DB
+    let user = await UserModel.findOne({ email });
+
+    if (!user) {
+      // Nếu chưa có, tạo tài khoản mới
+      user = await UserModel.create({
+        username: name,
+        email,
+        avatarUrl: picture,
+        googleId: sub,
+      });
+      console.log("New user created:", user); // Thay logger.info
+    } else {
+      console.log("User found:", user); // Thay logger.info
+    }
+
+    return {
+      success: true,
+      data: { user },
+    };
+  } catch (error) {
+    console.error("Error in googleLogin:", error); // Thay logger.error
     return {
       success: false,
-      error: new AppError("No Google token provided", 400),
+      error: new AppError(error.message || "Internal server error", 500),
     };
   }
-
-  // Xác thực token với Google
-  const ticket = await client.verifyIdToken({
-    idToken,
-    audience: process.env.GG_CLIENT_ID,
-  });
-
-  const { sub, email, name, picture } = ticket.getPayload(); // `sub` là Google ID
-
-  // Tìm người dùng trong DB
-  let user = await UserModel.findOne({ email });
-
-  if (!user) {
-    // Nếu chưa có, tạo tài khoản mới (kèm googleId)
-    user = await UserModel.create({
-      username: name,
-      email,
-      avatarUrl: picture,
-      googleId: sub, // Lưu Google ID để tránh yêu cầu password
-    });
-  }
-
-  return {
-    success: true,
-    data: { user },
-  };
 };
 
 // Quên mật khẩu
