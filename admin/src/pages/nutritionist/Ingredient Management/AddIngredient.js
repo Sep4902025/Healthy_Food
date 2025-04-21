@@ -24,7 +24,6 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
     imageFile: null,
     imageUrl: "",
     type: "",
-    customType: "",
     season: "",
     calories: "",
     protein: "",
@@ -60,25 +59,23 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
     else if (formData.imageUrl && !isValidImageUrl)
       newErrors.imageUrl = "Invalid image URL. Please provide a valid image link.";
     if (!formData.type) newErrors.type = "Type is required";
-    if (formData.type === "Others" && !formData.customType.trim())
-      newErrors.customType = "Custom Type is required when Type is 'Others'";
     if (!formData.season) newErrors.season = "Season is required";
     if (!formData.unit) newErrors.unit = "Unit is required";
-    if (formData.calories === "" || isNaN(formData.calories) || formData.calories < 0)
+    if (formData.calories === "" || isNaN(parseFloat(formData.calories)) || parseFloat(formData.calories) < 0)
       newErrors.calories = "Calories must be greater than or equal to 0";
-    else if (formData.calories > 1000)
+    else if (parseFloat(formData.calories) > 1000)
       newErrors.calories = "Calories must not exceed 1000 kcal";
-    if (formData.protein === "" || isNaN(formData.protein) || formData.protein < 0)
+    if (formData.protein === "" || isNaN(parseFloat(formData.protein)) || parseFloat(formData.protein) < 0)
       newErrors.protein = "Protein must be greater than or equal to 0";
-    else if (formData.protein > 100)
+    else if (parseFloat(formData.protein) > 100)
       newErrors.protein = "Protein must not exceed 100 g";
-    if (formData.carbs === "" || isNaN(formData.carbs) || formData.carbs < 0)
+    if (formData.carbs === "" || isNaN(parseFloat(formData.carbs)) || parseFloat(formData.carbs) < 0)
       newErrors.carbs = "Carbs must be greater than or equal to 0";
-    else if (formData.carbs > 100)
+    else if (parseFloat(formData.carbs) > 100)
       newErrors.carbs = "Carbs must not exceed 100 g";
-    if (formData.fat === "" || isNaN(formData.fat) || formData.fat < 0)
+    if (formData.fat === "" || isNaN(parseFloat(formData.fat)) || parseFloat(formData.fat) < 0)
       newErrors.fat = "Fat must be greater than or equal to 0";
-    else if (formData.fat > 100)
+    else if (parseFloat(formData.fat) > 100)
       newErrors.fat = "Fat must not exceed 100 g";
 
     setErrors(newErrors);
@@ -88,20 +85,16 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-
-    if (name === "type" && value !== "Others") {
-      setFormData((prev) => ({ ...prev, customType: "" }));
-      setErrors({ ...errors, type: "", customType: "" });
-    } else {
-      setErrors({ ...errors, [name]: "" });
-    }
+    setErrors({ ...errors, [name]: "" });
   };
 
   const handleNumericChange = (e, field) => {
-    let value = e.target.value.replace(/[^0-9]/g, "");
-    value = value === "" ? "" : parseInt(value, 10);
-    setFormData({ ...formData, [field]: value });
-    setErrors({ ...errors, [field]: "" });
+    let value = e.target.value;
+    // Chỉ cho phép số thập phân với tối đa 2 chữ số sau dấu chấm
+    if (value === "" || /^-?\d*\.?\d{0,2}$/.test(value)) {
+      setFormData({ ...formData, [field]: value });
+      setErrors({ ...errors, [field]: "" });
+    }
   };
 
   const handleFileSelect = (file) => {
@@ -184,7 +177,11 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
     const finalData = {
       ...formData,
       imageUrl,
-      type: formData.type === "Others" ? formData.customType : formData.type,
+      type: formData.type, // Directly use the selected type, including "Others"
+      calories: parseFloat(formData.calories) || 0,
+      protein: parseFloat(formData.protein) || 0,
+      carbs: parseFloat(formData.carbs) || 0,
+      fat: parseFloat(formData.fat) || 0,
     };
     const response = await ingredientService.createIngredient(finalData);
 
@@ -198,7 +195,6 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
         imageFile: null,
         imageUrl: "",
         type: "",
-        customType: "",
         season: "",
         calories: "",
         protein: "",
@@ -291,36 +287,16 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
                 ))}
               </select>
               {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
-              {formData.type === "Others" && (
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="customType"
-                    value={formData.customType}
-                    onChange={handleChange}
-                    placeholder="Enter custom type"
-                    className={`w-full border ${
-                      errors.customType ? "border-red-500" : "border-gray-300"
-                    } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
-                    disabled={isLoading}
-                  />
-                  {errors.customType && (
-                    <p className="text-red-500 text-sm mt-1">{errors.customType}</p>
-                  )}
-                </div>
-              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Calories *</label>
               <div className="flex items-center">
                 <input
-                  type="number"
+                  type="text"
                   name="calories"
                   value={formData.calories}
                   onChange={(e) => handleNumericChange(e, "calories")}
-                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter calories"
-                  min="0"
                   className={`w-full border ${
                     errors.calories ? "border-red-500" : "border-gray-300"
                   } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
@@ -337,13 +313,11 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Protein *</label>
               <div className="flex items-center">
                 <input
-                  type="number"
+                  type="text"
                   name="protein"
                   value={formData.protein}
                   onChange={(e) => handleNumericChange(e, "protein")}
-                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter protein"
-                  min="0"
                   className={`w-full border ${
                     errors.protein ? "border-red-500" : "border-gray-300"
                   } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
@@ -357,13 +331,11 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Carbs *</label>
               <div className="flex items-center">
                 <input
-                  type="number"
+                  type="text"
                   name="carbs"
                   value={formData.carbs}
                   onChange={(e) => handleNumericChange(e, "carbs")}
-                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter carbs"
-                  min="0"
                   className={`w-full border ${
                     errors.carbs ? "border-red-500" : "border-gray-300"
                   } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
@@ -380,13 +352,11 @@ const AddIngredient = ({ onIngredientAdded = () => {} }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Fat *</label>
               <div className="flex items-center">
                 <input
-                  type="number"
+                  type="text"
                   name="fat"
                   value={formData.fat}
                   onChange={(e) => handleNumericChange(e, "fat")}
-                  onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                   placeholder="Enter fat"
-                  min="0"
                   className={`w-full border ${
                     errors.fat ? "border-red-500" : "border-gray-300"
                   } rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}

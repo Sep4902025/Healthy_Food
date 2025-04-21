@@ -93,7 +93,7 @@ const UserChatButton = () => {
       "I want dietary advice!",
       "I want weight loss advice",
       "I want weight gain advice",
-      "I want nutrition advice for a medical condition",
+      "I want nutrition advice for a Health Conditions",
       "Other",
     ];
 

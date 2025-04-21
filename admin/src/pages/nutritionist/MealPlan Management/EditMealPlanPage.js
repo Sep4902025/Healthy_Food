@@ -119,7 +119,7 @@ const EditMealPlanPage = () => {
               const result = await medicalConditionService.getMedicalConditionById(id);
               return result;
             } catch (error) {
-              console.error(`Error fetching medical condition with ID ${id}:`, error);
+              console.error(`Error fetching health conditions with ID ${id}:`, error);
               return { success: false, data: null };
             }
           });

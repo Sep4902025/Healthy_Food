@@ -176,10 +176,10 @@ const FoodSelectionModal = ({
                 const isSelected = tempSelectedDishes.includes(dish._id);
                 const dishFavorite = isFavorite(dish._id);
                 const nutritionData = dish.recipe || {
-                  totalCalories: "N/A",
-                  totalProtein: "N/A",
-                  totalCarbs: "N/A",
-                  totalFat: "N/A",
+                  totalCalories: "0",
+                  totalProtein: "0",
+                  totalCarbs: "0",
+                  totalFat: "0",
                 };
 
                 return (
@@ -226,30 +226,32 @@ const FoodSelectionModal = ({
                     <div className="p-3 flex flex-col justify-between h-[100px]">
                       <div className="flex justify-between items-start">
                         <h3 className="font-medium text-gray-800 truncate w-[70%]">{dish.name}</h3>
-                        <span className="text-sm font-bold text-blue-600 min-w-[80px] text-right">
+                        {/* Increase min-width and prevent wrapping */}
+                        <span className="text-sm font-bold text-blue-600 min-w-[100px] text-right whitespace-nowrap">
                           {nutritionData.totalCalories !== "N/A"
                             ? `${nutritionData.totalCalories} kcal`
                             : "N/A"}
                         </span>
                       </div>
+                      {/* Keep nutritional stats aligned */}
                       <div className="text-sm flex flex-col h-[60px] justify-between">
-                        <div className="flex justify-between">
-                          <span className="text-gray-700">Protein:</span>
-                          <span className="font-medium">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700 min-w-[60px]">Protein:</span>
+                          <span className="font-medium text-right">
                             {nutritionData.totalProtein}{" "}
                             {nutritionData.totalProtein !== "N/A" ? "g" : ""}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-700">Fat:</span>
-                          <span className="font-medium">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700 min-w-[60px]">Fat:</span>
+                          <span className="font-medium text-right">
                             {nutritionData.totalFat}{" "}
                             {nutritionData.totalFat !== "N/A" ? "g" : ""}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-700">Carbs:</span>
-                          <span className="font-medium">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700 min-w-[60px]">Carbs:</span>
+                          <span className="font-medium text-right">
                             {nutritionData.totalCarbs}{" "}
                             {nutritionData.totalCarbs !== "N/A" ? "g" : ""}
                           </span>

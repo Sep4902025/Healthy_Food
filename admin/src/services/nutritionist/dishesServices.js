@@ -9,8 +9,8 @@ const getAuthHeaders = () => {
 };
 
 const dishesService = {
-  // Get all dishes with pagination
-  getAllDishes: async (page = 1, limit = 10, search = "") => {
+  // Get all dishes with pagination and filtering
+  getAllDishes: async (page = 1, limit = 10, type = "all", search = "") => {
     try {
       const response = await axios.get(`${API_URL}/dishes`, {
         headers: getAuthHeaders(),
@@ -18,6 +18,7 @@ const dishesService = {
         params: {
           page,
           limit,
+          type, // Filter by dish type
           search,
           sort: "createdAt",
           order: "desc",

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, memo } from "react";
+import React, { useEffect, useState, useCallback, memo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import UploadComponent from "../../../components/UploadComponent";
 import dishesService from "../../../services/nutritionist/dishesServices";
@@ -31,22 +31,29 @@ const debounce = (func, delay) => {
 };
 
 // Component riêng cho ô tìm kiếm
-const SearchInput = memo(({ value, onChange }) => {
+const SearchInput = memo(({ value, onChange, inputRef }) => {
   return (
     <input
+      ref={inputRef}
       type="text"
       placeholder="Search by dish name"
       className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
       value={value}
       onChange={onChange}
+      data-testid="search-input"
     />
   );
 });
 
 // Component riêng cho danh sách món ăn
-const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVisibility }) => (
+const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVisibility, isLoading }) => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-    {dishes.length > 0 ? (
+    {isLoading ? (
+      <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+        <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#40B491]"></div>
+        <p className="text-lg font-semibold mt-4">Loading dishes...</p>
+      </div>
+    ) : dishes.length > 0 ? (
       dishes.map((dish) => (
         <div
           key={dish._id}
@@ -64,7 +71,7 @@ const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVis
             <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
               <span className="flex items-center">
                 <Utensils className="w-4 h-4 mr-1" />
-                {ingredientCounts[dish._id] !== undefined ? ingredientCounts[dish._id] : "Loading..."} ingredients
+                {ingredientCounts[dish._id] !== undefined ? `${ingredientCounts[dish._id]} ingredients` : "0 ingredients"}
               </span>
             </div>
           </div>
@@ -72,6 +79,7 @@ const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVis
             <button
               onClick={() => window.open(dish.videoUrl, "_blank")}
               className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
+              disabled={isLoading}
             >
               <Video className="w-4 h-4 mr-1" />
               Video
@@ -80,6 +88,7 @@ const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVis
             <button
               onClick={() => onEdit(dish)}
               className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
+              disabled={isLoading}
             >
               <EditIcon className="w-4 h-4 mr-1" />
               Edit
@@ -88,6 +97,7 @@ const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVis
             <button
               onClick={() => onDelete(dish._id)}
               className="text-red-500 flex items-center px-2 py-1 hover:text-red-600 transition"
+              disabled={isLoading}
             >
               <TrashIcon className="w-4 h-4 mr-1" />
               Delete
@@ -95,8 +105,10 @@ const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVis
           </div>
           <button
             onClick={() => onToggleVisibility(dish)}
-            className={`absolute top-2 right-2 p-2 rounded-md text-white ${dish.isVisible ? "bg-gray-500 hover:bg-gray-600" : "bg-[#40B491] hover:bg-[#359c7a]"
-              } transition duration-200`}
+            className={`absolute top-2 right-2 p-2 rounded-md text-white ${
+              dish.isVisible ? "bg-gray-500 hover:bg-gray-600" : "bg-[#40B491] hover:bg-[#359c7a]"
+            } transition duration-200`}
+            disabled={isLoading}
           >
             {dish.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
           </button>
@@ -136,53 +148,72 @@ const TableDishes = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [ingredientCounts, setIngredientCounts] = useState({});
-  const [loadingIngredients, setLoadingIngredients] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
   const [isValidImageUrl, setIsValidImageUrl] = useState(false);
+  const searchInputRef = useRef(null);
+  const dishesRef = useRef(dishes);
 
-  const fetchDishes = async () => {
+  const fetchDishes = useCallback(async (isInitialOrFilterChange = false) => {
     try {
-      const response = await dishesService.getAllDishesForNutri(currentPage + 1, itemsPerPage, searchTerm);
+      if (isInitialOrFilterChange) {
+        setIsLoading(true);
+      }
+      const response = await dishesService.getAllDishes(
+        currentPage + 1,
+        itemsPerPage,
+        filterType,
+        searchTerm
+      );
       if (response.success) {
-        const filteredByType =
-          filterType === "all"
-            ? response.data.items
-            : response.data.items.filter((dish) => dish.type === filterType);
-        setDishes(filteredByType);
+        setDishes(response.data.items);
+        dishesRef.current = response.data.items;
         setTotalItems(response.data.total);
         setTotalPages(response.data.totalPages);
+        await fetchIngredientCounts(response.data.items); // Fetch ingredient counts after dishes
       } else {
         setDishes([]);
+        dishesRef.current = [];
+        setIngredientCounts({});
         setTotalItems(0);
         setTotalPages(1);
       }
     } catch {
       setDishes([]);
+      dishesRef.current = [];
+      setIngredientCounts({});
       setTotalItems(0);
       setTotalPages(1);
+    } finally {
+      if (isInitialOrFilterChange) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [currentPage, itemsPerPage, filterType, searchTerm]);
 
   const debouncedSearch = useCallback(
     debounce((value) => {
       setSearchTerm(value);
       setCurrentPage(0);
+      fetchDishes();
     }, 500),
-    []
+    [fetchDishes]
   );
 
   useEffect(() => {
-    fetchDishes();
-  }, [currentPage, itemsPerPage, filterType, searchTerm]);
+    fetchDishes(true);
+  }, [fetchDishes, filterType, currentPage]);
 
-  const fetchIngredientCounts = useCallback(async () => {
-    if (dishes.length === 0) return;
+  const fetchIngredientCounts = useCallback(async (dishesToFetch) => {
+    if (!dishesToFetch || dishesToFetch.length === 0) {
+      setIngredientCounts({});
+      return;
+    }
 
-    setLoadingIngredients(true);
     const counts = {};
     await Promise.all(
-      dishes.map(async (dish) => {
+      dishesToFetch.map(async (dish) => {
         if (dish.recipeId) {
           try {
             const recipeResponse = await recipeService.getRecipeById(dish._id, dish.recipeId);
@@ -196,18 +227,16 @@ const TableDishes = () => {
       })
     );
     setIngredientCounts(counts);
-    setLoadingIngredients(false);
-  }, [dishes]);
+  }, []);
 
-  useEffect(() => {
-    fetchIngredientCounts();
-  }, [fetchIngredientCounts]);
-
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    setInputValue(value);
-    debouncedSearch(value);
-  };
+  const handleInputChange = useCallback(
+    (e) => {
+      const value = e.target.value;
+      setInputValue(value);
+      debouncedSearch(value);
+    },
+    [debouncedSearch]
+  );
 
   const handleEditClick = (dish) => {
     let flavorArray = [];
@@ -313,8 +342,7 @@ const TableDishes = () => {
     if (response.success) {
       toast.success(`Dish "${editData.name}" has been saved!`);
       setIsEditModalOpen(false);
-      await fetchDishes();
-      await fetchIngredientCounts();
+      await fetchDishes(true);
     } else {
       toast.error("Failed to save dish. Please try again.");
     }
@@ -322,10 +350,12 @@ const TableDishes = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this dish?")) {
+      setIsLoading(true);
       const response = await dishesService.deleteDish(id);
+      setIsLoading(false);
       if (response.success) {
         toast.success("Deleted successfully!");
-        fetchDishes();
+        fetchDishes(true);
         if (dishes.length === 1 && currentPage > 0) {
           setCurrentPage(currentPage - 1);
         }
@@ -337,11 +367,12 @@ const TableDishes = () => {
 
   const handleToggleVisibility = async (dish) => {
     const newVisibility = !dish.isVisible;
-    const updatedDish = { ...dish, isVisible: newVisibility };
     try {
       const response = await dishesService.updateDish(dish._id, { isVisible: newVisibility });
       if (response.success) {
-        setDishes((prevDishes) => prevDishes.map((d) => (d._id === dish._id ? updatedDish : d)));
+        setDishes((prevDishes) =>
+          prevDishes.map((d) => (d._id === dish._id ? { ...d, isVisible: newVisibility } : d))
+        );
         toast.success(
           `Dish "${dish.name}" is now ${newVisibility ? "visible" : "hidden"}!`
         );
@@ -430,6 +461,11 @@ const TableDishes = () => {
     setCurrentPage(selected);
   };
 
+  const handleFilterChange = useCallback((type) => {
+    setFilterType((prev) => (prev === type ? "all" : type));
+    setCurrentPage(0);
+  }, []);
+
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setEditData({
@@ -458,11 +494,29 @@ const TableDishes = () => {
 
   return (
     <div className="container mx-auto px-6 py-8">
+      <style>
+        {`
+          .loader {
+            border-top-color: #40B491;
+            border-bottom-color: #40B491;
+          }
+          .dish-list-container {
+            transition: opacity 0.2s ease-in-out;
+          }
+          .dish-list-container.loading {
+            opacity: 0.7;
+          }
+          input[type="text"] {
+            transition: none;
+          }
+        `}
+      </style>
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">List of Dishes</h2>
         <button
           onClick={() => navigate("/nutritionist/dishes/add")}
           className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
+          disabled={isLoading}
         >
           + Add Dish
         </button>
@@ -471,51 +525,55 @@ const TableDishes = () => {
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => {
-              setFilterType("all");
-              setCurrentPage(0);
-            }}
-            className={`px-4 py-2 rounded-md font-semibold ${filterType === "all"
-              ? "bg-[#40B491] text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              } transition duration-200`}
+            onClick={() => handleFilterChange("all")}
+            className={`px-4 py-2 rounded-md font-semibold ${
+              filterType === "all"
+                ? "bg-[#40B491] text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            } transition duration-200`}
+            disabled={isLoading}
           >
             All
           </button>
           {TYPE_OPTIONS.map((type) => (
             <button
               key={type}
-              onClick={() => {
-                setFilterType(filterType === type ? "all" : type);
-                setCurrentPage(0);
-              }}
-              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${filterType === type
-                ? "bg-[#40B491] text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                } transition duration-200`}
+              onClick={() => handleFilterChange(type)}
+              className={`px-4 py-2 rounded-md font-semibold whitespace-nowrap ${
+                filterType === type
+                  ? "bg-[#40B491] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } transition duration-200`}
+              disabled={isLoading}
             >
               {type}
             </button>
           ))}
         </div>
         <div className="flex items-center">
-          <SearchInput value={inputValue} onChange={handleInputChange} />
+          <SearchInput
+            value={inputValue}
+            onChange={handleInputChange}
+            inputRef={searchInputRef}
+          />
         </div>
       </div>
 
-      <Loading isLoading={loadingIngredients}>
-        <div className="min-h-[calc(100vh-200px)]">
-          <DishList
-            dishes={dishes}
-            ingredientCounts={ingredientCounts}
-            onEdit={handleEditClick}
-            onDelete={handleDelete}
-            onToggleVisibility={handleToggleVisibility}
-          />
-        </div>
-      </Loading>
+      <div
+        className={`dish-list-container ${isLoading ? "loading" : ""}`}
+        style={{ minHeight: "calc(100vh - 200px)" }}
+      >
+        <DishList
+          dishes={dishes}
+          ingredientCounts={ingredientCounts}
+          onEdit={handleEditClick}
+          onDelete={handleDelete}
+          onToggleVisibility={handleToggleVisibility}
+          isLoading={isLoading}
+        />
+      </div>
 
-      {totalItems > 0 && !loadingIngredients && (
+      {totalItems > 0 && (
         <div className="p-4 bg-gray-50">
           <Pagination
             limit={itemsPerPage}
@@ -530,27 +588,29 @@ const TableDishes = () => {
 
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          {isSaving && (
-            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
-              <div className="loader"></div>
-              <p className="mt-4 text-white text-lg">Saving...</p>
-            </div>
-          )}
-          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl relative">
+            {isSaving && (
+              <div className="absolute inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
+                <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#40B491]"></div>
+                <p className="mt-4 text-white text-lg">Saving...</p>
+              </div>
+            )}
             <div className="flex items-center mb-6">
               <h2 className="text-2xl font-bold text-[#40B491]">Edit Dish</h2>
               <div className="ml-auto flex space-x-3">
                 <button
                   onClick={handleSaveEdit}
                   disabled={isSaving}
-                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${isSaving ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                  className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                    isSaving ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </button>
                 <button
                   onClick={closeEditModal}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+                  disabled={isSaving}
                 >
                   Cancel
                 </button>
@@ -568,8 +628,10 @@ const TableDishes = () => {
                     onChange={handleChange}
                     placeholder="Enter dish name"
                     maxLength={100}
-                    className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${
+                      errors.name ? "border-red-500" : "border-gray-300"
+                    } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    disabled={isSaving}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                   <p className="text-gray-500 text-sm mt-1">{editData.name.length}/100 characters</p>
@@ -582,8 +644,10 @@ const TableDishes = () => {
                       name="type"
                       value={editData.type || ""}
                       onChange={handleChange}
-                      className={`w-full border ${errors.type ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${
+                        errors.type ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      disabled={isSaving}
                     >
                       <option value="">Select type</option>
                       {TYPE_OPTIONS.map((type) => (
@@ -603,8 +667,10 @@ const TableDishes = () => {
                       value={editData.videoUrl || ""}
                       onChange={handleChange}
                       placeholder="https://www.youtube.com/embed/video_id"
-                      className={`w-full border ${errors.videoUrl ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${
+                        errors.videoUrl ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      disabled={isSaving}
                     />
                     {errors.videoUrl && (
                       <p className="text-red-500 text-sm mt-1">{errors.videoUrl}</p>
@@ -618,8 +684,10 @@ const TableDishes = () => {
                     name="season"
                     value={editData.season || ""}
                     onChange={handleChange}
-                    className={`w-full border ${errors.season ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${
+                      errors.season ? "border-red-500" : "border-gray-300"
+                    } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    disabled={isSaving}
                   >
                     <option value="">Select season</option>
                     {SEASON_OPTIONS.map((season) => (
@@ -642,6 +710,7 @@ const TableDishes = () => {
                           checked={Array.isArray(editData.flavor) && editData.flavor.includes(flavor)}
                           onChange={handleFlavorChange}
                           className="mr-2 h-4 w-4 text-[#40B491] focus:ring-[#40B491] rounded"
+                          disabled={isSaving}
                         />
                         <span className="text-sm text-gray-700">{flavor}</span>
                       </label>
@@ -655,6 +724,7 @@ const TableDishes = () => {
                     <UploadComponent
                       onFileSelect={handleFileSelect}
                       reset={editData.imageFile === null && !editData.imageUrl && !imagePreview}
+                      disabled={isSaving}
                     />
                   </div>
                   <div>
@@ -667,8 +737,10 @@ const TableDishes = () => {
                       value={editData.imageUrl || ""}
                       onChange={handleImageUrlChange}
                       placeholder="Enter image URL"
-                      className={`w-full border ${errors.imageUrl ? "border-red-500" : "border-gray-300"
-                        } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      className={`w-full border ${
+                        errors.imageUrl ? "border-red-500" : "border-gray-300"
+                      } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                      disabled={isSaving}
                     />
                     {errors.imageUrl && (
                       <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>
@@ -697,8 +769,10 @@ const TableDishes = () => {
                     onChange={handleChange}
                     placeholder="Enter description"
                     maxLength={500}
-                    className={`w-full border ${errors.description ? "border-red-500" : "border-gray-300"
-                      } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    className={`w-full border ${
+                      errors.description ? "border-red-500" : "border-gray-300"
+                    } rounded-md p-3 text-sm text-gray-700 h-96 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
+                    disabled={isSaving}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">{errors.description}</p>
