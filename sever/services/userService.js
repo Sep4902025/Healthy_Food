@@ -221,7 +221,7 @@ exports.createUser = async (body) => {
 
 // 📌 Nộp CV để trở thành Nutritionist
 exports.submitNutritionistApplication = async (userId, body) => {
-  const { personalInfo, profileImage, introduction } = body;
+  const { personalInfo, profileImage, introduction, certificateLink } = body;
 
   // Kiểm tra xem user đã nộp đơn chưa
   const user = await UserModel.findById(userId);
@@ -238,7 +238,6 @@ exports.submitNutritionistApplication = async (userId, body) => {
     };
   }
 
-  // Cập nhật chỉ trường nutritionistApplication
   const updatedUser = await UserModel.updateOne(
     { _id: userId },
     {
@@ -247,6 +246,7 @@ exports.submitNutritionistApplication = async (userId, body) => {
           personalInfo,
           profileImage,
           introduction,
+          certificateLink,
           status: "pending",
           submittedAt: new Date(),
         },
@@ -261,7 +261,6 @@ exports.submitNutritionistApplication = async (userId, body) => {
     };
   }
 
-  // Lấy lại user để trả về response
   const updatedUserDoc = await UserModel.findById(userId);
 
   return {

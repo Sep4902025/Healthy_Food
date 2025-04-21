@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import {
   LineChart,
   Line,
@@ -13,8 +12,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-
-import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import mealPlanService from "../../../services/mealPlanServices";
@@ -30,12 +27,9 @@ const HealthyDashboard = () => {
     totalRevenue: 0,
   });
 
-  const [planTypeData, setPlanTypeData] = useState([]); // Thay vì hard-coded
-
+  const [planTypeData, setPlanTypeData] = useState([]);
   const [showValue, setShowValue] = useState(false);
   const [totalRevenue, setTotalRevenue] = useState(0);
-  const [paymentStats, setPaymentStats] = useState([]);
-  const [revenueByYear, setRevenueByYear] = useState({});
   const [paymentStatusDatas, setPaymentStatusDatas] = useState([]);
   const [revenueByMonth, setRevenueByMonth] = useState({});
   const [yearFilters, setYearFilters] = useState("2025");
@@ -64,29 +58,31 @@ const HealthyDashboard = () => {
         console.log("userResponse:", userResponse);
 
         if (mealPlanResponse.success && mealPlanResponse.data?.summary) {
-          setSummaryStats({
-            totalMealPlans: mealPlanResponse.data.summary.totalMealPlans || 0,
-            unpaidMealPlans: mealPlanResponse.data.summary.unpaidMealPlans || 0,
-            activeMealPlans: mealPlanResponse.data.summary.activeMealPlans || 0,
-            totalRevenue: paymentResponse.data.totalRevenue || 0,
-          });
-
-          // Tính toán Plan Types từ mealPlans
           const mealPlans = mealPlanResponse.data.mealPlans || [];
           const planTypeCounts = mealPlans.reduce((acc, plan) => {
-            const type = plan.type || "unknown"; // Giả định có trường type, mặc định là "unknown" nếu không có
-            acc[type] = (acc[type] || 0) + 1; // Tăng số đếm cho type tương ứng
+            const type = plan.type ? plan.type.toLowerCase() : "unknown";
+            acc[type] = (acc[type] || 0) + 1;
             return acc;
           }, {});
 
-          const planTypeDataFormatted = Object.keys(planTypeCounts).map((type) => ({
-            name:
-              type === "predetermined"
-                ? "Fixed Plans"
-                : type.charAt(0).toUpperCase() + type.slice(1) + " Plans", // Đổi "predetermined" thành "Fixed Plans"
-            value: planTypeCounts[type],
+          const allPlanTypes = [
+            { name: "Fixed Plans", type: "predetermined" },
+            { name: "Custom Plans", type: "custom" }, // Adjusted to match Excel output
+          ];
+
+          const planTypeDataFormatted = allPlanTypes.map(({ name, type }) => ({
+            name,
+            value: planTypeCounts[type] || 0,
           }));
+
           setPlanTypeData(planTypeDataFormatted);
+
+          setSummaryStats({
+            totalMealPlans: mealPlanResponse.data.summary.totalMealPlans || 0,
+            unpaidMealPlans: paymentResponse.data.paymentStats?.unpaid || 0,
+            activeMealPlans: paymentResponse.data.paymentStats?.paid || 0,
+            totalRevenue: paymentResponse.data.totalRevenue || 0,
+          });
         }
 
         if (dishResponse.success && userResponse.success) {
@@ -111,42 +107,25 @@ const HealthyDashboard = () => {
             },
           ]);
           setRevenueByMonth(paymentResponse.data.revenueByMonth || {});
+          setTotalRevenue(paymentResponse.data.totalRevenue || 0);
         }
       } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu dashboard:", error);
+        console.error("Error fetching dashboard data:", error);
       }
     };
     fetchDashboardData();
   }, []);
 
-  useEffect(() => {
-    const fetchPaymentData = async () => {
-      try {
-        const response = await paymentService.getPaymentDashboardData();
-
-        if (response.success) {
-          setTotalRevenue(response.data.totalRevenue);
-          setPaymentStats(response.data.paymentStats);
-          setRevenueByYear(response.data.revenueByYear);
-          setPaymentStatusDatas([
-            { name: "Paid", value: response.data.paymentStats?.paid || 0 },
-            { name: "Unpaid", value: response.data.paymentStats?.unpaid || 0 },
-          ]);
-          setRevenueByMonth(response.data.revenueByMonth);
-        }
-      } catch (error) {
-        console.error("Lỗi tải dữ liệu Payment:", error);
-      }
-    };
-    fetchPaymentData();
-  }, []);
-
-  const revenueDatas =
-    revenueByMonth[yearFilters] &&
-    Object.keys(revenueByMonth[yearFilters]).map((month) => ({
-      month: `Mo${month}`,
-      revenue: revenueByMonth[yearFilters][month],
-    }));
+  const revenueDatas = revenueByMonth[yearFilters]
+    ? Object.keys(revenueByMonth[yearFilters])
+        .sort((a, b) => Number(a) - Number(b))
+        .map((month) => ({
+          month: new Date(2025, Number(month) - 1).toLocaleString("en-US", {
+            month: "long",
+          }),
+          revenue: revenueByMonth[yearFilters][month],
+        }))
+    : [];
 
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
@@ -155,13 +134,8 @@ const HealthyDashboard = () => {
 
     // Sheet 1: Summary Statistics
     const summarySheet = workbook.addWorksheet("Summary", {
-      properties: { tabColor: { argb: "FF00FF00" } }, // Màu tab xanh lá
+      properties: { tabColor: { argb: "FF00FF00" } },
     });
-
-    summarySheet.columns = [
-      { header: "Category", key: "category", width: 30 },
-      { header: "Value", key: "value", width: 20 },
-    ];
 
     summarySheet.addRow(["Healthy Dashboard Statistics Report"]).font = {
       size: 16,
@@ -175,28 +149,44 @@ const HealthyDashboard = () => {
       })}`,
     ]);
     summarySheet.addRow([]);
+
     summarySheet.addRow(["Summary Statistics"]).font = {
       bold: true,
       color: { argb: "FFFFFFFF" },
     };
-    summarySheet.getRow(4).fill = {
+    summarySheet.getCell("A4").fill = {
       type: "pattern",
       pattern: "solid",
-      fgColor: { argb: "FF40B491" }, // Màu nền xanh phù hợp giao diện
+      fgColor: { argb: "FF40B491" },
+    };
+
+    summarySheet.addRow(["Category", "Value"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    summarySheet.getCell("A5").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+    summarySheet.getCell("B5").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
     };
 
     const summaryData = [
       ["Total Meal Plans", summaryStats.totalMealPlans],
-      ["Unpaid Meal Plans", summaryStats.unpaidMealPlans],
-      ["Active Meal Plans", summaryStats.activeMealPlans],
+      ["Unpaid Meal Plans", paymentStatusDatas[1]?.value || 0],
+      ["Active Meal Plans", paymentStatusDatas[0]?.value || 0],
+      ["Total Revenue", summaryStats.totalRevenue.toLocaleString() + " VND"],
     ];
 
     summaryData.forEach(([category, value]) => {
-      summarySheet.addRow({ category, value });
+      summarySheet.addRow([category, value]);
     });
 
-    // Định dạng bảng (bao gồm tiêu đề)
-    summarySheet.getRows(4, summaryData.length + 1).forEach((row) => {
+    summarySheet.getRows(5, summaryData.length + 1).forEach((row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
         cell.border = {
           top: { style: "thin" },
@@ -208,26 +198,48 @@ const HealthyDashboard = () => {
       });
     });
 
-    // Sheet 2: System Overview
-    const systemSheet = workbook.addWorksheet("System Overview");
-    systemSheet.columns = [
-      { header: "Category", key: "category", width: 30 },
-      { header: "Value", key: "value", width: 20 },
+    summarySheet.columns = [
+      { key: "category", width: 30 },
+      { key: "value", width: 20 },
     ];
 
+    // Sheet 2: System Overview
+    const systemSheet = workbook.addWorksheet("System Overview");
     systemSheet.addRow(["System Overview"]).font = {
       bold: true,
       color: { argb: "FFFFFFFF" },
     };
-    systemSheet.getRow(1).fill = {
+    systemSheet.getCell("A1").fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "FF40B491" },
     };
-    systemSheet.addRow(["Total Dishes", systemOverview.totalDishes]);
-    systemSheet.addRow(["Total Users", systemOverview.totalUsers]);
 
-    systemSheet.getRows(1, 3).forEach((row) => {
+    systemSheet.addRow(["Category", "Value"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    systemSheet.getCell("A2").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+    systemSheet.getCell("B2").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    const systemData = [
+      ["Total Dishes", systemOverview.totalDishes],
+      ["Total Users", systemOverview.totalUsers],
+    ];
+
+    systemData.forEach(([category, value]) => {
+      systemSheet.addRow([category, value]);
+    });
+
+    systemSheet.getRows(2, systemData.length + 1).forEach((row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
         cell.border = {
           top: { style: "thin" },
@@ -239,26 +251,48 @@ const HealthyDashboard = () => {
       });
     });
 
-    // Sheet 3: Payment Status
-    const paymentSheet = workbook.addWorksheet("Payment Status");
-    paymentSheet.columns = [
-      { header: "Status", key: "status", width: 30 },
-      { header: "Value", key: "value", width: 20 },
+    systemSheet.columns = [
+      { key: "category", width: 30 },
+      { key: "value", width: 20 },
     ];
 
+    // Sheet 3: Payment Status
+    const paymentSheet = workbook.addWorksheet("Payment Status");
     paymentSheet.addRow(["Payment Status"]).font = {
       bold: true,
       color: { argb: "FFFFFFFF" },
     };
-    paymentSheet.getRow(1).fill = {
+    paymentSheet.getCell("A1").fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "FF40B491" },
     };
-    paymentSheet.addRow(["Paid", paymentStatusDatas[0]?.value || 0]);
-    paymentSheet.addRow(["Unpaid", paymentStatusDatas[1]?.value || 0]);
 
-    paymentSheet.getRows(1, 3).forEach((row) => {
+    paymentSheet.addRow(["Status", "Value"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    paymentSheet.getCell("A2").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+    paymentSheet.getCell("B2").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    const paymentData = [
+      ["Paid", paymentStatusDatas[0]?.value || 0],
+      ["Unpaid", paymentStatusDatas[1]?.value || 0],
+    ];
+
+    paymentData.forEach(([status, value]) => {
+      paymentSheet.addRow([status, value]);
+    });
+
+    paymentSheet.getRows(2, paymentData.length + 1).forEach((row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
         cell.border = {
           top: { style: "thin" },
@@ -270,27 +304,43 @@ const HealthyDashboard = () => {
       });
     });
 
-    // Sheet 4: Plan Types
-    const planSheet = workbook.addWorksheet("Plan Types");
-    planSheet.columns = [
-      { header: "Plan Type", key: "name", width: 30 },
-      { header: "Value", key: "value", width: 20 },
+    paymentSheet.columns = [
+      { key: "status", width: 30 },
+      { key: "value", width: 20 },
     ];
 
+    // Sheet 4: Plan Types
+    const planSheet = workbook.addWorksheet("Plan Types");
     planSheet.addRow(["Plan Types"]).font = {
       bold: true,
       color: { argb: "FFFFFFFF" },
     };
-    planSheet.getRow(1).fill = {
+    planSheet.getCell("A1").fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "FF40B491" },
     };
+
+    planSheet.addRow(["Plan Type", "Value"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    planSheet.getCell("A2").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+    planSheet.getCell("B2").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
     planTypeData.forEach((plan) => {
-      planSheet.addRow(plan);
+      planSheet.addRow([plan.name, plan.value]);
     });
 
-    planSheet.getRows(1, planTypeData.length + 1).forEach((row) => {
+    planSheet.getRows(2, planTypeData.length + 1).forEach((row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
         cell.border = {
           top: { style: "thin" },
@@ -302,38 +352,44 @@ const HealthyDashboard = () => {
       });
     });
 
-    // Sheet 5: Revenue Statistics
-    const revenueSheet = workbook.addWorksheet("Revenue");
-    revenueSheet.columns = [
-      { header: "Month", key: "month", width: 20 },
-      { header: "Revenue (VND)", key: "revenue", width: 25 },
+    planSheet.columns = [
+      { key: "name", width: 30 },
+      { key: "value", width: 20 },
     ];
 
+    // Sheet 5: Revenue Statistics
+    const revenueSheet = workbook.addWorksheet("Revenue");
     revenueSheet.addRow([`Revenue Statistics (${yearFilters})`]).font = {
       bold: true,
     };
-    revenueSheet.addRow(["Month", "Revenue (VND)"]).font = {
-      bold: true,
-      color: { argb: "FFFFFFFF" },
-    };
-    revenueSheet.getRow(2).fill = {
+    revenueSheet.getCell("A1").fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "FF40B491" },
     };
 
-    revenueDatas?.forEach((data) => {
-      revenueSheet.addRow({
-        month: `Month ${data.month.slice(2)}`,
-        revenue: data.revenue,
-      });
+    revenueSheet.addRow(["Month", "Revenue (VND)"]).font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+    };
+    revenueSheet.getCell("A2").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+    revenueSheet.getCell("B2").fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF40B491" },
+    };
+
+    revenueDatas.forEach((data) => {
+      revenueSheet.addRow([data.month, data.revenue]);
     });
 
     revenueSheet.addRow(["Total Revenue", totalRevenue]).font = { bold: true };
 
-    // Định dạng bảng (bao gồm cả hàng tổng cộng)
-    revenueSheet.getRows(2, (revenueDatas?.length || 0) + 2).forEach((row) => {
-      // +2 để bao gồm tiêu đề và tổng cộng
+    revenueSheet.getRows(2, revenueDatas.length + 2).forEach((row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
         cell.border = {
           top: { style: "thin" },
@@ -343,12 +399,17 @@ const HealthyDashboard = () => {
         };
         cell.alignment = { vertical: "middle", horizontal: "left" };
         if (cell.value && typeof cell.value === "number") {
-          cell.numFmt = "#,##0"; // Định dạng số với dấu phân cách hàng nghìn
+          cell.numFmt = "#,##0";
         }
       });
     });
 
-    // Lưu file
+    revenueSheet.columns = [
+      { key: "month", width: 20 },
+      { key: "revenue", width: 25 },
+    ];
+
+    // Save the file
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -375,18 +436,24 @@ const HealthyDashboard = () => {
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500">Unpaid Meal Plans</h3>
-            <p className="text-2xl font-bold">{paymentStats.unpaid || 0}</p>
+            <p className="text-2xl font-bold">
+              {paymentStatusDatas[1]?.value || 0}
+            </p>
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500">Active Meal Plans</h3>
-            <p className="text-2xl font-bold">{paymentStats.paid || 0}</p>
+            <p className="text-2xl font-bold">
+              {paymentStatusDatas[0]?.value || 0}
+            </p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-6 ml-6">
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500 mb-2">Total Dishes</h3>
-            <p className="text-2xl font-bold mb-2">{systemOverview.totalDishes}</p>
+            <p className="text-2xl font-bold mb-2">
+              {systemOverview.totalDishes}
+            </p>
             <div className="max-h-40 overflow-y-auto">
               {systemOverview.dishes.map((dish) => (
                 <div key={dish._id} className="flex items-center mb-2">
@@ -403,7 +470,9 @@ const HealthyDashboard = () => {
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500 mb-2">Total Users</h3>
-            <p className="text-2xl font-bold mb-2">{systemOverview.totalUsers}</p>
+            <p className="text-2xl font-bold mb-2">
+              {systemOverview.totalUsers}
+            </p>
             <div className="max-h-40 overflow-y-auto">
               {systemOverview.users.map((user) => (
                 <div key={user._id} className="flex items-center mb-2">
@@ -443,13 +512,13 @@ const HealthyDashboard = () => {
             </div>
             <div className="flex justify-around">
               <div>
-                <h4 className="text-center text-gray-600 mb-2">Payment Status</h4>
+                <h4 className="text-center text-gray-600 mb-2">
+                  Payment Status
+                </h4>
                 <PieChart width={220} height={220}>
-                  {" "}
-                  {/* Tăng kích thước một chút */}
                   <Pie
                     data={paymentStatusDatas}
-                    cx={110} // Giữ tâm ở giữa
+                    cx={110}
                     cy={110}
                     innerRadius={60}
                     outerRadius={80}
@@ -459,9 +528,11 @@ const HealthyDashboard = () => {
                       showValue
                         ? ({ name, value, cx, cy, midAngle, outerRadius }) => {
                             const RADIAN = Math.PI / 180;
-                            const radius = outerRadius + 20; // Di chuyển nhãn ra xa tâm
-                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                            const radius = outerRadius + 20;
+                            const x =
+                              cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y =
+                              cy + radius * Math.sin(-midAngle * RADIAN);
                             return (
                               <text
                                 x={x}
@@ -476,10 +547,13 @@ const HealthyDashboard = () => {
                           }
                         : false
                     }
-                    labelLine={showValue} // Hiển thị đường dẫn từ nhãn đến phần biểu đồ
+                    labelLine={showValue}
                   >
                     {paymentStatusDatas.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -487,12 +561,10 @@ const HealthyDashboard = () => {
               </div>
               <div>
                 <h4 className="text-center text-gray-600 mb-2">Plan Types</h4>
-                <PieChart width={220} height={220}>
-                  {" "}
-                  {/* Tăng kích thước một chút */}
+                <PieChart width={260} height={220}>
                   <Pie
                     data={planTypeData}
-                    cx={110} // Giữ tâm ở giữa
+                    cx={130} // Center adjusted for new width (260 / 2)
                     cy={110}
                     innerRadius={60}
                     outerRadius={80}
@@ -502,9 +574,11 @@ const HealthyDashboard = () => {
                       showValue
                         ? ({ name, value, cx, cy, midAngle, outerRadius }) => {
                             const RADIAN = Math.PI / 180;
-                            const radius = outerRadius + 20; // Di chuyển nhãn ra xa tâm
-                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                            const radius = outerRadius + 10; // Reduced from +20 to +10
+                            const x =
+                              cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y =
+                              cy + radius * Math.sin(-midAngle * RADIAN);
                             return (
                               <text
                                 x={x}
@@ -519,10 +593,13 @@ const HealthyDashboard = () => {
                           }
                         : false
                     }
-                    labelLine={showValue} // Hiển thị đường dẫn từ nhãn đến phần biểu đồ
+                    labelLine={showValue}
                   >
                     {planTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[(index + 2) % COLORS.length]}
+                      />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -537,7 +614,9 @@ const HealthyDashboard = () => {
               <div>
                 <button
                   className={`mr-2 px-3 py-1 rounded ${
-                    yearFilters === "2025" ? "bg-blue-500 text-white" : "bg-gray-200"
+                    yearFilters === "2025"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200"
                   }`}
                   onClick={() => setYearFilters("2025")}
                 >
@@ -545,7 +624,9 @@ const HealthyDashboard = () => {
                 </button>
                 <button
                   className={`px-3 py-1 rounded ${
-                    yearFilters === "2026" ? "bg-blue-500 text-white" : "bg-gray-200"
+                    yearFilters === "2026"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200"
                   }`}
                   onClick={() => setYearFilters("2026")}
                 >
@@ -554,13 +635,36 @@ const HealthyDashboard = () => {
               </div>
             </div>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={revenueDatas}>
+              <LineChart
+                data={revenueDatas}
+                margin={{ top: 10, right: 40, left: 10, bottom: 10 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
+                <XAxis
+                  dataKey="month"
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis
+                  width={80}
+                  tickFormatter={(value) =>
+                    value >= 1000000
+                      ? `${(value / 1000000).toFixed(1)}M`
+                      : value >= 1000
+                      ? `${(value / 1000).toFixed(1)}K`
+                      : value
+                  }
+                />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#8884d8"
+                  strokeWidth={2}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>

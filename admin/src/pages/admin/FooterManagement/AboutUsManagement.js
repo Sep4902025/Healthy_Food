@@ -245,7 +245,7 @@ const AboutUsManagement = () => {
                   <div className="col-span-1 text-gray-600 font-medium">
                     {currentPage * itemsPerPage + index + 1}
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-2 flex justify-center">
                     <img
                       src={item.bannerUrl}
                       alt="Banner"
