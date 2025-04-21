@@ -73,8 +73,8 @@ const ConditionList = React.memo(
       ) : (
         <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
           <HeartPulse className="w-24 h-24 text-gray-400 mb-4" />
-          <p className="text-lg font-semibold">No medical conditions</p>
-          <p className="text-sm">Looks like you haven't added any medical conditions yet.</p>
+          <p className="text-lg font-semibold">No health conditions</p>
+          <p className="text-sm">Looks like you haven't added any health conditions yet.</p>
         </div>
       )}
     </div>
@@ -85,6 +85,36 @@ const ConditionList = React.memo(
     prevProps.onView === nextProps.onView &&
     prevProps.onDelete === nextProps.onDelete
 );
+
+// New Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, conditionName }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete the health condition <strong>{conditionName}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const TableMedicalConditions = () => {
   const navigate = useNavigate();
@@ -115,6 +145,9 @@ const TableMedicalConditions = () => {
   const [recommendedPage, setRecommendedPage] = useState(0);
   const [foodsPerPage, setFoodsPerPage] = useState(5);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConditionId, setDeleteConditionId] = useState(null);
+  const [deleteConditionName, setDeleteConditionName] = useState("");
 
   const fetchConditions = async () => {
     try {
@@ -139,7 +172,7 @@ const TableMedicalConditions = () => {
         setConditions([]);
         setTotalItems(0);
         setTotalPages(1);
-        toast.error("Failed to fetch medical conditions.");
+        toast.error("Failed to fetch health conditions.");
       }
     } catch (error) {
       setConditions([]);
@@ -151,7 +184,7 @@ const TableMedicalConditions = () => {
 
   const fetchDishes = async () => {
     try {
-      const response = await dishService.getAllDishes(1, 50); // Giảm limit để tối ưu
+      const response = await dishService.getAllDishes(1, 50);
       if (response?.success) {
         const dishesData = Array.isArray(response.data.items) ? response.data.items : [];
         const enrichedDishes = await Promise.all(
@@ -284,26 +317,36 @@ const TableMedicalConditions = () => {
   }, []);
 
   const handleDelete = useCallback(
-    async (id) => {
-      if (window.confirm("Are you sure you want to delete this medical condition?")) {
-        try {
-          const response = await medicalConditionService.deleteMedicalCondition(id);
-          if (response.success) {
-            toast.success("Deleted successfully!");
-            fetchConditions();
-            if (conditions.length === 1 && currentPage > 0) {
-              setCurrentPage(currentPage - 1);
-            }
-          } else {
-            toast.error("Failed to delete medical condition.");
-          }
-        } catch (error) {
-          toast.error("Error deleting medical condition.");
-        }
+    (id) => {
+      const condition = conditions.find((c) => c._id === id);
+      if (condition) {
+        setDeleteConditionId(id);
+        setDeleteConditionName(condition.name);
+        setIsDeleteModalOpen(true);
       }
     },
-    [conditions.length, currentPage]
+    [conditions]
   );
+
+  const confirmDelete = async () => {
+    try {
+      const response = await medicalConditionService.deleteMedicalCondition(deleteConditionId);
+      if (response.success) {
+        toast.success("Deleted successfully!");
+        fetchConditions();
+        if (conditions.length === 1 && currentPage > 0) {
+          setCurrentPage(currentPage - 1);
+        }
+      } else {
+        toast.error("Failed to delete health condition.");
+      }
+    } catch (error) {
+      toast.error("Error deleting health condition.");
+    }
+    setIsDeleteModalOpen(false);
+    setDeleteConditionId(null);
+    setDeleteConditionName("");
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -390,15 +433,15 @@ const TableMedicalConditions = () => {
       const response = await medicalConditionService.updateMedicalCondition(editData.id, updatedData);
       setIsSaving(false);
       if (response.success) {
-        toast.success(`Medical condition "${editData.name}" has been saved!`);
+        toast.success(`Health condition "${editData.name}" has been saved!`);
         setIsEditModalOpen(false);
         fetchConditions();
       } else {
-        toast.error("Failed to update medical condition.");
+        toast.error("Failed to update health condition.");
       }
     } catch (error) {
       setIsSaving(false);
-      toast.error("Error updating medical condition.");
+      toast.error("Error updating health condition.");
     }
   };
 
@@ -466,15 +509,31 @@ const TableMedicalConditions = () => {
 
   return (
     <div className="container mx-auto px-6 py-8">
+      <style>
+        {`
+          .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #40B491;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
-          List of Medical Conditions
+          List of Health Conditions
         </h2>
         <button
           onClick={() => navigate("/nutritionist/medicalConditions/add")}
           className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
         >
-          + Add Medical Condition
+          + Add Health Condition
         </button>
       </div>
 
@@ -535,7 +594,7 @@ const TableMedicalConditions = () => {
           )}
           <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center mb-6">
-              <h2 className="text-2xl font-bold text-[#40B491]">Edit Medical Condition</h2>
+              <h2 className="text-2xl font-bold text-[#40B491]">Edit Health Condition</h2>
               <div className="ml-auto flex space-x-3">
                 <button
                   onClick={handleSaveEdit}
@@ -824,7 +883,7 @@ const TableMedicalConditions = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center mb-6">
-              <h2 className="text-2xl font-bold text-[#40B491]">View Medical Condition</h2>
+              <h2 className="text-2xl font-bold text-[#40B491]">View Health Condition</h2>
               <button
                 className="ml-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
                 onClick={closeViewModal}
@@ -950,6 +1009,13 @@ const TableMedicalConditions = () => {
           />
         </Suspense>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        conditionName={deleteConditionName}
+      />
     </div>
   );
 };

@@ -156,6 +156,36 @@ const IngredientList = memo(
   )
 );
 
+// New Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, ingredientName }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete the ingredient <strong>{ingredientName}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TableIngredient = () => {
   const navigate = useNavigate();
   const [ingredients, setIngredients] = useState([]);
@@ -185,6 +215,9 @@ const TableIngredient = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteIngredientId, setDeleteIngredientId] = useState(null);
+  const [deleteIngredientName, setDeleteIngredientName] = useState("");
   const searchInputRef = useRef(null);
 
   const fetchIngredients = useCallback(async (isInitialOrFilterChange = false) => {
@@ -245,7 +278,7 @@ const TableIngredient = () => {
       ...ingredient,
       id: ingredient._id,
       imageFile: null,
-      type: ingredient.type, // Directly use the ingredient's type
+      type: ingredient.type,
       calories: ingredient.calories !== undefined ? String(ingredient.calories) : "",
       protein: ingredient.protein !== undefined ? String(ingredient.protein) : "",
       carbs: ingredient.carbs !== undefined ? String(ingredient.carbs) : "",
@@ -310,11 +343,10 @@ const TableIngredient = () => {
     let updatedValue = value;
 
     if (["calories", "protein", "carbs", "fat"].includes(name)) {
-      // Chỉ cho phép số thập phân với tối đa 2 chữ số sau dấu chấm
       if (value === "" || /^-?\d*\.?\d{0,2}$/.test(value)) {
         updatedValue = value;
       } else {
-        return; // Bỏ qua nếu giá trị không hợp lệ
+        return;
       }
     }
 
@@ -400,7 +432,7 @@ const TableIngredient = () => {
     const finalData = {
       ...editData,
       imageUrl,
-      type: editData.type, // Directly use the selected type, including "Others"
+      type: editData.type,
       calories: parseFloat(editData.calories) || 0,
       protein: parseFloat(editData.protein) || 0,
       carbs: parseFloat(editData.carbs) || 0,
@@ -419,20 +451,30 @@ const TableIngredient = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this ingredient?")) {
-      setIsLoading(true);
-      const response = await ingredientService.deleteIngredient(id);
-      setIsLoading(false);
-      if (response.success) {
-        toast.success("Deleted successfully!");
-        fetchIngredients(true);
-        if (ingredients.length === 1 && currentPage > 0) {
-          setCurrentPage(currentPage - 1);
-        }
-      } else {
-        toast.error("Failed to delete ingredient. Please try again.");
-      }
+    const ingredient = ingredients.find((ing) => ing._id === id);
+    if (ingredient) {
+      setDeleteIngredientId(id);
+      setDeleteIngredientName(ingredient.name);
+      setIsDeleteModalOpen(true);
     }
+  };
+
+  const confirmDelete = async () => {
+    setIsLoading(true);
+    const response = await ingredientService.deleteIngredient(deleteIngredientId);
+    setIsLoading(false);
+    if (response.success) {
+      toast.success("Deleted successfully!");
+      fetchIngredients(true);
+      if (ingredients.length === 1 && currentPage > 0) {
+        setCurrentPage(currentPage - 1);
+      }
+    } else {
+      toast.error("Failed to delete ingredient. Please try again.");
+    }
+    setIsDeleteModalOpen(false);
+    setDeleteIngredientId(null);
+    setDeleteIngredientName("");
   };
 
   const handleToggleVisibility = async (ingredient) => {
@@ -839,6 +881,13 @@ const TableIngredient = () => {
           </div>
         </div>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        ingredientName={deleteIngredientName}
+      />
     </div>
   );
 };

@@ -142,7 +142,7 @@ const AddMedicalCondition = () => {
       const response = await medicalConditionService.createMedicalCondition(dataToSubmit);
       setIsSubmitting(false);
       if (response.success) {
-        toast.success(`Medical condition "${formData.name}" has been created successfully!`);
+        toast.success(`Health condition "${formData.name}" has been created successfully!`);
         setFormData({
           name: "",
           description: "",
@@ -157,7 +157,7 @@ const AddMedicalCondition = () => {
       }
     } catch (error) {
       setIsSubmitting(false);
-      toast.error("An error occurred while creating the medical condition.");
+      toast.error("An error occurred while creating the Health condition.");
     }
   };
 
@@ -203,7 +203,7 @@ const AddMedicalCondition = () => {
     <div className="p-4">
       <Loading isLoading={isLoading || isSubmitting}>
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
-          Create New Medical Condition
+          Create New Health condition
         </h2>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 mt-4">
@@ -473,7 +473,7 @@ const AddMedicalCondition = () => {
               className={`bg-[#40B491] text-white px-4 py-2 rounded-md hover:bg-[#359c7a] ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Creating..." : "Create Medical Condition"}
+              {isSubmitting ? "Creating..." : "Create Health condition"}
             </button>
           </div>
         </form>

@@ -732,7 +732,7 @@ const UserProfile = () => {
                           textClass="text-blue-700"
                         />
                         <InfoItem
-                          label="Medical Conditions"
+                          label="Health Conditions"
                           value={medicalConditionNames.join(", ") || "None"}
                           colorClass="bg-pink-50"
                           textClass="text-pink-700"

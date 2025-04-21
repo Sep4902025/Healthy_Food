@@ -499,7 +499,7 @@ const Header = () => {
               isActive("/medical") ? "text-custom-green" : "text-gray-700 hover:text-[#359c7a]"
             }`}
           >
-            Medical
+            Health Conditions
           </a>
         </div>
       </div>

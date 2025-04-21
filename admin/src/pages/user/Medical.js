@@ -7,8 +7,9 @@ import medicalConditionService from "../../services/nutritionist/medicalConditio
 const conditionCache = new Map();
 
 // Memoized MedicalConditionCard component
-const MedicalConditionCard = React.memo(({ condition, onClick }) => (
+const MedicalConditionCard = React.memo(({ condition, onClick, observeRef }) => (
   <div
+    ref={observeRef}
     className="bg-white shadow-lg rounded-2xl p-6 border border-gray-100 cursor-pointer hover:shadow-xl hover:border-[#40B491] hover:scale-105 transition-all duration-300 flex flex-col bg-gradient-to-br from-white to-[#40B491]/5 min-h-[180px]"
     onClick={() => onClick(condition._id)}
   >
@@ -26,28 +27,74 @@ const Medical = () => {
   const [medicalConditions, setMedicalConditions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
-  const preFetchQueue = useRef(new Set());
+  const observerRef = useRef(null);
+  const observedConditions = useRef(new Set());
 
-  // Pre-fetch condition details
-  const preFetchConditionDetails = useCallback(async (conditionId) => {
-    if (conditionCache.has(conditionId) || preFetchQueue.current.has(conditionId)) {
-      return;
-    }
+  // Pre-fetch condition details for a batch of condition IDs
+  const preFetchConditionDetails = useCallback(async (conditionIds) => {
+    // Filter out already cached or currently fetching conditions
+    const idsToFetch = conditionIds.filter(
+      (id) => !conditionCache.has(id) && !observedConditions.current.has(id)
+    );
+    if (idsToFetch.length === 0) return;
 
-    preFetchQueue.current.add(conditionId);
+    // Mark conditions as being fetched
+    idsToFetch.forEach((id) => observedConditions.current.add(id));
+
     try {
-      const response = await medicalConditionService.getMedicalConditionById(conditionId);
-      if (response.success) {
-        conditionCache.set(conditionId, response.data);
-      }
+      // Fetch details concurrently
+      const responses = await Promise.all(
+        idsToFetch.map((id) =>
+          medicalConditionService.getMedicalConditionById(id).catch((error) => ({
+            success: false,
+            id,
+            error,
+          }))
+        )
+      );
+
+      responses.forEach((response, index) => {
+        const id = idsToFetch[index];
+        if (response.success) {
+          conditionCache.set(id, response.data);
+        } else {
+          console.error(`Error pre-fetching condition ${id}:`, response.error);
+        }
+        observedConditions.current.delete(id);
+      });
     } catch (error) {
-      console.error(`Error pre-fetching condition ${conditionId}:`, error);
-    } finally {
-      preFetchQueue.current.delete(conditionId);
+      console.error("Error in batch pre-fetching conditions:", error);
+      idsToFetch.forEach((id) => observedConditions.current.delete(id));
     }
   }, []);
 
-  // Fetch medical conditions
+  // Set up IntersectionObserver to pre-fetch details for visible cards
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        const visibleConditionIds = entries
+          .filter((entry) => entry.isIntersecting)
+          .map((entry) => entry.target.dataset.conditionId)
+          .filter((id) => id);
+
+        if (visibleConditionIds.length > 0) {
+          preFetchConditionDetails(visibleConditionIds);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    // Observe all condition card elements
+    const conditionElements = document.querySelectorAll("[data-condition-id]");
+    conditionElements.forEach((el) => observerRef.current.observe(el));
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [medicalConditions, showAll, preFetchConditionDetails]);
+
   useEffect(() => {
     const fetchMedicalConditions = async () => {
       try {
@@ -61,14 +108,15 @@ const Medical = () => {
 
         const response = await medicalConditionService.getAllMedicalConditions(1, 1000, "");
         if (response.success) {
-          setMedicalConditions(response.data.items || []);
-          conditionCache.set("all_conditions", response.data.items || []);
+          const conditions = response.data.items || [];
+          setMedicalConditions(conditions);
+          conditionCache.set("all_conditions", conditions);
         } else {
-          toast.error(response.message || "Failed to load medical conditions!");
+          toast.error(response.message || "Failed to load health conditions!");
         }
       } catch (error) {
-        console.error("Error fetching medical conditions:", error);
-        toast.error("Error loading medical conditions!");
+        console.error("Error fetching health conditions:", error);
+        toast.error("Error loading health conditions!");
       } finally {
         setLoading(false);
       }
@@ -76,14 +124,6 @@ const Medical = () => {
 
     fetchMedicalConditions();
   }, []);
-
-  // Pre-fetch details for visible conditions
-  useEffect(() => {
-    const visibleConditions = showAll ? medicalConditions : medicalConditions.slice(0, 6);
-    visibleConditions.forEach((condition) => {
-      preFetchConditionDetails(condition._id);
-    });
-  }, [medicalConditions, showAll, preFetchConditionDetails]);
 
   // Handle condition click
   const handleConditionClick = useCallback(
@@ -96,7 +136,7 @@ const Medical = () => {
   if (loading) {
     return (
       <div className="container mx-auto px-6 py-12 text-center">
-        <p className="text-lg font-semibold text-gray-600">Loading medical conditions...</p>
+        <p className="text-lg font-semibold text-gray-600">Loading health conditions...</p>
       </div>
     );
   }
@@ -104,7 +144,7 @@ const Medical = () => {
   if (medicalConditions.length === 0) {
     return (
       <div className="container mx-auto px-6 py-12 text-center">
-        <p className="text-lg font-semibold text-gray-500">No medical conditions found.</p>
+        <p className="text-lg font-semibold text-gray-500">No health conditions found.</p>
       </div>
     );
   }
@@ -114,7 +154,7 @@ const Medical = () => {
   return (
     <div className="container mx-auto px-6 py-12 bg-gray-50">
       <h1 className="text-4xl font-extrabold text-center mb-10 font-['Syne'] text-[#40B491]">
-        Medical Conditions
+        Health Conditions
       </h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-8">
         {displayedConditions.map((condition) => (
@@ -122,6 +162,11 @@ const Medical = () => {
             key={condition._id}
             condition={condition}
             onClick={handleConditionClick}
+            observeRef={(el) => {
+              if (el) {
+                el.dataset.conditionId = condition._id;
+              }
+            }}
           />
         ))}
       </div>

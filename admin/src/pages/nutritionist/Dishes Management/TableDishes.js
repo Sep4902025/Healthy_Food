@@ -124,6 +124,36 @@ const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVis
   </div>
 ));
 
+// New Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, dishName }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete the dish <strong>{dishName}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TableDishes = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
@@ -152,6 +182,9 @@ const TableDishes = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
   const [isValidImageUrl, setIsValidImageUrl] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteDishId, setDeleteDishId] = useState(null);
+  const [deleteDishName, setDeleteDishName] = useState("");
   const searchInputRef = useRef(null);
   const dishesRef = useRef(dishes);
 
@@ -171,7 +204,7 @@ const TableDishes = () => {
         dishesRef.current = response.data.items;
         setTotalItems(response.data.total);
         setTotalPages(response.data.totalPages);
-        await fetchIngredientCounts(response.data.items); // Fetch ingredient counts after dishes
+        await fetchIngredientCounts(response.data.items);
       } else {
         setDishes([]);
         dishesRef.current = [];
@@ -349,20 +382,30 @@ const TableDishes = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this dish?")) {
-      setIsLoading(true);
-      const response = await dishesService.deleteDish(id);
-      setIsLoading(false);
-      if (response.success) {
-        toast.success("Deleted successfully!");
-        fetchDishes(true);
-        if (dishes.length === 1 && currentPage > 0) {
-          setCurrentPage(currentPage - 1);
-        }
-      } else {
-        toast.error("Failed to delete dish. Please try again.");
-      }
+    const dish = dishes.find((d) => d._id === id);
+    if (dish) {
+      setDeleteDishId(id);
+      setDeleteDishName(dish.name);
+      setIsDeleteModalOpen(true);
     }
+  };
+
+  const confirmDelete = async () => {
+    setIsLoading(true);
+    const response = await dishesService.deleteDish(deleteDishId);
+    setIsLoading(false);
+    if (response.success) {
+      toast.success("Deleted successfully!");
+      fetchDishes(true);
+      if (dishes.length === 1 && currentPage > 0) {
+        setCurrentPage(currentPage - 1);
+      }
+    } else {
+      toast.error("Failed to delete dish. Please try again.");
+    }
+    setIsDeleteModalOpen(false);
+    setDeleteDishId(null);
+    setDeleteDishName("");
   };
 
   const handleToggleVisibility = async (dish) => {
@@ -587,7 +630,7 @@ const TableDishes = () => {
       )}
 
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 pain">
           <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl relative">
             {isSaving && (
               <div className="absolute inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
@@ -784,6 +827,13 @@ const TableDishes = () => {
           </div>
         </div>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        dishName={deleteDishName}
+      />
     </div>
   );
 };

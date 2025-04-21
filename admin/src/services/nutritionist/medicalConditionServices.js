@@ -9,7 +9,7 @@ const getAuthHeaders = () => {
 };
 
 const medicalConditionService = {
-  // Get all medical conditions
+  // Get all health conditions
   getAllMedicalConditions: async (page = 1, limit = 10, search = "") => {
     try {
       const response = await axios.get(`${API_URL}/medicalConditions`, {
@@ -36,12 +36,12 @@ const medicalConditionService = {
       return {
         success: false,
         message:
-          error.response?.data?.message || "Failed to load medical conditions!",
+          error.response?.data?.message || "Failed to load health conditions!",
       };
     }
   },
 
-  // Get medical condition by ID
+  // Get health condition by ID
   getMedicalConditionById: async (id) => {
     try {
       const response = await axios.get(`${API_URL}/medicalConditions/${id}`, {
@@ -51,7 +51,7 @@ const medicalConditionService = {
       if (response.data.data?.isDelete === true) {
         return {
           success: false,
-          message: "Medical condition has been soft deleted!",
+          message: "health condition has been soft deleted!",
         };
       }
       return {
@@ -62,12 +62,12 @@ const medicalConditionService = {
       return {
         success: false,
         message:
-          error.response?.data?.message || "Medical condition not found!",
+          error.response?.data?.message || "health condition not found!",
       };
     }
   },
 
-  // Create a new medical condition
+  // Create a new health condition
   createMedicalCondition: async (data) => {
     try {
       const response = await axios.post(`${API_URL}/medicalConditions`, data, {
@@ -84,22 +84,22 @@ const medicalConditionService = {
     } catch (error) {
       if (
         error.response?.data?.message ===
-        "Medical condition with this name already exists"
+        "health condition with this name already exists"
       ) {
         return {
           success: false,
-          message: "Medical condition with this name already exists",
+          message: "health condition with this name already exists",
         };
       }
       return {
         success: false,
         message:
-          error.response?.data?.message || "Failed to add medical condition!",
+          error.response?.data?.message || "Failed to add health condition!",
       };
     }
   },
 
-  // Update medical condition
+  // Update health condition
   updateMedicalCondition: async (id, data) => {
     try {
       const response = await axios.put(
@@ -122,12 +122,12 @@ const medicalConditionService = {
         success: false,
         message:
           error.response?.data?.message ||
-          "Failed to update medical condition!",
+          "Failed to update health condition!",
       };
     }
   },
 
-  // Soft delete medical condition
+  // Soft delete health condition
   deleteMedicalCondition: async (id) => {
     try {
       const response = await axios.put(
@@ -141,19 +141,18 @@ const medicalConditionService = {
       return {
         success: true,
         message:
-          response.data.message || "Medical condition has been soft deleted",
+          response.data.message || "health condition has been soft deleted",
       };
     } catch (error) {
       return {
         success: false,
         message:
           error.response?.data?.message ||
-          "Failed to soft delete medical condition!",
+          "Failed to soft delete health condition!",
       };
     }
   },
 
-  // Search medical conditions by name
   searchMedicalConditionByName: async (name, page = 1, limit = 10) => {
     try {
       const response = await axios.get(`${API_URL}/medicalConditions/search`, {
@@ -179,7 +178,7 @@ const medicalConditionService = {
         success: false,
         message:
           error.response?.data?.message ||
-          "Failed to search medical conditions!",
+          "Failed to search health conditions!",
       };
     }
   },
