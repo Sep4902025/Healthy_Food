@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,32 +9,50 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-
 import SafeAreaWrapper from "../components/layout/SafeAreaWrapper";
 import SigninInputField from "../components/common/SigninInputField";
 import Ionicons from "../components/common/VectorIcons/Ionicons";
 import MaterialIcons from "../components/common/VectorIcons/MaterialIcons";
 import { TouchableOpacity } from "react-native";
 import RippleButton from "../components/common/RippleButton";
-
 import googleIcon from "../../assets/image/google_icon.png";
 import loginHeaderIcon from "../../assets/image/login_bg.png";
 import { ScreensName } from "../constants/ScreensName";
 import ShowToast from "../components/common/CustomToast";
 import { loginThunk } from "../redux/actions/userThunk";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import NonBottomTabWrapper from "../components/layout/NonBottomTabWrapper";
 import { normalize } from "../utils/common";
+import { userSelector } from "../redux/selectors/selector";
 
 const { width: WIDTH, height: HEIGHT } = Dimensions.get("window");
 
 function Signin({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Chỉ dùng cho đăng nhập email/password
   const dispatch = useDispatch();
-  const { signIn } = useGoogleAuth();
+  const { signIn, loading: googleLoading, error: googleError } = useGoogleAuth();
+
+  // Lấy trạng thái người dùng từ Redux store
+  const user = useSelector(userSelector);
+  console.log("USS", user);
+
+  // Chuyển hướng khi user thay đổi (đăng nhập thành công)
+  useEffect(() => {
+    if (user) {
+      ShowToast("success", `Welcome back ${user.username}`);
+      navigation.navigate(ScreensName.home);
+    }
+  }, [user, navigation]);
+
+  // Xử lý lỗi đăng nhập Google
+  useEffect(() => {
+    if (googleError) {
+      ShowToast("error", googleError || "Google login failed");
+    }
+  }, [googleError]);
 
   const loginMethod = [
     {
@@ -48,7 +66,11 @@ function Signin({ navigation }) {
   ];
 
   const loginGoogle = async () => {
-    await signIn();
+    try {
+      await signIn(); // googleLoading sẽ được quản lý bởi useGoogleAuth
+    } catch (error) {
+      console.log("Google login error:", error);
+    }
   };
 
   const handlePress = async () => {
@@ -67,8 +89,9 @@ function Signin({ navigation }) {
       } else {
         ShowToast(
           "error",
-          "Login fail : " + responseLogin?.payload?.message ??
-            "Unable to connect. Check your network connection and try again."
+          "Login fail: " +
+            (responseLogin?.payload?.message ??
+              "Unable to connect. Check your network connection and try again.")
         );
       }
     } catch (error) {
@@ -83,10 +106,11 @@ function Signin({ navigation }) {
       <RippleButton
         key={index}
         buttonStyle={styles.loginMethod}
-        backgroundColor={"rgab(0, 0, 0, 0.5)"}
+        backgroundColor={"rgba(0, 0, 0, 0.5)"}
         onPress={() => {
           item?.onPress ? item.onPress() : null;
         }}
+        loading={googleLoading} // Thêm trạng thái loading cho nút Google
       >
         <Image source={item.icon} style={styles.methodIcon} />
       </RippleButton>
@@ -147,7 +171,7 @@ function Signin({ navigation }) {
                 buttonText="Sign In"
                 buttonStyle={styles.signinButton}
                 textStyle={styles.signinButtonText}
-                loading={loading}
+                loading={loading} // Chỉ dùng loading cho email/password
               />
             </View>
 
@@ -171,6 +195,7 @@ function Signin({ navigation }) {
   );
 }
 
+// Styles giữ nguyên như bạn đã cung cấp
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -10,7 +10,7 @@ exports.addFavoriteDish = async (userId, dishId) => {
 
 exports.getUserFavoriteDishes = async (userId) => {
   return await UserFavoriteDishes.find({ userId, isLike: true })
-    .populate("dishId", "name image description")
+    .populate("dishId", "name imageUrl description calories protein carbs fat totalServing")
     .sort({ createdAt: -1 });
 };
 
