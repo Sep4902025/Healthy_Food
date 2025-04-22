@@ -75,7 +75,7 @@ const WeightGoal = () => {
         <ProgressBar progress={31.5} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Weight Goal</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Weight Goal</h2>
       <p className="text-center text-gray-600">Please enter your goal weight</p>
 
       <div className="mt-4">

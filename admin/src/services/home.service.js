@@ -145,18 +145,19 @@ const HomeService = {
   getFavoriteDishes: async (userId) => {
     try {
       const response = await axiosInstance.get(`/favoriteDishes/${userId}`);
-      console.log("UserId", userId);
+
       if (response.data.status === "success") {
         return response.data.data
-          .filter((item) => item.isLike) // 🔥 Chỉ lấy món có isLike = true
+          .filter((item) => item.isLike)
           .map((item) => ({
             dishId: item.dishId._id,
             isLike: item.isLike,
           }));
       }
+      console.log("UserId", response.data.data);
       return [];
     } catch (error) {
-      console.error("Lỗi khi tải danh sách yêu thích:", error);
+      console.error("Error fetching favorite dishes:", error);
       return [];
     }
   },

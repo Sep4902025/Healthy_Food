@@ -25,7 +25,14 @@ exports.createManyDishes = async (dishes) => {
 };
 
 exports.getAllDishes = async (query) => {
-  const { page = 1, limit = 10, type = "all", search = "", sort = "createdAt", order = "desc" } = query;
+  const {
+    page = 1,
+    limit = 10,
+    type = "all",
+    search = "",
+    sort = "createdAt",
+    order = "desc",
+  } = query;
   let filter = { isDelete: false, isVisible: true };
 
   // Lọc theo type

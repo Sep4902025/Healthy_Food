@@ -82,11 +82,7 @@ const ActivityLevel = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       {/* Header with back button and progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
@@ -99,10 +95,8 @@ const ActivityLevel = () => {
       </div>
 
       {/* Title and description */}
-      <h2 className="text-2xl font-bold text-center">Activity Level</h2>
-      <p className="text-center text-gray-600">
-        What is your daily activity level?
-      </p>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Activity Level</h2>
+      <p className="text-center text-gray-600">What is your daily activity level?</p>
 
       {/* Selection list */}
       <div className="space-y-4 mt-4">

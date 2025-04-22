@@ -51,11 +51,7 @@ const LongOfPlan = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/mealnumber")}
@@ -66,10 +62,8 @@ const LongOfPlan = () => {
         <ProgressBar progress={73.5} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Long Of Plan</h2>
-      <p className="text-center text-gray-600">
-        How long do you want to use the plan?
-      </p>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Long Of Plan</h2>
+      <p className="text-center text-gray-600">How long do you want to use the plan?</p>
 
       <div className="space-y-4 mt-4">
         {longofplanGroups.map((item, index) => (
@@ -82,9 +76,7 @@ const LongOfPlan = () => {
             }`}
             onClick={() => setSelectedLongOfPlan(item.longofplan)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.longofplan}
-            </span>
+            <span className="text-lg font-semibold flex-1 text-left">{item.longofplan}</span>
           </div>
         ))}
       </div>

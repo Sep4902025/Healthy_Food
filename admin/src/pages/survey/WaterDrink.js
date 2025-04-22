@@ -51,11 +51,7 @@ const WaterDrink = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       {/* Header with back button and progress bar */}
       <div className="w-full flex items-center justify-center mt-2">
         <button
@@ -64,15 +60,12 @@ const WaterDrink = () => {
         >
           <RiArrowLeftSLine className="w-12 h-12 text-[#40B491]" />
         </button>
-        <ProgressBar progress={57.75} />{" "}
-        {/* Adjust progress according to flow */}
+        <ProgressBar progress={57.75} /> {/* Adjust progress according to flow */}
       </div>
 
       {/* Title and description */}
-      <h2 className="text-2xl font-bold text-center">Water Drink</h2>
-      <p className="text-center text-gray-600">
-        How much water do you drink per day?
-      </p>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Water Drink</h2>
+      <p className="text-center text-gray-600">How much water do you drink per day?</p>
 
       {/* Selection list */}
       <div className="space-y-4 mt-4">
@@ -86,9 +79,7 @@ const WaterDrink = () => {
             }`}
             onClick={() => setSelectedWaterDrink(item.waterdrink)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.waterdrink}
-            </span>
+            <span className="text-lg font-semibold flex-1 text-left">{item.waterdrink}</span>
           </div>
         ))}
       </div>

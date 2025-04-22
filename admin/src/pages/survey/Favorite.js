@@ -167,11 +167,7 @@ const Favorite = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/underdisease")}
@@ -182,7 +178,7 @@ const Favorite = () => {
         <ProgressBar progress={94.5} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Favorite</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Favorite</h2>
       <p className="text-center text-gray-600">Select your favorite food</p>
 
       <div className="flex items-center justify-start space-x-2 my-4">
@@ -192,9 +188,8 @@ const Favorite = () => {
           onChange={handleSelectAllToggle}
           checked={
             selectedItemIds.length ===
-            favoriteGroups
-              .flatMap((c) => c.items)
-              .filter((item) => !hatedItemIds.includes(item.id)).length
+            favoriteGroups.flatMap((c) => c.items).filter((item) => !hatedItemIds.includes(item.id))
+              .length
           }
         />
         <label htmlFor="selectAll">Select All</label>

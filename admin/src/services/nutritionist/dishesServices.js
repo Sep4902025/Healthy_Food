@@ -75,16 +75,16 @@ const dishesService = {
     } catch (error) {
       // Check for duplicate name error from server
       if (error.response?.data?.message === "Dish with this name already exists") {
-        return { 
-          success: false, 
-          message: "Dish with this name already exists" 
+        return {
+          success: false,
+          message: "Dish with this name already exists",
         };
       }
-      
+
       // Handle other errors
-      return { 
-        success: false, 
-        message: error.response?.data?.message || "Failed to add dish!" 
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to add dish!",
       };
     }
   },

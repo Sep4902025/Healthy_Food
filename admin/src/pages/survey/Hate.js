@@ -199,11 +199,7 @@ const Hate = () => {
     );
 
     if (missingFields.length > 0) {
-      alert(
-        `Please complete the previous steps. Missing fields: ${missingFields.join(
-          ", "
-        )}`
-      );
+      alert(`Please complete the previous steps. Missing fields: ${missingFields.join(", ")}`);
       console.error("❌ Missing fields in quizData:", missingFields);
       return;
     }
@@ -225,9 +221,7 @@ const Hate = () => {
       weight: currentData.weight || 0,
       weightGoal: currentData.weightGoal || 0,
       height: currentData.height || 0,
-      activityLevel: currentData.activityLevel
-        ? currentData.activityLevel.value
-        : 1.2,
+      activityLevel: currentData.activityLevel ? currentData.activityLevel.value : 1.2,
       gender: currentData.gender || null,
       phoneNumber: currentData.phoneNumber || null,
       underDisease: currentData.underDisease || [],
@@ -250,14 +244,9 @@ const Hate = () => {
         if (result.user) {
           if (!result.user.userPreferenceId) {
             console.warn("⚠️ userPreferenceId is still null:", result.user);
-            alert(
-              "userPreferenceId has not been updated. Please check the backend logic."
-            );
+            alert("userPreferenceId has not been updated. Please check the backend logic.");
           } else {
-            console.log(
-              "✅ userPreferenceId has been updated:",
-              result.user.userPreferenceId
-            );
+            console.log("✅ userPreferenceId has been updated:", result.user.userPreferenceId);
           }
           dispatch(
             loginSuccess({
@@ -277,19 +266,11 @@ const Hate = () => {
         }
       } else {
         console.error("🚨 Submission failed:", result.message);
-        alert(
-          `Error submitting quiz: ${
-            result.message || "An unknown error occurred."
-          }`
-        );
+        alert(`Error submitting quiz: ${result.message || "An unknown error occurred."}`);
       }
     } catch (error) {
       console.error("🚨 Error in handleNext:", error);
-      alert(
-        `An error occurred while submitting the quiz: ${
-          error.message || "Unknown error"
-        }`
-      );
+      alert(`An error occurred while submitting the quiz: ${error.message || "Unknown error"}`);
     }
   };
 
@@ -300,11 +281,7 @@ const Hate = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/favorite")}
@@ -315,7 +292,7 @@ const Hate = () => {
         <ProgressBar progress={100} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Hate</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Hate</h2>
       <p className="text-center text-gray-600">Select your allergic food</p>
 
       <div className="flex items-center justify-start space-x-2 my-4">
@@ -325,9 +302,8 @@ const Hate = () => {
           onChange={handleSelectAllToggle}
           checked={
             selectedItemIds.length ===
-            hateGroups
-              .flatMap((c) => c.items)
-              .filter((item) => !favoriteItemIds.includes(item.id)).length
+            hateGroups.flatMap((c) => c.items).filter((item) => !favoriteItemIds.includes(item.id))
+              .length
           }
         />
         <label htmlFor="selectAll">Select All</label>

@@ -99,7 +99,8 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, dishName }) => {
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
         <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
         <p className="text-gray-600 mb-6">
-          Are you sure you want to delete the recipe for <strong>{dishName}</strong>? This action cannot be undone.
+          Are you sure you want to delete the recipe for <strong>{dishName}</strong>? This action
+          cannot be undone.
         </p>
         <div className="flex justify-end space-x-3">
           <button
@@ -446,7 +447,8 @@ const TableRecipes = () => {
     });
     setErrors({
       ...errors,
-      instruction: updatedInstructions.length === 0 ? "Please add at least one Instruction step!" : "",
+      instruction:
+        updatedInstructions.length === 0 ? "Please add at least one Instruction step!" : "",
     });
   };
 
@@ -484,10 +486,12 @@ const TableRecipes = () => {
         return ing.quantity > maxValue;
       });
       if (invalidIngredient) {
-        const maxValue = invalidIngredient.unit === "g" || invalidIngredient.unit === "ml" ? 10000 : 100;
-        newErrors.ingredients = invalidIngredient.quantity > maxValue
-          ? `Quantity must not exceed ${maxValue} ${invalidIngredient.unit}`
-          : "Please enter a valid Quantity and Unit for all ingredients!";
+        const maxValue =
+          invalidIngredient.unit === "g" || invalidIngredient.unit === "ml" ? 10000 : 100;
+        newErrors.ingredients =
+          invalidIngredient.quantity > maxValue
+            ? `Quantity must not exceed ${maxValue} ${invalidIngredient.unit}`
+            : "Please enter a valid Quantity and Unit for all ingredients!";
       }
     }
 
@@ -588,7 +592,9 @@ const TableRecipes = () => {
 
     if (duplicates.length > 0) {
       toast.error(
-        `The following ingredients are already in the recipe: ${duplicates.join(", ")}. Please edit the existing entries instead.`
+        `The following ingredients are already in the recipe: ${duplicates.join(
+          ", "
+        )}. Please edit the existing entries instead.`
       );
     } else {
       setErrors({ ...errors, ingredients: "" });
@@ -991,7 +997,9 @@ const TableRecipes = () => {
                         <li key={inst.step} className="flex flex-col gap-2">
                           {isEditingInstruction === index ? (
                             <div className="flex items-start gap-4 w-full">
-                              <span className="min-w-[80px] font-medium pt-2">Step {inst.step}:</span>
+                              <span className="min-w-[80px] font-medium pt-2">
+                                Step {inst.step}:
+                              </span>
                               <div className="flex-1 flex flex-col gap-2">
                                 <textarea
                                   className="w-full min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
@@ -1029,7 +1037,9 @@ const TableRecipes = () => {
                           ) : (
                             <div className="flex items-start gap-4 w-full">
                               <span className="min-w-[80px] font-medium">Step {inst.step}:</span>
-                              <span className="flex-1 max-w-full break-words">{inst.description}</span>
+                              <span className="flex-1 max-w-full break-words">
+                                {inst.description}
+                              </span>
                               <div className="min-w-[120px] flex flex-col gap-2 items-end">
                                 <button
                                   className="text-blue-500 hover:text-blue-700"
@@ -1061,7 +1071,9 @@ const TableRecipes = () => {
                           )}
                           {addingAfterStep === inst.step && (
                             <div className="flex items-start gap-4 mt-2 w-full">
-                              <span className="min-w-[80px] font-medium pt-2">Step {inst.step + 1}:</span>
+                              <span className="min-w-[80px] font-medium pt-2">
+                                Step {inst.step + 1}:
+                              </span>
                               <div className="flex-1 flex flex-col gap-2">
                                 <textarea
                                   className="w-full min-h-[60px] border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491] resize-y"
@@ -1099,7 +1111,9 @@ const TableRecipes = () => {
                             </p>
                           )}
                           {addingAfterStep === inst.step && errors.instruction && (
-                            <p className="text-red-500 text-sm mt-1 ml-[96px]">{errors.instruction}</p>
+                            <p className="text-red-500 text-sm mt-1 ml-[96px]">
+                              {errors.instruction}
+                            </p>
                           )}
                         </li>
                       ))}
@@ -1316,7 +1330,8 @@ const TableRecipes = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-700">Calories:</span>
                         <span className="font-medium">
-                          {(nutritionData.calories / (newRecipeData.totalServing || 1)).toFixed(2)} kcal
+                          {(nutritionData.calories / (newRecipeData.totalServing || 1)).toFixed(2)}{" "}
+                          kcal
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1340,8 +1355,8 @@ const TableRecipes = () => {
                     </div>
                   ) : (
                     <p className="text-gray-500">
-                      No nutrition data available. Add ingredients with valid quantities and units to
-                      see nutrition details.
+                      No nutrition data available. Add ingredients with valid quantities and units
+                      to see nutrition details.
                     </p>
                   )}
                 </div>

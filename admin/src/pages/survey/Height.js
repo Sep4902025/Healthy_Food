@@ -76,7 +76,7 @@ const Height = () => {
         <ProgressBar progress={26.25} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Height</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Height</h2>
       <p className="text-center text-gray-600">Please enter your height (cm)</p>
 
       <div className="mt-4">

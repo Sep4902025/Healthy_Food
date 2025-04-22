@@ -3,15 +3,7 @@ import { useNavigate } from "react-router-dom";
 import UploadComponent from "../../../components/UploadComponent";
 import dishesService from "../../../services/nutritionist/dishesServices";
 import recipeService from "../../../services/nutritionist/recipesServices";
-import {
-  Clock,
-  Utensils,
-  Video,
-  EditIcon,
-  TrashIcon,
-  EyeOffIcon,
-  EyeIcon,
-} from "lucide-react";
+import { Clock, Utensils, Video, EditIcon, TrashIcon, EyeOffIcon, EyeIcon } from "lucide-react";
 import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
 import uploadFile from "../../../helpers/uploadFile";
@@ -46,83 +38,87 @@ const SearchInput = memo(({ value, onChange, inputRef }) => {
 });
 
 // Component riêng cho danh sách món ăn
-const DishList = memo(({ dishes, ingredientCounts, onEdit, onDelete, onToggleVisibility, isLoading }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-    {isLoading ? (
-      <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
-        <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#40B491]"></div>
-        <p className="text-lg font-semibold mt-4">Loading dishes...</p>
-      </div>
-    ) : dishes.length > 0 ? (
-      dishes.map((dish) => (
-        <div
-          key={dish._id}
-          className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
-        >
-          <img
-            src={dish.imageUrl || "https://via.placeholder.com/300"}
-            alt={dish.name}
-            className="w-full h-48 object-cover"
-          />
-          <div className="p-4">
-            <h3 className="text-lg font-semibold text-center text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap w-full">
-              {dish.name}
-            </h3>
-            <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
-              <span className="flex items-center">
-                <Utensils className="w-4 h-4 mr-1" />
-                {ingredientCounts[dish._id] !== undefined ? `${ingredientCounts[dish._id]} ingredients` : "0 ingredients"}
-              </span>
-            </div>
-          </div>
-          <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
-            <button
-              onClick={() => window.open(dish.videoUrl, "_blank")}
-              className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
-              disabled={isLoading}
-            >
-              <Video className="w-4 h-4 mr-1" />
-              Video
-            </button>
-            <div className="h-4 border-l border-gray-300 mx-2"></div>
-            <button
-              onClick={() => onEdit(dish)}
-              className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
-              disabled={isLoading}
-            >
-              <EditIcon className="w-4 h-4 mr-1" />
-              Edit
-            </button>
-            <div className="h-4 border-l border-gray-300 mx-2"></div>
-            <button
-              onClick={() => onDelete(dish._id)}
-              className="text-red-500 flex items-center px-2 py-1 hover:text-red-600 transition"
-              disabled={isLoading}
-            >
-              <TrashIcon className="w-4 h-4 mr-1" />
-              Delete
-            </button>
-          </div>
-          <button
-            onClick={() => onToggleVisibility(dish)}
-            className={`absolute top-2 right-2 p-2 rounded-md text-white ${
-              dish.isVisible ? "bg-gray-500 hover:bg-gray-600" : "bg-[#40B491] hover:bg-[#359c7a]"
-            } transition duration-200`}
-            disabled={isLoading}
-          >
-            {dish.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-          </button>
+const DishList = memo(
+  ({ dishes, ingredientCounts, onEdit, onDelete, onToggleVisibility, isLoading }) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {isLoading ? (
+        <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+          <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#40B491]"></div>
+          <p className="text-lg font-semibold mt-4">Loading dishes...</p>
         </div>
-      ))
-    ) : (
-      <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
-        <Utensils className="w-24 h-24 text-gray-400 mb-4" />
-        <p className="text-lg font-semibold">No dishes</p>
-        <p className="text-sm">Looks like you haven't added any dishes yet.</p>
-      </div>
-    )}
-  </div>
-));
+      ) : dishes.length > 0 ? (
+        dishes.map((dish) => (
+          <div
+            key={dish._id}
+            className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
+          >
+            <img
+              src={dish.imageUrl || "https://via.placeholder.com/300"}
+              alt={dish.name}
+              className="w-full h-48 object-cover"
+            />
+            <div className="p-4">
+              <h3 className="text-lg font-semibold text-center text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap w-full">
+                {dish.name}
+              </h3>
+              <div className="flex justify-center items-center text-sm text-gray-600 mt-2">
+                <span className="flex items-center">
+                  <Utensils className="w-4 h-4 mr-1" />
+                  {ingredientCounts[dish._id] !== undefined
+                    ? `${ingredientCounts[dish._id]} ingredients`
+                    : "0 ingredients"}
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
+              <button
+                onClick={() => window.open(dish.videoUrl, "_blank")}
+                className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
+                disabled={isLoading}
+              >
+                <Video className="w-4 h-4 mr-1" />
+                Video
+              </button>
+              <div className="h-4 border-l border-gray-300 mx-2"></div>
+              <button
+                onClick={() => onEdit(dish)}
+                className="text-[#40B491] flex items-center px-2 py-1 hover:text-[#359c7a] transition"
+                disabled={isLoading}
+              >
+                <EditIcon className="w-4 h-4 mr-1" />
+                Edit
+              </button>
+              <div className="h-4 border-l border-gray-300 mx-2"></div>
+              <button
+                onClick={() => onDelete(dish._id)}
+                className="text-red-500 flex items-center px-2 py-1 hover:text-red-600 transition"
+                disabled={isLoading}
+              >
+                <TrashIcon className="w-4 h-4 mr-1" />
+                Delete
+              </button>
+            </div>
+            <button
+              onClick={() => onToggleVisibility(dish)}
+              className={`absolute top-2 right-2 p-2 rounded-md text-white ${
+                dish.isVisible ? "bg-gray-500 hover:bg-gray-600" : "bg-[#40B491] hover:bg-[#359c7a]"
+              } transition duration-200`}
+              disabled={isLoading}
+            >
+              {dish.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+            </button>
+          </div>
+        ))
+      ) : (
+        <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+          <Utensils className="w-24 h-24 text-gray-400 mb-4" />
+          <p className="text-lg font-semibold">No dishes</p>
+          <p className="text-sm">Looks like you haven't added any dishes yet.</p>
+        </div>
+      )}
+    </div>
+  )
+);
 
 // New Delete Confirmation Modal Component
 const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, dishName }) => {
@@ -133,7 +129,8 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, dishName }) => {
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
         <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
         <p className="text-gray-600 mb-6">
-          Are you sure you want to delete the dish <strong>{dishName}</strong>? This action cannot be undone.
+          Are you sure you want to delete the dish <strong>{dishName}</strong>? This action cannot
+          be undone.
         </p>
         <div className="flex justify-end space-x-3">
           <button
@@ -188,42 +185,45 @@ const TableDishes = () => {
   const searchInputRef = useRef(null);
   const dishesRef = useRef(dishes);
 
-  const fetchDishes = useCallback(async (isInitialOrFilterChange = false) => {
-    try {
-      if (isInitialOrFilterChange) {
-        setIsLoading(true);
-      }
-      const response = await dishesService.getAllDishes(
-        currentPage + 1,
-        itemsPerPage,
-        filterType,
-        searchTerm
-      );
-      if (response.success) {
-        setDishes(response.data.items);
-        dishesRef.current = response.data.items;
-        setTotalItems(response.data.total);
-        setTotalPages(response.data.totalPages);
-        await fetchIngredientCounts(response.data.items);
-      } else {
+  const fetchDishes = useCallback(
+    async (isInitialOrFilterChange = false) => {
+      try {
+        if (isInitialOrFilterChange) {
+          setIsLoading(true);
+        }
+        const response = await dishesService.getAllDishes(
+          currentPage + 1,
+          itemsPerPage,
+          filterType,
+          searchTerm
+        );
+        if (response.success) {
+          setDishes(response.data.items);
+          dishesRef.current = response.data.items;
+          setTotalItems(response.data.total);
+          setTotalPages(response.data.totalPages);
+          await fetchIngredientCounts(response.data.items);
+        } else {
+          setDishes([]);
+          dishesRef.current = [];
+          setIngredientCounts({});
+          setTotalItems(0);
+          setTotalPages(1);
+        }
+      } catch {
         setDishes([]);
         dishesRef.current = [];
         setIngredientCounts({});
         setTotalItems(0);
         setTotalPages(1);
+      } finally {
+        if (isInitialOrFilterChange) {
+          setIsLoading(false);
+        }
       }
-    } catch {
-      setDishes([]);
-      dishesRef.current = [];
-      setIngredientCounts({});
-      setTotalItems(0);
-      setTotalPages(1);
-    } finally {
-      if (isInitialOrFilterChange) {
-        setIsLoading(false);
-      }
-    }
-  }, [currentPage, itemsPerPage, filterType, searchTerm]);
+    },
+    [currentPage, itemsPerPage, filterType, searchTerm]
+  );
 
   const debouncedSearch = useCallback(
     debounce((value) => {
@@ -250,7 +250,9 @@ const TableDishes = () => {
         if (dish.recipeId) {
           try {
             const recipeResponse = await recipeService.getRecipeById(dish._id, dish.recipeId);
-            counts[dish._id] = recipeResponse.success ? recipeResponse.data.ingredients?.length || 0 : 0;
+            counts[dish._id] = recipeResponse.success
+              ? recipeResponse.data.ingredients?.length || 0
+              : 0;
           } catch {
             counts[dish._id] = 0;
           }
@@ -416,9 +418,7 @@ const TableDishes = () => {
         setDishes((prevDishes) =>
           prevDishes.map((d) => (d._id === dish._id ? { ...d, isVisible: newVisibility } : d))
         );
-        toast.success(
-          `Dish "${dish.name}" is now ${newVisibility ? "visible" : "hidden"}!`
-        );
+        toast.success(`Dish "${dish.name}" is now ${newVisibility ? "visible" : "hidden"}!`);
       } else {
         toast.error("Failed to update visibility. Please try again.");
       }
@@ -594,11 +594,7 @@ const TableDishes = () => {
           ))}
         </div>
         <div className="flex items-center">
-          <SearchInput
-            value={inputValue}
-            onChange={handleInputChange}
-            inputRef={searchInputRef}
-          />
+          <SearchInput value={inputValue} onChange={handleInputChange} inputRef={searchInputRef} />
         </div>
       </div>
 
@@ -677,7 +673,9 @@ const TableDishes = () => {
                     disabled={isSaving}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-                  <p className="text-gray-500 text-sm mt-1">{editData.name.length}/100 characters</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {editData.name.length}/100 characters
+                  </p>
                 </div>
 
                 <div className="space-y-4">
@@ -703,7 +701,9 @@ const TableDishes = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Video URL *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Video URL *
+                    </label>
                     <input
                       type="text"
                       name="videoUrl"
@@ -750,7 +750,9 @@ const TableDishes = () => {
                         <input
                           type="checkbox"
                           value={flavor}
-                          checked={Array.isArray(editData.flavor) && editData.flavor.includes(flavor)}
+                          checked={
+                            Array.isArray(editData.flavor) && editData.flavor.includes(flavor)
+                          }
                           onChange={handleFlavorChange}
                           className="mr-2 h-4 w-4 text-[#40B491] focus:ring-[#40B491] rounded"
                           disabled={isSaving}
@@ -820,7 +822,9 @@ const TableDishes = () => {
                   {errors.description && (
                     <p className="text-red-500 text-sm mt-1">{errors.description}</p>
                   )}
-                  <p className="text-gray-500 text-sm mt-1">{editData.description.length}/500 characters</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {editData.description.length}/500 characters
+                  </p>
                 </div>
               </div>
             </div>

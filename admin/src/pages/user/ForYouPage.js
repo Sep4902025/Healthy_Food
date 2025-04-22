@@ -22,25 +22,16 @@ const debounce = (func, wait) => {
 
 // Define fallback images based on type
 const FALLBACK_IMAGES = {
-  ALL: "https://i.pinimg.com/736x/93/00/a4/9300a4f74d823f7bb93be955493a0155.jpg",
-  "HEAVY MEALS":
-    "https://i.pinimg.com/736x/e8/8b/12/e88b123fd4a3f0555d7e70045ac14f9c.jpg",
-  "LIGHT MEALS":
-    "https://i.pinimg.com/474x/db/c5/36/dbc53635aad70a15ce04489d02467605.jpg",
-  DESSERT:
-    "https://i.pinimg.com/474x/e0/7c/de/e07cde796c00d499dc5d93d517082c00.jpg",
-  BEVERAGES:
-    "https://i.pinimg.com/474x/08/76/98/0876982d7a1c29ca365fc84c0731ee78.jpg",
-  SNACKS:
-    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
-  BREAKFAST:
-    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
-  VEGAN:
-    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
-  "VIETNAMESE BEEF":
-    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
-  "VIETNAMESE BEVERAGE":
-    "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  ALL: "https://i.pinimg.com/736x/1d/92/d0/1d92d0984eb0597b5d9492db9c3ff6da.jpg",
+  "HEAVY MEALS": "https://i.pinimg.com/736x/09/a6/19/09a619b49ec913f426f2b1d857b711ed.jpg",
+  "LIGHT MEALS": "https://i.pinimg.com/736x/f8/b5/0d/f8b50d9e38c02d0f26ad3c663d286876.jpg",
+  DESSERTS: "https://i.pinimg.com/736x/a0/a8/c6/a0a8c6be34dfc82f5d1f14b0e4e0208e.jpg",
+  BEVERAGES: "https://i.pinimg.com/736x/f3/35/3d/f3353da22218a4de90629ea801d6d0ff.jpg",
+  SNACKS: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  BREAKFAST: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  VEGAN: "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  "VIETNAMESE BEEF": "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
+  "VIETNAMESE BEVERAGE": "https://i.pinimg.com/736x/5b/99/fb/5b99fbbebc94914af6601309fa53475a.jpg",
   DEFAULT:
     "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=200&auto=format&fit=crop",
 };
@@ -60,7 +51,7 @@ const ForYouPage = () => {
   const [selectedType, setSelectedType] = useState("");
   const [categories, setCategories] = useState([]);
   const [alertMessage] = useState(null);
-  const [likedFoods, setLikedFoods ] = useState([]); // Thêm state để quản lý danh sách món ăn yêu thích
+  const [likedFoods, setLikedFoods] = useState([]); // Thêm state để quản lý danh sách món ăn yêu thích
   const { searchTerm } = useSearch();
   const [filteredDishes, setFilteredDishes] = useState([]);
 
@@ -76,7 +67,6 @@ const ForYouPage = () => {
           isLike: true,
         }));
         setLikedFoods(likedDishes);
-
       } else {
         console.error("Unexpected response format:", response);
       }
@@ -125,9 +115,7 @@ const ForYouPage = () => {
       if (response.success) {
         const formattedCategories = response.data.map((category) => {
           const formattedName = formatCategoryName(category.name);
-          const isPlaceholderImage = category.image?.includes(
-            "via.placeholder.com"
-          );
+          const isPlaceholderImage = category.image?.includes("via.placeholder.com");
           const image =
             !category.image || isPlaceholderImage
               ? FALLBACK_IMAGES[formattedName] || FALLBACK_IMAGES["DEFAULT"]
@@ -272,21 +260,13 @@ const ForYouPage = () => {
   // Hàm xử lý thả tim yêu thích món ăn
   const handleLike = async (dishId) => {
     const foodIndex = likedFoods.findIndex((item) => item.dishId === dishId);
-    const isCurrentlyLiked =
-      foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
+    const isCurrentlyLiked = foodIndex !== -1 ? likedFoods[foodIndex].isLike : false;
 
     try {
-      const newLikeState = await HomeService.toggleFavoriteDish(
-        userId,
-        dishId,
-        isCurrentlyLiked
-      );
+      const newLikeState = await HomeService.toggleFavoriteDish(userId, dishId, isCurrentlyLiked);
       setLikedFoods((prev) =>
         newLikeState
-          ? [
-              ...prev.filter((item) => item.dishId !== dishId),
-              { dishId, isLike: true },
-            ]
+          ? [...prev.filter((item) => item.dishId !== dishId), { dishId, isLike: true }]
           : prev.filter((item) => item.dishId !== dishId)
       );
       const food = recommendedRecipes.find((item) => item._id === dishId);
@@ -344,9 +324,7 @@ const ForYouPage = () => {
             <div
               onClick={() => handleSelectType(category.name)}
               className={`cursor-pointer group transition-all duration-300 ${
-                selectedType === category.name
-                  ? "opacity-100 scale-105"
-                  : "opacity-80"
+                selectedType === category.name ? "opacity-100 scale-105" : "opacity-80"
               } hover:opacity-100 hover:scale-105`}
             >
               <div className="relative">
@@ -355,9 +333,7 @@ const ForYouPage = () => {
                   alt={category.name}
                   className="rounded-xl shadow-lg w-48 h-36 object-cover border-2 border-gray-200 dark:border-gray-500 mx-auto transition-all duration-300 group-hover:shadow-xl"
                   onError={(e) =>
-                    (e.target.src =
-                      FALLBACK_IMAGES[category.name] ||
-                      FALLBACK_IMAGES["DEFAULT"])
+                    (e.target.src = FALLBACK_IMAGES[category.name] || FALLBACK_IMAGES["DEFAULT"])
                   }
                 />
               </div>
@@ -394,8 +370,7 @@ const ForYouPage = () => {
               </span>
               <img
                 src={
-                  recipe.imageUrl &&
-                  recipe.imageUrl !== "ERR_WRONG_CONNECTION_TIME"
+                  recipe.imageUrl && recipe.imageUrl !== "ERR_WRONG_CONNECTION_TIME"
                     ? recipe.imageUrl
                     : "https://via.placeholder.com/200"
                 }
@@ -420,9 +395,7 @@ const ForYouPage = () => {
                   {recipe.calories || "N/A"} kcal
                 </p>
               </div>
-              {!recipe.recipeId && (
-                <p className="mt-2 text-sm text-red-500">No recipe available</p>
-              )}
+              {!recipe.recipeId && <p className="mt-2 text-sm text-red-500">No recipe available</p>}
               <div
                 className="absolute right-[-10px] bottom-[-5px] w-[55px] h-[35px] bg-[#40b491] rounded-tr-[37.50px] rounded-bl-[42.50px] flex items-center justify-center"
                 onClick={(e) => {
@@ -433,8 +406,7 @@ const ForYouPage = () => {
                 <Heart
                   size={25}
                   className={`text-white ${
-                    likedFoods.find((item) => item.dishId === recipe._id)
-                      ?.isLike
+                    likedFoods.find((item) => item.dishId === recipe._id)?.isLike
                       ? "fill-white"
                       : "stroke-white"
                   }`}
@@ -450,13 +422,9 @@ const ForYouPage = () => {
           Loading more dishes...
         </div>
       )}
-      {currentPage >= totalPages &&
-        recommendedRecipes.length > 0 &&
-        !loading && (
-          <div className="text-center p-6 text-gray-600 dark:text-gray-400">
-            All dishes loaded!
-          </div>
-        )}
+      {currentPage >= totalPages && recommendedRecipes.length > 0 && !loading && (
+        <div className="text-center p-6 text-gray-600 dark:text-gray-400">All dishes loaded!</div>
+      )}
       {error && recommendedRecipes.length > 0 && (
         <div className="text-center p-6 text-red-500">{error}</div>
       )}

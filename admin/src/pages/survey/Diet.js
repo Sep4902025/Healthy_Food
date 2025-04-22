@@ -53,11 +53,7 @@ const Diet = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/waterdrink")}
@@ -67,10 +63,8 @@ const Diet = () => {
         </button>
         <ProgressBar progress={63} />
       </div>
-      <h2 className="text-2xl font-bold text-center">Diet</h2>
-      <p className="text-center text-gray-600">
-        Choose your diet that you are following
-      </p>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Diet</h2>
+      <p className="text-center text-gray-600">Choose your diet that you are following</p>
 
       <div className="space-y-4 mt-4">
         {dietGroups.map((item, index) => (
@@ -83,14 +77,8 @@ const Diet = () => {
             }`}
             onClick={() => setSelectedDiet(item.diet)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.diet}
-            </span>
-            <img
-              src={item.img}
-              alt=""
-              className="w-16 h-16 rounded-full object-cover"
-            />
+            <span className="text-lg font-semibold flex-1 text-left">{item.diet}</span>
+            <img src={item.img} alt="" className="w-16 h-16 rounded-full object-cover" />
           </div>
         ))}
       </div>

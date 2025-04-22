@@ -26,9 +26,7 @@ const Goal = () => {
     const selectedGender = savedData.gender || "Male"; // Default to Male if no gender is selected
 
     // Filter goal groups based on selected gender
-    const filteredGroups = goalGroups.filter(
-      (group) => group.gender === selectedGender
-    );
+    const filteredGroups = goalGroups.filter((group) => group.gender === selectedGender);
     setFilteredGoalGroups(filteredGroups);
 
     // Set previously selected goal if available
@@ -67,11 +65,7 @@ const Goal = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/age")}
@@ -81,7 +75,7 @@ const Goal = () => {
         </button>
         <ProgressBar progress={47.25} />
       </div>
-      <h2 className="text-2xl font-bold text-center">Goal</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Goal</h2>
       <p className="text-center text-gray-600">Select your goal</p>
 
       <div className="space-y-4 mt-4">
@@ -95,14 +89,8 @@ const Goal = () => {
             }`}
             onClick={() => setSelectedGoal(item.goal)}
           >
-            <span className="text-lg font-semibold flex-1 text-left">
-              {item.goal}
-            </span>
-            <img
-              src={item.img}
-              alt={item.goal}
-              className="w-16 h-16 rounded-full object-cover"
-            />
+            <span className="text-lg font-semibold flex-1 text-left">{item.goal}</span>
+            <img src={item.img} alt={item.goal} className="w-16 h-16 rounded-full object-cover" />
           </div>
         ))}
       </div>

@@ -58,8 +58,8 @@ const NutritionAdviceModal = ({ isOpen, onClose, nutritionData, nutritionTargets
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
-        <h3 className="text-xl font-semibold mb-4 text-gray-800">Nutrition Advice</h3>
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-semibold mb-4 text-custom-green">Nutrition Advice</h3>
 
         <div className="mb-4">
           <div className="flex justify-between mb-2">

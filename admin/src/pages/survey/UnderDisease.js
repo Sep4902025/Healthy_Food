@@ -54,25 +54,19 @@ const UnderDisease = () => {
     // Restore selected data from sessionStorage
     const savedData = JSON.parse(sessionStorage.getItem("quizData")) || {};
     if (savedData.underDisease) {
-      const validObjectIds = savedData.underDisease.filter((id) =>
-        /^[0-9a-fA-F]{24}$/.test(id)
-      );
+      const validObjectIds = savedData.underDisease.filter((id) => /^[0-9a-fA-F]{24}$/.test(id));
       setSelectedItems(validObjectIds);
     }
   }, [token]);
 
   const toggleItemSelection = (id) => {
     setSelectedItems((prev) => {
-      const noDiseaseId = medicalConditions.find(
-        (d) => d.name === "No health conditions"
-      )?.id;
+      const noDiseaseId = medicalConditions.find((d) => d.name === "No health conditions")?.id;
       if (id === noDiseaseId) {
         return prev.includes(id) ? [] : [id];
       }
       const filtered = prev.filter((item) => item !== noDiseaseId);
-      return filtered.includes(id)
-        ? filtered.filter((item) => item !== id)
-        : [...filtered, id];
+      return filtered.includes(id) ? filtered.filter((item) => item !== id) : [...filtered, id];
     });
   };
 
@@ -97,11 +91,7 @@ const UnderDisease = () => {
   };
 
   return (
-    <div
-      className="w-[400px] mx-auto p-4"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="w-[400px] mx-auto p-4" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="w-full flex items-center justify-center mt-2">
         <button
           onClick={() => navigate("/survey/eathabit")}
@@ -112,20 +102,16 @@ const UnderDisease = () => {
         <ProgressBar progress={84} />
       </div>
 
-      <h2 className="text-2xl font-bold text-center">Underlying conditions</h2>
+      <h2 className="text-2xl font-bold text-center text-custom-green">Underlying conditions</h2>
       <p className="text-center text-gray-600">
         Please tell me about your underlying health conditions
       </p>
 
       {loading && (
-        <div className="text-center text-gray-500 mt-4">
-          Loading health conditions...
-        </div>
+        <div className="text-center text-gray-500 mt-4">Loading health conditions...</div>
       )}
 
-      {error && !loading && (
-        <div className="text-center text-red-500 mt-4">{error}</div>
-      )}
+      {error && !loading && <div className="text-center text-red-500 mt-4">{error}</div>}
 
       {!loading && !error && medicalConditions.length > 0 && (
         <div className="space-y-3 mt-4">
@@ -133,9 +119,7 @@ const UnderDisease = () => {
             <div
               key={condition.id}
               className={`flex items-center p-3 border rounded-xl cursor-pointer ${
-                isSelected(condition.id)
-                  ? "bg-yellow-50 border-yellow-400"
-                  : "bg-gray-100"
+                isSelected(condition.id) ? "bg-yellow-50 border-yellow-400" : "bg-gray-100"
               }`}
               onClick={() => toggleItemSelection(condition.id)}
             >

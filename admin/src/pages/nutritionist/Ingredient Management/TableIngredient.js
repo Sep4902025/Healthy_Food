@@ -51,110 +51,104 @@ const SearchInput = memo(({ value, onChange, inputRef }) => {
   );
 });
 
-const IngredientList = memo(
-  ({ ingredients, onEdit, onDelete, onToggleVisibility, isLoading }) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[400px]">
-      {isLoading ? (
-        <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
-          <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#40B491]"></div>
-          <p className="text-lg font-semibold mt-4">Loading ingredients...</p>
-        </div>
-      ) : ingredients.length > 0 ? (
-        ingredients.map((ingredient) => (
-          <div
-            key={ingredient._id}
-            className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
-          >
-            <img
-              src={ingredient.imageUrl || "https://via.placeholder.com/300"}
-              alt={ingredient.name}
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-center text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap w-full">
-                {ingredient.name}
-              </h3>
-              <div className="text-sm text-gray-600 mt-2">
-                <div className="flex justify-between">
-                  <div className="flex flex-col space-y-2">
+const IngredientList = memo(({ ingredients, onEdit, onDelete, onToggleVisibility, isLoading }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[400px]">
+    {isLoading ? (
+      <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+        <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#40B491]"></div>
+        <p className="text-lg font-semibold mt-4">Loading ingredients...</p>
+      </div>
+    ) : ingredients.length > 0 ? (
+      ingredients.map((ingredient) => (
+        <div
+          key={ingredient._id}
+          className="bg-white rounded-2xl shadow-md overflow-hidden relative transition duration-200 hover:shadow-lg"
+        >
+          <img
+            src={ingredient.imageUrl || "https://via.placeholder.com/300"}
+            alt={ingredient.name}
+            className="w-full h-48 object-cover"
+          />
+          <div className="p-4">
+            <h3 className="text-lg font-semibold text-center text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap w-full">
+              {ingredient.name}
+            </h3>
+            <div className="text-sm text-gray-600 mt-2">
+              <div className="flex justify-between">
+                <div className="flex flex-col space-y-2">
+                  <span className="flex items-center">
+                    <Ruler className="w-4 h-4 mr-1" />
+                    Unit {ingredient.unit || "N/A"}
+                  </span>
+                  <div className="flex items-center">
+                    <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                     <span className="flex items-center">
-                      <Ruler className="w-4 h-4 mr-1" />
-                      Unit {ingredient.unit || "N/A"}
+                      Calories: {ingredient.calories || "0"} kcal
                     </span>
-                    <div className="flex items-center">
-                      <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="flex items-center">
-                        Calories: {ingredient.calories || "0"} kcal
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Dumbbell className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="flex items-center">
-                        Protein: {ingredient.protein || "0"} g
-                      </span>
-                    </div>
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center">
-                      <Wheat className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="flex items-center">
-                        Carbs: {ingredient.carbs || "0"} g
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Droplet className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="flex items-center">
-                        Fat: {ingredient.fat || "0"} g
-                      </span>
-                    </div>
+                  <div className="flex items-center">
+                    <Dumbbell className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                    <span className="flex items-center">
+                      Protein: {ingredient.protein || "0"} g
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col space-y-2">
+                  <div className="flex items-center">
+                    <Wheat className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                    <span className="flex items-center">Carbs: {ingredient.carbs || "0"} g</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Droplet className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                    <span className="flex items-center">Fat: {ingredient.fat || "0"} g</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="p-2 bg-gray-50 border-t border-gray-200 h-16 flex items-center justify-center">
-              <div className="flex w-full justify-center items-center gap-2">
-                <button
-                  onClick={() => onEdit(ingredient)}
-                  className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition whitespace-nowrap"
-                  disabled={isLoading}
-                >
-                  <EditIcon className="w-4 h-4 mr-1" />
-                  Edit
-                </button>
-                <div className="h-4 border-l border-gray-300 mx-1"></div>
-                <button
-                  onClick={() => onDelete(ingredient._id)}
-                  className="flex-1 text-red-500 flex items-center justify-center px-2 py-1 hover:text-red-600 transition whitespace-nowrap"
-                  disabled={isLoading}
-                >
-                  <TrashIcon className="w-4 h-4 mr-1" />
-                  Delete
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => onToggleVisibility(ingredient)}
-              className={`absolute top-2 right-2 p-2 rounded-md text-white ${
-                ingredient.isVisible
-                  ? "bg-gray-500 hover:bg-gray-600"
-                  : "bg-[#40B491] hover:bg-[#359c7a]"
-              } transition duration-200`}
-              disabled={isLoading}
-            >
-              {ingredient.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-            </button>
           </div>
-        ))
-      ) : (
-        <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
-          <Wheat className="w-24 h-24 text-gray-400 mb-4" />
-          <p className="text-lg font-semibold">No ingredients</p>
-          <p className="text-sm">Looks like you haven't added any ingredients yet.</p>
+          <div className="p-2 bg-gray-50 border-t border-gray-200 h-16 flex items-center justify-center">
+            <div className="flex w-full justify-center items-center gap-2">
+              <button
+                onClick={() => onEdit(ingredient)}
+                className="flex-1 text-[#40B491] flex items-center justify-center px-2 py-1 hover:text-[#359c7a] transition whitespace-nowrap"
+                disabled={isLoading}
+              >
+                <EditIcon className="w-4 h-4 mr-1" />
+                Edit
+              </button>
+              <div className="h-4 border-l border-gray-300 mx-1"></div>
+              <button
+                onClick={() => onDelete(ingredient._id)}
+                className="flex-1 text-red-500 flex items-center justify-center px-2 py-1 hover:text-red-600 transition whitespace-nowrap"
+                disabled={isLoading}
+              >
+                <TrashIcon className="w-4 h-4 mr-1" />
+                Delete
+              </button>
+            </div>
+          </div>
+          <button
+            onClick={() => onToggleVisibility(ingredient)}
+            className={`absolute top-2 right-2 p-2 rounded-md text-white ${
+              ingredient.isVisible
+                ? "bg-gray-500 hover:bg-gray-600"
+                : "bg-[#40B491] hover:bg-[#359c7a]"
+            } transition duration-200`}
+            disabled={isLoading}
+          >
+            {ingredient.isVisible ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+          </button>
         </div>
-      )}
-    </div>
-  )
-);
+      ))
+    ) : (
+      <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
+        <Wheat className="w-24 h-24 text-gray-400 mb-4" />
+        <p className="text-lg font-semibold">No ingredients</p>
+        <p className="text-sm">Looks like you haven't added any ingredients yet.</p>
+      </div>
+    )}
+  </div>
+));
 
 // New Delete Confirmation Modal Component
 const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, ingredientName }) => {
@@ -165,7 +159,8 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, ingredientName })
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
         <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
         <p className="text-gray-600 mb-6">
-          Are you sure you want to delete the ingredient <strong>{ingredientName}</strong>? This action cannot be undone.
+          Are you sure you want to delete the ingredient <strong>{ingredientName}</strong>? This
+          action cannot be undone.
         </p>
         <div className="flex justify-end space-x-3">
           <button
@@ -220,36 +215,39 @@ const TableIngredient = () => {
   const [deleteIngredientName, setDeleteIngredientName] = useState("");
   const searchInputRef = useRef(null);
 
-  const fetchIngredients = useCallback(async (isInitialOrFilterChange = false) => {
-    try {
-      if (isInitialOrFilterChange) {
-        setIsLoading(true);
-      }
-      const response = await ingredientService.getAllIngredients(
-        currentPage + 1,
-        itemsPerPage,
-        filterType,
-        searchTerm
-      );
-      if (response.success) {
-        setIngredients(response.data.items);
-        setTotalItems(response.data.total);
-        setTotalPages(response.data.totalPages);
-      } else {
+  const fetchIngredients = useCallback(
+    async (isInitialOrFilterChange = false) => {
+      try {
+        if (isInitialOrFilterChange) {
+          setIsLoading(true);
+        }
+        const response = await ingredientService.getAllIngredients(
+          currentPage + 1,
+          itemsPerPage,
+          filterType,
+          searchTerm
+        );
+        if (response.success) {
+          setIngredients(response.data.items);
+          setTotalItems(response.data.total);
+          setTotalPages(response.data.totalPages);
+        } else {
+          setIngredients([]);
+          setTotalItems(0);
+          setTotalPages(1);
+        }
+      } catch {
         setIngredients([]);
         setTotalItems(0);
         setTotalPages(1);
+      } finally {
+        if (isInitialOrFilterChange) {
+          setIsLoading(false);
+        }
       }
-    } catch {
-      setIngredients([]);
-      setTotalItems(0);
-      setTotalPages(1);
-    } finally {
-      if (isInitialOrFilterChange) {
-        setIsLoading(false);
-      }
-    }
-  }, [currentPage, itemsPerPage, filterType, searchTerm]);
+    },
+    [currentPage, itemsPerPage, filterType, searchTerm]
+  );
 
   const debouncedSearch = useCallback(
     debounce((value) => {
@@ -327,7 +325,11 @@ const TableIngredient = () => {
       newErrors.protein = "Protein must be greater than or equal to 0";
     else if (parseFloat(editData.protein) > 100)
       newErrors.protein = "Protein must not exceed 100 g";
-    if (editData.carbs === "" || isNaN(parseFloat(editData.carbs)) || parseFloat(editData.carbs) < 0)
+    if (
+      editData.carbs === "" ||
+      isNaN(parseFloat(editData.carbs)) ||
+      parseFloat(editData.carbs) < 0
+    )
       newErrors.carbs = "Carbs must be greater than or equal to 0";
     else if (parseFloat(editData.carbs) > 100) newErrors.carbs = "Carbs must not exceed 100 g";
     if (editData.fat === "" || isNaN(parseFloat(editData.fat)) || parseFloat(editData.fat) < 0)
@@ -597,11 +599,7 @@ const TableIngredient = () => {
           ))}
         </div>
         <div className="flex items-center">
-          <SearchInput
-            value={inputValue}
-            onChange={handleInputChange}
-            inputRef={searchInputRef}
-          />
+          <SearchInput value={inputValue} onChange={handleInputChange} inputRef={searchInputRef} />
         </div>
       </div>
 
@@ -680,7 +678,9 @@ const TableIngredient = () => {
                     disabled={isEditLoading}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-                  <p className="text-gray-500 text-sm mt-1">{editData.name.length}/100 characters</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {editData.name.length}/100 characters
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
