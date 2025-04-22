@@ -42,7 +42,7 @@ const FAQsPage = () => {
     <div className="container mx-auto px-6 py-12 grid grid-cols-12 gap-6">
       {/* Left Column - Categories */}
       <div className="col-span-4 bg-gray-100 p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">Categories</h2>
+        <h2 className="text-2xl font-bold text-custom-green mb-4">Categories</h2>
         <ul className="space-y-3">
           {categories.map((category, index) => (
             <li

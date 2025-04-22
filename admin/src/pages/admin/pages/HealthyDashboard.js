@@ -436,24 +436,18 @@ const HealthyDashboard = () => {
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500">Unpaid Meal Plans</h3>
-            <p className="text-2xl font-bold">
-              {paymentStatusDatas[1]?.value || 0}
-            </p>
+            <p className="text-2xl font-bold">{paymentStatusDatas[1]?.value || 0}</p>
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500">Active Meal Plans</h3>
-            <p className="text-2xl font-bold">
-              {paymentStatusDatas[0]?.value || 0}
-            </p>
+            <p className="text-2xl font-bold">{paymentStatusDatas[0]?.value || 0}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-6 ml-6">
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500 mb-2">Total Dishes</h3>
-            <p className="text-2xl font-bold mb-2">
-              {systemOverview.totalDishes}
-            </p>
+            <p className="text-2xl font-bold mb-2">{systemOverview.totalDishes}</p>
             <div className="max-h-40 overflow-y-auto">
               {systemOverview.dishes.map((dish) => (
                 <div key={dish._id} className="flex items-center mb-2">
@@ -470,14 +464,15 @@ const HealthyDashboard = () => {
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h3 className="text-gray-500 mb-2">Total Users</h3>
-            <p className="text-2xl font-bold mb-2">
-              {systemOverview.totalUsers}
-            </p>
+            <p className="text-2xl font-bold mb-2">{systemOverview.totalUsers}</p>
             <div className="max-h-40 overflow-y-auto">
               {systemOverview.users.map((user) => (
                 <div key={user._id} className="flex items-center mb-2">
                   <img
-                    src={user.avatarUrl}
+                    src={
+                      user?.avatarUrl ||
+                      "https://i.pinimg.com/736x/81/ec/02/81ec02c841e7aa13d0f099b5df02b25c.jpg"
+                    }
                     alt={user.username}
                     className="w-8 h-8 mr-2 rounded-full"
                     onError={(e) => (e.target.src = "/api/placeholder/32/32")}
@@ -512,9 +507,7 @@ const HealthyDashboard = () => {
             </div>
             <div className="flex justify-around">
               <div>
-                <h4 className="text-center text-gray-600 mb-2">
-                  Payment Status
-                </h4>
+                <h4 className="text-center text-gray-600 mb-2">Payment Status</h4>
                 <PieChart width={220} height={220}>
                   <Pie
                     data={paymentStatusDatas}
@@ -529,10 +522,8 @@ const HealthyDashboard = () => {
                         ? ({ name, value, cx, cy, midAngle, outerRadius }) => {
                             const RADIAN = Math.PI / 180;
                             const radius = outerRadius + 20;
-                            const x =
-                              cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y =
-                              cy + radius * Math.sin(-midAngle * RADIAN);
+                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
                             return (
                               <text
                                 x={x}
@@ -550,10 +541,7 @@ const HealthyDashboard = () => {
                     labelLine={showValue}
                   >
                     {paymentStatusDatas.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -575,10 +563,8 @@ const HealthyDashboard = () => {
                         ? ({ name, value, cx, cy, midAngle, outerRadius }) => {
                             const RADIAN = Math.PI / 180;
                             const radius = outerRadius + 10; // Reduced from +20 to +10
-                            const x =
-                              cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y =
-                              cy + radius * Math.sin(-midAngle * RADIAN);
+                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
                             return (
                               <text
                                 x={x}
@@ -596,10 +582,7 @@ const HealthyDashboard = () => {
                     labelLine={showValue}
                   >
                     {planTypeData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[(index + 2) % COLORS.length]}
-                      />
+                      <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -614,9 +597,7 @@ const HealthyDashboard = () => {
               <div>
                 <button
                   className={`mr-2 px-3 py-1 rounded ${
-                    yearFilters === "2025"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200"
+                    yearFilters === "2025" ? "bg-blue-500 text-white" : "bg-gray-200"
                   }`}
                   onClick={() => setYearFilters("2025")}
                 >
@@ -624,9 +605,7 @@ const HealthyDashboard = () => {
                 </button>
                 <button
                   className={`px-3 py-1 rounded ${
-                    yearFilters === "2026"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200"
+                    yearFilters === "2026" ? "bg-blue-500 text-white" : "bg-gray-200"
                   }`}
                   onClick={() => setYearFilters("2026")}
                 >
@@ -635,18 +614,9 @@ const HealthyDashboard = () => {
               </div>
             </div>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart
-                data={revenueDatas}
-                margin={{ top: 10, right: 40, left: 10, bottom: 10 }}
-              >
+              <LineChart data={revenueDatas} margin={{ top: 10, right: 40, left: 10, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="month"
-                  interval={0}
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                />
+                <XAxis dataKey="month" interval={0} angle={-45} textAnchor="end" height={60} />
                 <YAxis
                   width={80}
                   tickFormatter={(value) =>
@@ -659,12 +629,7 @@ const HealthyDashboard = () => {
                 />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#8884d8"
-                  strokeWidth={2}
-                />
+                <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </div>

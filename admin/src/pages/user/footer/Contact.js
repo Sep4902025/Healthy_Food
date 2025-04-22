@@ -33,7 +33,7 @@ const ContactUs = () => {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-lg w-full bg-white rounded-xl shadow-2xl p-8 transform transition-all duration-300 hover:shadow-xl">
         {/* Tiêu đề */}
-        <h1 className="text-4xl font-extrabold text-center text-green-700 mb-6">Contact Us</h1>
+        <h1 className="text-4xl font-extrabold text-center text-custom-green mb-6">Contact Us</h1>
 
         {/* Thông báo trạng thái */}
         {status.message && (
@@ -106,7 +106,7 @@ const ContactUs = () => {
           {/* Nút Submit */}
           <button
             type="submit"
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200"
+            className="w-full bg-custom-green text-white py-3 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200"
           >
             Send Message
           </button>

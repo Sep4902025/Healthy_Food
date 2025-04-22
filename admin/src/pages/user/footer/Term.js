@@ -41,7 +41,7 @@ const Term = () => {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-4xl font-bold text-green-700 mb-4">Terms & Conditions</h1>
+      <h1 className="text-4xl font-bold text-custom-green mb-4">Terms & Conditions</h1>
 
       {/* Display list of terms */}
       {terms.length > 0 ? (

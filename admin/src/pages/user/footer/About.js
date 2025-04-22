@@ -34,7 +34,7 @@ const AboutPage = () => {
 
   return (
     <div className="container mx-auto px-6 py-12">
-      <h1 className="text-5xl font-extrabold text-green-800 text-center mb-8">About Us</h1>
+      <h1 className="text-5xl font-extrabold text-custom-green text-center mb-8">About Us</h1>
       {aboutData.length > 0 ? (
         aboutData.map((item, index) => (
           <div key={index} className="bg-white shadow-lg rounded-lg overflow-hidden mb-10">
