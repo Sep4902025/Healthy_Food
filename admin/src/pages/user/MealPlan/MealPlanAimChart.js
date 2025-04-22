@@ -344,7 +344,7 @@ const MealPlanAimChart = ({ mealPlanId, duration, onNutritionTargetsCalculated }
           </p>
 
           <div>
-            <p className="font-semibold">Nutrition Targets:</p>
+            <p className="font-semibold text-custom-green">Nutrition Targets:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Calories: {nutritionTargets.calories.target} kcal (±10%)</li>
               <li>Protein: {nutritionTargets.protein.target}g (±15g)</li>

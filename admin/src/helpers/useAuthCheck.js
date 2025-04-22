@@ -6,7 +6,7 @@ const useAuthCheck = (userId) => {
 
   const checkLogin = () => {
     if (!userId) {
-      toast.info("You need to login to continue!", {
+      toast.info("You need to Signin to continue!", {
         autoClose: 2000,
       });
 

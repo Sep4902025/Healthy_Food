@@ -53,6 +53,43 @@ const SearchInput = memo(({ value, onChange }) => {
   );
 });
 
+// Hàm tính toán dinh dưỡng
+const calculateTotalNutrition = (ingredients, availableIngredients) => {
+  let totalCalories = 0;
+  let totalProtein = 0;
+  let totalFat = 0;
+  let totalCarbs = 0;
+
+  ingredients.forEach((ing) => {
+    const ingredientData = availableIngredients.find(
+      (item) => item._id === (ing.ingredientId?._id || ing.ingredientId || ing._id)
+    );
+    if (ingredientData && ing.quantity >= 0 && ing.unit) {
+      let conversionFactor;
+      if (ing.unit === "g" || ing.unit === "ml") {
+        conversionFactor = ing.quantity / 100;
+      } else if (ing.unit === "tbsp") {
+        conversionFactor = (ing.quantity * 15) / 100;
+      } else if (ing.unit === "tsp") {
+        conversionFactor = (ing.quantity * 5) / 100;
+      } else {
+        conversionFactor = ing.quantity / 100;
+      }
+      totalCalories += (ingredientData.calories || 0) * conversionFactor;
+      totalProtein += (ingredientData.protein || 0) * conversionFactor;
+      totalFat += (ingredientData.fat || 0) * conversionFactor;
+      totalCarbs += (ingredientData.carbs || 0) * conversionFactor;
+    }
+  });
+
+  return {
+    calories: totalCalories.toFixed(2),
+    protein: totalProtein.toFixed(2),
+    fat: totalFat.toFixed(2),
+    carbs: totalCarbs.toFixed(2),
+  };
+};
+
 const TableRecipes = () => {
   const [dishes, setDishes] = useState([]);
   const [availableIngredients, setAvailableIngredients] = useState([]);
@@ -128,6 +165,22 @@ const TableRecipes = () => {
             const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
             if (recipeResponse.success) {
               dish.recipe = recipeResponse.data;
+              // Tính toán dinh dưỡng cho công thức
+              if (dish.recipe?.ingredients?.length > 0) {
+                const nutrition = calculateTotalNutrition(
+                  dish.recipe.ingredients,
+                  ingredientsResponse.data.items || []
+                );
+                dish.recipe.calories = nutrition.calories;
+                dish.recipe.protein = nutrition.protein;
+                dish.recipe.fat = nutrition.fat;
+                dish.recipe.carbs = nutrition.carbs;
+              } else {
+                dish.recipe.calories = 0;
+                dish.recipe.protein = 0;
+                dish.recipe.fat = 0;
+                dish.recipe.carbs = 0;
+              }
             } else {
               dish.recipe = null;
             }
@@ -158,41 +211,12 @@ const TableRecipes = () => {
   };
 
   useEffect(() => {
-    const calculateTotalNutrition = () => {
-      let totalCalories = 0;
-      let totalProtein = 0;
-      let totalFat = 0;
-      let totalCarbs = 0;
-
-      newRecipeData.ingredients.forEach((ing) => {
-        const ingredientData = availableIngredients.find((item) => item._id === ing._id);
-        if (ingredientData && ing.quantity >= 0 && ing.unit) {
-          let conversionFactor;
-          if (ing.unit === "g" || ing.unit === "ml") {
-            conversionFactor = ing.quantity / 100;
-          } else if (ing.unit === "tbsp") {
-            conversionFactor = (ing.quantity * 15) / 100;
-          } else if (ing.unit === "tsp") {
-            conversionFactor = (ing.quantity * 5) / 100;
-          } else {
-            conversionFactor = ing.quantity / 100;
-          }
-          totalCalories += (ingredientData.calories || 0) * conversionFactor;
-          totalProtein += (ingredientData.protein || 0) * conversionFactor;
-          totalFat += (ingredientData.fat || 0) * conversionFactor;
-          totalCarbs += (ingredientData.carbs || 0) * conversionFactor;
-        }
-      });
-
-      setNutritionData({
-        calories: totalCalories.toFixed(2),
-        protein: totalProtein.toFixed(2),
-        fat: totalFat.toFixed(2),
-        carbs: totalCarbs.toFixed(2),
-      });
-    };
-
-    calculateTotalNutrition();
+    if (newRecipeData.ingredients.length > 0) {
+      const nutrition = calculateTotalNutrition(newRecipeData.ingredients, availableIngredients);
+      setNutritionData(nutrition);
+    } else {
+      setNutritionData({ calories: 0, protein: 0, fat: 0, carbs: 0 });
+    }
   }, [newRecipeData.ingredients, availableIngredients]);
 
   const handleAddRecipeClick = async (dish) => {
@@ -459,11 +483,18 @@ const TableRecipes = () => {
       unit: ing.unit || "g",
     }));
 
+    // Tính toán dinh dưỡng trước khi lưu
+    const nutrition = calculateTotalNutrition(formattedIngredients, availableIngredients);
+
     const updatedRecipe = {
       ingredients: formattedIngredients,
       instruction: newRecipeData.instruction,
       cookingTime: newRecipeData.cookingTime,
       totalServing: newRecipeData.totalServing,
+      calories: nutrition.calories,
+      protein: nutrition.protein,
+      fat: nutrition.fat,
+      carbs: nutrition.carbs,
     };
 
     try {
