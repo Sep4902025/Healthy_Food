@@ -273,7 +273,7 @@ const CreateMealPlanForm = ({ userId, userRole, onSuccess }) => {
         />
       )}
       <TouchableOpacity
-        className={`bg-green-500 p-3 rounded-lg items-center ${creating ? "opacity-50" : ""}`}
+        className={`bg-custom-green p-3 rounded-lg items-center ${creating ? "opacity-50" : ""}`}
         onPress={handleCreateMealPlan}
         disabled={creating}
       >

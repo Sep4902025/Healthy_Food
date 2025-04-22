@@ -52,10 +52,10 @@ const ConversationStarter = ({ visible, onStartConversation, onBack, title, plac
             <TouchableOpacity onPress={handleClose} className="p-2">
               <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
-            <Text className="text-lg font-bold">{title}</Text>
+            <Text className="text-lg font-bold text-custom-green">{title}</Text>
           </View>
 
-          <Text className="text-base font-medium mb-3" style={{ marginHorizontal: 5 }}>
+          <Text className="text-base font-bold mb-3" style={{ marginHorizontal: 5 }}>
             Select consultation topic
           </Text>
           <FlatList

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -32,6 +32,8 @@ import RatingModal from "../components/common/RatingModal";
 import styles from "./../css/FavorAndSuggestCss";
 import { Heart } from "lucide-react-native";
 import ShowToast from "../components/common/CustomToast";
+import { debounce } from "lodash";
+
 const HEIGHT = Dimensions.get("window").height;
 const WIDTH = Dimensions.get("window").width;
 
@@ -50,7 +52,7 @@ function FavorAndSuggest({ route }) {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const navigation = useNavigation();
-  const [comment, setComment] = useState([]);
+  const [comment, setComment] = useState("");
   const [commentList, setCommentList] = useState([]);
 
   useEffect(() => {
@@ -84,35 +86,33 @@ function FavorAndSuggest({ route }) {
     }
   };
 
-  useEffect(() => {
-    const fetchComments = async () => {
-      if (!dish?._id) return;
+  const fetchComments = debounce(async () => {
+    if (!dish?._id) return;
 
-      setLoading(true);
-      try {
-        const res = await commentService.getCommentsByDishId(dish._id);
-        let cmtList = res?.data;
+    setLoading(true);
+    try {
+      const res = await commentService.getCommentsByDishId(dish._id);
+      let cmtList = res?.data;
+      console.log("Fetched comments:", cmtList); // Debug log
 
-        if (Array.isArray(cmtList)) {
-          cmtList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-          // ✅ Gán thêm isLiked cho mỗi comment
-          const commentsWithIsLiked = cmtList.map((comment) => ({
-            ...comment,
-            isLiked: comment.likedBy?.includes(user?._id),
-          }));
-
-          setCommentList(commentsWithIsLiked);
-        }
-      } catch (error) {
-        console.error("Lỗi khi lấy danh sách comment:", error);
+      if (Array.isArray(cmtList)) {
+        cmtList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const commentsWithIsLiked = cmtList.map((comment) => ({
+          ...comment,
+          isLiked: comment.likedBy?.includes(user?._id),
+        }));
+        setCommentList(commentsWithIsLiked);
       }
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách comment:", error);
+    }
+    setLoading(false);
+  }, 300);
 
-      setLoading(false);
-    };
-
+  useEffect(() => {
     fetchComments();
-  }, [dish, user?._id]); // nhớ thêm `user._id` để refetch đúng khi user thay đổi
+    return () => fetchComments.cancel(); // Cleanup debounce on unmount
+  }, [dish, user?._id]);
 
   const handleLike = async (commentId) => {
     try {
@@ -169,32 +169,26 @@ function FavorAndSuggest({ route }) {
     setRecipe((prev) => ({ ...prev, rate: ratePoint }));
     try {
       const res = await commentService.rateRecipe(dish.recipeId, user._id, ratePoint);
-
       console.log("⭐️ Đánh giá thành công:", res);
-
       await fetchRating();
     } catch (err) {
       console.error("Lỗi khi gọi rateRecipe:", err);
     }
   };
 
-  // Load rating
   useEffect(() => {
     fetchRating();
   }, [recipe, user]);
 
-  // Load recipe when dish changes
   useEffect(() => {
     if (!dish?._id || !dish?.recipeId) {
       setLoading(false);
-      console.warn("Dish ID or Recipe ID is missing:", dish);
       return;
     }
     loadRecipe();
     loadRate();
   }, [dish]);
 
-  // Fetch ingredient details when recipe changes
   useEffect(() => {
     const fetchIngredientDetails = async () => {
       if (!recipe?.ingredients?.length) {
@@ -284,8 +278,6 @@ function FavorAndSuggest({ route }) {
       return;
     }
     try {
-      // const isLiked = isFavorite(dish._id);
-      // await HomeService.toggleFavoriteDish(user.userId, dish._id, isLiked);
       dispatch(toggleFavorite({ id: dish._id }));
     } catch (error) {
       console.error("Error toggling favorite:", error);
@@ -445,69 +437,95 @@ function FavorAndSuggest({ route }) {
       );
     };
 
-    const CommentRatingRoute = () => (
-      <ScrollView
-        style={styles.tabContent}
-        nestedScrollEnabled={true}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>All Comments</Text>
+    const CommentRatingRoute = () => {
+      const scrollViewRef = useRef(null);
+      const [scrollPosition, setScrollPosition] = useState(0);
 
-        {/* Danh sách bình luận */}
-        {commentList.length > 0 ? (
-          commentList.map((comment, index) => (
-            <View key={index} style={styles.commentBox}>
-              {/* Avatar + tên người dùng + đánh giá sao */}
-              <View style={styles.commentHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      ...styles.commentUser,
-                      color: theme.greyTextColor,
-                    }}
-                  >
-                    {comment.userId.email || "Anonymous"}
-                  </Text>
-                  {comment.star !== undefined && (
-                    <Text
-                      style={{
-                        ...styles.commentRating,
-                        color: theme.greyTextColor,
-                      }}
-                    >
-                      Rating: {comment.star} ★
-                    </Text>
-                  )}
-                </View>
-              </View>
+      const handleScroll = (event) => {
+        setScrollPosition(event.nativeEvent.contentOffset.y);
+      };
 
-              {/* Nội dung bình luận */}
-              <Text style={{ ...styles.commentText, color: theme.greyTextColor }}>
-                {comment.text}
+      useEffect(() => {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollTo({ y: scrollPosition, animated: false });
+        }
+      }, [commentList]);
+
+      return (
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.tabContent}
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          onLayout={(event) => {
+            const { height } = event.nativeEvent.layout;
+            console.log("CommentRatingRoute height:", height); // Debug log
+          }}
+        >
+          {loading ? (
+            <SpinnerLoading />
+          ) : (
+            <>
+              <Text style={{ ...styles.sectionTitle, color: theme.greyTextColor }}>
+                All Comments
               </Text>
+              {commentList.length > 0 ? (
+                commentList.map((comment, index) => (
+                  <View key={index} style={styles.commentBox}>
+                    <View style={styles.commentHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            ...styles.commentUser,
+                            color: theme.greyTextColor,
+                          }}
+                        >
+                          {comment.userId.email || "Anonymous"}
+                        </Text>
+                        {comment.star !== undefined && (
+                          <Text
+                            style={{
+                              ...styles.commentRating,
+                              color: theme.greyTextColor,
+                            }}
+                          >
+                            Rating: {comment.star} ★
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                    <Text style={{ ...styles.commentText, color: theme.greyTextColor }}>
+                      {comment.text}
+                    </Text>
+                    <View style={styles.commentFooter}>
+                      <TouchableOpacity
+                        style={styles.likeButton}
+                        onPress={() => handleLike(comment._id)}
+                      >
+                        <Heart
+                          size={20}
+                          color={comment.isLiked ? "red" : "gray"}
+                          fill={comment.isLiked ? "red" : "none"}
+                        />
+                        <Text style={styles.likeCount}>{comment.likeCount || 0}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
+                  No comments yet. Be the first to share your thoughts!
+                </Text>
+              )}
+            </>
+          )}
+        </ScrollView>
+      );
+    };
 
-              {/* Nút like + số lượt like */}
-              <View style={styles.commentFooter}>
-                <TouchableOpacity style={styles.likeButton} onPress={() => handleLike(comment._id)}>
-                  <Heart
-                    size={20}
-                    color={comment.isLiked ? "red" : "gray"}
-                    fill={comment.isLiked ? "red" : "none"}
-                  />
-                  <Text style={styles.likeCount}>{comment.likeCount || 0}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        ) : (
-          <Text style={{ ...styles.noDataText, color: theme.greyTextColor }}>
-            No comments yet. Be the first to share your thoughts!
-          </Text>
-        )}
-      </ScrollView>
-    );
-
-    if (loading) {
+    if (loading && !dish) {
       return <Text style={{ padding: 16 }}>Đang tải dữ liệu...</Text>;
     }
 
@@ -530,11 +548,7 @@ function FavorAndSuggest({ route }) {
         }}
         style={{ backgroundColor: "#C4F9D7", borderRadius: 8, fontSize: 8 }}
         renderTabBarItem={({ key, ...props }) => (
-          <TabBarItem
-            key={key}
-            {...props}
-            labelStyle={{ fontSize: 12 }} // Set your desired font size here
-          />
+          <TabBarItem key={key} {...props} labelStyle={{ fontSize: 12 }} />
         )}
         activeColor="#ffffff"
         inactiveColor="#000000"
@@ -585,9 +599,7 @@ function FavorAndSuggest({ route }) {
               >
                 Average Rating:
               </Text>
-
               <Rating rate={averageRating ?? 0} size={WIDTH * 0.06} disabled />
-
               <TouchableOpacity
                 onPress={() => {
                   if (!user?._id) {
@@ -628,7 +640,6 @@ function FavorAndSuggest({ route }) {
                   <Text style={{ fontSize: 16, marginBottom: 10 }}>
                     You need to sign in to do this action.
                   </Text>
-
                   <TouchableOpacity
                     onPress={() => {
                       setLoginModalVisible(false);
@@ -638,7 +649,6 @@ function FavorAndSuggest({ route }) {
                   >
                     <Text style={{ color: "#fff", fontWeight: "bold" }}>Sign In</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     onPress={() => setLoginModalVisible(false)}
                     style={{ marginTop: 10 }}
@@ -687,10 +697,14 @@ function FavorAndSuggest({ route }) {
             <TabView
               navigationState={{ index, routes }}
               renderScene={renderScene}
-              onIndexChange={setIndex}
+              onIndexChange={(newIndex) => {
+                console.log("Tab changed to:", newIndex); // Debug log
+                setIndex(newIndex);
+              }}
               initialLayout={{ width: WIDTH - 16 }}
               renderTabBar={renderTabBar}
               style={styles.tabView}
+              lazy
             />
           </View>
         </View>

@@ -33,7 +33,8 @@ const AddDishToMeal = ({ mealPlanId, mealDayId, mealId, onClose, onDishAdded, us
     { label: "Favorites", type: "favorites" },
     { label: "Heavy Meals", type: "Heavy Meals" },
     { label: "Light Meals", type: "Light Meals" },
-    { label: "Dessert", type: "Dessert" },
+    { label: "Desserts", type: "Desserts" },
+    { label: "Beverages", type: "Beverages" },
   ];
 
   useEffect(() => {

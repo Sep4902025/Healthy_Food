@@ -120,13 +120,13 @@ const RecipeModal = ({ dishId, recipeId, onClose }) => {
           </View>
 
           {/* Ingredients and Instructions Section */}
-          <View className="flex-col gap-4">
+          <View className="flex-col gap-4 max-h-100 overflow-y-scroll">
             {/* Ingredients List */}
             <View>
               <Text className="text-lg font-semibold text-gray-800 mb-3 flex-row items-center">
                 <Text className="mr-2">🍽️</Text> Ingredients
               </Text>
-              <ScrollView className="max-h-60">
+              <ScrollView className="max-h-40">
                 {recipe.ingredients.map((item, index) => {
                   const ingredient = ingredients.find((ing) => ing._id === item.ingredientId._id);
                   return ingredient ? (
@@ -166,18 +166,20 @@ const RecipeModal = ({ dishId, recipeId, onClose }) => {
                   </Text>
                 </TouchableOpacity>
               </View>
-              {isInstructionsOpen && (
-                <ScrollView className="max-h-60">
-                  {recipe.instruction?.map((step, index) => (
-                    <View key={index} className="flex-row items-start mb-2">
-                      <Text className="font-medium mr-1 text-gray-700 text-sm">
-                        Step {step.step}:
-                      </Text>
-                      <Text className="text-gray-700 text-sm">{step.description}</Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              )}
+              <View className="h-30">
+                {isInstructionsOpen && (
+                  <ScrollView className="max-h-60 overflow-auto">
+                    {recipe.instruction?.map((step, index) => (
+                      <View key={index} className="flex-row items-start mb-2">
+                        <Text className="font-medium mr-1 text-gray-700 text-sm">
+                          Step {step.step}:
+                        </Text>
+                        <Text className="text-gray-700 text-sm">{step.description}</Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
             </View>
           </View>
         </View>

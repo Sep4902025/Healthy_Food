@@ -7,11 +7,11 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import MaterialCommunityIcons from "../components/common/VectorIcons/MaterialCommunityIcons";
 import MainLayoutWrapper from "../components/layout/MainLayoutWrapper";
 import DishedV1 from "../components/common/DishedV1";
-import dishesService from "../services/dishService";
 import { useTheme } from "../contexts/ThemeContext";
 import { useSelector } from "react-redux";
 import { userSelector } from "../redux/selectors/selector";
@@ -20,35 +20,45 @@ import quizService from "../services/quizService";
 const ForYou = ({ navigation }) => {
   const { theme } = useTheme();
   const [dishes, setDishes] = useState([]);
-  const [sortType, setSortType] = useState("");
+  const [sortType, setSortType] = useState(""); // Options: "", "name_asc", "name_desc", "calories_asc", "calories_desc"
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState({ initial: true, more: false });
+  const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const limit = 10;
   const user = useSelector(userSelector);
-  const userId = user?._id; // Thay bằng userId thực tế, có thể lấy từ context hoặc props
+  const userId = user?._id;
 
   const loadForYouDishes = useCallback(
     async (pageNum, isRefresh = false) => {
       try {
+        setError(null);
         const response = await quizService.getForyou(userId, pageNum, limit);
         if (response.success) {
           const newDishes = response.dishes || [];
-          // Loại bỏ các món ăn trùng lặp dựa trên _id
+          // Ensure recipeId is a string (extract _id if it's an object)
+          const processedDishes = newDishes.map((dish) => ({
+            ...dish,
+            recipeId:
+              typeof dish.recipeId === "object" && dish.recipeId?._id
+                ? dish.recipeId._id
+                : dish.recipeId,
+          }));
           setDishes((prev) => {
             const existingIds = isRefresh ? new Set() : new Set(prev.map((dish) => dish._id));
-            const filteredNewDishes = newDishes.filter((dish) => !existingIds.has(dish._id));
-            const updatedDishes = isRefresh ? newDishes : [...prev, ...filteredNewDishes];
-            return updatedDishes;
+            const filteredNewDishes = processedDishes.filter((dish) => !existingIds.has(dish._id));
+            return isRefresh ? processedDishes : [...prev, ...filteredNewDishes];
           });
           setPage(pageNum);
           setHasMore(pageNum < response.pagination.totalPages);
         } else {
           setHasMore(false);
+          setError("No more dishes available.");
         }
       } catch (error) {
         console.error("Error loading for you dishes:", error.message);
+        setError("Failed to load dishes. Please try again.");
         setHasMore(false);
       }
     },
@@ -77,15 +87,25 @@ const ForYou = ({ navigation }) => {
   }, [loadForYouDishes]);
 
   const toggleSort = useCallback(() => {
-    setSortType((prev) => (prev === "asc" ? "desc" : "asc"));
+    setSortType((prev) => {
+      if (prev === "") return "name_asc";
+      if (prev === "name_asc") return "name_desc";
+      if (prev === "name_desc") return "calories_asc";
+      if (prev === "calories_asc") return "calories_desc";
+      return "";
+    });
   }, []);
 
   const sortedDishes = useMemo(() => {
     const sorted = [...dishes];
-    if (sortType === "asc") {
+    if (sortType === "name_asc") {
       return sorted.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortType === "desc") {
-      return sorted.sort((a, b) => b.name.localeCompare(b.name));
+    } else if (sortType === "name_desc") {
+      return sorted.sort((a, b) => b.name.localeCompare(a.name));
+    } else if (sortType === "calories_asc") {
+      return sorted.sort((a, b) => a.calories - b.calories);
+    } else if (sortType === "calories_desc") {
+      return sorted.sort((a, b) => b.calories - a.calories);
     }
     return sorted;
   }, [dishes, sortType]);
@@ -101,6 +121,13 @@ const ForYou = ({ navigation }) => {
     [loadMoreDishes]
   );
 
+  const handleDishPress = useCallback(
+    (dish) => {
+      navigation.navigate("DishDetail", { dish }); // Navigate to a detail screen with dish data
+    },
+    [navigation]
+  );
+
   return (
     <MainLayoutWrapper>
       <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
@@ -108,7 +135,7 @@ const ForYou = ({ navigation }) => {
           <Text style={[styles.headerTitle, { color: theme.textColor }]}>For You Dishes</Text>
           <TouchableOpacity style={styles.sortButton} onPress={toggleSort}>
             <Text style={[styles.sortText, { color: theme.textColor }]}>
-              Sort ({sortType || "none"})
+              Sort ({sortType.replace("_", " ") || "default"})
             </Text>
             <MaterialCommunityIcons name="sort" size={20} color={theme.textColor} />
           </TouchableOpacity>
@@ -117,6 +144,14 @@ const ForYou = ({ navigation }) => {
         {loading.initial ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.primary} />
+            <Text style={[styles.loadingText, { color: theme.textColor }]}>Loading dishes...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: theme.textColor }]}>{error}</Text>
+            <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <ScrollView
@@ -128,11 +163,16 @@ const ForYou = ({ navigation }) => {
           >
             {sortedDishes.length > 0 ? (
               sortedDishes.map((dish, index) => (
-                <DishedV1 dish={dish} key={`${dish._id}-${index}`} />
+                <TouchableOpacity
+                  key={`${dish._id}-${index}`}
+                  onPress={() => handleDishPress(dish)}
+                >
+                  <DishedV1 dish={dish} />
+                </TouchableOpacity>
               ))
             ) : (
               <Text style={[styles.noResultsText, { color: theme.textColor }]}>
-                No recommended dishes found
+                No recommended dishes found. Try refreshing!
               </Text>
             )}
             {loading.more && (
@@ -167,7 +207,7 @@ const styles = StyleSheet.create({
   sortButton: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 4,
+    padding: 8,
     borderRadius: 8,
     backgroundColor: "white",
     shadowColor: "#343C41",
@@ -184,6 +224,31 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  retryButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
   },
   loadingMore: {
     marginVertical: 20,
