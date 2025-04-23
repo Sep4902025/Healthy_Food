@@ -3,11 +3,12 @@ import faqServices from "../../../services/footer/faqServices";
 
 const FAQsPage = () => {
   const [faqs, setFaqs] = useState([]);
+  const [allCategories, setAllCategories] = useState(new Set()); // Sử dụng Set để tránh trùng lặp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Default 5 FAQs per page
+  const [itemsPerPage] = useState(5);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
@@ -17,7 +18,13 @@ const FAQsPage = () => {
       console.log("API Response:", result);
 
       if (result.success) {
-        setFaqs(result.data.data.faqs || []); // Truy cập đúng result.data.data.faqs
+        const newFaqs = result.data.data.faqs || [];
+        setFaqs(newFaqs);
+
+        // Cập nhật danh sách danh mục
+        const newCategories = newFaqs.map((faq) => faq.category);
+        setAllCategories((prev) => new Set([...prev, ...newCategories]));
+
         setTotalPages(result.data.totalPages || 1);
       } else {
         setError(result.message);
@@ -28,7 +35,6 @@ const FAQsPage = () => {
     fetchData();
   }, [currentPage]);
 
-  const categories = [...new Set(faqs.map((faq) => faq.category))];
   const filteredFaqs = selectedCategory
     ? faqs.filter((faq) => faq.category === selectedCategory)
     : faqs;
@@ -40,11 +46,10 @@ const FAQsPage = () => {
 
   return (
     <div className="container mx-auto px-6 py-12 grid grid-cols-12 gap-6">
-      {/* Left Column - Categories */}
       <div className="col-span-4 bg-gray-100 p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-custom-green mb-4">Categories</h2>
+        <h2 className="text-2xl font-semibold text-custom-green mb-4">Categories</h2>
         <ul className="space-y-3">
-          {categories.map((category, index) => (
+          {[...allCategories].map((category, index) => (
             <li
               key={index}
               className={`text-lg font-medium cursor-pointer p-2 rounded-lg ${
@@ -52,7 +57,10 @@ const FAQsPage = () => {
                   ? "bg-green-500 text-white"
                   : "text-gray-800 hover:bg-green-100"
               }`}
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => {
+                setSelectedCategory(category);
+                setCurrentPage(1);
+              }}
             >
               {category}
             </li>
@@ -60,7 +68,6 @@ const FAQsPage = () => {
         </ul>
       </div>
 
-      {/* Right Column - Questions and Answers */}
       <div className="col-span-8">
         {filteredFaqs.length > 0 ? (
           <div className="space-y-6">
@@ -72,10 +79,9 @@ const FAQsPage = () => {
             ))}
           </div>
         ) : (
-          <p className="text-gray-600">No FAQs available.</p>
+          <p className="text-gray-600">No FAQs available for this category.</p>
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center mt-8 space-x-2">
             <button

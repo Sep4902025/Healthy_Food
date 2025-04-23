@@ -26,37 +26,37 @@ const ReviewSection = ({ recipeId, dishId }) => {
         commentService.getRatingsByRecipe(recipeId),
         commentService.getCommentsByDishId(dishId),
       ]);
-  
+
       const ratings = ratingsRes.data;
       const rawComments = commentsRes.data;
-  
+
       // 2. Gắn isLiked vào mỗi comment
       const comments = rawComments.map((comment) => ({
         ...comment,
         isLiked: comment.likedBy.includes(userId),
       }));
-  
+
       // 3. Tạo Map lưu review theo userId
       const reviewMap = new Map();
       let totalStars = 0;
-  
+
       ratings.forEach(({ userId: user, star }) => {
         if (!user || !user._id) return;
-  
+
         reviewMap.set(user._id, {
           userId: user._id,
           email: user.email,
           star,
           comments: [],
         });
-  
+
         if (user._id === userId) {
           setSelectedRating(star); // đánh dấu rating của chính mình
         }
-  
+
         totalStars += star;
       });
-  
+
       // 4. Gộp comment vào reviewMap
       comments.forEach((comment) => {
         const uid = comment.userId;
@@ -71,23 +71,23 @@ const ReviewSection = ({ recipeId, dishId }) => {
           });
         }
       });
-  
+
       // 5. Sắp xếp comment theo lượt like và thời gian
       const sortedReviews = Array.from(reviewMap.values()).map((review) => {
         const sortedComments = [...review.comments].sort((a, b) => {
           if (b.likeCount !== a.likeCount) return b.likeCount - a.likeCount;
-  
+
           const timeA = new Date(a.updatedAt || a.createdAt);
           const timeB = new Date(b.updatedAt || b.createdAt);
           return timeB - timeA;
         });
-  
+
         return {
           ...review,
           comments: sortedComments,
         };
       });
-  
+
       // 6. Tính điểm trung bình và cập nhật UI
       const average = ratings.length ? (totalStars / ratings.length).toFixed(1) : 0;
       setAverage(average);
@@ -96,7 +96,6 @@ const ReviewSection = ({ recipeId, dishId }) => {
       console.error("Error fetching reviews:", error);
     }
   };
-  
 
   useEffect(() => {
     fetchReviews();
@@ -109,9 +108,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
       setReviews((prevReviews) =>
         prevReviews.map((review) => ({
           ...review,
-          comments: review.comments.filter(
-            (comment) => comment._id !== commentId
-          ),
+          comments: review.comments.filter((comment) => comment._id !== commentId),
         }))
       );
       toast.success("Comment deleted successfully! 🗑️");
@@ -124,11 +121,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
     try {
       if (!checkLogin()) return;
 
-      const response = await commentService.rateRecipe(
-        recipeId,
-        userId,
-        ratingValue
-      );
+      const response = await commentService.rateRecipe(recipeId, userId, ratingValue);
       if (response.success) {
         toast.success("Thank you for your rating! 😍");
         setSelectedRating(ratingValue);
@@ -145,11 +138,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
     if (!checkLogin()) return;
     if (!newComment.trim()) return;
     try {
-      const response = await commentService.addComment(
-        dishId,
-        newComment,
-        userId
-      );
+      const response = await commentService.addComment(dishId, newComment, userId);
       const newCommentData = response.data;
       setNewComment("");
 
@@ -194,9 +183,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
               ? {
                   ...comment,
                   isLiked: !comment.isLiked,
-                  likeCount: comment.isLiked
-                    ? comment.likeCount - 1
-                    : comment.likeCount + 1,
+                  likeCount: comment.isLiked ? comment.likeCount - 1 : comment.likeCount + 1,
                 }
               : comment
           ),
@@ -210,9 +197,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
   return (
     <div className="w-full max-w-3xl mt-6 bg-white p-6 rounded-lg shadow-md">
       <div className="bg-gray-100 p-4 rounded-xl shadow-md">
-        <label className="block mb-2 text-lg font-semibold text-gray-700">
-          Rate Now
-        </label>
+        <label className="block mb-2 text-lg font-semibold text-gray-700">Rate Now</label>
         <div className="flex justify-center gap-2">
           {[1, 2, 3, 4, 5].map((star) => (
             <Star
@@ -233,8 +218,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
 
       <div className="mt-6 p-4 rounded-xl">
         <p className="text-md text-gray-600 mb-2">
-          Average Rating:{" "}
-          <span className="text-yellow-500 font-semibold">{averageRate} ★</span>
+          Average Rating: <span className="text-yellow-500 font-semibold">{averageRate} ★</span>
         </p>
         <h2 className="text-2xl font-semibold mb-4">Comments</h2>
         <textarea
@@ -252,9 +236,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
         </Button>
 
         {reviews.length === 0 ? (
-          <p className="text-gray-500 text-center mt-4">
-            No ratings or comments yet.
-          </p>
+          <p className="text-gray-500 text-center mt-4">No ratings or comments yet.</p>
         ) : (
           <div className="space-y-6 mt-8">
             {reviews.flatMap((review) =>
@@ -262,9 +244,7 @@ const ReviewSection = ({ recipeId, dishId }) => {
                 <div
                   key={comment._id}
                   className={`p-5 border border-gray-200 rounded-lg bg-white shadow-md ${
-                    review.email === user?.email
-                      ? "border-2 border-blue-500 bg-blue-100"
-                      : ""
+                    review.email === user?.email ? "border-2 border-blue-500 bg-blue-100" : ""
                   }`}
                 >
                   <div className="flex items-center gap-4 mb-4">
@@ -274,13 +254,9 @@ const ReviewSection = ({ recipeId, dishId }) => {
                       className="w-12 h-12 rounded-full border-2 border-gray-300"
                     />
                     <div>
-                      <p className="font-semibold text-md text-gray-800">
-                        {review.email}
-                      </p>
+                      <p className="font-semibold text-md text-gray-800">{review.email}</p>
                       {review.star && (
-                        <span className="text-yellow-500 text-sm font-medium">
-                          {review.star} ★
-                        </span>
+                        <span className="text-yellow-500 text-sm font-medium">{review.star} ★</span>
                       )}
 
                       <p className="text-xs text-gray-500">
