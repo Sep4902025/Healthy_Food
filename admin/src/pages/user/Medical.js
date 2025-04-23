@@ -1,208 +1,131 @@
-import React, { useState, useEffect, useCallback, memo } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import medicalConditionService from "../../services/nutritionist/medicalConditionServices";
-import dishesService from "../../services/nutritionist/dishesServices";
-import recipesService from "../../services/nutritionist/recipesServices";
 import { toast } from "react-toastify";
-import { selectAuth } from "../../store/selectors/authSelectors";
-import { Search } from "lucide-react";
+import medicalConditionService from "../../services/nutritionist/medicalConditionServices";
 
-// Debounce function to delay search
-const debounce = (func, delay) => {
-  let timeoutId;
-  return (...args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-};
+// Simple in-memory cache for condition details
+const conditionCache = new Map();
 
-// Memoized SearchInput component
-const SearchInput = memo(({ value, onChange }) => {
-  return (
-    <div className="max-w-xl mx-auto relative">
-      <input
-        type="text"
-        value={value}
-        onChange={onChange}
-        placeholder="Search medical conditions..."
-        className="w-full py-3 px-5 pr-12 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#40B491] shadow-md"
-      />
-      <Search className="w-6 h-6 absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500" />
-    </div>
-  );
-});
-
-// Memoized MedicalConditionList component to prevent re-renders
-const MedicalConditionList = memo(
-  ({ conditions, onConditionClick }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {conditions.map((condition) => (
-        <article
-          key={condition._id}
-          className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1 flex flex-col"
-          style={{ height: "220px" }} // Fixed height for the card
-          onClick={() => onConditionClick(condition._id)}
-        >
-          <div className="p-6 flex flex-col flex-grow">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3 font-['Syne'] line-clamp-1">
-              {condition.name}
-            </h2>
-            <p
-              className="text-gray-600 text-base mb-4 leading-relaxed line-clamp-3 flex-grow"
-              style={{ height: "72px" }} // Fixed height for description (3 lines)
-            >
-              {condition.description || "Learn more about this condition and its dietary impacts."}
-            </p>
-            <button
-              className="text-[#40B491] font-semibold hover:text-[#359c7a] transition duration-200 flex items-center mt-auto"
-              onClick={(e) => {
-                e.stopPropagation();
-                onConditionClick(condition._id);
-              }}
-            >
-              Read More <span className="ml-2">→</span>
-            </button>
-          </div>
-        </article>
-      ))}
-    </div>
-  ),
-  (prevProps, nextProps) =>
-    prevProps.conditions === nextProps.conditions &&
-    prevProps.onConditionClick === nextProps.onConditionClick
-);
+// Memoized MedicalConditionCard component
+const MedicalConditionCard = React.memo(({ condition, onClick, observeRef }) => (
+  <div
+    ref={observeRef}
+    className="bg-white shadow-lg rounded-2xl p-6 border border-gray-100 cursor-pointer hover:shadow-xl hover:border-[#40B491] hover:scale-105 transition-all duration-300 flex flex-col bg-gradient-to-br from-white to-[#40B491]/5 min-h-[180px]"
+    onClick={() => onClick(condition._id)}
+  >
+    <h2 className="text-2xl font-extrabold text-[#40B491] mb-4 font-['Syne']">
+      {condition.name}
+    </h2>
+    <p className="text-gray-700 text-base leading-relaxed flex-grow line-clamp-3">
+      {condition.description || "Learn more about this condition and its dietary impacts."}
+    </p>
+  </div>
+));
 
 const Medical = () => {
   const navigate = useNavigate();
   const [medicalConditions, setMedicalConditions] = useState([]);
-  const [dishes, setDishes] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [initialLoading, setInitialLoading] = useState(true); // For initial load
-  const [searchLoading, setSearchLoading] = useState(false); // For search updates
-  const [searchTerm, setSearchTerm] = useState("");
-  const [inputValue, setInputValue] = useState("");
-  const limit = 6;
+  const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+  const observerRef = useRef(null);
+  const observedConditions = useRef(new Set());
 
-  // Fetch danh sách điều kiện y tế
-  const fetchMedicalConditions = async (page) => {
-    setSearchLoading(true);
+  // Pre-fetch condition details for a batch of condition IDs
+  const preFetchConditionDetails = useCallback(async (conditionIds) => {
+    // Filter out already cached or currently fetching conditions
+    const idsToFetch = conditionIds.filter(
+      (id) => !conditionCache.has(id) && !observedConditions.current.has(id)
+    );
+    if (idsToFetch.length === 0) return;
+
+    // Mark conditions as being fetched
+    idsToFetch.forEach((id) => observedConditions.current.add(id));
+
     try {
-      const response = await medicalConditionService.getAllMedicalConditions(
-        page,
-        limit,
-        searchTerm
+      // Fetch details concurrently
+      const responses = await Promise.all(
+        idsToFetch.map((id) =>
+          medicalConditionService.getMedicalConditionById(id).catch((error) => ({
+            success: false,
+            id,
+            error,
+          }))
+        )
       );
-      if (response.success) {
-        setMedicalConditions(response.data.items || []);
-        setTotalPages(response.data.totalPages || 1);
-        setCurrentPage(response.data.currentPage || 1);
-      } else {
-        toast.error(response.message || "Failed to load medical conditions!");
-      }
-    } catch (error) {
-      console.error("Error fetching medical conditions:", error);
-      toast.error("Error loading medical conditions!");
-    } finally {
-      setSearchLoading(false);
-      setInitialLoading(false);
-    }
-  };
 
-  // Fetch all dishes with nutrition data
-  const fetchDishes = async () => {
-    try {
-      const response = await dishesService.getAllDishes(1, 1000);
-      if (response?.success) {
-        const dishesData = Array.isArray(response.data.items) ? response.data.items : [];
-        const enrichedDishes = await Promise.all(
-          dishesData.map(async (dish) => {
-            if (dish.recipeId) {
-              try {
-                const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
-                if (recipeResponse.success && recipeResponse.data?.status === "success") {
-                  const recipe = recipeResponse.data.data;
-                  const nutritions = calculateNutritionFromRecipe(recipe);
-                  return { ...dish, nutritions };
-                }
-              } catch (error) {
-                console.error(`Error fetching recipe for dish ${dish._id}:`, error);
-              }
-            }
-            return {
-              ...dish,
-              nutritions: { calories: "N/A", protein: "N/A", carbs: "N/A", fat: "N/A" },
-            };
-          })
-        );
-        setDishes(enrichedDishes);
-      } else {
-        setDishes([]);
-        toast.error("Failed to fetch dishes: " + response?.message);
-      }
-    } catch (error) {
-      setDishes([]);
-      toast.error("Error fetching dishes: " + error.message);
-    }
-  };
-
-  const calculateNutritionFromRecipe = (recipe) => {
-    let totalCalories = 0;
-    let totalProtein = 0;
-    let totalFat = 0;
-    let totalCarbs = 0;
-
-    if (recipe?.ingredients && Array.isArray(recipe.ingredients)) {
-      recipe.ingredients.forEach((ing) => {
-        const ingredient = ing.ingredientId;
-        if (ingredient && ing.quantity && ing.unit) {
-          let conversionFactor;
-          if (ing.unit === "g" || ing.unit === "ml") {
-            conversionFactor = ing.quantity / 100;
-          } else if (ing.unit === "tbsp") {
-            conversionFactor = (ing.quantity * 15) / 100;
-          } else if (ing.unit === "tsp" || ing.unit === "tp") {
-            conversionFactor = (ing.quantity * 5) / 100;
-          } else {
-            conversionFactor = ing.quantity / 100;
-          }
-          totalCalories += (ingredient.calories || 0) * conversionFactor;
-          totalProtein += (ingredient.protein || 0) * conversionFactor;
-          totalFat += (ingredient.fat || 0) * conversionFactor;
-          totalCarbs += (ingredient.carbs || 0) * conversionFactor;
+      responses.forEach((response, index) => {
+        const id = idsToFetch[index];
+        if (response.success) {
+          conditionCache.set(id, response.data);
+        } else {
+          console.error(`Error pre-fetching condition ${id}:`, response.error);
         }
+        observedConditions.current.delete(id);
       });
+    } catch (error) {
+      console.error("Error in batch pre-fetching conditions:", error);
+      idsToFetch.forEach((id) => observedConditions.current.delete(id));
     }
+  }, []);
 
-    return {
-      calories: totalCalories.toFixed(2),
-      protein: totalProtein.toFixed(2),
-      carbs: totalCarbs.toFixed(2),
-      fat: totalFat.toFixed(2),
+  // Set up IntersectionObserver to pre-fetch details for visible cards
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        const visibleConditionIds = entries
+          .filter((entry) => entry.isIntersecting)
+          .map((entry) => entry.target.dataset.conditionId)
+          .filter((id) => id);
+
+        if (visibleConditionIds.length > 0) {
+          preFetchConditionDetails(visibleConditionIds);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    // Observe all condition card elements
+    const conditionElements = document.querySelectorAll("[data-condition-id]");
+    conditionElements.forEach((el) => observerRef.current.observe(el));
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
     };
-  };
+  }, [medicalConditions, showAll, preFetchConditionDetails]);
 
-  // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((value) => {
-      setSearchTerm(value);
-      setCurrentPage(1);
-    }, 500),
-    []
-  );
+  useEffect(() => {
+    const fetchMedicalConditions = async () => {
+      try {
+        // Check cache first
+        const cachedConditions = conditionCache.get("all_conditions");
+        if (cachedConditions) {
+          setMedicalConditions(cachedConditions);
+          setLoading(false);
+          return;
+        }
 
-  // Stable onChange handler for SearchInput
-  const handleInputChange = useCallback(
-    (e) => {
-      const value = e.target.value;
-      setInputValue(value);
-      debouncedSearch(value);
-    },
-    [debouncedSearch]
-  );
+        const response = await medicalConditionService.getAllMedicalConditions(1, 1000, "");
+        if (response.success) {
+          const conditions = response.data.items || [];
+          setMedicalConditions(conditions);
+          conditionCache.set("all_conditions", conditions);
+        } else {
+          toast.error(response.message || "Failed to load health conditions!");
+        }
+      } catch (error) {
+        console.error("Error fetching health conditions:", error);
+        toast.error("Error loading health conditions!");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Stable onConditionClick handler
+    fetchMedicalConditions();
+  }, []);
+
+  // Handle condition click
   const handleConditionClick = useCallback(
     (conditionId) => {
       navigate(`/medical/${conditionId}`);
@@ -210,93 +133,50 @@ const Medical = () => {
     [navigate]
   );
 
-  useEffect(() => {
-    fetchMedicalConditions(currentPage);
-    fetchDishes();
-  }, [currentPage, navigate, searchTerm]);
-
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  if (initialLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-xl font-semibold text-gray-600">Loading medical insights...</p>
+      <div className="container mx-auto px-6 py-12 text-center">
+        <p className="text-lg font-semibold text-gray-600">Loading health conditions...</p>
       </div>
     );
   }
 
+  if (medicalConditions.length === 0) {
+    return (
+      <div className="container mx-auto px-6 py-12 text-center">
+        <p className="text-lg font-semibold text-gray-500">No health conditions found.</p>
+      </div>
+    );
+  }
+
+  const displayedConditions = showAll ? medicalConditions : medicalConditions.slice(0, 6);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header Section */}
-      <header className="bg-gradient-to-r from-[#40B491] to-[#2e8b6e] text-white py-16 px-6">
-        <div className="container mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-extrabold font-['Syne'] mb-4">
-            Health Insights
-          </h1>
-          <p className="text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed">
-            Discover expert advice on medical conditions and dietary recommendations.
-          </p>
-          <div className="mt-8">
-            <SearchInput value={inputValue} onChange={handleInputChange} />
-          </div>
-        </div>
-      </header>
-
-      {/* Blog Posts Section */}
-      <section className="container mx-auto py-12 px-6">
-        {medicalConditions.length > 0 ? (
-          <div className="relative">
-            {searchLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-50">
-                <p className="text-gray-600">Searching...</p>
-              </div>
-            )}
-            <MedicalConditionList
-              conditions={medicalConditions}
-              onConditionClick={handleConditionClick}
-            />
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <p className="text-xl text-gray-500 font-medium">No medical conditions found.</p>
-            <p className="text-gray-400 mt-2">Try adjusting your search or check back later.</p>
-          </div>
-        )}
-      </section>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center py-12 space-x-3">
+    <div className="container mx-auto px-6 py-12 bg-gray-50">
+      <h1 className="text-4xl font-extrabold text-center mb-10 font-['Syne'] text-[#40B491]">
+        Health Conditions
+      </h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-8">
+        {displayedConditions.map((condition) => (
+          <MedicalConditionCard
+            key={condition._id}
+            condition={condition}
+            onClick={handleConditionClick}
+            observeRef={(el) => {
+              if (el) {
+                el.dataset.conditionId = condition._id;
+              }
+            }}
+          />
+        ))}
+      </div>
+      {medicalConditions.length > 6 && (
+        <div className="text-center mt-10">
           <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-5 py-2 bg-white text-gray-700 rounded-full shadow-md disabled:opacity-50 hover:bg-gray-100 transition duration-200"
+            onClick={() => setShowAll(!showAll)}
+            className="px-8 py-3 bg-[#40B491] text-white font-semibold rounded-full shadow-lg hover:bg-[#359c7a] hover:scale-105 transition-all duration-200"
           >
-            Previous
-          </button>
-          {[...Array(totalPages)].map((_, index) => (
-            <button
-              key={index}
-              onClick={() => handlePageChange(index + 1)}
-              className={`px-5 py-2 rounded-full font-semibold shadow-md ${
-                currentPage === index + 1
-                  ? "bg-[#40B491] text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-100"
-              } transition duration-200`}
-            >
-              {index + 1}
-            </button>
-          ))}
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-5 py-2 bg-white text-gray-700 rounded-full shadow-md disabled:opacity-50 hover:bg-gray-100 transition duration-200"
-          >
-            Next
+            {showAll ? "View Less" : "View All"}
           </button>
         </div>
       )}

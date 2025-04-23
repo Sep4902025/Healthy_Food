@@ -53,6 +53,74 @@ const SearchInput = memo(({ value, onChange }) => {
   );
 });
 
+// Hàm tính toán dinh dưỡng
+const calculateTotalNutrition = (ingredients, availableIngredients) => {
+  let totalCalories = 0;
+  let totalProtein = 0;
+  let totalFat = 0;
+  let totalCarbs = 0;
+
+  ingredients.forEach((ing) => {
+    const ingredientData = availableIngredients.find(
+      (item) => item._id === (ing.ingredientId?._id || ing.ingredientId || ing._id)
+    );
+    if (ingredientData && ing.quantity >= 0 && ing.unit) {
+      let conversionFactor;
+      if (ing.unit === "g" || ing.unit === "ml") {
+        conversionFactor = ing.quantity / 100;
+      } else if (ing.unit === "tbsp") {
+        conversionFactor = (ing.quantity * 15) / 100;
+      } else if (ing.unit === "tsp") {
+        conversionFactor = (ing.quantity * 5) / 100;
+      } else {
+        conversionFactor = ing.quantity / 100;
+      }
+      totalCalories += (ingredientData.calories || 0) * conversionFactor;
+      totalProtein += (ingredientData.protein || 0) * conversionFactor;
+      totalFat += (ingredientData.fat || 0) * conversionFactor;
+      totalCarbs += (ingredientData.carbs || 0) * conversionFactor;
+    }
+  });
+
+  return {
+    calories: totalCalories.toFixed(2),
+    protein: totalProtein.toFixed(2),
+    fat: totalFat.toFixed(2),
+    carbs: totalCarbs.toFixed(2),
+  };
+};
+
+// Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, dishName }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete the recipe for <strong>{dishName}</strong>? This action
+          cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TableRecipes = () => {
   const [dishes, setDishes] = useState([]);
   const [availableIngredients, setAvailableIngredients] = useState([]);
@@ -85,6 +153,10 @@ const TableRecipes = () => {
   const [newInstructionStep, setNewInstructionStep] = useState({ description: "" });
   const [addingAfterStep, setAddingAfterStep] = useState(null);
   const [showNewInstructionInput, setShowNewInstructionInput] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteDishId, setDeleteDishId] = useState(null);
+  const [deleteDishName, setDeleteDishName] = useState("");
+  const [deleteRecipeId, setDeleteRecipeId] = useState(null);
 
   // Debounced search
   const debouncedSearch = useCallback(
@@ -128,6 +200,21 @@ const TableRecipes = () => {
             const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
             if (recipeResponse.success) {
               dish.recipe = recipeResponse.data;
+              if (dish.recipe?.ingredients?.length > 0) {
+                const nutrition = calculateTotalNutrition(
+                  dish.recipe.ingredients,
+                  ingredientsResponse.data.items || []
+                );
+                dish.recipe.calories = nutrition.calories;
+                dish.recipe.protein = nutrition.protein;
+                dish.recipe.fat = nutrition.fat;
+                dish.recipe.carbs = nutrition.carbs;
+              } else {
+                dish.recipe.calories = 0;
+                dish.recipe.protein = 0;
+                dish.recipe.fat = 0;
+                dish.recipe.carbs = 0;
+              }
             } else {
               dish.recipe = null;
             }
@@ -158,41 +245,12 @@ const TableRecipes = () => {
   };
 
   useEffect(() => {
-    const calculateTotalNutrition = () => {
-      let totalCalories = 0;
-      let totalProtein = 0;
-      let totalFat = 0;
-      let totalCarbs = 0;
-
-      newRecipeData.ingredients.forEach((ing) => {
-        const ingredientData = availableIngredients.find((item) => item._id === ing._id);
-        if (ingredientData && ing.quantity >= 0 && ing.unit) {
-          let conversionFactor;
-          if (ing.unit === "g" || ing.unit === "ml") {
-            conversionFactor = ing.quantity / 100;
-          } else if (ing.unit === "tbsp") {
-            conversionFactor = (ing.quantity * 15) / 100;
-          } else if (ing.unit === "tsp") {
-            conversionFactor = (ing.quantity * 5) / 100;
-          } else {
-            conversionFactor = ing.quantity / 100;
-          }
-          totalCalories += (ingredientData.calories || 0) * conversionFactor;
-          totalProtein += (ingredientData.protein || 0) * conversionFactor;
-          totalFat += (ingredientData.fat || 0) * conversionFactor;
-          totalCarbs += (ingredientData.carbs || 0) * conversionFactor;
-        }
-      });
-
-      setNutritionData({
-        calories: totalCalories.toFixed(2),
-        protein: totalProtein.toFixed(2),
-        fat: totalFat.toFixed(2),
-        carbs: totalCarbs.toFixed(2),
-      });
-    };
-
-    calculateTotalNutrition();
+    if (newRecipeData.ingredients.length > 0) {
+      const nutrition = calculateTotalNutrition(newRecipeData.ingredients, availableIngredients);
+      setNutritionData(nutrition);
+    } else {
+      setNutritionData({ calories: 0, protein: 0, fat: 0, carbs: 0 });
+    }
   }, [newRecipeData.ingredients, availableIngredients]);
 
   const handleAddRecipeClick = async (dish) => {
@@ -455,15 +513,21 @@ const TableRecipes = () => {
 
     const formattedIngredients = newRecipeData.ingredients.map((ing) => ({
       ingredientId: ing._id,
-      quantity: ing.quantity || 0,
+      quantity: Number(ing.quantity) || 0,
       unit: ing.unit || "g",
     }));
+
+    const nutrition = calculateTotalNutrition(formattedIngredients, availableIngredients);
 
     const updatedRecipe = {
       ingredients: formattedIngredients,
       instruction: newRecipeData.instruction,
       cookingTime: newRecipeData.cookingTime,
       totalServing: newRecipeData.totalServing,
+      calories: nutrition.calories,
+      protein: nutrition.protein,
+      fat: nutrition.fat,
+      carbs: nutrition.carbs,
     };
 
     try {
@@ -515,7 +579,7 @@ const TableRecipes = () => {
         newIngredients.push({
           _id: newIng._id,
           name: newIng.name,
-          quantity: newIng.quantity || 0,
+          quantity: "",
           unit: newIng.unit || "g",
         });
       }
@@ -545,15 +609,17 @@ const TableRecipes = () => {
       return;
     }
 
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete the recipe for "${dish.name}"?`
-    );
-    if (!confirmDelete) return;
+    setDeleteDishId(dish._id);
+    setDeleteDishName(dish.name);
+    setDeleteRecipeId(dish.recipeId);
+    setIsDeleteModalOpen(true);
+  };
 
+  const confirmDeleteRecipe = async () => {
     try {
-      const response = await recipesService.deleteRecipe(dish._id, dish.recipeId);
+      const response = await recipesService.deleteRecipe(deleteDishId, deleteRecipeId);
       if (response.success) {
-        toast.success(`The recipe for "${dish.name}" has been deleted!`);
+        toast.success(`The recipe for "${deleteDishName}" has been deleted!`);
         fetchData();
         if (dishes.length === 1 && currentPage > 1) {
           setCurrentPage(currentPage - 1);
@@ -563,6 +629,11 @@ const TableRecipes = () => {
       }
     } catch (error) {
       toast.error("An error occurred while deleting: " + (error.message || "Unspecified error"));
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteDishId(null);
+      setDeleteDishName("");
+      setDeleteRecipeId(null);
     }
   };
 
@@ -575,8 +646,12 @@ const TableRecipes = () => {
 
   const formatNutrition = (value) => {
     if (isNaN(value) || value === null) return "N/A";
+    if (Math.abs(value) < 0.01) return "0";
     if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
     if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+    if (Number.isInteger(value) || value % 1 === 0) {
+      return String(Math.round(value));
+    }
     return value.toFixed(2);
   };
 
@@ -599,6 +674,26 @@ const TableRecipes = () => {
 
   return (
     <div className="container mx-auto px-6 py-8">
+      <style>
+        {`
+          .loader {
+            border-top-color: #40B491;
+            border-bottom-color: #40B491;
+            border-left-color: transparent;
+            border-right-color: transparent;
+            border-width: 4px;
+            border-style: solid;
+            animation: spin 1s linear infinite;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">List of Dishes</h2>
       </div>
@@ -668,7 +763,7 @@ const TableRecipes = () => {
                               Protein:{" "}
                               {dish.recipe?.totalServing && dish.recipe?.protein
                                 ? formatNutrition(dish.recipe.protein / dish.recipe.totalServing)
-                                : "N/A"}{" "}
+                                : "0"}{" "}
                               g
                             </span>
                           </div>
@@ -678,7 +773,7 @@ const TableRecipes = () => {
                               Fat:{" "}
                               {dish.recipe?.totalServing && dish.recipe?.fat
                                 ? formatNutrition(dish.recipe.fat / dish.recipe.totalServing)
-                                : "N/A"}{" "}
+                                : "0"}{" "}
                               g
                             </span>
                           </div>
@@ -696,7 +791,7 @@ const TableRecipes = () => {
                               Calories:{" "}
                               {dish.recipe?.totalServing && dish.recipe?.calories
                                 ? formatNutrition(dish.recipe.calories / dish.recipe.totalServing)
-                                : "N/A"}{" "}
+                                : "0"}{" "}
                               kcal
                             </span>
                           </div>
@@ -706,7 +801,7 @@ const TableRecipes = () => {
                               Carbs:{" "}
                               {dish.recipe?.totalServing && dish.recipe?.carbs
                                 ? formatNutrition(dish.recipe.carbs / dish.recipe.totalServing)
-                                : "N/A"}{" "}
+                                : "0"}{" "}
                               g
                             </span>
                           </div>
@@ -1121,13 +1216,13 @@ const TableRecipes = () => {
                           <span className="w-1/2 min-w-0 truncate text-left">{ing.name}</span>
                           <div className="flex items-center gap-2 min-w-[200px]">
                             <input
-                              type="number"
+                              type="text"
                               className="w-16 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
-                              value={ing.quantity || ""}
+                              value={ing.quantity}
                               placeholder="Qty"
                               onChange={(e) => {
-                                let value = e.target.value.replace(/[^0-9]/g, "");
-                                value = value === "" ? "" : parseInt(value, 10);
+                                let value = e.target.value;
+                                if (!/^\d*\.?\d{0,2}$/.test(value)) return;
                                 const updatedIngredients = [...newRecipeData.ingredients];
                                 updatedIngredients[index].quantity = value;
                                 setNewRecipeData({
@@ -1135,11 +1230,6 @@ const TableRecipes = () => {
                                   ingredients: updatedIngredients,
                                 });
                                 setErrors({ ...errors, ingredients: "" });
-                              }}
-                              onKeyPress={(e) => {
-                                if (!/[0-9]/.test(e.key)) {
-                                  e.preventDefault();
-                                }
                               }}
                               min="0"
                             />
@@ -1275,6 +1365,18 @@ const TableRecipes = () => {
           </div>
         </div>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeleteDishId(null);
+          setDeleteDishName("");
+          setDeleteRecipeId(null);
+        }}
+        onConfirm={confirmDeleteRecipe}
+        dishName={deleteDishName}
+      />
 
       <IngredientSelectionModal
         isOpen={isIngredientModalOpen}
@@ -1478,26 +1580,26 @@ const IngredientSelectionModal = ({
                       <div className="flex justify-between items-start">
                         <h3 className="font-medium text-gray-800 truncate w-[70%]">{ing.name}</h3>
                         <span className="text-sm font-bold text-blue-600 min-w-[80px] text-right">
-                          {ing.calories !== "N/A" ? `${ing.calories} kcal` : "N/A"}
+                          {ing.calories !== "0" ? `${ing.calories} kcal` : "0"}
                         </span>
                       </div>
                       <div className="mt-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-700">Protein:</span>
                           <span className="font-medium">
-                            {ing.protein || "N/A"} {ing.protein !== "N/A" ? "g" : ""}
+                            {ing.protein || "0"} {ing.protein !== "0" ? "g" : ""}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-700">Fat:</span>
                           <span className="font-medium">
-                            {ing.fat || "N/A"} {ing.fat !== "N/A" ? "g" : ""}
+                            {ing.fat || "0"} {ing.fat !== "0" ? "g" : ""}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-700">Carbs:</span>
                           <span className="font-medium">
-                            {ing.carbs || "N/A"} {ing.carbs !== "N/A" ? "g" : ""}
+                            {ing.carbs || "0"} {ing.carbs !== "0" ? "g" : ""}
                           </span>
                         </div>
                       </div>

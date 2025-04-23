@@ -40,7 +40,7 @@ const SearchInput = memo(({ value, onChange, inputRef }) => {
 // Component riêng cho danh sách món ăn
 const DishList = memo(
   ({ dishes, ingredientCounts, onEdit, onDelete, onToggleVisibility, isLoading }) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[400px]">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {isLoading ? (
         <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
           <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#40B491]"></div>
@@ -65,9 +65,8 @@ const DishList = memo(
                 <span className="flex items-center">
                   <Utensils className="w-4 h-4 mr-1" />
                   {ingredientCounts[dish._id] !== undefined
-                    ? ingredientCounts[dish._id]
-                    : "Loading..."}{" "}
-                  ingredients
+                    ? `${ingredientCounts[dish._id]} ingredients`
+                    : "0 ingredients"}
                 </span>
               </div>
             </div>
@@ -121,6 +120,37 @@ const DishList = memo(
   )
 );
 
+// New Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, dishName }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete the dish <strong>{dishName}</strong>? This action cannot
+          be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TableDishes = () => {
   const navigate = useNavigate();
   const [dishes, setDishes] = useState([]);
@@ -149,7 +179,11 @@ const TableDishes = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
   const [isValidImageUrl, setIsValidImageUrl] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteDishId, setDeleteDishId] = useState(null);
+  const [deleteDishName, setDeleteDishName] = useState("");
   const searchInputRef = useRef(null);
+  const dishesRef = useRef(dishes);
 
   const fetchDishes = useCallback(
     async (isInitialOrFilterChange = false) => {
@@ -165,15 +199,21 @@ const TableDishes = () => {
         );
         if (response.success) {
           setDishes(response.data.items);
+          dishesRef.current = response.data.items;
           setTotalItems(response.data.total);
           setTotalPages(response.data.totalPages);
+          await fetchIngredientCounts(response.data.items);
         } else {
           setDishes([]);
+          dishesRef.current = [];
+          setIngredientCounts({});
           setTotalItems(0);
           setTotalPages(1);
         }
       } catch {
         setDishes([]);
+        dishesRef.current = [];
+        setIngredientCounts({});
         setTotalItems(0);
         setTotalPages(1);
       } finally {
@@ -198,13 +238,15 @@ const TableDishes = () => {
     fetchDishes(true);
   }, [fetchDishes, filterType, currentPage]);
 
-  const fetchIngredientCounts = useCallback(async () => {
-    if (dishes.length === 0) return;
+  const fetchIngredientCounts = useCallback(async (dishesToFetch) => {
+    if (!dishesToFetch || dishesToFetch.length === 0) {
+      setIngredientCounts({});
+      return;
+    }
 
-    setIsLoading(true);
     const counts = {};
     await Promise.all(
-      dishes.map(async (dish) => {
+      dishesToFetch.map(async (dish) => {
         if (dish.recipeId) {
           try {
             const recipeResponse = await recipeService.getRecipeById(dish._id, dish.recipeId);
@@ -220,12 +262,7 @@ const TableDishes = () => {
       })
     );
     setIngredientCounts(counts);
-    setIsLoading(false);
-  }, [dishes]);
-
-  useEffect(() => {
-    fetchIngredientCounts();
-  }, [fetchIngredientCounts]);
+  }, []);
 
   const handleInputChange = useCallback(
     (e) => {
@@ -341,36 +378,46 @@ const TableDishes = () => {
       toast.success(`Dish "${editData.name}" has been saved!`);
       setIsEditModalOpen(false);
       await fetchDishes(true);
-      await fetchIngredientCounts();
     } else {
       toast.error("Failed to save dish. Please try again.");
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this dish?")) {
-      setIsLoading(true);
-      const response = await dishesService.deleteDish(id);
-      setIsLoading(false);
-      if (response.success) {
-        toast.success("Deleted successfully!");
-        fetchDishes(true);
-        if (dishes.length === 1 && currentPage > 0) {
-          setCurrentPage(currentPage - 1);
-        }
-      } else {
-        toast.error("Failed to delete dish. Please try again.");
-      }
+    const dish = dishes.find((d) => d._id === id);
+    if (dish) {
+      setDeleteDishId(id);
+      setDeleteDishName(dish.name);
+      setIsDeleteModalOpen(true);
     }
+  };
+
+  const confirmDelete = async () => {
+    setIsLoading(true);
+    const response = await dishesService.deleteDish(deleteDishId);
+    setIsLoading(false);
+    if (response.success) {
+      toast.success("Deleted successfully!");
+      fetchDishes(true);
+      if (dishes.length === 1 && currentPage > 0) {
+        setCurrentPage(currentPage - 1);
+      }
+    } else {
+      toast.error("Failed to delete dish. Please try again.");
+    }
+    setIsDeleteModalOpen(false);
+    setDeleteDishId(null);
+    setDeleteDishName("");
   };
 
   const handleToggleVisibility = async (dish) => {
     const newVisibility = !dish.isVisible;
-    const updatedDish = { ...dish, isVisible: newVisibility };
     try {
       const response = await dishesService.updateDish(dish._id, { isVisible: newVisibility });
       if (response.success) {
-        setDishes((prevDishes) => prevDishes.map((d) => (d._id === dish._id ? updatedDish : d)));
+        setDishes((prevDishes) =>
+          prevDishes.map((d) => (d._id === dish._id ? { ...d, isVisible: newVisibility } : d))
+        );
         toast.success(`Dish "${dish.name}" is now ${newVisibility ? "visible" : "hidden"}!`);
       } else {
         toast.error("Failed to update visibility. Please try again.");
@@ -579,7 +626,7 @@ const TableDishes = () => {
       )}
 
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 pain">
           <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl relative">
             {isSaving && (
               <div className="absolute inset-0 bg-gray-600 bg-opacity-50 flex flex-col items-center justify-center z-50">
@@ -784,6 +831,13 @@ const TableDishes = () => {
           </div>
         </div>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        dishName={deleteDishName}
+      />
     </div>
   );
 };

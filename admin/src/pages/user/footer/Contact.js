@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import contactServices from "../../../services/footer/contactServices";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -15,8 +17,28 @@ const ContactUs = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Mock authentication check (replace with actual auth logic)
+  const isAuthenticated = () => {
+    // This is a placeholder. In a real app, check for a token or user session.
+    return false; // Simulating a not-logged-in user
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Check if user is authenticated
+    if (!isAuthenticated()) {
+      toast.error("Please log in to send a message!", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      return;
+    }
+
     const result = await contactServices.createContact(formData);
 
     if (result.success) {
@@ -33,7 +55,7 @@ const ContactUs = () => {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-lg w-full bg-white rounded-xl shadow-2xl p-8 transform transition-all duration-300 hover:shadow-xl">
         {/* Tiêu đề */}
-        <h1 className="text-4xl font-extrabold text-center text-green-700 mb-6">Contact Us</h1>
+        <h1 className="text-4xl font-extrabold text-center text-custom-green mb-6">Contact Us</h1>
 
         {/* Thông báo trạng thái */}
         {status.message && (
@@ -47,7 +69,7 @@ const ContactUs = () => {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div onSubmit={handleSubmit} className="space-y-6">
           {/* Full Name */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
@@ -105,13 +127,14 @@ const ContactUs = () => {
 
           {/* Nút Submit */}
           <button
-            type="submit"
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200"
+            onClick={handleSubmit}
+            className="w-full bg-custom-green text-white py-3 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200"
           >
             Send Message
           </button>
-        </form>
+        </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

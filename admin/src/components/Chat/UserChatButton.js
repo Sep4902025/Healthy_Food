@@ -93,7 +93,7 @@ const UserChatButton = () => {
       "I want dietary advice!",
       "I want weight loss advice",
       "I want weight gain advice",
-      "I want nutrition advice for a medical condition",
+      "I want nutrition advice for a Health Conditions",
       "Other",
     ];
 
@@ -110,7 +110,7 @@ const UserChatButton = () => {
     return (
       <div className="flex flex-col h-full p-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Start Consultation</h3>
+          <h3 className="text-lg font-semibold text-blue-500">Start Consultation</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <FiX size={20} />
           </button>

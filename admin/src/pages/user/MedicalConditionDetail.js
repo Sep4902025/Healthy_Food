@@ -128,7 +128,7 @@ const MedicalConditionDetail = () => {
       });
     } catch (error) {
       console.error("Error fetching condition details:", error);
-      toast.error("Error loading medical condition details!");
+      toast.error("Error loading Health condition details!");
       navigate("/medical");
     } finally {
       setLoading(false);
@@ -209,7 +209,7 @@ const MedicalConditionDetail = () => {
             onClick={() => navigate("/medical")}
             className="flex items-center text-white hover:text-gray-200 transition duration-200 mb-6"
           >
-            <ArrowLeft className="w-6 h-6 mr-2" /> Back to Health Insights
+            <ArrowLeft className="w-6 h-6 mr-2" /> Back to Health Conditions
           </button>
           <h1 className="text-4xl md:text-5xl font-extrabold font-['Syne'] mb-4">{condition.name}</h1>
         </div>
@@ -325,7 +325,7 @@ const MedicalConditionDetail = () => {
             onClick={() => navigate("/medical")}
             className="mt-6 bg-[#40B491] hover:bg-[#359c7a] text-white px-8 py-3 rounded-full font-semibold transition duration-300 shadow-md"
           >
-            Back to Health Insights
+            Back to Health Conditions
           </button>
         </div>
       </section>

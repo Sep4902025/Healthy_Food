@@ -32,7 +32,7 @@ const UnderDisease = () => {
 
         const conditions = result.data.items;
         if (conditions.length === 0) {
-          setError("No medical conditions available to display.");
+          setError("No health conditions available to display.");
           setMedicalConditions([]);
         } else {
           const mappedData = conditions.map((condition) => ({
@@ -42,7 +42,7 @@ const UnderDisease = () => {
           setMedicalConditions(mappedData);
         }
       } catch (error) {
-        setError(`Unable to load medical conditions: ${error.message}`);
+        setError(`Unable to load health conditions: ${error.message}`);
         setMedicalConditions([]);
       } finally {
         setLoading(false);
@@ -61,7 +61,7 @@ const UnderDisease = () => {
 
   const toggleItemSelection = (id) => {
     setSelectedItems((prev) => {
-      const noDiseaseId = medicalConditions.find((d) => d.name === "No medical conditions")?.id;
+      const noDiseaseId = medicalConditions.find((d) => d.name === "No health conditions")?.id;
       if (id === noDiseaseId) {
         return prev.includes(id) ? [] : [id];
       }
@@ -108,7 +108,7 @@ const UnderDisease = () => {
       </p>
 
       {loading && (
-        <div className="text-center text-gray-500 mt-4">Loading medical conditions...</div>
+        <div className="text-center text-gray-500 mt-4">Loading health conditions...</div>
       )}
 
       {error && !loading && <div className="text-center text-red-500 mt-4">{error}</div>}

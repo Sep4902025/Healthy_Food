@@ -7,6 +7,36 @@ import Pagination from "../../../components/Pagination";
 import Loading from "../../../components/Loading";
 import { EditIcon, TrashIcon } from "lucide-react";
 
+// Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, mealPlanTitle }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete the meal plan <strong>{mealPlanTitle}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TableMealPlan = () => {
   const { user } = useSelector(selectAuth);
   const navigate = useNavigate();
@@ -24,6 +54,9 @@ const TableMealPlan = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [activeTab, setActiveTab] = useState("All"); // Tab hiện tại
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteMealPlanId, setDeleteMealPlanId] = useState(null);
+  const [deleteMealPlanTitle, setDeleteMealPlanTitle] = useState("");
 
   // Fetch meal plans
   const fetchMealPlans = async (callback) => {
@@ -117,26 +150,36 @@ const TableMealPlan = () => {
   };
 
   // Handle delete
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this meal plan?")) {
-      try {
-        const response = await mealPlanService.deleteMealPlan(id);
-        if (response.success) {
-          fetchMealPlans((result) => {
-            const totalItemsAfterDelete = result.total || result.data.mealPlans.length;
-            const newTotalPages = Math.ceil(totalItemsAfterDelete / limit) || 1;
-            if (result.data.mealPlans.length === 0 && currentPage > 0) {
-              setCurrentPage(currentPage - 1);
-            } else if (currentPage >= newTotalPages) {
-              setCurrentPage(newTotalPages - 1);
-            }
-          });
-        } else {
-          alert("Failed to delete meal plan");
-        }
-      } catch (error) {
-        alert("Error deleting meal plan");
+  const handleDelete = async (id, title) => {
+    setDeleteMealPlanId(id);
+    setDeleteMealPlanTitle(title);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Confirm delete
+  const confirmDeleteMealPlan = async () => {
+    try {
+      const response = await mealPlanService.deleteMealPlan(deleteMealPlanId);
+      if (response.success) {
+        fetchMealPlans((result) => {
+          const totalItemsAfterDelete = result.total || result.data.mealPlans.length;
+          const newTotalPages = Math.ceil(totalItemsAfterDelete / limit) || 1;
+          if (result.data.mealPlans.length === 0 && currentPage > 0) {
+            setCurrentPage(currentPage - 1);
+          } else if (currentPage >= newTotalPages) {
+            setCurrentPage(newTotalPages - 1);
+          }
+        });
+        alert(`Meal plan "${deleteMealPlanTitle}" deleted successfully`);
+      } else {
+        alert("Failed to delete meal plan");
       }
+    } catch (error) {
+      alert("Error deleting meal plan");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteMealPlanId(null);
+      setDeleteMealPlanTitle("");
     }
   };
 
@@ -330,7 +373,7 @@ const TableMealPlan = () => {
                           </button>
                           <button
                             className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-                            onClick={() => handleDelete(mealPlan._id)}
+                            onClick={() => handleDelete(mealPlan._id, mealPlan.title)}
                             title="Delete"
                           >
                             <TrashIcon size={16} />
@@ -372,6 +415,18 @@ const TableMealPlan = () => {
           )}
         </div>
       </Loading>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeleteMealPlanId(null);
+          setDeleteMealPlanTitle("");
+        }}
+        onConfirm={confirmDeleteMealPlan}
+        mealPlanTitle={deleteMealPlanTitle}
+      />
     </div>
   );
 };

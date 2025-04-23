@@ -124,8 +124,6 @@ exports.updateDish = async (req, res) => {
   }
 };
 
-const Dish = require("../models/Dish");
-
 exports.deleteDish = async (req, res) => {
   try {
     const updatedDish = await dishService.deleteDish(req.params.dishId);

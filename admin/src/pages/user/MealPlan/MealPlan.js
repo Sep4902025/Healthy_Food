@@ -15,7 +15,7 @@ const MealPlan = () => {
 
   const [userMealPlan, setUserMealPlan] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(true);
   const [processingAction, setProcessingAction] = useState(false);
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [isMealPlanExpired, setIsMealPlanExpired] = useState(false);

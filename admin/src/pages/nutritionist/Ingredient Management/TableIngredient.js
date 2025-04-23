@@ -83,24 +83,24 @@ const IngredientList = memo(({ ingredients, onEdit, onDelete, onToggleVisibility
                   <div className="flex items-center">
                     <Flame className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                     <span className="flex items-center">
-                      Calories: {ingredient.calories || "N/A"} kcal
+                      Calories: {ingredient.calories || "0"} kcal
                     </span>
                   </div>
                   <div className="flex items-center">
                     <Dumbbell className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
                     <span className="flex items-center">
-                      Protein: {ingredient.protein || "N/A"} g
+                      Protein: {ingredient.protein || "0"} g
                     </span>
                   </div>
                 </div>
                 <div className="flex flex-col space-y-2">
                   <div className="flex items-center">
                     <Wheat className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                    <span className="flex items-center">Carbs: {ingredient.carbs || "N/A"} g</span>
+                    <span className="flex items-center">Carbs: {ingredient.carbs || "0"} g</span>
                   </div>
                   <div className="flex items-center">
                     <Droplet className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                    <span className="flex items-center">Fat: {ingredient.fat || "N/A"} g</span>
+                    <span className="flex items-center">Fat: {ingredient.fat || "0"} g</span>
                   </div>
                 </div>
               </div>
@@ -150,6 +150,37 @@ const IngredientList = memo(({ ingredients, onEdit, onDelete, onToggleVisibility
   </div>
 ));
 
+// New Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, ingredientName }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete the ingredient <strong>{ingredientName}</strong>? This
+          action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TableIngredient = () => {
   const navigate = useNavigate();
   const [ingredients, setIngredients] = useState([]);
@@ -165,7 +196,6 @@ const TableIngredient = () => {
     imageUrl: "",
     imageFile: null,
     type: "",
-    customType: "",
     season: "",
     calories: "",
     protein: "",
@@ -180,6 +210,9 @@ const TableIngredient = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteIngredientId, setDeleteIngredientId] = useState(null);
+  const [deleteIngredientName, setDeleteIngredientName] = useState("");
   const searchInputRef = useRef(null);
 
   const fetchIngredients = useCallback(
@@ -243,8 +276,11 @@ const TableIngredient = () => {
       ...ingredient,
       id: ingredient._id,
       imageFile: null,
-      customType: TYPE_OPTIONS.includes(ingredient.type) ? "" : ingredient.type,
-      type: TYPE_OPTIONS.includes(ingredient.type) ? ingredient.type : "Others",
+      type: ingredient.type,
+      calories: ingredient.calories !== undefined ? String(ingredient.calories) : "",
+      protein: ingredient.protein !== undefined ? String(ingredient.protein) : "",
+      carbs: ingredient.carbs !== undefined ? String(ingredient.carbs) : "",
+      fat: ingredient.fat !== undefined ? String(ingredient.fat) : "",
     });
     setImagePreview(ingredient.imageUrl || "");
     setErrors({});
@@ -272,22 +308,33 @@ const TableIngredient = () => {
       newErrors.imageUrl = "Image (file or URL) is required";
     }
     if (!editData.type) newErrors.type = "Type is required";
-    if (editData.type === "Others" && !editData.customType.trim()) {
-      newErrors.customType = "Custom type is required when 'Others' is selected";
-    }
     if (!editData.unit) newErrors.unit = "Unit is required";
-    if (editData.calories === "" || isNaN(editData.calories) || editData.calories < 0)
+    if (
+      editData.calories === "" ||
+      isNaN(parseFloat(editData.calories)) ||
+      parseFloat(editData.calories) < 0
+    )
       newErrors.calories = "Calories must be greater than or equal to 0";
-    else if (editData.calories > 1000) newErrors.calories = "Calories must not exceed 1000 kcal";
-    if (editData.protein === "" || isNaN(editData.protein) || editData.protein < 0)
+    else if (parseFloat(editData.calories) > 1000)
+      newErrors.calories = "Calories must not exceed 1000 kcal";
+    if (
+      editData.protein === "" ||
+      isNaN(parseFloat(editData.protein)) ||
+      parseFloat(editData.protein) < 0
+    )
       newErrors.protein = "Protein must be greater than or equal to 0";
-    else if (editData.protein > 100) newErrors.protein = "Protein must not exceed 100 g";
-    if (editData.carbs === "" || isNaN(editData.carbs) || editData.carbs < 0)
+    else if (parseFloat(editData.protein) > 100)
+      newErrors.protein = "Protein must not exceed 100 g";
+    if (
+      editData.carbs === "" ||
+      isNaN(parseFloat(editData.carbs)) ||
+      parseFloat(editData.carbs) < 0
+    )
       newErrors.carbs = "Carbs must be greater than or equal to 0";
-    else if (editData.carbs > 100) newErrors.carbs = "Carbs must not exceed 100 g";
-    if (editData.fat === "" || isNaN(editData.fat) || editData.fat < 0)
+    else if (parseFloat(editData.carbs) > 100) newErrors.carbs = "Carbs must not exceed 100 g";
+    if (editData.fat === "" || isNaN(parseFloat(editData.fat)) || parseFloat(editData.fat) < 0)
       newErrors.fat = "Fat must be greater than or equal to 0";
-    else if (editData.fat > 100) newErrors.fat = "Fat must not exceed 100 g";
+    else if (parseFloat(editData.fat) > 100) newErrors.fat = "Fat must not exceed 100 g";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -298,17 +345,17 @@ const TableIngredient = () => {
     let updatedValue = value;
 
     if (["calories", "protein", "carbs", "fat"].includes(name)) {
-      updatedValue = value.replace(/[^0-9]/g, "");
-      updatedValue = updatedValue === "" ? "" : parseInt(updatedValue, 10);
+      if (value === "" || /^-?\d*\.?\d{0,2}$/.test(value)) {
+        updatedValue = value;
+      } else {
+        return;
+      }
     }
 
-    setEditData((prev) => {
-      const updatedData = { ...prev, [name]: updatedValue };
-      if (name === "type" && updatedValue !== "Others") {
-        updatedData.customType = "";
-      }
-      return updatedData;
-    });
+    setEditData((prev) => ({
+      ...prev,
+      [name]: updatedValue,
+    }));
     setErrors({ ...errors, [name]: "" });
   };
 
@@ -387,7 +434,11 @@ const TableIngredient = () => {
     const finalData = {
       ...editData,
       imageUrl,
-      type: editData.type === "Others" ? editData.customType : editData.type,
+      type: editData.type,
+      calories: parseFloat(editData.calories) || 0,
+      protein: parseFloat(editData.protein) || 0,
+      carbs: parseFloat(editData.carbs) || 0,
+      fat: parseFloat(editData.fat) || 0,
     };
     const response = await ingredientService.updateIngredient(editData.id, finalData);
     setIsEditLoading(false);
@@ -402,20 +453,30 @@ const TableIngredient = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this ingredient?")) {
-      setIsLoading(true);
-      const response = await ingredientService.deleteIngredient(id);
-      setIsLoading(false);
-      if (response.success) {
-        toast.success("Deleted successfully!");
-        fetchIngredients(true);
-        if (ingredients.length === 1 && currentPage > 0) {
-          setCurrentPage(currentPage - 1);
-        }
-      } else {
-        toast.error("Failed to delete ingredient. Please try again.");
-      }
+    const ingredient = ingredients.find((ing) => ing._id === id);
+    if (ingredient) {
+      setDeleteIngredientId(id);
+      setDeleteIngredientName(ingredient.name);
+      setIsDeleteModalOpen(true);
     }
+  };
+
+  const confirmDelete = async () => {
+    setIsLoading(true);
+    const response = await ingredientService.deleteIngredient(deleteIngredientId);
+    setIsLoading(false);
+    if (response.success) {
+      toast.success("Deleted successfully!");
+      fetchIngredients(true);
+      if (ingredients.length === 1 && currentPage > 0) {
+        setCurrentPage(currentPage - 1);
+      }
+    } else {
+      toast.error("Failed to delete ingredient. Please try again.");
+    }
+    setIsDeleteModalOpen(false);
+    setDeleteIngredientId(null);
+    setDeleteIngredientName("");
   };
 
   const handleToggleVisibility = async (ingredient) => {
@@ -458,7 +519,6 @@ const TableIngredient = () => {
       imageUrl: "",
       imageFile: null,
       type: "",
-      customType: "",
       season: "",
       calories: "",
       protein: "",
@@ -643,24 +703,6 @@ const TableIngredient = () => {
                       ))}
                     </select>
                     {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
-                    {editData.type === "Others" && (
-                      <>
-                        <input
-                          type="text"
-                          name="customType"
-                          value={editData.customType || ""}
-                          onChange={handleChange}
-                          placeholder="Enter custom type"
-                          className={`w-full mt-2 border ${
-                            errors.customType ? "border-red-500" : "border-gray-300"
-                          } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
-                          disabled={isEditLoading}
-                        />
-                        {errors.customType && (
-                          <p className="text-red-500 text-sm mt-1">{errors.customType}</p>
-                        )}
-                      </>
-                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -668,13 +710,11 @@ const TableIngredient = () => {
                     </label>
                     <div className="flex items-center">
                       <input
-                        type="number"
+                        type="text"
                         name="calories"
                         value={editData.calories || ""}
                         onChange={handleChange}
-                        onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                         placeholder="0"
-                        min="0"
                         className={`w-full border ${
                           errors.calories ? "border-red-500" : "border-gray-300"
                         } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
@@ -695,13 +735,11 @@ const TableIngredient = () => {
                     </label>
                     <div className="flex items-center">
                       <input
-                        type="number"
+                        type="text"
                         name="protein"
                         value={editData.protein || ""}
                         onChange={handleChange}
-                        onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                         placeholder="0"
-                        min="0"
                         className={`w-full border ${
                           errors.protein ? "border-red-500" : "border-gray-300"
                         } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
@@ -717,13 +755,11 @@ const TableIngredient = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Carbs *</label>
                     <div className="flex items-center">
                       <input
-                        type="number"
+                        type="text"
                         name="carbs"
                         value={editData.carbs || ""}
                         onChange={handleChange}
-                        onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                         placeholder="0"
-                        min="0"
                         className={`w-full border ${
                           errors.carbs ? "border-red-500" : "border-gray-300"
                         } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
@@ -737,13 +773,11 @@ const TableIngredient = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Fat *</label>
                     <div className="flex items-center">
                       <input
-                        type="number"
+                        type="text"
                         name="fat"
                         value={editData.fat || ""}
                         onChange={handleChange}
-                        onKeyPress={(e) => !/[0-9]/.test(e.key) && e.preventDefault()}
                         placeholder="0"
-                        min="0"
                         className={`w-full border ${
                           errors.fat ? "border-red-500" : "border-gray-300"
                         } rounded-md p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]`}
@@ -847,6 +881,13 @@ const TableIngredient = () => {
           </div>
         </div>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        ingredientName={deleteIngredientName}
+      />
     </div>
   );
 };

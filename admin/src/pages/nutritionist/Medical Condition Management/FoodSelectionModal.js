@@ -1,17 +1,10 @@
-import React, { useState, useCallback, useEffect } from "react";
-import Pagination from "../../../components/Pagination";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import recipesService from "../../../services/nutritionist/recipesServices";
+import dishService from "../../../services/nutritionist/dishesServices";
+import { toast } from "react-toastify";
+import Pagination from "../../../components/Pagination";
 
-// Debounce function to delay search
-const debounce = (func, delay) => {
-  let timeoutId;
-  return (...args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-};
-
-// SearchInput Component
+// Component SearchInput tái sử dụng
 const SearchInput = React.memo(({ value, onChange }) => {
   return (
     <input
@@ -24,24 +17,71 @@ const SearchInput = React.memo(({ value, onChange }) => {
   );
 });
 
+// Hàm giới hạn số lượng yêu cầu đồng thời
+const limitConcurrency = (tasks, limit) => {
+  return new Promise((resolve) => {
+    const results = new Array(tasks.length);
+    let activeTasks = 0;
+    let taskIndex = 0;
+
+    const runTask = () => {
+      while (activeTasks < limit && taskIndex < tasks.length) {
+        const currentIndex = taskIndex++;
+        activeTasks++;
+        tasks[currentIndex]()
+          .then((result) => {
+            results[currentIndex] = result;
+          })
+          .catch((error) => {
+            results[currentIndex] = { error };
+          })
+          .finally(() => {
+            activeTasks--;
+            if (taskIndex < tasks.length) {
+              runTask();
+            } else if (activeTasks === 0) {
+              resolve(results);
+            }
+          });
+      }
+    };
+
+    runTask();
+  });
+};
+
 const TYPE_OPTIONS = ["Heavy Meals", "Light Meals", "Beverages", "Desserts"];
 
 const FoodSelectionModal = ({
   isOpen,
   onClose,
   onSelect,
-  availableDishes,
   selectedDishes,
   conflictingDishes,
   foodModalType,
 }) => {
+  const [dishes, setDishes] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [tempSelectedDishes, setTempSelectedDishes] = useState(selectedDishes || []);
   const [currentPage, setCurrentPage] = useState(0);
   const [limit, setLimit] = useState(8);
-  const [enrichedDishes, setEnrichedDishes] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [tempSelectedDishes, setTempSelectedDishes] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Bộ nhớ đệm cho công thức
+  const recipeCache = useMemo(() => new Map(), []);
+
+  // Hàm debounce
+  const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func(...args), delay);
+    };
+  };
 
   const debouncedSearch = useCallback(
     debounce((value) => {
@@ -62,47 +102,73 @@ const FoodSelectionModal = ({
     setCurrentPage(0);
   };
 
-  // Fetch recipe data for dishes with recipeId
+  // Khởi tạo tempSelectedDishes dựa trên selectedDishes khi modal mở
   useEffect(() => {
-    const fetchRecipeData = async () => {
-      const dishesWithRecipes = await Promise.all(
-        availableDishes.map(async (dish) => {
-          if (dish.recipeId && !dish.recipe) {
+    if (isOpen) {
+      const selectedIds = selectedDishes.map((dish) =>
+        typeof dish === "object" ? dish._id : dish
+      );
+      setTempSelectedDishes(selectedIds);
+    }
+  }, [isOpen, selectedDishes]);
+
+  // Lấy danh sách món ăn từ API với phân trang từ server
+  const fetchDishesAndRecipes = async () => {
+    setIsLoading(true);
+    try {
+      const dishesResponse = await dishService.getAllDishes(
+        currentPage + 1,
+        limit,
+        filterType,
+        searchTerm
+      );
+
+      if (dishesResponse?.success) {
+        let dishesData = dishesResponse.data.items || [];
+
+        const recipeTasks = dishesData.map((dish, index) => async () => {
+          if (dish.recipeId && typeof dish.recipeId === "string" && !dish.recipe) {
+            if (recipeCache.has(dish.recipeId)) {
+              return { ...dish, recipe: recipeCache.get(dish.recipeId) };
+            }
             try {
               const recipeResponse = await recipesService.getRecipeById(dish._id, dish.recipeId);
               if (recipeResponse.success) {
+                recipeCache.set(dish.recipeId, recipeResponse.data);
                 return { ...dish, recipe: recipeResponse.data };
               }
             } catch (error) {
-              // Silent error handling
+              console.log(`Error fetching recipe for dish ${dish._id}:`, error);
             }
           }
           return dish;
-        })
-      );
-      setEnrichedDishes(dishesWithRecipes);
-    };
+        });
 
-    if (isOpen && availableDishes.length > 0) {
-      fetchRecipeData();
+        const dishesWithRecipes = await limitConcurrency(recipeTasks, 5);
+
+        setDishes(dishesWithRecipes);
+        setTotalItems(dishesResponse.data.total || 0);
+        setTotalPages(dishesResponse.data.totalPages || 1);
+      } else {
+        setDishes([]);
+        toast.error("Failed to load dish list: " + dishesResponse.message);
+      }
+    } catch (error) {
+      setDishes([]);
+      toast.error("An error occurred while loading dishes: " + error.message);
+    } finally {
+      setIsLoading(false);
     }
-  }, [isOpen, availableDishes]);
+  };
 
-  // Filter dishes based on searchTerm and filterType
-  const filteredDishes = enrichedDishes.filter((dish) => {
-    const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === "all" || dish.type === filterType;
-    return matchesSearch && matchesType;
-  });
-
-  const totalItems = filteredDishes.length;
-  const totalPages = Math.ceil(totalItems / limit);
-  const paginatedDishes = filteredDishes.slice(currentPage * limit, (currentPage + 1) * limit);
+  useEffect(() => {
+    if (isOpen) {
+      fetchDishesAndRecipes();
+    }
+  }, [isOpen, currentPage, limit, filterType, searchTerm]);
 
   const handleDishClick = (dishId) => {
-    if (conflictingDishes.includes(dishId)) return;
-    const isSelected = tempSelectedDishes.includes(dishId);
-    if (isSelected) {
+    if (tempSelectedDishes.includes(dishId)) {
       setTempSelectedDishes(tempSelectedDishes.filter((id) => id !== dishId));
     } else {
       setTempSelectedDishes([...tempSelectedDishes, dishId]);
@@ -120,16 +186,21 @@ const FoodSelectionModal = ({
   };
 
   const handlePageClick = (data) => {
-    setCurrentPage(data.selected);
+    const selectedPage = data.selected;
+    if (selectedPage >= 0 && selectedPage < totalPages) {
+      setCurrentPage(selectedPage);
+    }
   };
 
-  const isFavorite = (dishId) => false; // Placeholder; integrate with actual favorites if available
+  const isFavorite = (dishId) => {
+    return false; // Placeholder logic for favorites
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-[90vw] max-w-5xl h-[100vh] flex flex-col shadow-xl">
+      <div className="bg-white rounded-2xl p-6 w-[90vw] max-w-5xl h-[95vh] flex flex-col shadow-xl">
         <div className="flex items-center mb-6">
           <h2 className="text-2xl font-bold text-[#40B491]">
             Select {foodModalType === "restricted" ? "Restricted" : "Recommended"} Dishes
@@ -137,14 +208,22 @@ const FoodSelectionModal = ({
           <div className="ml-auto flex space-x-3">
             <button
               onClick={handleConfirm}
-              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${tempSelectedDishes.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+              className={`px-4 py-2 bg-[#40B491] text-white rounded-md hover:bg-[#359c7a] transition ${
+                tempSelectedDishes.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               disabled={tempSelectedDishes.length === 0}
             >
               Confirm
             </button>
             <button
-              onClick={onClose}
+              onClick={() => {
+                setTempSelectedDishes([]);
+                setSearchTerm("");
+                setInputValue("");
+                setFilterType("all");
+                setCurrentPage(0);
+                onClose();
+              }}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
             >
               Close
@@ -170,24 +249,28 @@ const FoodSelectionModal = ({
 
         <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {paginatedDishes.length > 0 ? (
-              paginatedDishes.map((dish) => {
+            {dishes.length > 0 ? (
+              dishes.map((dish) => {
                 const isConflicting = conflictingDishes.includes(dish._id);
                 const isSelected = tempSelectedDishes.includes(dish._id);
+                const isAlreadyAdded = selectedDishes.some(
+                  (selected) => (typeof selected === "object" ? selected._id : selected) === dish._id
+                );
                 const dishFavorite = isFavorite(dish._id);
                 const nutritionData = dish.recipe || {
-                  totalCalories: "N/A",
-                  totalProtein: "N/A",
-                  totalCarbs: "N/A",
-                  totalFat: "N/A",
+                  totalCalories: "0",
+                  totalProtein: "0",
+                  totalCarbs: "0",
+                  totalFat: "0",
                 };
 
                 return (
                   <div
                     key={dish._id}
-                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative flex flex-col h-[280px] ${isSelected ? "border-[#40B491] border-2" : "border-gray-200"
-                      } ${isConflicting ? "opacity-50 cursor-not-allowed" : ""}`}
-                    onClick={() => !isConflicting && handleDishClick(dish._id)}
+                    className={`border rounded-lg overflow-hidden shadow-sm transition-all hover:shadow-md cursor-pointer relative flex flex-col h-[280px] ${
+                      isSelected ? "border-[#40B491] border-2" : "border-gray-200"
+                    } ${isConflicting || isAlreadyAdded ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={() => !(isConflicting || isAlreadyAdded) && handleDishClick(dish._id)}
                   >
                     <div className="relative h-40 bg-gray-200">
                       {dish.imageUrl ? (
@@ -215,7 +298,12 @@ const FoodSelectionModal = ({
                           </span>
                         </div>
                       )}
-                      {isSelected && !isConflicting && (
+                      {isAlreadyAdded && (
+                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                          <span className="text-white font-semibold">Added</span>
+                        </div>
+                      )}
+                      {isSelected && !isConflicting && !isAlreadyAdded && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span className="bg-[#40B491] text-white px-4 py-2 rounded-full font-semibold text-sm shadow-md">
                             Choice
@@ -226,30 +314,30 @@ const FoodSelectionModal = ({
                     <div className="p-3 flex flex-col justify-between h-[100px]">
                       <div className="flex justify-between items-start">
                         <h3 className="font-medium text-gray-800 truncate w-[70%]">{dish.name}</h3>
-                        <span className="text-sm font-bold text-blue-600 min-w-[80px] text-right">
+                        <span className="text-sm font-bold text-blue-600 min-w-[100px] text-right whitespace-nowrap">
                           {nutritionData.totalCalories !== "N/A"
                             ? `${nutritionData.totalCalories} kcal`
                             : "N/A"}
                         </span>
                       </div>
                       <div className="text-sm flex flex-col h-[60px] justify-between">
-                        <div className="flex justify-between">
-                          <span className="text-gray-700">Protein:</span>
-                          <span className="font-medium">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700 min-w-[60px]">Protein:</span>
+                          <span className="font-medium text-right">
                             {nutritionData.totalProtein}{" "}
                             {nutritionData.totalProtein !== "N/A" ? "g" : ""}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-700">Fat:</span>
-                          <span className="font-medium">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700 min-w-[60px]">Fat:</span>
+                          <span className="font-medium text-right">
                             {nutritionData.totalFat}{" "}
                             {nutritionData.totalFat !== "N/A" ? "g" : ""}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-700">Carbs:</span>
-                          <span className="font-medium">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700 min-w-[60px]">Carbs:</span>
+                          <span className="font-medium text-right">
                             {nutritionData.totalCarbs}{" "}
                             {nutritionData.totalCarbs !== "N/A" ? "g" : ""}
                           </span>

@@ -49,10 +49,10 @@ const menuItems = [
   },
   {
     icon: <HeartPulseIcon size={20} />,
-    name: "Medical Condition Management",
+    name: "Health Conditions Management",
     submenus: [
-      { name: "View Medical Conditions", path: "/nutritionist/medicalConditions" },
-      { name: "Add New Medical Condition", path: "/nutritionist/medicalConditions/add" },
+      { name: "View Health Conditions", path: "/nutritionist/medicalConditions" },
+      { name: "Add New Health Conditions", path: "/nutritionist/medicalConditions/add" },
     ],
   },
 ];

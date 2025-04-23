@@ -19,10 +19,7 @@ exports.getAllUsers = async (query, currentAdminId) => {
   const totalUsers = await UserModel.countDocuments(filter);
 
   // Lấy danh sách người dùng với phân trang
-  const users = await UserModel.find(filter)
-    .skip(skip)
-    .limit(limit)
-    .populate("userPreferenceId");
+  const users = await UserModel.find(filter).skip(skip).limit(limit).populate("userPreferenceId");
 
   // Tính tổng số trang
   const totalPages = Math.ceil(totalUsers / limit);
@@ -149,11 +146,7 @@ exports.deleteUser = async (id, password) => {
 
 // 📌 Khôi phục người dùng (Chỉ admin)
 exports.restoreUser = async (id) => {
-  const user = await UserModel.findByIdAndUpdate(
-    id,
-    { isDelete: false },
-    { new: true }
-  );
+  const user = await UserModel.findByIdAndUpdate(id, { isDelete: false }, { new: true });
 
   if (!user) {
     return {
@@ -172,8 +165,7 @@ exports.restoreUser = async (id) => {
 
 // 📌 Tạo mới người dùng
 exports.createUser = async (body) => {
-  const { userName, email, phoneNumber, gender, status, role, profileImage } =
-    body;
+  const { userName, email, phoneNumber, gender, status, role, profileImage } = body;
 
   // Kiểm tra xem user với email này đã tồn tại chưa
   const existingUser = await UserModel.findOne({ email, isDelete: false });
@@ -221,7 +213,7 @@ exports.createUser = async (body) => {
 
 // 📌 Nộp CV để trở thành Nutritionist
 exports.submitNutritionistApplication = async (userId, body) => {
-  const { personalInfo, profileImage, introduction } = body;
+  const { personalInfo, profileImage, introduction, certificateLink } = body;
 
   // Kiểm tra xem user đã nộp đơn chưa
   const user = await UserModel.findById(userId);
@@ -238,7 +230,6 @@ exports.submitNutritionistApplication = async (userId, body) => {
     };
   }
 
-  // Cập nhật chỉ trường nutritionistApplication
   const updatedUser = await UserModel.updateOne(
     { _id: userId },
     {
@@ -247,6 +238,7 @@ exports.submitNutritionistApplication = async (userId, body) => {
           personalInfo,
           profileImage,
           introduction,
+          certificateLink,
           status: "pending",
           submittedAt: new Date(),
         },
@@ -261,7 +253,6 @@ exports.submitNutritionistApplication = async (userId, body) => {
     };
   }
 
-  // Lấy lại user để trả về response
   const updatedUserDoc = await UserModel.findById(userId);
 
   return {
@@ -311,21 +302,20 @@ exports.reviewNutritionistApplication = async (body) => {
   if (action === "approve") {
     user.nutritionistApplication.status = "approved";
     user.role = "nutritionist";
-    emailSubject =
-      "Chúc mừng! Đơn xin trở thành Nutritionist của bạn đã được phê duyệt";
+    emailSubject = "Congratulations! Your application to become a Nutritionist has been approved.";
     emailHtml = `
-      <h2>Chúc mừng ${user.username}!</h2>
-      <p>Chúng tôi rất vui mừng thông báo rằng đơn xin trở thành Nutritionist của bạn đã được phê duyệt.</p>
-      <p>Bạn giờ đây có thể bắt đầu hoạt động với vai trò Nutritionist trên hệ thống Healthy Food.</p>
-      <p>Trân trọng,<br/>Đội ngũ Healthy Food</p>
+      <h2>Congratulations ${user.username}!</h2>
+      <p>We are pleased to announce that your application to become a Nutritionist has been approved.</p>
+      <p>You can now start working as a Nutritionist on the Healthy Food system.</p>
+      <p>Best regards,<br/>Healthy Food Team</p>
     `;
   } else if (action === "reject") {
-    emailSubject = "Thông báo về đơn xin trở thành Nutritionist";
+    emailSubject = "Notice of Application to Become a Nutritionist";
     emailHtml = `
-      <h2>Xin chào ${user.username},</h2>
-      <p>Chúng tôi rất tiếc phải thông báo rằng đơn xin trở thành Nutritionist của bạn đã bị từ chối.</p>
-      <p>Bạn có thể nộp lại đơn đăng ký nếu muốn. Vui lòng kiểm tra và bổ sung thông tin cần thiết trước khi nộp lại.</p>
-      <p>Trân trọng,<br/>Đội ngũ Healthy Food</p>
+      <h2>Hello ${user.username},</h2>
+      <p>We regret to inform you that your application to become a Nutritionist has been rejected.</p>
+      <p>You may resubmit your application if you wish. Please review and supplement the necessary information before resubmitting.</p>
+      <p>Best regards,<br/>Healthy Food Team</p>
     `;
     user.nutritionistApplication = null;
   } else {

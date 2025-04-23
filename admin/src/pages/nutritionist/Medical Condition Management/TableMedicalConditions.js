@@ -1,37 +1,32 @@
-import React, { useEffect, useState, useCallback, memo } from "react";
+import React, { useEffect, useState, useCallback, Suspense } from "react";
 import medicalConditionService from "../../../services/nutritionist/medicalConditionServices";
 import dishService from "../../../services/nutritionist/dishesServices";
 import recipesService from "../../../services/nutritionist/recipesServices";
 import { HeartPulse, Pencil, Trash2, Eye } from "lucide-react";
-import FoodSelectionModal from "./FoodSelectionModal"; // Ensure correct import path
-import Pagination from "../../../components/Pagination";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import { debounce } from "lodash";
 
-// Debounce function
-const debounce = (func, delay) => {
-  let timeoutId;
-  return (...args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-};
+// Lazy load components
+const FoodSelectionModal = React.lazy(() => import("./FoodSelectionModal"));
+const Pagination = React.lazy(() => import("../../../components/Pagination"));
 
-// SearchInput Component
-const SearchInput = memo(({ value, onChange }) => {
-  return (
-    <input
-      type="text"
-      placeholder="Search by condition name"
-      className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
-      value={value}
-      onChange={onChange}
-    />
-  );
-});
+const SkeletonCondition = () => (
+  <div className="bg-white rounded-2xl shadow-md overflow-hidden h-[170px] animate-pulse">
+    <div className="p-4 h-[120px] flex flex-col justify-between">
+      <div className="h-6 bg-gray-200 rounded w-3/4 mx-auto"></div>
+      <div className="h-4 bg-gray-200 rounded w-full mt-2"></div>
+      <div className="h-4 bg-gray-200 rounded w-full"></div>
+    </div>
+    <div className="flex justify-center items-center p-2 bg-gray-50 border-t border-gray-200">
+      <div className="h-4 bg-gray-200 rounded w-16 mx-2"></div>
+      <div className="h-4 bg-gray-200 rounded w-16 mx-2"></div>
+      <div className="h-4 bg-gray-200 rounded w-16 mx-2"></div>
+    </div>
+  </div>
+);
 
-// ConditionList Component (unchanged)
-const ConditionList = memo(
+const ConditionList = React.memo(
   ({ conditions, onEdit, onView, onDelete }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {conditions.length > 0 ? (
@@ -78,8 +73,8 @@ const ConditionList = memo(
       ) : (
         <div className="col-span-full flex flex-col items-center justify-center text-center text-gray-500 py-12">
           <HeartPulse className="w-24 h-24 text-gray-400 mb-4" />
-          <p className="text-lg font-semibold">No medical conditions</p>
-          <p className="text-sm">Looks like you haven't added any medical conditions yet.</p>
+          <p className="text-lg font-semibold">No health conditions</p>
+          <p className="text-sm">Looks like you haven't added any health conditions yet.</p>
         </div>
       )}
     </div>
@@ -90,6 +85,36 @@ const ConditionList = memo(
     prevProps.onView === nextProps.onView &&
     prevProps.onDelete === nextProps.onDelete
 );
+
+// New Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, conditionName }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete the health condition <strong>{conditionName}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const TableMedicalConditions = () => {
   const navigate = useNavigate();
@@ -119,8 +144,11 @@ const TableMedicalConditions = () => {
   const [restrictedPage, setRestrictedPage] = useState(0);
   const [recommendedPage, setRecommendedPage] = useState(0);
   const [foodsPerPage, setFoodsPerPage] = useState(5);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConditionId, setDeleteConditionId] = useState(null);
+  const [deleteConditionName, setDeleteConditionName] = useState("");
 
-  // Fetch conditions and dishes
   const fetchConditions = async () => {
     try {
       const response = searchTerm
@@ -144,7 +172,7 @@ const TableMedicalConditions = () => {
         setConditions([]);
         setTotalItems(0);
         setTotalPages(1);
-        toast.error("Failed to fetch medical conditions.");
+        toast.error("Failed to fetch health conditions.");
       }
     } catch (error) {
       setConditions([]);
@@ -156,7 +184,7 @@ const TableMedicalConditions = () => {
 
   const fetchDishes = async () => {
     try {
-      const response = await dishService.getAllDishes(1, 1000);
+      const response = await dishService.getAllDishes(1, 50);
       if (response?.success) {
         const dishesData = Array.isArray(response.data.items) ? response.data.items : [];
         const enrichedDishes = await Promise.all(
@@ -169,9 +197,7 @@ const TableMedicalConditions = () => {
                   const nutritions = calculateNutritionFromRecipe(recipe);
                   return { ...dish, nutritions };
                 }
-              } catch (error) {
-                // Silent error handling
-              }
+              } catch (error) {}
             }
             return {
               ...dish,
@@ -199,8 +225,10 @@ const TableMedicalConditions = () => {
   );
 
   useEffect(() => {
-    fetchConditions();
-    fetchDishes();
+    setIsLoading(true);
+    Promise.all([fetchConditions(), fetchDishes()])
+      .then(() => setIsLoading(false))
+      .catch(() => setIsLoading(false));
   }, [currentPage, itemsPerPage, searchTerm]);
 
   const handleInputChange = (e) => {
@@ -245,7 +273,7 @@ const TableMedicalConditions = () => {
     };
   };
 
-  const handleEditClick = (condition) => {
+  const handleEditClick = useCallback((condition) => {
     const normalizedRestrictedFoods = condition.restrictedFoods.map((food) =>
       typeof food === "object" && food._id ? food._id : food.toString()
     );
@@ -270,9 +298,9 @@ const TableMedicalConditions = () => {
     setRestrictedPage(0);
     setRecommendedPage(0);
     setIsEditModalOpen(true);
-  };
+  }, []);
 
-  const handleViewClick = (condition) => {
+  const handleViewClick = useCallback((condition) => {
     const normalizedRestrictedFoods = condition.restrictedFoods.map((food) =>
       typeof food === "object" && food._id ? food._id : food.toString()
     );
@@ -286,32 +314,44 @@ const TableMedicalConditions = () => {
       recommendedFoods: normalizedRecommendedFoods,
     });
     setIsViewModalOpen(true);
-  };
+  }, []);
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this medical condition?")) {
-      try {
-        const response = await medicalConditionService.deleteMedicalCondition(id);
-        if (response.success) {
-          toast.success("Deleted successfully!");
-          fetchConditions();
-          if (conditions.length === 1 && currentPage > 0) {
-            setCurrentPage(currentPage - 1);
-          }
-        } else {
-          toast.error("Failed to delete medical condition.");
-        }
-      } catch (error) {
-        toast.error("Error deleting medical condition.");
+  const handleDelete = useCallback(
+    (id) => {
+      const condition = conditions.find((c) => c._id === id);
+      if (condition) {
+        setDeleteConditionId(id);
+        setDeleteConditionName(condition.name);
+        setIsDeleteModalOpen(true);
       }
+    },
+    [conditions]
+  );
+
+  const confirmDelete = async () => {
+    try {
+      const response = await medicalConditionService.deleteMedicalCondition(deleteConditionId);
+      if (response.success) {
+        toast.success("Deleted successfully!");
+        fetchConditions();
+        if (conditions.length === 1 && currentPage > 0) {
+          setCurrentPage(currentPage - 1);
+        }
+      } else {
+        toast.error("Failed to delete health condition.");
+      }
+    } catch (error) {
+      toast.error("Error deleting health condition.");
     }
+    setIsDeleteModalOpen(false);
+    setDeleteConditionId(null);
+    setDeleteConditionName("");
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name in editData.nutritionalConstraints) {
-      // Allow free input for numbers, validation happens on submit
       setEditData({
         ...editData,
         nutritionalConstraints: {
@@ -328,7 +368,6 @@ const TableMedicalConditions = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Validate Name
     if (!editData.name.trim()) {
       newErrors.name = "Name is required";
     } else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.name)) {
@@ -337,7 +376,6 @@ const TableMedicalConditions = () => {
       newErrors.name = "Name must not exceed 100 characters";
     }
 
-    // Validate Description
     if (!editData.description.trim()) {
       newErrors.description = "Description is required";
     } else if (/[^a-zA-Z0-9\s\u00C0-\u1EF9.,!?'"“”‘’():;\-\/]/i.test(editData.description)) {
@@ -346,7 +384,6 @@ const TableMedicalConditions = () => {
       newErrors.description = "Description must not exceed 500 characters";
     }
 
-    // Validate Restricted and Recommended Foods
     if (editData.restrictedFoods.length === 0) {
       newErrors.restrictedFoods = "At least one restricted food is required";
     }
@@ -357,21 +394,14 @@ const TableMedicalConditions = () => {
       newErrors.foodConflict = "A dish cannot be both restricted and recommended";
     }
 
-    // Validate Nutritional Constraints
     ["carbs", "fat", "protein", "calories"].forEach((field) => {
       const value = editData.nutritionalConstraints[field];
       if (value === "" || value === null || value === undefined) {
-        newErrors[field] = `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } is required`;
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
       } else if (isNaN(value) || Number(value) < 0) {
-        newErrors[field] = `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } must be a positive number`;
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} must be a positive number`;
       } else if (Number(value) > 10000) {
-        newErrors[field] = `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } must not exceed 10000`;
+        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} must not exceed 10000`;
       }
     });
 
@@ -403,15 +433,15 @@ const TableMedicalConditions = () => {
       const response = await medicalConditionService.updateMedicalCondition(editData.id, updatedData);
       setIsSaving(false);
       if (response.success) {
-        toast.success(`Medical condition "${editData.name}" has been saved!`);
+        toast.success(`Health condition "${editData.name}" has been saved!`);
         setIsEditModalOpen(false);
         fetchConditions();
       } else {
-        toast.error("Failed to update medical condition.");
+        toast.error("Failed to update health condition.");
       }
     } catch (error) {
       setIsSaving(false);
-      toast.error("Error updating medical condition.");
+      toast.error("Error updating health condition.");
     }
   };
 
@@ -479,47 +509,79 @@ const TableMedicalConditions = () => {
 
   return (
     <div className="container mx-auto px-6 py-8">
+      <style>
+        {`
+          .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #40B491;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#40B491] tracking-tight">
-          List of Medical Conditions
+          List of Health Conditions
         </h2>
         <button
           onClick={() => navigate("/nutritionist/medicalConditions/add")}
           className="px-6 py-2 bg-[#40B491] text-white font-semibold rounded-full shadow-md hover:bg-[#359c7a] transition duration-300"
         >
-          + Add Medical Condition
+          + Add Health Condition
         </button>
       </div>
 
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex items-center">
-          <SearchInput value={inputValue} onChange={handleInputChange} />
+          <input
+            type="text"
+            placeholder="Search by condition name"
+            className="w-full max-w-md p-3 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#40B491]"
+            value={inputValue}
+            onChange={handleInputChange}
+          />
         </div>
       </div>
 
       <div className="min-h-[calc(100vh-200px)]">
-        <ConditionList
-          conditions={conditions}
-          onEdit={handleEditClick}
-          onView={handleViewClick}
-          onDelete={handleDelete}
-        />
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <SkeletonCondition key={index} />
+            ))}
+          </div>
+        ) : (
+          <ConditionList
+            conditions={conditions}
+            onEdit={handleEditClick}
+            onView={handleViewClick}
+            onDelete={handleDelete}
+          />
+        )}
       </div>
 
       {totalItems > 0 && (
-        <div className="p-4 bg-gray-50">
-          <Pagination
-            limit={itemsPerPage}
-            setLimit={(newLimit) => {
-              setItemsPerPage(newLimit);
-              setCurrentPage(0);
-            }}
-            totalItems={totalItems}
-            handlePageClick={handlePageClick}
-            currentPage={currentPage}
-            text="Conditions"
-          />
-        </div>
+        <Suspense fallback={<div>Loading...</div>}>
+          <div className="p-4 bg-gray-50">
+            <Pagination
+              limit={itemsPerPage}
+              setLimit={(newLimit) => {
+                setItemsPerPage(newLimit);
+                setCurrentPage(0);
+              }}
+              totalItems={totalItems}
+              handlePageClick={handlePageClick}
+              currentPage={currentPage}
+              text="Conditions"
+            />
+          </div>
+        </Suspense>
       )}
 
       {isEditModalOpen && (
@@ -532,7 +594,7 @@ const TableMedicalConditions = () => {
           )}
           <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center mb-6">
-              <h2 className="text-2xl font-bold text-[#40B491]">Edit Medical Condition</h2>
+              <h2 className="text-2xl font-bold text-[#40B491]">Edit Health Condition</h2>
               <div className="ml-auto flex space-x-3">
                 <button
                   onClick={handleSaveEdit}
@@ -555,9 +617,7 @@ const TableMedicalConditions = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <div className="mb-4">
-                  <label className="block text-sm font-bold text-[#40B491] mb-1">
-                    Name *
-                  </label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">Name *</label>
                   <input
                     type="text"
                     name="name"
@@ -578,9 +638,7 @@ const TableMedicalConditions = () => {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-bold text-[#40B491] mb-1">
-                    Description *
-                  </label>
+                  <label className="block text-sm font-bold text-[#40B491] mb-1">Description *</label>
                   <textarea
                     name="description"
                     value={editData.description}
@@ -636,17 +694,19 @@ const TableMedicalConditions = () => {
                   </div>
                   {restrictedTotalItems > foodsPerPage && (
                     <div className="mt-2">
-                      <Pagination
-                        limit={foodsPerPage}
-                        setLimit={(newLimit) => {
-                          setFoodsPerPage(newLimit);
-                          setRestrictedPage(0);
-                        }}
-                        totalItems={restrictedTotalItems}
-                        handlePageClick={handleRestrictedPageClick}
-                        currentPage={restrictedPage}
-                        text="Restricted Foods"
-                      />
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <Pagination
+                          limit={foodsPerPage}
+                          setLimit={(newLimit) => {
+                            setFoodsPerPage(newLimit);
+                            setRestrictedPage(0);
+                          }}
+                          totalItems={restrictedTotalItems}
+                          handlePageClick={handleRestrictedPageClick}
+                          currentPage={restrictedPage}
+                          text="Restricted Foods"
+                        />
+                      </Suspense>
                     </div>
                   )}
                   <button
@@ -694,17 +754,19 @@ const TableMedicalConditions = () => {
                   </div>
                   {recommendedTotalItems > foodsPerPage && (
                     <div className="mt-2">
-                      <Pagination
-                        limit={foodsPerPage}
-                        setLimit={(newLimit) => {
-                          setFoodsPerPage(newLimit);
-                          setRecommendedPage(0);
-                        }}
-                        totalItems={recommendedTotalItems}
-                        handlePageClick={handleRecommendedPageClick}
-                        currentPage={recommendedPage}
-                        text="Recommended Foods"
-                      />
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <Pagination
+                          limit={foodsPerPage}
+                          setLimit={(newLimit) => {
+                            setFoodsPerPage(newLimit);
+                            setRecommendedPage(0);
+                          }}
+                          totalItems={recommendedTotalItems}
+                          handlePageClick={handleRecommendedPageClick}
+                          currentPage={recommendedPage}
+                          text="Recommended Foods"
+                        />
+                      </Suspense>
                     </div>
                   )}
                   <button
@@ -821,7 +883,7 @@ const TableMedicalConditions = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center mb-6">
-              <h2 className="text-2xl font-bold text-[#40B491]">View Medical Condition</h2>
+              <h2 className="text-2xl font-bold text-[#40B491]">View Health Condition</h2>
               <button
                 className="ml-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
                 onClick={closeViewModal}
@@ -917,9 +979,7 @@ const TableMedicalConditions = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-[#40B491] mb-1">
-                  Description
-                </label>
+                <label className="block text-sm font-bold text-[#40B491] mb-1">Description</label>
                 <div
                   className="text-gray-900 h-96 overflow-y-auto p-3 border border-gray-300 rounded-md whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{
@@ -933,20 +993,29 @@ const TableMedicalConditions = () => {
       )}
 
       {isFoodModalOpen && (
-        <FoodSelectionModal
-          isOpen={isFoodModalOpen}
-          onClose={() => setIsFoodModalOpen(false)}
-          onSelect={handleFoodSelect}
-          availableDishes={dishes}
-          selectedDishes={
-            foodModalType === "restricted" ? editData.restrictedFoods : editData.recommendedFoods
-          }
-          conflictingDishes={
-            foodModalType === "restricted" ? editData.recommendedFoods : editData.restrictedFoods
-          }
-          foodModalType={foodModalType}
-        />
+        <Suspense fallback={<div>Loading...</div>}>
+          <FoodSelectionModal
+            isOpen={isFoodModalOpen}
+            onClose={() => setIsFoodModalOpen(false)}
+            onSelect={handleFoodSelect}
+            availableDishes={dishes}
+            selectedDishes={
+              foodModalType === "restricted" ? editData.restrictedFoods : editData.recommendedFoods
+            }
+            conflictingDishes={
+              foodModalType === "restricted" ? editData.recommendedFoods : editData.restrictedFoods
+            }
+            foodModalType={foodModalType}
+          />
+        </Suspense>
       )}
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        conditionName={deleteConditionName}
+      />
     </div>
   );
 };

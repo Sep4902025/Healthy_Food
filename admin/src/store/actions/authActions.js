@@ -20,7 +20,7 @@ export const loginWithGoogle = (credential) => async (dispatch) => {
     }
 
     if (result.data.user.isBan) {
-      toast.error("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
+      toast.error("Your account has been locked. Please contact the administrator.");
       return false;
     }
 
@@ -31,13 +31,13 @@ export const loginWithGoogle = (credential) => async (dispatch) => {
       })
     );
 
-    toast.success(result.message || "Đăng nhập thành công!");
+    toast.success(result.message || "Login successful!");
     return true;
   } catch (error) {
     const data = error?.response?.data;
     console.error("Lỗi đăng nhập:", data || error);
-    dispatch(loginFailure(data?.message || "Đăng nhập thất bại"));
-    toast.error(data?.message || "Đã có lỗi xảy ra. Vui lòng thử lại!");
+    dispatch(loginFailure(data?.message || "Login failed!"));
+    toast.error(data?.message || "Something went wrong. Please try again!");
     return false;
   }
 };
@@ -49,8 +49,8 @@ export const loginWithEmail = (formData) => async (dispatch) => {
 
     if (response.success) {
       if (response.user.isBan) {
-        toast.error("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
-        dispatch(loginFailure("Tài khoản bị khóa"));
+        toast.error("Your account has been locked. Please contact the administrator.");
+        dispatch(loginFailure("Your account has been locked."));
         return false;
       }
 
@@ -65,12 +65,12 @@ export const loginWithEmail = (formData) => async (dispatch) => {
       return response;
     } else {
       dispatch(loginFailure(response.message));
-      toast.error(response.message || "Đăng nhập thất bại!");
+      toast.error(response.message || "Login failed!");
       return false;
     }
   } catch (error) {
-    dispatch(loginFailure("Đăng nhập thất bại!")); // Reset trạng thái loading
-    toast.error("Đăng nhập thất bại!");
+    dispatch(loginFailure("Login failed!")); // Reset trạng thái loading
+    toast.error("Login failed!");
     return false;
   }
 };
@@ -97,7 +97,7 @@ export const updateUser = (userData) => async (dispatch) => {
   try {
     const { _id, ...data } = userData; // Extract _id and the rest as data
     if (!_id) {
-      toast.error("Không tìm thấy ID người dùng!");
+      toast.error("User ID not found!");
       return false;
     }
 
@@ -108,12 +108,12 @@ export const updateUser = (userData) => async (dispatch) => {
       toast.success("Avatar update successful!");
       return response.user; // Trả về user mới
     } else {
-      toast.error(response.message || "Cập nhật thất bại!");
+      toast.error(response.message || "Update failed!");
       return false;
     }
   } catch (error) {
-    console.error("Lỗi cập nhật user:", error);
-    toast.error(error.message || "Đã có lỗi xảy ra. Vui lòng thử lại!");
+    console.error("User update error:", error);
+    toast.error(error.message || "Something went wrong. Please try again!");
     return false;
   }
 };
